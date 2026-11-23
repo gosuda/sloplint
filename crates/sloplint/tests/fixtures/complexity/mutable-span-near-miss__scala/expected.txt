@@ -1,2 +1,3 @@
 # Near-miss: val is never rewritten after declaration.
 # shadowed-generator.scala: outer `total` is written once on line 4; the line-27 write targets the nested block's own `total` under the `for` generator, so misattribution would span 23 and fire.
+# given-shadow.scala: outer `_status` is written once on line 4; the line-25 arm write targets the extractor's own `_status` (`case given(_status, _)`), so misattribution would span 21 and fire.

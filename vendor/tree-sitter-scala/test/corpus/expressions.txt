@@ -90,6 +90,125 @@ class C {
                 (identifier)))))))))
 
 ================================================================================
+Block argument on the next line
+================================================================================
+
+object A {
+  val p = f(
+    { a => b })
+    { c => d }
+  g(x)
+  {
+    y
+  }
+  h(x)
+
+    { z }
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (val_definition
+        (identifier)
+        (call_expression
+          (call_expression
+            (identifier)
+            (arguments
+              (block
+                (lambda_expression
+                  (identifier)
+                  (identifier)))))
+          (block
+            (lambda_expression
+              (identifier)
+              (identifier)))))
+      (call_expression
+        (identifier)
+        (arguments
+          (identifier)))
+      (block
+        (identifier))
+      (call_expression
+        (identifier)
+        (arguments
+          (identifier)))
+      (block
+        (identifier)))))
+
+================================================================================
+Argument clause on the next line (Scala 3 syntax)
+================================================================================
+
+def f =
+  if xs.exists
+      (p) then 1
+  else 2
+
+def g =
+  val x = f(1)
+    (2)
+  x
+
+def h(x: Int) = {
+  val fs = x & 1
+  (fs & 2) != 0
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (function_definition
+    (identifier)
+    (indented_block
+      (if_expression
+        (call_expression
+          (field_expression
+            (identifier)
+            (identifier))
+          (arguments
+            (identifier)))
+        (integer_literal)
+        (integer_literal))))
+  (function_definition
+    (identifier)
+    (indented_block
+      (val_definition
+        (identifier)
+        (call_expression
+          (call_expression
+            (identifier)
+            (arguments
+              (integer_literal)))
+          (arguments
+            (integer_literal))))
+      (identifier)))
+  (function_definition
+    (identifier)
+    (parameters
+      (parameter
+        (identifier)
+        (type_identifier)))
+    (block
+      (val_definition
+        (identifier)
+        (infix_expression
+          (identifier)
+          (operator_identifier)
+          (integer_literal)))
+      (infix_expression
+        (parenthesized_expression
+          (infix_expression
+            (identifier)
+            (operator_identifier)
+            (integer_literal)))
+        (operator_identifier)
+        (integer_literal)))))
+
+================================================================================
 Call expressions (Scala 3 syntax)
 ================================================================================
 
@@ -478,6 +597,68 @@ xs.filter(x =>
             right: (identifier)))))))
 
 ================================================================================
+Colon argument on the operand of an operator
+================================================================================
+
+def f =
+  !a || xs.forall: x =>
+    g(x)
+
+def g =
+  !susp:
+    "s"
+
+def h =
+  xs ++ ys.filter:
+    case y => true
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (function_definition
+    (identifier)
+    (indented_block
+      (infix_expression
+        (prefix_expression
+          (identifier))
+        (operator_identifier)
+        (call_expression
+          (field_expression
+            (identifier)
+            (identifier))
+          (colon_argument
+            (identifier)
+            (indented_block
+              (call_expression
+                (identifier)
+                (arguments
+                  (identifier)))))))))
+  (function_definition
+    (identifier)
+    (indented_block
+      (prefix_expression
+        (call_expression
+          (identifier)
+          (colon_argument
+            (indented_block
+              (string)))))))
+  (function_definition
+    (identifier)
+    (indented_block
+      (infix_expression
+        (identifier)
+        (operator_identifier)
+        (call_expression
+          (field_expression
+            (identifier)
+            (identifier))
+          (colon_argument
+            (indented_cases
+              (case_clause
+                (identifier)
+                (boolean_literal)))))))))
+
+================================================================================
 Colon argument followed by comma
 ================================================================================
 
@@ -554,6 +735,30 @@ class C {
                   (type_arguments
                     (type_identifier)))))
             (arguments)))))))
+
+================================================================================
+Type arguments on the right operand of an infix expression
+================================================================================
+
+a && b.asInstanceOf[T].length == 0
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (infix_expression
+    (identifier)
+    (operator_identifier)
+    (infix_expression
+      (field_expression
+        (generic_function
+          (field_expression
+            (identifier)
+            (identifier))
+          (type_arguments
+            (type_identifier)))
+        (identifier))
+      (operator_identifier)
+      (integer_literal))))
 
 ================================================================================
 Assignments
@@ -2509,7 +2714,8 @@ bar(a, xs: _*)
     function: (identifier)
     arguments: (arguments
       (vararg
-        (identifier))))
+        (identifier)
+        (wildcard))))
   (call_expression
     function: (identifier)
     arguments: (arguments
@@ -2521,7 +2727,73 @@ bar(a, xs: _*)
     arguments: (arguments
       (identifier)
       (vararg
-        (identifier)))))
+        (identifier)
+        (wildcard)))))
+
+================================================================================
+Vararg of an infix or prefix expression
+================================================================================
+
+foo(a ++ b*)
+bar(a ++ b: _*)
+foo(x, -a*)
+baz(a ++ b: Seq[Int])
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (call_expression
+    (identifier)
+    (arguments
+      (vararg
+        (infix_expression
+          (identifier)
+          (operator_identifier)
+          (identifier)))))
+  (call_expression
+    (identifier)
+    (arguments
+      (vararg
+        (infix_expression
+          (identifier)
+          (operator_identifier)
+          (identifier))
+        (wildcard))))
+  (call_expression
+    (identifier)
+    (arguments
+      (identifier)
+      (vararg
+        (prefix_expression
+          (identifier)))))
+  (call_expression
+    (identifier)
+    (arguments
+      (ascription_expression
+        (infix_expression
+          (identifier)
+          (operator_identifier)
+          (identifier))
+        (generic_type
+          (type_identifier)
+          (type_arguments
+            (type_identifier)))))))
+
+================================================================================
+Scala 2 vararg with a space before the star
+================================================================================
+
+foo(xs: _ *)
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (call_expression
+    (identifier)
+    (arguments
+      (vararg
+        (identifier)
+        (wildcard)))))
 
 ================================================================================
 Catch case with a multi-statement indented body
@@ -2681,6 +2953,291 @@ end p
     (end_marker)))
 
 ================================================================================
+End marker on a match inside braces in an indented region (Scala 3 syntax)
+================================================================================
+
+object O:
+  def f = g {
+    v match
+    case r =>
+      if a then
+        b
+      else
+        c
+    end match
+  }
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (function_definition
+        (identifier)
+        (call_expression
+          (identifier)
+          (block
+            (match_expression
+              (identifier)
+              (indented_cases
+                (case_clause
+                  (identifier)
+                  (if_expression
+                    (identifier)
+                    (indented_block
+                      (identifier))
+                    (indented_block
+                      (identifier)))))
+              (end_marker))))))))
+
+================================================================================
+Comment between case clauses after a nested match (Scala 3 syntax)
+================================================================================
+
+object O:
+  def f(p: P) =
+    p match
+    case a =>
+      q match
+      case t => 1
+    case b =>
+      2
+    // c
+    case c => 3
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (function_definition
+        (identifier)
+        (parameters
+          (parameter
+            (identifier)
+            (type_identifier)))
+        (indented_block
+          (match_expression
+            (identifier)
+            (indented_cases
+              (case_clause
+                (identifier)
+                (match_expression
+                  (identifier)
+                  (indented_cases
+                    (case_clause
+                      (identifier)
+                      (integer_literal)))))
+              (case_clause
+                (identifier)
+                (integer_literal))
+              (comment)
+              (case_clause
+                (identifier)
+                (integer_literal)))))))))
+
+================================================================================
+Lines after `then` or `do` at the width of a case body end the branch (Scala 3 syntax)
+================================================================================
+
+object P:
+  def f(t: Any, c: Boolean): Int = t match
+    case _: String =>
+      if c then
+      println("then")
+      1
+    case _ =>
+      while c do
+      println("do")
+      2
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (function_definition
+        (identifier)
+        (parameters
+          (parameter
+            (identifier)
+            (type_identifier))
+          (parameter
+            (identifier)
+            (type_identifier)))
+        (type_identifier)
+        (match_expression
+          (identifier)
+          (indented_cases
+            (case_clause
+              (typed_pattern
+                (wildcard)
+                (type_identifier))
+              (if_expression
+                (identifier)
+                (call_expression
+                  (identifier)
+                  (arguments
+                    (string))))
+              (integer_literal))
+            (case_clause
+              (wildcard)
+              (while_expression
+                (identifier)
+                (call_expression
+                  (identifier)
+                  (arguments
+                    (string))))
+              (integer_literal))))))))
+
+================================================================================
+A leading operator after a case body closes the nested match it is not deeper than (Scala 3 syntax)
+================================================================================
+
+def f =
+  a
+  || b.match
+    case B =>
+      c.match
+        case C => d
+      || e
+    case _ =>
+      g
+  || h
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (function_definition
+    (identifier)
+    (indented_block
+      (infix_expression
+        (infix_expression
+          (identifier)
+          (operator_identifier)
+          (match_expression
+            (identifier)
+            (indented_cases
+              (case_clause
+                (identifier)
+                (infix_expression
+                  (match_expression
+                    (identifier)
+                    (indented_cases
+                      (case_clause
+                        (identifier)
+                        (identifier))))
+                  (operator_identifier)
+                  (identifier)))
+              (case_clause
+                (wildcard)
+                (identifier)))))
+        (operator_identifier)
+        (identifier)))))
+
+================================================================================
+A leading operator the case region keeps continues the case body (Scala 3 syntax)
+================================================================================
+
+def f =
+  a
+  || b.match
+      case B => c
+      case _ =>
+        d
+    || e
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (function_definition
+    (identifier)
+    (indented_block
+      (infix_expression
+        (identifier)
+        (operator_identifier)
+        (match_expression
+          (identifier)
+          (indented_cases
+            (case_clause
+              (identifier)
+              (identifier))
+            (case_clause
+              (wildcard)
+              (infix_expression
+                (identifier)
+                (operator_identifier)
+                (identifier)))))))))
+
+================================================================================
+A case body continues after a line that closes its region (Scala 3 syntax)
+================================================================================
+
+def f = x match
+  case a =>
+      b
+    c
+  case _ => d
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (function_definition
+    (identifier)
+    (match_expression
+      (identifier)
+      (indented_cases
+        (case_clause
+          (identifier)
+          (identifier)
+          (identifier))
+        (case_clause
+          (wildcard)
+          (identifier))))))
+
+================================================================================
+A line at the case width that is not a case ends the clauses (Scala 3 syntax)
+================================================================================
+
+object O:
+  def f =
+    v.match
+      case a =>
+        g(a)
+      case b => b
+      .showing(c)
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (function_definition
+        (identifier)
+        (indented_block
+          (call_expression
+            (field_expression
+              (match_expression
+                (identifier)
+                (indented_cases
+                  (case_clause
+                    (identifier)
+                    (call_expression
+                      (identifier)
+                      (arguments
+                        (identifier))))
+                  (case_clause
+                    (identifier)
+                    (identifier))))
+              (identifier))
+            (arguments
+              (identifier))))))))
+
+================================================================================
 Braced typed lambda and a colon-argument lambda
 ================================================================================
 
@@ -2690,6 +3247,10 @@ val a = forAll { int: Int =>
 
 val b = OWrites: c =>
   Json.obj(c)
+
+val c = xs.flatMap { a: (String, Json) =>
+  a._2
+}
 
 --------------------------------------------------------------------------------
 
@@ -2702,10 +3263,9 @@ val b = OWrites: c =>
         (lambda_expression
           (identifier)
           (type_identifier)
-          (indented_block
-            (field_expression
-              (identifier)
-              (identifier)))))))
+          (field_expression
+            (identifier)
+            (identifier))))))
   (val_definition
     (identifier)
     (call_expression
@@ -2718,7 +3278,22 @@ val b = OWrites: c =>
               (identifier)
               (identifier))
             (arguments
-              (identifier))))))))
+              (identifier)))))))
+  (val_definition
+    (identifier)
+    (call_expression
+      (field_expression
+        (identifier)
+        (identifier))
+      (block
+        (lambda_expression
+          (identifier)
+          (tuple_type
+            (type_identifier)
+            (type_identifier))
+          (field_expression
+            (identifier)
+            (identifier)))))))
 
 ================================================================================
 Standalone end is not a marker (Scala 3 syntax)
@@ -3404,27 +3979,27 @@ def allowed =
     (identifier)
     (indented_block
       (infix_expression
-        (field_expression
-          (identifier)
-          (identifier))
-        (operator_identifier)
-        (match_expression
-          (field_expression
+        (infix_expression
+          (infix_expression
             (field_expression
               (identifier)
               (identifier))
-            (identifier))
-          (comment)
-          (indented_cases
-            (case_clause
-              (stable_identifier
-                (identifier)
+            (operator_identifier)
+            (match_expression
+              (field_expression
+                (field_expression
+                  (identifier)
+                  (identifier))
                 (identifier))
-              (boolean_literal))
-            (case_clause
-              (identifier)
-              (infix_expression
-                (infix_expression
+              (comment)
+              (indented_cases
+                (case_clause
+                  (stable_identifier
+                    (identifier)
+                    (identifier))
+                  (boolean_literal))
+                (case_clause
+                  (identifier)
                   (infix_expression
                     (field_expression
                       (identifier)
@@ -3437,21 +4012,76 @@ def allowed =
                         (identifier)
                         (identifier))
                       (arguments
-                        (identifier))))
-                  (operator_identifier)
-                  (field_expression
-                    (field_expression
-                      (identifier)
-                      (identifier))
-                    (identifier)))
-                (comment)
-                (operator_identifier)
-                (field_expression
-                  (field_expression
-                    (identifier)
-                    (identifier))
-                  (identifier))))
-            (comment)))))))
+                        (identifier))))))))
+          (operator_identifier)
+          (field_expression
+            (field_expression
+              (identifier)
+              (identifier))
+            (identifier)))
+        (comment)
+        (operator_identifier)
+        (field_expression
+          (field_expression
+            (identifier)
+            (identifier))
+          (identifier)))
+      (comment))))
+
+================================================================================
+Leading infix operator after case clauses
+================================================================================
+
+def a =
+  x
+  || y.match
+      case 1 => false
+      case _ => true
+  || !x
+
+def b =
+      p
+   || q.match
+      case _ => false
+   || r
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (function_definition
+    (identifier)
+    (indented_block
+      (infix_expression
+        (infix_expression
+          (identifier)
+          (operator_identifier)
+          (match_expression
+            (identifier)
+            (indented_cases
+              (case_clause
+                (integer_literal)
+                (boolean_literal))
+              (case_clause
+                (wildcard)
+                (boolean_literal)))))
+        (operator_identifier)
+        (prefix_expression
+          (identifier)))))
+  (function_definition
+    (identifier)
+    (indented_block
+      (infix_expression
+        (infix_expression
+          (identifier)
+          (operator_identifier)
+          (match_expression
+            (identifier)
+            (indented_cases
+              (case_clause
+                (wildcard)
+                (boolean_literal)))))
+        (operator_identifier)
+        (identifier)))))
 
 ================================================================================
 Block comment closed by same-line code inside a braced body
@@ -4170,6 +4800,137 @@ def m =
         (identifier)))))
 
 ================================================================================
+Operator alone on its line continues the expression
+================================================================================
+
+object O:
+  def a =
+    x == 0
+    ||
+      y
+  def b =
+    x
+    &&
+      !y
+  def c =
+    x
+    || // comment
+    y
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (function_definition
+        (identifier)
+        (indented_block
+          (infix_expression
+            (infix_expression
+              (identifier)
+              (operator_identifier)
+              (integer_literal))
+            (operator_identifier)
+            (identifier))))
+      (function_definition
+        (identifier)
+        (indented_block
+          (infix_expression
+            (identifier)
+            (operator_identifier)
+            (prefix_expression
+              (identifier)))))
+      (function_definition
+        (identifier)
+        (indented_block
+          (infix_expression
+            (identifier)
+            (operator_identifier)
+            (comment)
+            (identifier)))))))
+
+================================================================================
+Operator alone on its line before a line that ends the expression
+================================================================================
+
+object O:
+  def a =
+    x
+    ||
+
+    y
+  def b =
+    x
+    ||
+  y
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (function_definition
+        (identifier)
+        (indented_block
+          (identifier)
+          (operator_identifier)
+          (identifier)))
+      (function_definition
+        (identifier)
+        (indented_block
+          (identifier)
+          (operator_identifier)))
+      (identifier))))
+
+================================================================================
+Operator alone on its line after a deeper block continues the enclosing expression
+================================================================================
+
+object O:
+  def f =
+    val targets =
+      files.map: f =>
+        g(f)
+      ++
+      dirs.map(h)
+    targets
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (function_definition
+        (identifier)
+        (indented_block
+          (val_definition
+            (identifier)
+            (indented_block
+              (infix_expression
+                (call_expression
+                  (field_expression
+                    (identifier)
+                    (identifier))
+                  (colon_argument
+                    (identifier)
+                    (indented_block
+                      (call_expression
+                        (identifier)
+                        (arguments
+                          (identifier))))))
+                (operator_identifier)
+                (call_expression
+                  (field_expression
+                    (identifier)
+                    (identifier))
+                  (arguments
+                    (identifier))))))
+          (identifier))))))
+
+================================================================================
 Leading infix operator continuing inside colon-argument regions
 ================================================================================
 
@@ -4203,38 +4964,38 @@ def f: Boolean =
               (identifier)
               (colon_argument
                 (indented_block
-                  (call_expression
+                  (infix_expression
+                    (call_expression
+                      (field_expression
+                        (identifier)
+                        (identifier))
+                      (arguments
+                        (identifier)))
+                    (operator_identifier)
                     (infix_expression
-                      (call_expression
+                      (prefix_expression
                         (field_expression
                           (identifier)
-                          (identifier))
-                        (arguments
                           (identifier)))
                       (operator_identifier)
-                      (infix_expression
-                        (prefix_expression
-                          (field_expression
-                            (identifier)
-                            (identifier)))
-                        (operator_identifier)
+                      (call_expression
                         (call_expression
                           (identifier)
                           (arguments
-                            (identifier)))))
-                    (colon_argument
-                      (indented_block
-                        (val_definition
-                          (identifier)
-                          (field_expression
-                            (identifier)
                             (identifier)))
-                        (call_expression
-                          (field_expression
-                            (identifier)
-                            (identifier))
-                          (arguments
-                            (identifier)))))))))))))))
+                        (colon_argument
+                          (indented_block
+                            (val_definition
+                              (identifier)
+                              (field_expression
+                                (identifier)
+                                (identifier)))
+                            (call_expression
+                              (field_expression
+                                (identifier)
+                                (identifier))
+                              (arguments
+                                (identifier)))))))))))))))))
 
 ================================================================================
 Leading operator statements with trailing comments keep their block
@@ -4529,6 +5290,161 @@ trait RunnerSpec {
           (operator_identifier))))))
 
 ================================================================================
+Alphanumeric operator at the end of a line continues the expression
+================================================================================
+
+object O:
+  def a =
+    x getOrElse
+      y
+  def b = {
+    x orElse
+    y
+  }
+  def c =
+    x `op`
+      y
+  def d =
+    x op // comment
+      y
+  def e =
+    x op_!
+      y
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (function_definition
+        (identifier)
+        (indented_block
+          (infix_expression
+            (identifier)
+            (identifier)
+            (identifier))))
+      (function_definition
+        (identifier)
+        (block
+          (infix_expression
+            (identifier)
+            (identifier)
+            (identifier))))
+      (function_definition
+        (identifier)
+        (indented_block
+          (infix_expression
+            (identifier)
+            (identifier)
+            (identifier))))
+      (function_definition
+        (identifier)
+        (indented_block
+          (infix_expression
+            (identifier)
+            (identifier)
+            (comment)
+            (identifier))))
+      (function_definition
+        (identifier)
+        (indented_block
+          (infix_expression
+            (identifier)
+            (identifier)
+            (identifier)))))))
+
+================================================================================
+Alphanumeric operator at the end of a line before a line that ends it
+================================================================================
+
+object O:
+  def a = {
+    x size
+
+    y
+  }
+  def b = {
+    x size
+    val y = 1
+  }
+  def c =
+    if x isEmpty
+    then 1
+    else 2
+  def d =
+    x size
+  y
+  def e =
+    if (c) foo
+    1
+  def f = (
+    g[T] _
+      compose g[T])
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (function_definition
+        (identifier)
+        (block
+          (postfix_expression
+            (identifier)
+            (identifier))
+          (identifier)))
+      (function_definition
+        (identifier)
+        (block
+          (postfix_expression
+            (identifier)
+            (identifier))
+          (val_definition
+            (identifier)
+            (integer_literal))))
+      (function_definition
+        (identifier)
+        (indented_block
+          (if_expression
+            (postfix_expression
+              (identifier)
+              (identifier))
+            (integer_literal)
+            (integer_literal))))
+      (function_definition
+        (identifier)
+        (indented_block
+          (postfix_expression
+            (identifier)
+            (identifier))))
+      (identifier)
+      (function_definition
+        (identifier)
+        (indented_block
+          (if_expression
+            (parenthesized_expression
+              (identifier))
+            (identifier))
+          (integer_literal)))
+      (function_definition
+        (identifier)
+        (parenthesized_expression
+          (infix_expression
+            (method_value
+              (generic_function
+                (identifier)
+                (type_arguments
+                  (type_identifier)))
+              (wildcard))
+            (identifier)
+            (generic_function
+              (identifier)
+              (type_arguments
+                (type_identifier)))))))))
+
+================================================================================
 Top-level match with cases at width zero and a following statement
 ================================================================================
 
@@ -4743,13 +5659,13 @@ val h = { x: Int => y: Int => x + y }
       (lambda_expression
         (identifier)
         (type_identifier)
-        (ascription_expression
+        (lambda_expression
           (identifier)
           (type_identifier)
-          (infix_type
-            (type_identifier)
+          (infix_expression
+            (identifier)
             (operator_identifier)
-            (type_identifier)))))))
+            (identifier)))))))
 
 ================================================================================
 Lambda takes the rest of an indented block (Scala 3 syntax)
@@ -5070,6 +5986,57 @@ object O {
             (binding
               (identifier)
               (type_identifier)))
+          (identifier))))))
+
+================================================================================
+Polymorphic function with an expression body
+================================================================================
+
+object O {
+  val a = f(
+    xs,
+    [T] =>
+      _ match {
+        case _ => 1
+      }
+  )
+  val b: [T] => T => T = [T] => x => x
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (val_definition
+        (identifier)
+        (call_expression
+          (identifier)
+          (arguments
+            (identifier)
+            (lambda_expression
+              (type_parameters
+                (identifier))
+              (match_expression
+                (wildcard)
+                (case_block
+                  (case_clause
+                    (wildcard)
+                    (integer_literal))))))))
+      (val_definition
+        (identifier)
+        (function_type
+          (type_parameters
+            (identifier))
+          (function_type
+            (parameter_types
+              (type_identifier))
+            (type_identifier)))
+        (lambda_expression
+          (type_parameters
+            (identifier))
+          (identifier)
           (identifier))))))
 
 ================================================================================
@@ -5446,3 +6413,92 @@ object O:
               (identifier)
               (operator_identifier)
               (operator_identifier))))))))
+
+================================================================================
+Braced typed lambda with multiple statements and varied indentation
+================================================================================
+
+val f = _.next { x: M.N =>
+    val a = 1
+  val b = 2
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (val_definition
+    (identifier)
+    (call_expression
+      (field_expression
+        (wildcard)
+        (identifier))
+      (block
+        (lambda_expression
+          (identifier)
+          (stable_type_identifier
+            (identifier)
+            (type_identifier))
+          (val_definition
+            (identifier)
+            (integer_literal))
+          (val_definition
+            (identifier)
+            (integer_literal)))))))
+
+================================================================================
+Braced typed lambda with wildcard parameter
+================================================================================
+
+val f = { _: Foo => () }
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (val_definition
+    (identifier)
+    (block
+      (lambda_expression
+        (wildcard)
+        (type_identifier)
+        (unit)))))
+
+================================================================================
+A match after a bracketed for body matches on the body
+================================================================================
+
+for (x <- xs) x match {
+  case 1 => a
+  case _ => b
+}
+for { x <- xs } x match {
+  case _ => c
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (for_expression
+    (enumerators
+      (enumerator
+        (identifier)
+        (identifier)))
+    (match_expression
+      (identifier)
+      (case_block
+        (case_clause
+          (integer_literal)
+          (identifier))
+        (case_clause
+          (wildcard)
+          (identifier)))))
+  (for_expression
+    (enumerators
+      (enumerator
+        (identifier)
+        (identifier)))
+    (match_expression
+      (identifier)
+      (case_block
+        (case_clause
+          (wildcard)
+          (identifier))))))

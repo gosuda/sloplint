@@ -270,6 +270,42 @@ def first(x: Seq[Int]) = x match {
           (identifier))))))
 
 ================================================================================
+Infix patterns with a star operator
+================================================================================
+
+val P(a, b * c) = p
+
+x match {
+  case P(a * b, xs*) => a
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (val_definition
+    (case_class_pattern
+      (type_identifier)
+      (identifier)
+      (infix_pattern
+        (identifier)
+        (operator_identifier)
+        (identifier)))
+    (identifier))
+  (match_expression
+    (identifier)
+    (case_block
+      (case_clause
+        (case_class_pattern
+          (type_identifier)
+          (infix_pattern
+            (identifier)
+            (operator_identifier)
+            (identifier))
+          (repeat_pattern
+            (identifier)))
+        (identifier)))))
+
+================================================================================
 Capture patterns
 ================================================================================
 
@@ -386,6 +422,74 @@ yield ()
           (arguments
             (integer_literal)))))
     (unit)))
+
+================================================================================
+Given pattern bound by a capture (Scala 3 syntax)
+================================================================================
+
+def f = x match {
+  case ord @ given Ordering[T] => 1
+  case (y @ given Ordering[T], _) => 2
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (function_definition
+    (identifier)
+    (match_expression
+      (identifier)
+      (case_block
+        (case_clause
+          (capture_pattern
+            (identifier)
+            (given_pattern
+              (generic_type
+                (type_identifier)
+                (type_arguments
+                  (type_identifier)))))
+          (integer_literal))
+        (case_clause
+          (tuple_pattern
+            (capture_pattern
+              (identifier)
+              (given_pattern
+                (generic_type
+                  (type_identifier)
+                  (type_arguments
+                    (type_identifier)))))
+            (wildcard))
+          (integer_literal))))))
+
+================================================================================
+Given pattern of a parenthesized type (Scala 3 syntax)
+================================================================================
+
+x match {
+  case given (A & B) => 1
+  case given (A, B) => 2
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (match_expression
+    (identifier)
+    (case_block
+      (case_clause
+        (given_pattern
+          (tuple_type
+            (infix_type
+              (type_identifier)
+              (operator_identifier)
+              (type_identifier))))
+        (integer_literal))
+      (case_clause
+        (given_pattern
+          (tuple_type
+            (type_identifier)
+            (type_identifier)))
+        (integer_literal)))))
 
 ================================================================================
 Capture patterns inside string interpolation patterns

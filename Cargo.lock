@@ -1433,7 +1433,7 @@ dependencies = [
 
 [[package]]
 name = "tree-sitter-scala"
-version = "0.26.3"
+version = "0.26.14"
 dependencies = [
  "cc",
  "tree-sitter-language",

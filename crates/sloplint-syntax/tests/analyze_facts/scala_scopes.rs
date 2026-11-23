@@ -364,3 +364,164 @@ fn symbolic_call_with_unlisted_name_records_the_write() {
         );
     });
 }
+
+#[test]
+fn given_extractor_binds_underscore_prefixed_argument() {
+    // `case given(_status, other)` is an extractor: an underscore-prefixed
+    // name binds a local like any lowercase name, shadowing the outer
+    // variable for writes inside the arm. Before the fix the underscore
+    // rejected the whole arm and both writes leaked out.
+    let source = "def f(v: Any): Int = {\n  var _status = 0\n  var other = 0\n  v match {\n    case given(_status, other) => _status += 1\n    case _ => 0\n  }\n  _status += 10\n  other += 10\n  _status + other\n}\n";
+    with_scala_bindings(source, |found| {
+        let ss = named_all(found, "_status");
+        assert_eq!(
+            ss.len(),
+            1,
+            "the extractor arg shadows the outer var, not a second binding: {found:?}"
+        );
+        assert_eq!(
+            (
+                ss[0].write_lines,
+                ss[0].first_write_line,
+                ss[0].last_write_line
+            ),
+            (1, 8, 8),
+            "the extractor arm's write is shadowed; only the post-match write lands: {found:?}"
+        );
+        let os = named_all(found, "other");
+        assert_eq!(os.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            (
+                os[0].write_lines,
+                os[0].first_write_line,
+                os[0].last_write_line
+            ),
+            (1, 9, 9),
+            "only the post-match write reaches the outer binding: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn given_extractor_with_wildcard_binds_named_argument() {
+    // `case given(x, _)` is an extractor with a wildcard member: the
+    // wildcard binds nothing but must not discard `x`. Before the fix the
+    // arm bound nothing and the write leaked to the outer `x`.
+    let source = "def f(v: Any): Int = {\n  var x = 0\n  v match {\n    case given(x, _) => x += 1\n    case _ => 0\n  }\n  x += 10\n  x\n}\n";
+    with_scala_bindings(source, |found| {
+        let xs = named_all(found, "x");
+        assert_eq!(xs.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            (
+                xs[0].write_lines,
+                xs[0].first_write_line,
+                xs[0].last_write_line
+            ),
+            (1, 7, 7),
+            "the extractor arm's write is shadowed; only the post-match write lands: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn given_extractor_with_imported_type_alias_binds_nothing() {
+    // `case given(_status, other)` is a given of tuple type when both
+    // members are type aliases in scope through `import Types.*`: nothing
+    // binds, so the arm write lands on the outer variable. Before the fix
+    // the alias lookup missed imports and both writes went to an invented
+    // shadowing binder.
+    let source = "object Types {\n  type _status = Int\n  type other = String\n}\ndef f(v: Any): Int = {\n  import Types.*\n  var _status = 0\n  v match {\n    case given(_status, other) => _status += 1\n    case Other() => 0\n    case _ => 0\n  }\n  _status += 10\n  _status\n}\n";
+    with_scala_bindings(source, |found| {
+        let ss = named_all(found, "_status");
+        assert_eq!(
+            ss.len(),
+            1,
+            "no invented binder: only the outer var exists: {found:?}"
+        );
+        assert_eq!(
+            (
+                ss[0].write_lines,
+                ss[0].first_write_line,
+                ss[0].last_write_line
+            ),
+            (2, 9, 13),
+            "both the arm write and the post-match write land on the outer var: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn given_extractor_with_type_shaped_member_binds_the_binder() {
+    // `case given(x, None)` is a Scala 2 extractor application with a
+    // type-shaped member: `x` binds a local while uppercase `None` reads
+    // as a tuple type. Before the fix the uppercase member discarded the
+    // whole arm and the write leaked to the outer `x`.
+    let source = "def f(v: Any): Int = {\n  var x = 0\n  v match {\n    case given(x, None) => x += 1\n    case _ => 0\n  }\n  x += 10\n  x\n}\n";
+    with_scala_bindings(source, |found| {
+        let xs = named_all(found, "x");
+        assert_eq!(xs.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            (
+                xs[0].write_lines,
+                xs[0].first_write_line,
+                xs[0].last_write_line
+            ),
+            (1, 7, 7),
+            "the extractor arm's write is shadowed; only the post-match write lands: {found:?}"
+        );
+    });
+}
+
+// The outer `_status` var's (write count, first, last write line) when
+// `case given(_status, other)` follows `import_line` and `Types` declares
+// the type members `st` and `_status`. A type import leaves the arm write
+// on the outer var, `(2, 9, 12)`; a fresh binder shadows it, `(1, 12, 12)`.
+fn outer_status_writes(import_line: &str) -> (u32, u32, u32) {
+    let source = format!(
+        "object Types {{\n  type st = Int\n  type _status = Int\n}}\ndef f(v: Any): Int = {{\n  {import_line}\n  var _status = 0\n  v match {{\n    case given(_status, other) => _status += 1\n    case _ => 0\n  }}\n  _status += 10\n  _status\n}}\n"
+    );
+    with_scala_bindings(&source, |found| {
+        let ss = named_all(found, "_status");
+        assert_eq!(ss.len(), 1, "only the outer var binds: {found:?}");
+        (
+            ss[0].write_lines,
+            ss[0].first_write_line,
+            ss[0].last_write_line,
+        )
+    })
+}
+
+#[test]
+fn bare_member_import_before_a_comma_names_a_type_alias() {
+    // Each comma-separated import expression resolves on its own, so the
+    // bare `Types._status` before the comma imports the type.
+    assert_eq!(
+        outer_status_writes("import Types._status, Types.st"),
+        (2, 9, 12),
+        "the imported alias binds nothing; the arm write lands outside"
+    );
+}
+
+#[test]
+fn renamed_member_import_names_a_type_alias() {
+    // `Types.st as _status` and `Types.{st => _status}` bring the type
+    // `st` in under the name `_status`.
+    for import_line in ["import Types.st as _status", "import Types.{st => _status}"] {
+        assert_eq!(
+            outer_status_writes(import_line),
+            (2, 9, 12),
+            "`{import_line}` makes `_status` an alias that binds nothing"
+        );
+    }
+}
+
+#[test]
+fn hidden_member_stays_out_of_a_wildcard_import() {
+    // `{_status => _, *}` hides `_status` from the wildcard, so the
+    // extractor member is a fresh binder that shadows the arm write.
+    assert_eq!(
+        outer_status_writes("import Types.{_status => _, *}"),
+        (1, 12, 12),
+        "the hidden name binds; only the post-match write lands outside"
+    );
+}

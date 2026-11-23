@@ -1,8 +1,8 @@
 diff --git a/grammar.js b/grammar.js
-index 6fcbe2c8..8e478b3d 100644
+index a5d890729b48ed162e3c4ade77b9e5f07f570c93..6215f69b3825e4c5bea859453bc4eca2902bb436 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -138,6 +138,10 @@ const OP_TOKEN = {
+@@ -144,6 +144,10 @@
        opRegex(`[*%]${OP_RUN}${OP_TAIL_LEFT}`),
        opRegex(`/[${OP_NSS_END_LEFT}]`),
        opRegex(`/[${OP_NSS}]${OP_RUN}${OP_TAIL_LEFT}`),
@@ -13,7 +13,7 @@ index 6fcbe2c8..8e478b3d 100644
      ),
    ),
    mulRight: token(
-@@ -173,6 +177,13 @@ const OP_LEFT = [
+@@ -179,6 +183,13 @@
  ];
  const opLeft = ($, key) => $[`_op_left_${key}`];
  
@@ -27,7 +27,7 @@ index 6fcbe2c8..8e478b3d 100644
  // The pre-split operator identifier as one token, for pure name contexts
  // (definitions, imports, types, patterns). A state that also allows an infix
  // continuation needs the per-class tokens instead, because one lexer state
-@@ -181,7 +192,7 @@ const OP_ID_UNION = token(
+@@ -187,7 +198,7 @@
    choice(
      opRegex(`[${OP_SINGLE_UNICODE}\\-!#%&*+/\\\\<>?\\u005e\\u007c~]`),
      opRegex(`[${noSlash(OP)}]${OP_STEP}+`),
@@ -36,41 +36,28 @@ index 6fcbe2c8..8e478b3d 100644
    ),
  );
  
-@@ -245,6 +256,11 @@ const nameChoice = $ =>
+@@ -255,6 +266,12 @@
      alias($._alpha_identifier, $.identifier),
      alias($._backquoted_id, $.identifier),
      alias($._soft_identifier, $.identifier),
-+    // `using`/`given` stay soft in every name position, including argument
++    // `using` stays soft in every name position, including argument
 +    // expressions (`f(using())`), qualified types (`using.Context`), and
-+    // statement heads — the `using`/`given` clause reads keep winning where
-+    // their keyword is valid because the alias carries no lexical precedence.
-+    alias(choice("using", "given"), $.identifier),
++    // statement heads — the `using` clause reads keep winning where the
++    // keyword is valid because the alias carries no lexical precedence.
++    // (`given` rides upstream's own alias below.)
++    alias("using", $.identifier),
      alias("this", $.identifier),
      alias("super", $.identifier),
      // `export` is a hard keyword in Scala 3 but an ordinary identifier in
-@@ -278,6 +294,21 @@ const wordOrOpName = $ => choice(wordName($), opName($));
+@@ -291,6 +308,7 @@
  // (lambda parameters, bindings, self types). These must share the identifier
  // rule's per-class tokens: one lexer state cannot hold both flavors of the
  // same string, so swapping a site to $._identifier changes lexing there.
 +
-+// A parameter name: nameChoice minus `using`/`given`. At a clause head the
-+// keyword token is the clause marker, and mid-list a `using`/`given`-named
-+// parameter must carry its type (see class_parameter's second alternative).
-+const paramName = $ =>
-+  choice(
-+    alias($._alpha_identifier, $.identifier),
-+    alias($._backquoted_id, $.identifier),
-+    alias($._soft_identifier, $.identifier),
-+    alias("this", $.identifier),
-+    alias("super", $.identifier),
-+    alias("export", $.identifier),
-+    opName($),
-+  );
-+
  const operandName = $ => choice(nameChoice($), $.operator_identifier);
  
  // A Scala 3 end marker as the last child of the construct it closes. The
-@@ -372,6 +403,11 @@ module.exports = grammar({
+@@ -385,6 +403,11 @@
      // one so the lexer falls back to the grammar definition.
      ...OP_LEFT.map(key => opLeft($, key)),
      $._op_name,
@@ -82,7 +69,7 @@ index 6fcbe2c8..8e478b3d 100644
      // The `>` of `//>`. A regex would have to swallow the `using` after it to
      // see it, and highlighting needs that keyword as a token of its own, so
      // the scanner looks ahead instead and declines the `>` of a plain comment.
-@@ -389,6 +425,13 @@ module.exports = grammar({
+@@ -402,6 +425,13 @@
      // The `?` of a bounded wildcard. Only the bound tells it from the plain
      // one, and the parser cannot see that far.
      $._wildcard_bound_start,
@@ -93,10 +80,22 @@ index 6fcbe2c8..8e478b3d 100644
 +    // at end of line belongs to the fewer-braces colon argument, so the
 +    // parameter's colon takes this token instead.
 +    $._colon_mid,
+     // An alphanumeric operator that ends its line, when the next line starts
+     // its right operand. Only the infix production takes it, so the line
+     // break cannot end the statement after `left op`.
+@@ -413,6 +443,11 @@
+     // An INDENT that opens the body of a case clause. Only the body takes
+     // it, so the scanner knows the region is a case body.
+     $._case_body_indent,
++    // A colon whose indented body is empty because an end marker closes it
++    // (`new Foo:` + `end new`). The scanner only emits it when the next
++    // significant line starts with an end marker, so a marker-less empty
++    // template stays a parse error the way scalac reads it.
++    $._empty_body_colon,
    ],
  
    inline: $ => [
-@@ -437,8 +480,13 @@ module.exports = grammar({
+@@ -482,6 +517,12 @@
    ],
  
    conflicts: $ => [
@@ -106,33 +105,37 @@ index 6fcbe2c8..8e478b3d 100644
 +    [$.val_declaration, $.identifiers, $._comma_definition_pattern],
 +    [$.val_declaration, $._comma_definition_pattern],
 +    [$._comma_definition_pattern, $.identifiers],
-     [$._if_rest],
--    [$.repeat_pattern, $._simple_expression],
-     [$.tuple_pattern, $._simple_expression],
-     [$.tuple_pattern, $._simple_expression, $.binding],
-     // 'for'  '('  pattern  '='  _xml_open_tag  '/>'  •  ':'  … — the element
-@@ -459,12 +507,37 @@ module.exports = grammar({
+     // '['  'enum'  ':'  '{'  'enum'  •  … — under a context bound's brace,
+     // `enum` opens a definition or reads as a type name until the next token.
+     [$.enum_definition, $._type_identifier],
+@@ -504,12 +545,43 @@
      // 'extension' • '{' is either an extension definition with a braced body
      // or the soft identifier `extension` (a Scala 2 id) called with a block.
      [$.extension_definition, $._soft_identifier],
-+    // 'enum' is a soft keyword too: an `enum`-definition and the identifier
-+    // `enum` (Scala 2 code uses it as a parameter or named argument) diverge
-+    // only after the token's continuation is known.
-+    [$.enum_definition, $._soft_identifier],
 +    [$._type_identifier, $.given_pattern],
-+    // Same fork with the unparenthesized typed lambda: `given : T => b` can
-+    // start a given definition, an identifier ascription, or a lambda whose
-+    // parameter is named `given`.
-+    [$.given_definition, $._simple_expression, $.lambda_expression],
-+    [$.self_type, $.given_definition, $._simple_expression, $.lambda_expression],
++    // `given { enum: …`: a self-type ascription on the soft name, or a
++    // plain ascription. Upstream's enum-as-identifier support needs this
++    // fork that the pre-enum grammar did not.
++    [$.self_type, $._simple_expression],
++    // `[A: C] { enum: …`: bound-brace `enum` as self-type, type name, or
++    // plain ascription. Same three-way fork one level deeper in brackets.
++    [$.self_type, $._type_identifier, $._simple_expression],
++    // Same fork for a wildcard head: upstream's enum support needs back
++    // the triple the pre-enum grammar dropped as unnecessary.
++    [$.self_type, $._annotated_type, $._simple_expression],
 +    [$.given_pattern, $._simple_expression],
 +    [$._type_identifier, $.given_pattern, $._simple_expression],
-+    [$.given_definition, $._simple_expression],
-+    [$._using_parameters_clause, $._type_identifier],
++    // `x: T => …` after a polymorphic result: the unparenthesized typed
++    // lambda, the ascription, or the type name. The `=>` tail decides.
++    [$.lambda_expression, $._simple_expression, $._type_identifier],
++    // `_: T => …` in the same spot: wildcard adds the annotated-type
++    // reading to the fork.
++    [$.lambda_expression, $._annotated_type, $._simple_expression],
 +    [$._simple_expression, $.keyword_named_argument],
++    // `given (using …`: `using` as a type name, or a parameter-list
++    // using-clause head. The `:`/`,` tail decides; keep both alive.
++    [$.parameters, $._type_identifier],
 +    [$._simple_expression, $.arguments],
-+    [$.self_type, $.given_definition, $._type_identifier, $._simple_expression, $.lambda_expression],
-+    [$.given_definition, $._type_identifier, $._simple_expression],
 +    [$.given_definition, $._type_identifier],
      [$.binding, $._simple_expression],
      [$.binding, $._type_identifier],
@@ -149,7 +152,7 @@ index 6fcbe2c8..8e478b3d 100644
      [$.parameter_types, $._colon_bindings],
      [$.parameter_types, $.bindings],
      [$.while_expression, $._simple_expression],
-@@ -480,6 +553,8 @@ module.exports = grammar({
+@@ -525,6 +597,8 @@
      // Same separator-or-marker fork as above.
      [$.function_definition],
      [$.val_definition],
@@ -158,15 +161,7 @@ index 6fcbe2c8..8e478b3d 100644
      [$._dot_match_expression],
      [$.var_definition],
      [$.package_clause],
-@@ -493,6 +568,7 @@ module.exports = grammar({
-     // we treat `operator_identifier` as `simple_expression`
-     [$._simple_expression, $.lambda_expression],
-     [$._simple_expression, $._single_lambda_param],
-+    [$.block, $.capture_set],
-     // 'export'  identifier  •  … — a Scala 3 export clause, or the Scala 2
-     // identifier `export` beginning an expression statement. Each reading
-     // dies on the next token ('.' vs a name), so forking settles it. The
-@@ -510,8 +586,6 @@ module.exports = grammar({
+@@ -566,8 +640,6 @@
      [$._class_constructor],
      // 'enum'  _class_constructor  '{'  'case'  operator_identifier  _full_enum_def_repeat1  •  _automatic_semicolon  …
      [$._full_enum_def],
@@ -175,12 +170,8 @@ index 6fcbe2c8..8e478b3d 100644
      // 'enum'  operator_identifier  _automatic_semicolon  '('  ')'  •  ':'  …
      [$.class_parameters],
      // 'for'  operator_identifier  ':'  _annotated_type  •  ':'  …
-@@ -532,20 +606,32 @@ module.exports = grammar({
-     [$._constructor_annotation],
-     [$._constructor_annotation_arguments, $.arguments],
-     [$._constructor_annotation, $.applied_constructor_type],
--    // type_parameters  '=>'  '{'  '}'  •  '['  …
--    [$.block, $.capture_set],
+@@ -594,16 +666,30 @@
+     [$.lambda_expression],
      // '{'  identifier  •  ':' starts the braced typed lambda, the block
      // lambda param, and a statement alike.
 -    [$._simple_expression, $._braced_typed_lambda],
@@ -215,7 +206,7 @@ index 6fcbe2c8..8e478b3d 100644
      // _simple_expression  ':'  '('  name_and_type  ')'  •  '=>'
      // The parenthesized list is either the lambda parameters of a colon
      // argument or a named tuple type on the ascription reading. What follows
-@@ -555,9 +641,6 @@ module.exports = grammar({
+@@ -613,9 +699,6 @@
      [$._annotated_type, $.binding],
      // '['  identifier  ':'  '{'  identifier  •  ':'  — a braced context
      // bound reuses the self-type head shapes.
@@ -225,7 +216,7 @@ index 6fcbe2c8..8e478b3d 100644
      // '['  identifier  ':'  '{'  '('  wildcard  •  ':'  …
      [$.binding, $._annotated_type, $._simple_expression],
      // '['  identifier  ':'  '{'  wildcard  •  '{'  …
-@@ -636,14 +719,29 @@ module.exports = grammar({
+@@ -694,14 +777,29 @@
      compilation_unit: $ =>
        seq(
          optional($._shebang),
@@ -257,44 +248,22 @@ index 6fcbe2c8..8e478b3d 100644
          $.extension_definition,
          $.class_definition,
          $.import_declaration,
-@@ -663,15 +761,18 @@ module.exports = grammar({
+@@ -1058,9 +1156,11 @@
+             choice($._outdent, $._comma_outdent),
+           ),
+         ),
+-        // An empty body, as in `class C:` + `end C`. The scanner gives no
+-        // indent before an end marker there.
+-        alias($._colon_eol, ":"),
++        // An empty body, as in `class C:` + `end C`. Only the scanner's
++        // empty-body colon takes this alternative, so without a following
++        // end marker the body must be non-empty (a marker-less empty
++        // template stays a parse error).
++        alias($._empty_body_colon, ":"),
        ),
  
-     enum_definition: $ =>
--      seq(
--        repeat($.annotation),
--        optional($.modifiers),
--        "enum",
--        $._class_constructor,
--        field("extend", optional($.extends_clause)),
--        field("derive", optional(choice($.derives_clause, $.uses_clause))),
--        field("body", $.enum_body),
--        optional($._end_marker_named_tail),
-+      prec(
-+        1,
-+        seq(
-+          repeat($.annotation),
-+          optional($.modifiers),
-+          "enum",
-+          $._class_constructor,
-+          field("extend", optional($.extends_clause)),
-+          field("derive", optional(choice($.derives_clause, $.uses_clause))),
-+          field("body", $.enum_body),
-+          optional($._end_marker_named_tail),
-+        ),
-       ),
- 
-     _enum_block: $ =>
-@@ -801,7 +902,7 @@ module.exports = grammar({
-     // Scala 3 keywords that are valid identifiers in Scala 2 sources and thus
-     // may appear as package names in import/export paths (e.g. `import io.circe.export.Exported`).
-     _namespace_path_segment: $ =>
--      choice($._identifier, alias(choice("enum", "export"), $.identifier)),
-+      choice($._identifier, alias("export", $.identifier)),
- 
-     namespace_wildcard: $ => prec.left(1, choice("*", "_", "given")),
- 
-@@ -1073,10 +1174,14 @@ module.exports = grammar({
+     _braced_template_body: $ =>
+@@ -1141,10 +1241,14 @@
  
      // Dynamic precedences added here to win over $.call_expression
      self_type: $ =>
@@ -312,7 +281,7 @@ index 6fcbe2c8..8e478b3d 100644
          prec(
            "self_type",
            seq(
-@@ -1132,7 +1237,16 @@ module.exports = grammar({
+@@ -1200,7 +1304,16 @@
      val_definition: $ =>
        seq(
          $._start_val,
@@ -330,7 +299,7 @@ index 6fcbe2c8..8e478b3d 100644
          optional(seq(":", field("type", $._type))),
          "=",
          field("value", $._indentable_expression),
-@@ -1160,7 +1274,16 @@ module.exports = grammar({
+@@ -1228,7 +1341,16 @@
      var_definition: $ =>
        seq(
          $._start_var,
@@ -348,50 +317,34 @@ index 6fcbe2c8..8e478b3d 100644
          optional(seq(":", field("type", $._type))),
          "=",
          field("value", $._indentable_expression),
-@@ -1522,13 +1645,26 @@ module.exports = grammar({
+@@ -1592,12 +1714,16 @@
+         ")",
        ),
  
++    // `using` stays a soft name here (Scala 2 `def f(using: Int)`); `given`
++    // and `enum` ride `$._identifier`. A `(using = 1)` argument list after
++    // an annotation still reads as arguments: the annotation rules do not
++    // admit a bare parameter clause, so no fork arises.
      class_parameter: $ =>
--      seq(
--        repeat($.annotation),
--        optional($.modifiers),
--        optional(choice("val", "var")),
+       seq(
+         repeat($.annotation),
+         optional($.modifiers),
+         optional(choice("val", "var")),
 -        field("name", $._identifier),
--        optional(seq(":", field("type", $._param_type))),
--        optional(seq("=", field("default_value", $.expression))),
-+      choice(
-+        seq(
-+          repeat($.annotation),
-+          optional($.modifiers),
-+          optional(choice("val", "var")),
-+          field("name", paramName($)),
-+          optional(seq(":", field("type", $._param_type))),
-+          optional(seq("=", field("default_value", $.expression))),
-+        ),
-+        // A `using`/`given`-named parameter must be typed: `(using = 1)`
-+        // after an annotation is that annotation's argument list instead.
-+        seq(
-+          repeat($.annotation),
-+          optional($.modifiers),
-+          optional(choice("val", "var")),
-+          field("name", alias(choice("using", "given"), $.identifier)),
-+          ":",
-+          field("type", $._param_type),
-+          optional(seq("=", field("default_value", $.expression))),
-+        ),
++        field("name", choice($._identifier, alias("using", $.identifier))),
+         optional(seq(":", field("type", $._param_type))),
+         optional(seq("=", field("default_value", $.expression))),
        ),
- 
-     /*
-@@ -1545,7 +1681,7 @@ module.exports = grammar({
+@@ -1616,7 +1742,7 @@
            // A given conditional clause takes `tracked val`.
            optional(trackedMod($)),
            optional(choice("val", "var")),
 -          field("name", $._identifier),
-+          field("name", choice($._identifier, alias(choice("using", "given"), $.identifier))),
++          field("name", choice($._identifier, alias("using", $.identifier))),
            ":",
            field("type", $._param_type),
            optional(seq("=", field("default_value", $.expression))),
-@@ -1896,6 +2032,17 @@ module.exports = grammar({
+@@ -1967,6 +2093,17 @@
                field("parameter_types", $.parameter_types),
                $._arrow_then_type,
              ),
@@ -409,7 +362,7 @@ index 6fcbe2c8..8e478b3d 100644
            ),
          ),
        ),
-@@ -1930,6 +2077,20 @@ module.exports = grammar({
+@@ -2001,6 +2138,20 @@
          $.infix_type,
        ),
  
@@ -430,7 +383,7 @@ index 6fcbe2c8..8e478b3d 100644
      _param_type: $ => choice($.lazy_parameter_type, $._param_value_type),
  
      _param_value_type: $ =>
-@@ -1978,6 +2139,27 @@ module.exports = grammar({
+@@ -2049,6 +2200,27 @@
      // SLS 4.1: the pattern of a val/var definition is a Pattern2, so no
      // top-level alternatives or ascription. `val a: A | B` then reads `|`
      // as a union type instead of an alternative pattern.
@@ -458,19 +411,7 @@ index 6fcbe2c8..8e478b3d 100644
      _definition_pattern: $ =>
        choice(
          $._identifier,
-@@ -2019,7 +2201,10 @@ module.exports = grammar({
-         PREC.infix,
-         seq(
-           field("left", $._definition_pattern),
--          field("operator", wordOrOpName($)),
-+          field(
-+            "operator",
-+            choice(wordOrOpName($), alias($._asterisk, $.operator_identifier)),
-+          ),
-           field("right", $._definition_pattern),
-         ),
-       ),
-@@ -2151,10 +2336,17 @@ module.exports = grammar({
+@@ -2239,10 +2411,21 @@
                ),
                field(
                  "parameters",
@@ -487,47 +428,40 @@ index 6fcbe2c8..8e478b3d 100644
 +                  // (-1) readings, which keep their upstream trees where both
 +                  // can apply; this only wins where the tail cannot parse as
 +                  // a type (`=> new …`, `=> { … }` as expression bodies).
-+                  prec.right(prec.dynamic(-5, seq(optional("implicit"), choice(operandName($), $.wildcard), ":", $._type))),
++                  // The name stays clear of the soft keywords (`enum`,
++                  // `given`, `using`, …): upstream already reads those as
++                  // identifiers, and forking them here as well explodes the
++                  // LR table for no pinned shape.
++                  prec.right(prec.dynamic(-5, seq(optional("implicit"), choice(wordOrOpName($), $.wildcard), ":", $._type))),
 +                ),
                ),
                anyArrow(),
                $._indentable_expression,
-@@ -2211,18 +2403,30 @@ module.exports = grammar({
-         ),
-       ),
- 
--    // `{ x: T => body }` is legal only as a block result. The weight beats
--    // the reading of `x: T` as a statement taking a colon argument.
-+    // `{ x: T => body }` is legal only as a block result. The weight sits
-+    // below the colon-argument reading (0): when the `:` ends its line, `x:`
-+    // is a fewer-braces call taking an indented callback, never a typed
-+    // parameter (`{ f: ` + `cb => ... }` calls `f`, it does not bind it).
-+    // A mid-line `:` has no colon-argument alternative, so the lambda
-+    // reading still applies there. The `wildcard` parameter needs no
-+    // self-type weight: `self_type` (dynamic 3) is only reachable inside a
-+    // template body, while this rule lives in expression blocks, where
-+    // `{ _: T => go() }` is the lambda scalac reads.
-     _braced_typed_lambda: $ =>
-       prec.dynamic(
--        1,
-+        2,
-         prec.right(
-           "lambda",
-           seq(
-             field(
-               "parameters",
+@@ -2317,8 +2500,21 @@
                prec.right(
--                seq(optional("implicit"), operandName($), ":", $._type),
-+                seq(
-+                  optional("implicit"),
-+                  operandName($),
+                 seq(
+                   optional("implicit"),
+-                  choice(operandName($), $.wildcard),
+-                  colonEol($),
++                  // Plain alpha names, backquoted names and the wildcard:
++                  // every pinned shape (`x`, `int`, `_`) uses these. The
++                  // soft keywords already read as identifiers through
++                  // upstream's own rules; forking them here as well
++                  // multiplied one LR state per keyword and changed
++                  // long-settled disambiguation below.
++                  choice(
++                    alias($._alpha_identifier, $.identifier),
++                    alias($._backquoted_id, $.identifier),
++                    $.wildcard,
++                  ),
++                  // A mid-line colon only: at end of line the colon
++                  // belongs to the fewer-braces colon argument, so the
++                  // braced reading cannot start there.
 +                  $._colon_mid,
-+                  $._type,
-+                ),
+                   $._type,
+                 ),
                ),
-             ),
-             anyArrow(),
-@@ -2283,19 +2487,37 @@ module.exports = grammar({
+@@ -2386,19 +2582,37 @@
      _if_condition_paren: $ => prec.dynamic(4, $.parenthesized_expression),
  
      _if_condition_then: $ =>
@@ -553,7 +487,7 @@ index 6fcbe2c8..8e478b3d 100644
 +            $._control_tail_gate,
 +            "then",
 +          ),
-+        ),
+         ),
 +        prec.dynamic(
 +          5,
 +          seq(
@@ -562,7 +496,7 @@ index 6fcbe2c8..8e478b3d 100644
 +            $._control_tail_gate,
 +            "then",
 +          ),
-         ),
++        ),
        ),
  
 +    split_call_condition: $ =>
@@ -575,7 +509,7 @@ index 6fcbe2c8..8e478b3d 100644
      /*
       *   MatchClause       ::=  'match' <<< CaseClauses >>>
       *
-@@ -2529,6 +2751,17 @@ module.exports = grammar({
+@@ -2663,6 +2877,17 @@
              optional($._end_marker_kw_tail),
            ),
          ),
@@ -593,7 +527,7 @@ index 6fcbe2c8..8e478b3d 100644
          prec(
            "new",
            seq("new", $.template_body, optional($._end_marker_kw_tail)),
-@@ -2726,10 +2959,34 @@ module.exports = grammar({
+@@ -2864,10 +3089,33 @@
      // binder is admitted in every argument list.
      _argument_list: $ =>
        seq(
@@ -625,11 +559,10 @@ index 6fcbe2c8..8e478b3d 100644
 +        // `f(x =\n  indented`).
 +        field("right", choice(statementExpression($), $.indented_block)),
 +      ),
-+
+     // The spliced argument is a PostfixExpr in both dialects, so an infix or
+     // prefix expression can precede the star: `f(a ++ b*)`, `f(a ++ b: _*)`.
      vararg: $ =>
-       choice(
-         // Scala 3: `args*`. The star in front of a closing delimiter arrives
-@@ -2745,7 +3002,10 @@ module.exports = grammar({
+@@ -2891,7 +3139,10 @@
        ),
  
      // ExprsInParens     ::=  ExprInParens {‘,’ ExprInParens}
@@ -641,7 +574,7 @@ index 6fcbe2c8..8e478b3d 100644
  
      // The opening is a single two-character token so that a bare `$` used as
      // an ordinary identifier (e.g. `$(selector)`) still lexes as an
-@@ -2765,11 +3025,17 @@ module.exports = grammar({
+@@ -2911,11 +3162,17 @@
      quote_expression: $ =>
        prec.left(
          PREC.macro,
@@ -664,7 +597,7 @@ index 6fcbe2c8..8e478b3d 100644
              // TypeBlock ::= {TypeBlockStat semi} Type. The bindings let a
              // quote name the type variables it matches on.
              seq(
-@@ -2779,8 +3045,29 @@ module.exports = grammar({
+@@ -2925,8 +3182,29 @@
                "]",
              ),
              $.identifier,
@@ -696,16 +629,7 @@ index 6fcbe2c8..8e478b3d 100644
            ),
          ),
        ),
-@@ -2802,7 +3089,7 @@ module.exports = grammar({
-     _super_identifier: $ => "super",
- 
-     // https://docs.scala-lang.org/scala3/reference/soft-modifier.html
--    _soft_identifier: $ => prec("soft_id", "extension"),
-+    _soft_identifier: $ => prec("soft_id", choice("extension", "enum")),
- 
-     // alphaid          ::=  upper idrest
-     //                       |  varid
-@@ -2884,6 +3171,13 @@ module.exports = grammar({
+@@ -3032,6 +3310,13 @@
        OP_LEFT.map(key => [`_op_left_${key}`, () => OP_TOKEN[`${key}Left`]]),
      ),
      _op_name: $ => OP_ID_UNION,
@@ -720,10 +644,10 @@ index 6fcbe2c8..8e478b3d 100644
      // XML literals (SLS §10). The external token $._xml_tag_start decides
      // where markup starts. Comment, CDATA and processing instruction
 diff --git a/src/scanner.c b/src/scanner.c
-index b4856af..bd85f9d 100644
+index fb13d797e7cbed0adb6c47a046213ee16176a242..90bef0ad80982c8068e9858f037b28f4eb95ff56 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
-@@ -69,10 +69,32 @@ enum TokenType {
+@@ -69,13 +69,39 @@
    OP_LEFT_MUL,
    OP_LEFT_OTHER,
    OP_NAME,
@@ -744,8 +668,7 @@ index b4856af..bd85f9d 100644
    USING_DIRECTIVE_START,
    CASE_DEFINITION_KEYWORD,
    DEF_SEMICOLON,
--  WILDCARD_BOUND_START
-+  WILDCARD_BOUND_START,
+   WILDCARD_BOUND_START,
 +  // A symbolic quote literal `'op` that ends in `/`. The internal regex
 +  // cannot bound a trailing `/` (no lookahead for a comment opener), so it
 +  // goes out through this token.
@@ -754,10 +677,18 @@ index b4856af..bd85f9d 100644
 +  // typed lambda. The colon that ends its line belongs to the fewer-braces
 +  // colon argument instead.
 +  COLON_MID,
+   WORD_OPERATOR_EOL,
+   NAME_GATE,
+-  CASE_BODY_INDENT
++  CASE_BODY_INDENT,
++  // A `:` whose indented body is empty because an end marker closes it.
++  // The grammar's empty-body alternative takes only this token, so a
++  // marker-less empty template stays a parse error.
++  EMPTY_BODY_COLON,
  };
  
  // Mirrors enum TokenType above.
-@@ -128,10 +150,22 @@ const char* token_name[] = {
+@@ -131,13 +157,26 @@
    "OP_LEFT_MUL",
    "OP_LEFT_OTHER",
    "OP_NAME",
@@ -774,14 +705,18 @@ index b4856af..bd85f9d 100644
    "USING_DIRECTIVE_START",
    "CASE_DEFINITION_KEYWORD",
    "DEF_SEMICOLON",
--  "WILDCARD_BOUND_START"
-+  "WILDCARD_BOUND_START",
+   "WILDCARD_BOUND_START",
 +  "OP_SYMBOL",
 +  "COLON_MID",
+   "WORD_OPERATOR_EOL",
+   "NAME_GATE",
+-  "CASE_BODY_INDENT"
++  "CASE_BODY_INDENT",
++  "EMPTY_BODY_COLON",
  };
  
  typedef struct {
-@@ -240,6 +274,42 @@ static inline bool is_word_start(int32_t c) {
+@@ -256,6 +295,42 @@
    return is_alpha(c) || c == '_' || c == '$';
  }
  
@@ -824,7 +759,7 @@ index b4856af..bd85f9d 100644
  static inline void advance(TSLexer *lexer) { lexer->advance(lexer, false); }
  
  static inline void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
-@@ -285,6 +355,46 @@ static bool is_op_char(int32_t c) {
+@@ -326,6 +401,46 @@
    }
  }
  
@@ -871,7 +806,7 @@ index b4856af..bd85f9d 100644
  // SLS 6.12.3 gives an operator its precedence by its first character. An
  // operator ending in `/` is never right-associative and never an assignment,
  // so the left-associative class is the whole answer. The partition matches
-@@ -299,11 +409,64 @@ static enum TokenType op_left_class(int32_t first) {
+@@ -340,11 +455,64 @@
      case '<': case '>': return OP_LEFT_REL;
      case ':': return OP_LEFT_COLON;
      case '+': case '-': return OP_LEFT_ADD;
@@ -937,7 +872,7 @@ index b4856af..bd85f9d 100644
  // Mirrors the start class of XML_NAME in grammar.js. Every non-ASCII
  // character is accepted, since the letter test is ASCII-only and the internal
  // lexer rejects the name if it is not a letter after all.
-@@ -393,13 +556,20 @@ static bool scan_string_content(TSLexer *lexer, bool is_multiline, StringMode st
+@@ -434,13 +602,20 @@
  
  // Consumes a block comment body, nesting per SLS 1.4. The caller has consumed
  // the leading "/*". With stop_at_newline it stops at the first newline.
@@ -960,7 +895,7 @@ index b4856af..bd85f9d 100644
      if (lexer->lookahead == '/') {
        advance(lexer);
        if (lexer->lookahead == '*') {
-@@ -421,13 +591,13 @@ static bool consume_block_comment_body_ex(TSLexer *lexer, bool stop_at_newline)
+@@ -462,13 +637,13 @@
  
  // Stops just past the matching "*/" (or at EOF).
  static void consume_block_comment_body(TSLexer *lexer) {
@@ -976,7 +911,7 @@ index b4856af..bd85f9d 100644
  }
  
  static bool finish_block_comment(TSLexer *lexer) {
-@@ -467,7 +637,7 @@ static int read_word(TSLexer *lexer, char *buf, int cap,
+@@ -508,7 +683,7 @@
    bool not_keyword = false;
    int32_t last = 0;
    while (is_alnum(lexer->lookahead) || lexer->lookahead == '_' ||
@@ -985,7 +920,7 @@ index b4856af..bd85f9d 100644
      if (lexer->lookahead > 127 || len >= cap - 1) {
        not_keyword = true;
      } else {
-@@ -529,9 +699,12 @@ static bool word_is_expression_tail(TSLexer *lexer) {
+@@ -570,9 +745,12 @@
        "do",    "yield", "while",   "with", "extends"};
    char word[sizeof "finally"];
    int len = read_word(lexer, word, (int)sizeof word, NULL);
@@ -1001,7 +936,7 @@ index b4856af..bd85f9d 100644
  }
  
  // No modifier precedes such a word, so `update match` stays a plain name. A
-@@ -540,7 +713,6 @@ static bool word_is_expression_tail(TSLexer *lexer) {
+@@ -581,7 +759,6 @@
  static bool modifier_word_allowed(TSLexer *lexer) {
    return !word_is_expression_tail(lexer);
  }
@@ -1009,7 +944,7 @@ index b4856af..bd85f9d 100644
  // The right operand of an operator has to start an expression, so `??? match`
  // on its own line is a statement rather than the tail of the line above.
  static bool operand_word_allowed(TSLexer *lexer) {
-@@ -700,6 +872,193 @@ static int32_t skip_char_or_quote_tail(TSLexer *lexer) {
+@@ -771,6 +948,193 @@
    return quoted;
  }
  
@@ -1203,7 +1138,7 @@ index b4856af..bd85f9d 100644
  // Whether the rest of the line holds only blanks and comments. A comment
  // running past the line end still counts as blank because comments are
  // transparent to scalac, but code after a closed block comment does not.
-@@ -724,33 +1083,52 @@ static bool rest_of_line_is_blank_or_comments(TSLexer *lexer) {
+@@ -795,9 +1159,7 @@
        return false;  // a lone '/' is code
      }
      advance(lexer);
@@ -1214,14 +1149,55 @@ index b4856af..bd85f9d 100644
    }
  }
  
+@@ -864,36 +1226,179 @@
+   }
+ }
+ 
 -// Whether a real operand follows the operator. Comments and line breaks are
 -// transparent, so scalac reads the next real token across them. A comment-only
 -// tail to EOF, a closing delimiter and a list separator are all no operand.
++// Whether a lone `:` opens an empty body closed by an end marker: the rest
++// of its line is blank (the caller checked) and the next significant line
++// starts with `end` plus a name. Mirrors the trivial-end rule that fires
++// when that word is scanned. Advances the lexer; the caller must have
++// marked the token end already, or must return false.
++static bool empty_body_end_follows(TSLexer *lexer) {
++  for (;;) {
++    while (!lexer->eof(lexer) && (lexer->lookahead == ' ' ||
++                                   lexer->lookahead == '\t' ||
++                                   lexer->lookahead == '\n' ||
++                                   lexer->lookahead == '\r')) {
++      advance(lexer);
++    }
++    if (lexer->eof(lexer)) {
++      return false;
++    }
++    if (lexer->lookahead != '/') {
++      break;
++    }
++    advance(lexer);
++    if (lexer->lookahead == '/') {
++      while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
++        advance(lexer);
++      }
++      continue;
++    }
++    if (lexer->lookahead != '*') {
++      return false;  // a lone '/' is code
++    }
++    advance(lexer);
++    consume_block_comment_body(lexer);
++  }
++  char word[16];
++  int len = read_word(lexer, word, (int)sizeof word, NULL);
++  return len == 3 && strcmp(word, "end") == 0 && name_follows_word(lexer);
++}
 +// Whether a real operand follows the operator. Comments and a single line
 +// break are transparent, so scalac reads the next real token across them;
 +// a blank line (two line breaks) is a statement separator, so it ends the
 +// expression. A comment-only tail to EOF, a closing delimiter and a list
 +// separator are all no operand. A CRLF pair counts as one line break.
++
  static bool has_operand(TSLexer *lexer) {
 +  int line_breaks = 0;
    for (;;) {
@@ -1237,8 +1213,6 @@ index b4856af..bd85f9d 100644
        advance(lexer);
        continue;
      }
--    if (lexer->lookahead != '/') {
--      return !is_close_or_separator(lexer->lookahead);
 +    if (c == '\r') {
 +      advance(lexer);
 +      if (lexer->lookahead == '\n') {
@@ -1255,21 +1229,22 @@ index b4856af..bd85f9d 100644
 +    }
 +    if (c != '/') {
 +      return !is_close_or_separator(c);
-     }
-     advance(lexer);
-     if (lexer->lookahead == '/') {
-       while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
-         advance(lexer);
-       }
--      continue;
++    }
++    advance(lexer);
++    if (lexer->lookahead == '/') {
++      while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
++        advance(lexer);
++      }
 +      continue;  // the closing newline counts on the next pass
-     }
-     if (lexer->lookahead != '*') {
-       return true;  // a lone '/' is code
-@@ -760,6 +1138,91 @@ static bool has_operand(TSLexer *lexer) {
-   }
- }
- 
++    }
++    if (lexer->lookahead != '*') {
++      return true;  // a lone '/' is code
++    }
++    advance(lexer);
++    consume_block_comment_body(lexer);
++  }
++}
++
 +// Skips blanks and comments for the `enum`/`given` definition peeks. Returns
 +// the character the peek should inspect — the real lookahead, or '/' when a
 +// lone slash (an operator, not a comment) was consumed. The caller may only
@@ -1281,23 +1256,24 @@ index b4856af..bd85f9d 100644
 +    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
 +      advance(lexer);
 +    }
-+    if (lexer->lookahead != '/') {
+     if (lexer->lookahead != '/') {
+-      return !is_close_or_separator(lexer->lookahead);
 +      return lexer->lookahead;
-+    }
-+    advance(lexer);
-+    if (lexer->lookahead == '/') {
+     }
+     advance(lexer);
+     if (lexer->lookahead == '/') {
 +      // A line comment runs to the newline; the declaration prefix never
 +      // crosses it, so the peek stops there too.
-+      while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
-+        advance(lexer);
-+      }
+       while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
+         advance(lexer);
+       }
 +      return lexer->lookahead;
 +    }
 +    if (lexer->lookahead == '*') {
 +      advance(lexer);
 +      consume_block_comment_body(lexer);
-+      continue;
-+    }
+       continue;
+     }
 +    return '/';
 +  }
 +}
@@ -1325,12 +1301,13 @@ index b4856af..bd85f9d 100644
 +      }
 +      return false;
 +    }
-+    if (lexer->lookahead != '*') {
+     if (lexer->lookahead != '*') {
+-      return true;  // a lone '/' is code
 +      return false;  // a lone '/' is an operator, not a comment
-+    }
-+    advance(lexer);
-+    consume_block_comment_body(lexer);
-+  }
+     }
+     advance(lexer);
+     consume_block_comment_body(lexer);
+   }
 +  int32_t c = lexer->lookahead;
 +  if (is_alpha(c) || c == '_' || c == '$' || c == '`' ||
 +      nonascii_id_start(c)) {
@@ -1341,8 +1318,8 @@ index b4856af..bd85f9d 100644
 +    return !is_op_char(lexer->lookahead);
 +  }
 +  return false;
-+}
-+
+ }
+ 
 +// True when the identifier under the lookahead is an interpolator: a name
 +// immediately followed by a quote (`s"..."`). `given s"..."` calls `given`
 +// with an interpolated string, so the name is an operand, not the given's
@@ -1358,15 +1335,19 @@ index b4856af..bd85f9d 100644
  // Reads the run of opchars at the lookahead into `op`. Only the first 3 are
  // kept, since a longer run is never a symbolic keyword. Returns the full
  // length and advances the lexer past the run.
-@@ -1114,6 +1577,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
-     skip(lexer);
-   }
- 
-+
-   // COMMA_OUTDENT is a distinct token so tree-sitter only makes it valid
-   // where comma termination is expected (colon_argument,
-   // _indentable_expression).
-@@ -1736,39 +2200,152 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+@@ -1212,7 +1717,10 @@
+   // Track whether the last returned token was a fewer-braces colon. Comments
+   // in between keep the flag. A false return does not persist state anyway.
+   if (res) {
+-    if (lexer->result_symbol == COLON_EOL) {
++    // The empty-body colon is a fewer-braces colon too: the end marker on
++    // the next significant line still needs its trivial-end semicolon.
++    if (lexer->result_symbol == COLON_EOL ||
++        lexer->result_symbol == EMPTY_BODY_COLON) {
+       scanner->after_colon_eol = 1;
+     } else if (lexer->result_symbol != BLOCK_COMMENT) {
+       scanner->after_colon_eol = 0;
+@@ -2071,6 +2579,53 @@
      return scan_float_with_separator(lexer);
    }
  
@@ -1417,9 +1398,10 @@ index b4856af..bd85f9d 100644
 +    return false;
 +  }
 +
-   // A symbolic operator in postfix position is lexed here, as is the
-   // fewer-braces colon. An operator that continues its expression, on the
-   // same line or over a line break, stays with the internal per-class
+   // Right after `enum`, a symbolic word may be the definition's name. The
+   // Scala 2 reading of `enum` as an identifier also admits an infix operator
+   // there, which the internal lexer would pick. The name wins only when an
+@@ -2126,35 +2681,111 @@
    // tokens: since the postfix reading only exists through this branch, the
    // internal tokens admit no statement split after `left op`.
    // COLON_EOL only ever lexes a lone `:`, so that leg needs a colon first.
@@ -1516,22 +1498,34 @@ index b4856af..bd85f9d 100644
 +    }
 +    if (lone_colon) {
        // A lone `:` ending its line is the fewer-braces colon (scalac's
-       // COLONeol). Deciding it at the token level kills the cross-newline
+       // COLONeol), as is one before a lambda head that ends its line.
+       // Deciding it at the token level kills the cross-newline
        // ascription fork that GLR would otherwise keep alive across the region.
--      if (valid_symbols[COLON_EOL] &&
--          rest_of_line_is_blank_or_comments(lexer)) {
 +      bool blank =
 +          line_blank ||
 +          (!rest_checked && rest_of_line_is_blank_or_comments(lexer));
++      // An empty indented body needs an end marker after it. Only the new
++      // token takes the grammar's empty-body alternative; when the next
++      // significant line does not start one, the colon keeps its usual
++      // reading. `blank` is required first so this probe never advances
++      // past content the checks below still need to see.
++      if (blank && valid_symbols[EMPTY_BODY_COLON] &&
++          empty_body_end_follows(lexer)) {
++        lexer->result_symbol = EMPTY_BODY_COLON;
++        return true;
++      }
 +      if (valid_symbols[COLON_MID] && !blank) {
 +        lexer->result_symbol = COLON_MID;
 +        return true;
 +      }
-+      if (valid_symbols[COLON_EOL] && blank) {
+       if (valid_symbols[COLON_EOL] &&
+-          (rest_of_line_is_blank_or_comments(lexer) ||
+-           colon_lambda_follows(lexer, prev_width))) {
++          (blank || colon_lambda_follows(lexer, prev_width))) {
          lexer->result_symbol = COLON_EOL;
          return true;
        }
-@@ -1779,14 +2356,29 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+@@ -2165,14 +2796,29 @@
      // and the first character alone fixes the SLS 6.12.3 precedence class.
      // `#!` opens a script header, whose path is not part of an operator.
      bool shebang = op_len >= 2 && op[0] == '#' && op[1] == '!';
@@ -1566,7 +1560,7 @@ index b4856af..bd85f9d 100644
        while (!at_comment) {
          int32_t c = lexer->lookahead;
          if (c == '/') {
-@@ -1797,22 +2389,169 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+@@ -2183,22 +2829,169 @@
          } else {
            break;
          }
@@ -1583,10 +1577,6 @@ index b4856af..bd85f9d 100644
        }
        // A Unicode opchar would carry the operator past what this reads, so
 -      // hand the whole token back to the internal lexer.
--      if (ends_in_slash && lexer->lookahead < 0x80) {
--        lexer->mark_end(lexer);
--        lexer->result_symbol = valid_symbols[op_class] ? op_class : OP_NAME;
--        return true;
 +      // hand the whole token back to the internal lexer. A `/`-tail ends the
 +      // infix reading when nothing but a close, a separator, a comment or
 +      // the line end follows — the postfix checks below decide that case
@@ -1597,9 +1587,11 @@ index b4856af..bd85f9d 100644
 +      // lexer's real char classes decide which.
 +      if (ends_in_slash && lexer->lookahead >= 0x80) {
 +        return false;
-       }
--      return false;
-+      if (ends_in_slash && lexer->lookahead < 0x80) {
++      }
+       if (ends_in_slash && lexer->lookahead < 0x80) {
+-        lexer->mark_end(lexer);
+-        lexer->result_symbol = valid_symbols[op_class] ? op_class : OP_NAME;
+-        return true;
 +        bool operand_follows = false;
 +        // Line breaks seen so far. A single line break continues the
 +        // expression (SLS 1.2: `x /\n y` is the `/` infix); a blank line
@@ -1686,7 +1678,8 @@ index b4856af..bd85f9d 100644
 +        }
 +        // The mark still ends the operator at its `/`; the reads above are
 +        // re-lexed for the comment or close that follows.
-+      }
+       }
+-      return false;
 +      if (!at_comment && !ends_in_slash) {
 +        return false;
 +      }
@@ -1744,7 +1737,7 @@ index b4856af..bd85f9d 100644
        return false;
      }
      // These sequences are not infix operators, so the line does not
-@@ -1851,6 +2590,20 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+@@ -2237,6 +3030,20 @@
            return true;
          }
        }
@@ -1765,7 +1758,7 @@ index b4856af..bd85f9d 100644
        return false;
      }
      // The right operand must be able to start an expression. Comments and line
-@@ -1879,8 +2632,8 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+@@ -2265,8 +3072,8 @@
        // (`inline`, `open`, `opaque`, `transparent`, `infix`) stay out: they
        // are ordinary identifiers, so such a line can be the right operand.
        static const char *const definition_words[] = {
@@ -1776,7 +1769,7 @@ index b4856af..bd85f9d 100644
            "package",  "private", "protected", "sealed", "trait", "type",
            "val",      "var",
        };
-@@ -1894,9 +2647,206 @@ static bool scan_impl(void *payload, TSLexer *lexer,
+@@ -2280,9 +3087,206 @@
          lexer->result_symbol = postfix_sym;
          return true;
        }
