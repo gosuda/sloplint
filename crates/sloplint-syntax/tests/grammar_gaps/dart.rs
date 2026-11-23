@@ -2,8 +2,9 @@
 //! `vendor/tree-sitter-dart`.
 //!
 //! Fix repros are accepted by `dart format --output=none` (Dart 3.13.5, no
-//! experiment flags) and must parse cleanly; the published 0.2.0 crate rejects
-//! them. Controls are rejected by the same tool and must keep a parse error.
+//! experiment flags) and must parse cleanly; 20 of the 24 are fixed by
+//! upstream 0.3.0 itself, and the remaining 4 only by `sloplint-grammar.patch`.
+//! Controls are rejected by the same tool and must keep a parse error.
 //! One non-regression guard passes on both grammars.
 //!
 //! Over-accepts and residue (version pins, experimental augmentation syntax,
