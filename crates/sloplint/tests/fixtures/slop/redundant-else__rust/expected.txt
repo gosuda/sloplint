@@ -1,0 +1,3 @@
+a.rs:4 info slop/redundant-else
+a.rs:14 info slop/redundant-else
+a.rs:24 info slop/redundant-else

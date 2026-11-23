@@ -15,9 +15,11 @@ mod asserts;
 mod attrs;
 mod calls;
 mod errors;
+mod flow;
 mod imports;
 mod items;
 mod params;
+mod sleeps;
 
 use ambient::ambient;
 use arms::wildcard_arm;
@@ -66,6 +68,14 @@ pub(crate) struct RustHooks;
 pub(crate) static HOOKS: RustHooks = RustHooks;
 
 impl LangHooks for RustHooks {
+    fn redundant_else(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
+        flow::redundant_else(n, cx)
+    }
+
+    fn blocking_sleep(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
+        sleeps::blocking_sleep(n, cx)
+    }
+
     fn shadow_filter(&self) -> ShadowKind {
         ShadowKind::DeclsAndBinds
     }

@@ -24,6 +24,8 @@ pub fn facts_for(lang: Lang, path: &'static str, source: &'static str) -> FileFa
         impls: Vec::new(),
         wildcard_arms: Vec::new(),
         handlers: Vec::new(),
+        redundant_elses: Vec::new(),
+        blocking_sleeps: Vec::new(),
         assertions: Vec::new(),
         field_copies: Vec::new(),
         dynamic_symbols: Vec::new(),

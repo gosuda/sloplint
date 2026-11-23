@@ -124,9 +124,7 @@ fn binding_arg_ranges(calls: &[Call<'_>]) -> Vec<(u32, u32)> {
 /// initializer argument, so the call is nested in the initializer rather
 /// than a neighbor starting on one of its lines.
 fn contained_in(ranges: &[(u32, u32)], start: u32, end: u32) -> bool {
-    ranges
-        .iter()
-        .any(|&(lo, hi)| lo <= start && end <= hi)
+    ranges.iter().any(|&(lo, hi)| lo <= start && end <= hi)
 }
 
 fn widest_collection(call: &Call<'_>) -> Option<(usize, u32, u32, u32)> {
@@ -181,6 +179,8 @@ mod tests {
             impls: Vec::new(),
             wildcard_arms: Vec::new(),
             handlers: Vec::new(),
+            redundant_elses: Vec::new(),
+            blocking_sleeps: Vec::new(),
             assertions: Vec::new(),
             field_copies: Vec::new(),
             dynamic_symbols: Vec::new(),

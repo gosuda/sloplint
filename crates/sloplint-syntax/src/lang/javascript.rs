@@ -15,6 +15,7 @@ use crate::spec::Role;
 pub(crate) mod ambient;
 pub(crate) mod calls;
 pub(crate) mod dynamic;
+pub(crate) mod flow;
 pub(crate) mod funcs;
 pub(crate) mod imports;
 pub(crate) mod items;
@@ -107,6 +108,10 @@ pub(crate) fn top_level(cx: &Cx<'_, '_>) -> bool {
 }
 
 impl LangHooks for JavaScriptHooks {
+    fn redundant_else(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
+        flow::redundant_else(n, cx)
+    }
+
     fn shadow_filter(&self) -> ShadowKind {
         ShadowKind::DeclsAndBinds
     }

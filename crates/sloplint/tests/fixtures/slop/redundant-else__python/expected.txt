@@ -1,0 +1,4 @@
+a.py:4 info slop/redundant-else
+a.py:11 info slop/redundant-else
+a.py:19 info slop/redundant-else
+a.py:27 info slop/redundant-else
