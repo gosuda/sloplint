@@ -36,11 +36,71 @@ fn lean_callee_root(callee: &str) -> Option<&str> {
 
 /// String argument shapes: plain and raw literals are one static run.
 /// Interpolated `s!"..."/m!"..."` strings measure the longest literal
-/// run between `{...}` holes from the node's own text: the grammar
-/// surfaces no literal-chunk children (only the opener, the
-/// `interpolation` holes, and the closer), so child slices would see
-/// just `s!"` plus `"`. Escapes break plain runs; the linter only
-/// compares against an 8-char floor.
+/// run in the gaps between the parsed `interpolation` hole spans: the
+/// grammar marks every hole, so primed identifiers and nested calls never
+/// leak into the measurement. Escapes break runs but `%` stays literal;
+/// the linter only compares against an 8-char floor.
+fn lean_literal_run(segment: &str) -> u32 {
+    let mut best = 0u32;
+    let mut run = 0u32;
+    let mut chars = segment.chars();
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            best = best.max(run);
+            run = 0;
+            chars.next();
+        } else {
+            run += 1;
+        }
+    }
+    best.max(run)
+}
+
+/// Gaps between the parsed hole spans are literal text. A string whose
+/// opener or closer the parser did not produce falls back to the shared
+/// hole scanner so error-recovery trees still measure something.
+fn lean_interpolated_static(cx: &Cx<'_, '_>, arg: Node<'_>) -> u32 {
+    let raw = text(cx, arg);
+    let Some(rest) = raw
+        .strip_prefix("s!\"")
+        .or_else(|| raw.strip_prefix("m!\""))
+    else {
+        return longest_static_chunk_interp(raw);
+    };
+    let Some(inner) = rest.strip_suffix('"') else {
+        return longest_static_chunk_interp(raw);
+    };
+    let base = arg.start_byte() + (raw.len() - rest.len());
+    let mut holes: Vec<(usize, usize)> = Vec::new();
+    for index in 0..arg.child_count() {
+        let Some(child) = arg.child(index) else {
+            continue;
+        };
+        if child.kind() == "interpolation" {
+            holes.push((
+                child.start_byte().saturating_sub(base),
+                child.end_byte().saturating_sub(base),
+            ));
+        }
+    }
+    let mut best = 0u32;
+    let mut pos = 0usize;
+    for (start, end) in holes {
+        let start = start.min(inner.len());
+        let end = end.min(inner.len());
+        if start > pos
+            && let Some(gap) = inner.get(pos..start)
+        {
+            best = best.max(lean_literal_run(gap));
+        }
+        pos = pos.max(end);
+    }
+    if let Some(gap) = inner.get(pos..) {
+        best = best.max(lean_literal_run(gap));
+    }
+    best
+}
+
 fn lean_arg_shape<'s>(cx: &Cx<'_, 's>, arg: Node<'_>) -> ArgShape<'s> {
     match arg.kind() {
         "str_lit" | "raw_string" => {
@@ -56,17 +116,9 @@ fn lean_arg_shape<'s>(cx: &Cx<'_, 's>, arg: Node<'_>) -> ArgShape<'s> {
                 longest_static: longest_static_chunk(&[inner]),
             }
         }
-        "interpolated_str" => {
-            let raw = text(cx, arg);
-            let inner = raw
-                .strip_prefix("s!\"")
-                .or_else(|| raw.strip_prefix("m!\""))
-                .unwrap_or(raw);
-            let inner = inner.strip_suffix('"').unwrap_or(inner);
-            ArgShape::Str {
-                longest_static: longest_static_chunk_interp(inner),
-            }
-        }
+        "interpolated_str" => ArgShape::Str {
+            longest_static: lean_interpolated_static(cx, arg),
+        },
         "identifier" => ArgShape::Ident(text(cx, arg)),
         _ => ArgShape::Other,
     }

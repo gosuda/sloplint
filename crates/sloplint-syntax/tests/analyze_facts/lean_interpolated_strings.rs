@@ -16,6 +16,9 @@ const PARSED: &str = "def main : IO Unit := do\n  IO.println s!\"parsed {r.size}
 const INVALID: &str = "def main : IO Unit := do\n  IO.println s!\"invalid csv data: {e}\"\n";
 
 const NESTED_CALL: &str = "def main : IO Unit := do\n  IO.println s!\"{f x} tail literal here\"\n";
+const PRIMED_SUFFIX: &str = "def main : IO Unit := do\n  IO.println s!\"{x'} rows of data\"\n";
+
+const PERCENT_LITERAL: &str = "def main : IO Unit := do\n  IO.println s!\"disk 95% done: {n}\"\n";
 
 const HOLE_ONLY: &str = "def aux : IO Unit := do\n  logInfo m!\"{value}\"\n";
 
@@ -69,5 +72,23 @@ fn calls_inside_holes_stay_visible() {
         arg_run(NESTED_CALL, "IO.println"),
         18,
         "` tail literal here` is 18 chars"
+    );
+}
+
+#[test]
+fn primed_hole_keeps_trailing_literal() {
+    assert_eq!(
+        arg_run(PRIMED_SUFFIX, "IO.println"),
+        13,
+        "` rows of data` is 13 chars"
+    );
+}
+
+#[test]
+fn percent_before_word_stays_literal() {
+    assert_eq!(
+        arg_run(PERCENT_LITERAL, "IO.println"),
+        15,
+        "`disk 95% done: ` is 15 chars"
     );
 }
