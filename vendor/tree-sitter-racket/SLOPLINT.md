@@ -53,7 +53,9 @@ single-grammar crate here): `.clang-format`, `.clang-tidy`,
 `pnpm-lock.yaml`, `pyproject.toml`, `setup.py`, `shell.nix`,
 `test/scripts/`.
 
-No local grammar changes: there is no `sloplint-grammar.patch`
+One local scanner change, recorded in `sloplint-grammar.patch`: here-string
+lines compare with `memcmp` plus length (`strcmp` stopped at the embedded
+NUL every `int32` element carries). The grammar is otherwise unchanged
 (the committed parser already accepts every corpus case and every
 sloplint fixture below). `bindings/rust/build.rs` is the upstream
 file unchanged: it compiles `src/parser.c` and `src/scanner.c`

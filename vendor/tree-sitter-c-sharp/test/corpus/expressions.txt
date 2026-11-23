@@ -3056,7 +3056,8 @@ if (aa is [(name: A.B), ..]) { }
                 right: (list_pattern))
               right: (list_pattern
                 (constant_pattern
-                  (integer_literal)))))))))
+                  (integer_literal))
+                (slice_pattern))))))))
   (global_statement
     (if_statement
       condition: (is_pattern_expression
@@ -3069,8 +3070,110 @@ if (aa is [(name: A.B), ..]) { }
                 (constant_pattern
                   (member_access_expression
                     expression: (identifier)
-                    name: (identifier))))))))
+                    name: (identifier))))))
+          (slice_pattern)))
       consequence: (block))))
+
+================================================================================
+Slice-only list patterns before logical operators
+================================================================================
+
+var a = items is [..] && ready;
+var b = items is [..] || ready;
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (global_statement
+    (local_declaration_statement
+      (variable_declaration
+        type: (implicit_type)
+        (variable_declarator
+          name: (identifier)
+          (binary_expression
+            left: (is_pattern_expression
+              expression: (identifier)
+              pattern: (list_pattern
+                (slice_pattern)))
+            right: (identifier))))))
+  (global_statement
+    (local_declaration_statement
+      (variable_declaration
+        type: (implicit_type)
+        (variable_declarator
+          name: (identifier)
+          (binary_expression
+            left: (is_pattern_expression
+              expression: (identifier)
+              pattern: (list_pattern
+                (slice_pattern)))
+            right: (identifier)))))))
+
+================================================================================
+List pattern with slice subpatterns (C# 11)
+================================================================================
+
+class C {
+    string M(string s) => s switch {
+        ['"', .. var inner, '"'] => inner,
+        [.. List<int> all] => "list",
+        [a, .., b] => "bare",
+        _ => s,
+    };
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_declaration
+    name: (identifier)
+    body: (declaration_list
+      (method_declaration
+        returns: (predefined_type)
+        name: (identifier)
+        parameters: (parameter_list
+          (parameter
+            type: (predefined_type)
+            name: (identifier)))
+        body: (arrow_expression_clause
+          (switch_expression
+            (identifier)
+            (switch_expression_arm
+              (list_pattern
+                (constant_pattern
+                  (character_literal
+                    (character_literal_content)))
+                (slice_pattern
+                  (declaration_pattern
+                    type: (implicit_type)
+                    name: (identifier)))
+                (constant_pattern
+                  (character_literal
+                    (character_literal_content))))
+              (identifier))
+            (switch_expression_arm
+              (list_pattern
+                (slice_pattern
+                  (declaration_pattern
+                    type: (generic_name
+                      (identifier)
+                      (type_argument_list
+                        (predefined_type)))
+                    name: (identifier))))
+              (string_literal
+                (string_literal_content)))
+            (switch_expression_arm
+              (list_pattern
+                (constant_pattern
+                  (identifier))
+                (slice_pattern)
+                (constant_pattern
+                  (identifier)))
+              (string_literal
+                (string_literal_content)))
+            (switch_expression_arm
+              (discard)
+              (identifier))))))))
 
 ================================================================================
 Conditional expression with member accesses
@@ -3164,6 +3267,59 @@ if (a?.B != 1) { }
             name: (identifier)))
         right: (integer_literal))
       consequence: (block))))
+
+================================================================================
+Null-conditional assignment (C# 14)
+================================================================================
+
+class C {
+  void M(D obj) {
+    obj?.field = 5;
+    obj?.list[0] = 1;
+    obj?[key] = val;
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_declaration
+    name: (identifier)
+    body: (declaration_list
+      (method_declaration
+        returns: (predefined_type)
+        name: (identifier)
+        parameters: (parameter_list
+          (parameter
+            type: (identifier)
+            name: (identifier)))
+        body: (block
+          (expression_statement
+            (assignment_expression
+              left: (conditional_access_expression
+                condition: (identifier)
+                (member_binding_expression
+                  name: (identifier)))
+              right: (integer_literal)))
+          (expression_statement
+            (assignment_expression
+              left: (element_access_expression
+                expression: (conditional_access_expression
+                  condition: (identifier)
+                  (member_binding_expression
+                    name: (identifier)))
+                subscript: (bracketed_argument_list
+                  (argument
+                    (integer_literal))))
+              right: (integer_literal)))
+          (expression_statement
+            (assignment_expression
+              left: (conditional_access_expression
+                condition: (identifier)
+                (element_binding_expression
+                  (argument
+                    (identifier))))
+              right: (identifier))))))))
 
 ================================================================================
 Conditional access expression with simple member access
@@ -3412,6 +3568,57 @@ var x = nameof(A.B);
                   name: (identifier))))))))))
 
 ================================================================================
+Nameof with unbound generic types (C# 14)
+================================================================================
+
+var x = nameof(List<>);
+var x = nameof(Dictionary<,>);
+var x = nameof(IDictionary<,,>);
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (global_statement
+    (local_declaration_statement
+      (variable_declaration
+        type: (implicit_type)
+        (variable_declarator
+          name: (identifier)
+          (invocation_expression
+            function: (identifier)
+            arguments: (argument_list
+              (argument
+                (generic_name
+                  (identifier)
+                  (type_argument_list)))))))))
+  (global_statement
+    (local_declaration_statement
+      (variable_declaration
+        type: (implicit_type)
+        (variable_declarator
+          name: (identifier)
+          (invocation_expression
+            function: (identifier)
+            arguments: (argument_list
+              (argument
+                (generic_name
+                  (identifier)
+                  (type_argument_list)))))))))
+  (global_statement
+    (local_declaration_statement
+      (variable_declaration
+        type: (implicit_type)
+        (variable_declarator
+          name: (identifier)
+          (invocation_expression
+            function: (identifier)
+            arguments: (argument_list
+              (argument
+                (generic_name
+                  (identifier)
+                  (type_argument_list))))))))))
+
+================================================================================
 Generic invocation expression
 ================================================================================
 
@@ -3433,25 +3640,140 @@ MyFunction<A,B>(1);
             (integer_literal)))))))
 
 ================================================================================
-Dereference versus logical and
+Logical AND vs cast disambiguation with parenthesized LHS (#413)
 ================================================================================
 
-bool c = (a) && b;
+class C {
+  void M() {
+    bool a = (x) && y;
+    bool b = (x) && (y > 0);
+    bool c = (x) && (y) && (z);
+    bool d = (x) && (y) || (z);
+    bool e = !(x) && (y);
+    bool g = (MyType<T>) && c;
+    bool h = (i) && &j;
+    int k = (l) & m;
+    var p1 = (IntPtr) &x;
+    var p2 = &x;
+  }
+}
 
 --------------------------------------------------------------------------------
 
 (compilation_unit
-  (global_statement
-    (local_declaration_statement
-      (variable_declaration
-        type: (predefined_type)
-        (variable_declarator
-          name: (identifier)
-          (cast_expression
-            type: (identifier)
-            value: (prefix_unary_expression
-              (prefix_unary_expression
-                (identifier)))))))))
+  (class_declaration
+    name: (identifier)
+    body: (declaration_list
+      (method_declaration
+        returns: (predefined_type)
+        name: (identifier)
+        parameters: (parameter_list)
+        body: (block
+          (local_declaration_statement
+            (variable_declaration
+              type: (predefined_type)
+              (variable_declarator
+                name: (identifier)
+                (binary_expression
+                  left: (parenthesized_expression
+                    (identifier))
+                  right: (identifier)))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (predefined_type)
+              (variable_declarator
+                name: (identifier)
+                (binary_expression
+                  left: (parenthesized_expression
+                    (identifier))
+                  right: (parenthesized_expression
+                    (binary_expression
+                      left: (identifier)
+                      right: (integer_literal)))))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (predefined_type)
+              (variable_declarator
+                name: (identifier)
+                (binary_expression
+                  left: (binary_expression
+                    left: (parenthesized_expression
+                      (identifier))
+                    right: (parenthesized_expression
+                      (identifier)))
+                  right: (parenthesized_expression
+                    (identifier))))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (predefined_type)
+              (variable_declarator
+                name: (identifier)
+                (binary_expression
+                  left: (binary_expression
+                    left: (parenthesized_expression
+                      (identifier))
+                    right: (parenthesized_expression
+                      (identifier)))
+                  right: (parenthesized_expression
+                    (identifier))))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (predefined_type)
+              (variable_declarator
+                name: (identifier)
+                (binary_expression
+                  left: (prefix_unary_expression
+                    (parenthesized_expression
+                      (identifier)))
+                  right: (parenthesized_expression
+                    (identifier))))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (predefined_type)
+              (variable_declarator
+                name: (identifier)
+                (binary_expression
+                  left: (parenthesized_expression
+                    (generic_name
+                      (identifier)
+                      (type_argument_list
+                        (identifier))))
+                  right: (identifier)))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (predefined_type)
+              (variable_declarator
+                name: (identifier)
+                (binary_expression
+                  left: (parenthesized_expression
+                    (identifier))
+                  right: (prefix_unary_expression
+                    (identifier))))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (predefined_type)
+              (variable_declarator
+                name: (identifier)
+                (cast_expression
+                  type: (identifier)
+                  value: (prefix_unary_expression
+                    (identifier))))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (cast_expression
+                  type: (identifier)
+                  value: (prefix_unary_expression
+                    (identifier))))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (prefix_unary_expression
+                  (identifier))))))))))
 
 ================================================================================
 With expression typical basic form
@@ -3931,3 +4253,454 @@ class C {
                       (identifier))
                     (argument
                       (identifier))))))))))))
+
+================================================================================
+Simple lambda parameters with modifiers (C# 14)
+================================================================================
+
+class C { void M() {
+  var a = (ref x) => x;
+  var b = (out y) => y = 0;
+  var c = (in z) => z;
+  var d = (scoped p) => p;
+  var e = (ref readonly q) => q;
+  var f = (text, out result) => Int32.TryParse(text, out result);
+  var g = (ref x, out y, in z) => 0;
+} }
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_declaration
+    name: (identifier)
+    body: (declaration_list
+      (method_declaration
+        returns: (predefined_type)
+        name: (identifier)
+        parameters: (parameter_list)
+        body: (block
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (lambda_expression
+                  parameters: (modifier)
+                  parameters: (implicit_parameter)
+                  body: (identifier)))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (lambda_expression
+                  parameters: (modifier)
+                  parameters: (implicit_parameter)
+                  body: (assignment_expression
+                    left: (identifier)
+                    right: (integer_literal))))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (lambda_expression
+                  parameters: (modifier)
+                  parameters: (implicit_parameter)
+                  body: (identifier)))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (lambda_expression
+                  parameters: (parameter_list
+                    (parameter
+                      type: (identifier)
+                      name: (identifier)))
+                  body: (identifier)))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (lambda_expression
+                  parameters: (modifier)
+                  parameters: (modifier)
+                  parameters: (implicit_parameter)
+                  body: (identifier)))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (lambda_expression
+                  parameters: (implicit_parameter)
+                  parameters: (modifier)
+                  parameters: (implicit_parameter)
+                  body: (invocation_expression
+                    function: (member_access_expression
+                      expression: (identifier)
+                      name: (identifier))
+                    arguments: (argument_list
+                      (argument
+                        (identifier))
+                      (argument
+                        (identifier))))))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (lambda_expression
+                  parameters: (modifier)
+                  parameters: (implicit_parameter)
+                  parameters: (modifier)
+                  parameters: (implicit_parameter)
+                  parameters: (modifier)
+                  parameters: (implicit_parameter)
+                  body: (integer_literal))))))))))
+
+================================================================================
+Modifier-prefixed parens that are NOT lambda parameter lists (C# 14)
+================================================================================
+
+class C { void M() {
+  var a = (ref obj);
+  var b = (ref x) + 1;
+} }
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_declaration
+    name: (identifier)
+    body: (declaration_list
+      (method_declaration
+        returns: (predefined_type)
+        name: (identifier)
+        parameters: (parameter_list)
+        body: (block
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (parenthesized_expression
+                  (ref_expression
+                    (identifier))))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (cast_expression
+                  type: (ref_type
+                    type: (identifier))
+                  value: (prefix_unary_expression
+                    (integer_literal)))))))))))
+
+================================================================================
+Checked and unchecked expressions as constant patterns
+================================================================================
+
+class C {
+  void M(Exception e) {
+    var a = e is ExternalException { HResult: unchecked((int)0x800401D0) };
+    var b = e is { HResult: checked(5) };
+    var c = e is unchecked(5);
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_declaration
+    name: (identifier)
+    body: (declaration_list
+      (method_declaration
+        returns: (predefined_type)
+        name: (identifier)
+        parameters: (parameter_list
+          (parameter
+            type: (identifier)
+            name: (identifier)))
+        body: (block
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (is_pattern_expression
+                  expression: (identifier)
+                  pattern: (recursive_pattern
+                    type: (identifier)
+                    (property_pattern_clause
+                      (subpattern
+                        (identifier)
+                        (constant_pattern
+                          (checked_expression
+                            (cast_expression
+                              type: (predefined_type)
+                              value: (integer_literal)))))))))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (is_pattern_expression
+                  expression: (identifier)
+                  pattern: (recursive_pattern
+                    (property_pattern_clause
+                      (subpattern
+                        (identifier)
+                        (constant_pattern
+                          (checked_expression
+                            (integer_literal))))))))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (is_pattern_expression
+                  expression: (identifier)
+                  pattern: (constant_pattern
+                    (checked_expression
+                      (integer_literal))))))))))))
+
+================================================================================
+Dereference of a pointer cast or a parenthesized expression
+================================================================================
+
+unsafe class C {
+  void M() {
+    var data = *(MsllHookStruct*)lParam;
+    *(int*)p = 1;
+    var a = *(byte*)p + 1;
+    var d = *(p + 1);
+    var m = (a) * (b + c);
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_declaration
+    (modifier)
+    name: (identifier)
+    body: (declaration_list
+      (method_declaration
+        returns: (predefined_type)
+        name: (identifier)
+        parameters: (parameter_list)
+        body: (block
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (prefix_unary_expression
+                  (cast_expression
+                    type: (pointer_type
+                      type: (identifier))
+                    value: (identifier))))))
+          (expression_statement
+            (assignment_expression
+              left: (prefix_unary_expression
+                (cast_expression
+                  type: (pointer_type
+                    type: (predefined_type))
+                  value: (identifier)))
+              right: (integer_literal)))
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (binary_expression
+                  left: (prefix_unary_expression
+                    (cast_expression
+                      type: (pointer_type
+                        type: (predefined_type))
+                      value: (identifier)))
+                  right: (integer_literal)))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (prefix_unary_expression
+                  (parenthesized_expression
+                    (binary_expression
+                      left: (identifier)
+                      right: (integer_literal)))))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (binary_expression
+                  left: (parenthesized_expression
+                    (identifier))
+                  right: (parenthesized_expression
+                    (binary_expression
+                      left: (identifier)
+                      right: (identifier))))))))))))
+
+================================================================================
+Lambda whose first parameter has an in or out modifier
+================================================================================
+
+class C {
+  void M() {
+    F((in Q q, int i) => 1);
+    var f = (out int a) => 1;
+    var g = (in int a) => a;
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_declaration
+    name: (identifier)
+    body: (declaration_list
+      (method_declaration
+        returns: (predefined_type)
+        name: (identifier)
+        parameters: (parameter_list)
+        body: (block
+          (expression_statement
+            (invocation_expression
+              function: (identifier)
+              arguments: (argument_list
+                (argument
+                  (lambda_expression
+                    parameters: (parameter_list
+                      (parameter
+                        (modifier)
+                        type: (identifier)
+                        name: (identifier))
+                      (parameter
+                        type: (predefined_type)
+                        name: (identifier)))
+                    body: (integer_literal))))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (lambda_expression
+                  parameters: (parameter_list
+                    (parameter
+                      (modifier)
+                      type: (predefined_type)
+                      name: (identifier)))
+                  body: (integer_literal)))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (lambda_expression
+                  parameters: (parameter_list
+                    (parameter
+                      (modifier)
+                      type: (predefined_type)
+                      name: (identifier)))
+                  body: (identifier))))))))))
+
+================================================================================
+List pattern followed by a when clause
+================================================================================
+
+class C {
+  void M(string[] path) {
+    var r = path switch {
+      [var background] when Is(background, "background") => 1,
+      [1, ..] when a.Is("b") => 2,
+      [var x, var y] => 3,
+      _ => 4,
+    };
+    var s = path is [1, 2] list;
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (class_declaration
+    name: (identifier)
+    body: (declaration_list
+      (method_declaration
+        returns: (predefined_type)
+        name: (identifier)
+        parameters: (parameter_list
+          (parameter
+            type: (array_type
+              type: (predefined_type)
+              rank: (array_rank_specifier))
+            name: (identifier)))
+        body: (block
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (switch_expression
+                  (identifier)
+                  (switch_expression_arm
+                    (list_pattern
+                      (declaration_pattern
+                        type: (implicit_type)
+                        name: (identifier)))
+                    (when_clause
+                      (invocation_expression
+                        function: (identifier)
+                        arguments: (argument_list
+                          (argument
+                            (identifier))
+                          (argument
+                            (string_literal
+                              (string_literal_content))))))
+                    (integer_literal))
+                  (switch_expression_arm
+                    (list_pattern
+                      (constant_pattern
+                        (integer_literal))
+                      (slice_pattern))
+                    (when_clause
+                      (invocation_expression
+                        function: (member_access_expression
+                          expression: (identifier)
+                          name: (identifier))
+                        arguments: (argument_list
+                          (argument
+                            (string_literal
+                              (string_literal_content))))))
+                    (integer_literal))
+                  (switch_expression_arm
+                    (list_pattern
+                      (declaration_pattern
+                        type: (implicit_type)
+                        name: (identifier))
+                      (declaration_pattern
+                        type: (implicit_type)
+                        name: (identifier)))
+                    (integer_literal))
+                  (switch_expression_arm
+                    (discard)
+                    (integer_literal))))))
+          (local_declaration_statement
+            (variable_declaration
+              type: (implicit_type)
+              (variable_declarator
+                name: (identifier)
+                (is_pattern_expression
+                  expression: (identifier)
+                  pattern: (list_pattern
+                    (constant_pattern
+                      (integer_literal))
+                    (constant_pattern
+                      (integer_literal))
+                    name: (identifier)))))))))))

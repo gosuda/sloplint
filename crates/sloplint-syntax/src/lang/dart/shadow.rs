@@ -2,7 +2,7 @@ use tree_sitter::Node;
 
 use sloplint_core::facts::Pos;
 
-use crate::hooks::{Cx, child_by_field, named_children, pos_of, text};
+use crate::hooks::{Cx, any_named_child, child_by_field, named_children, pos_of, text};
 
 use super::funcs::closure_shadow_params;
 use super::syntax::has_anon;
@@ -49,7 +49,16 @@ pub(crate) fn closure_bare_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Ve
     }
     while let Some(cur) = stack.pop() {
         if cur.kind() == "formal_parameter" {
-            if child_by_field(cur, "name").is_none() {
+            if let Some(nm) = child_by_field(cur, "name") {
+                // Named function-typed formals (`bool cb()`) are skipped by
+                // parameter collection (their `type` child is only the return
+                // type), so push their names here to keep them shadowing.
+                // The base grammar gave these formals no `name` field and the
+                // bare scan below picked them up.
+                if any_named_child(cur, |c| c.kind() == "formal_parameter_list") {
+                    out.push(text(cx, nm));
+                }
+            } else {
                 push_direct_identifiers(cx, cur, out);
             }
         } else if cur.kind() == "optional_formal_parameters" {
@@ -86,7 +95,7 @@ pub(crate) fn push_pattern_names<'s>(
             }
         } else if !matches!(
             cur.kind(),
-            "qualified"
+            "qualified_name"
                 | "static_member_shorthand"
                 | "symbol_literal"
                 | "label"

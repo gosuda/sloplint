@@ -8,6 +8,8 @@ mod c_scopes;
 mod callback_functions;
 #[path = "analyze_facts/cpp_scopes.rs"]
 mod cpp_scopes;
+#[path = "analyze_facts/csharp_closures.rs"]
+mod csharp_closures;
 #[path = "analyze_facts/csharp_scopes.rs"]
 mod csharp_scopes;
 #[path = "analyze_facts/dart_scopes.rs"]

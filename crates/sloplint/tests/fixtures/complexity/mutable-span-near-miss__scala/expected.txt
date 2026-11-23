@@ -7,3 +7,4 @@
 # outer method, so `sink(count = 1)` in the default calls the parameter's
 # `apply` and records no write; without the guard the write at line 39 would
 # span 30 and fire.
+# given-shadow.scala: outer `_status` is written once on line 4; the line-25 arm write targets the extractor's own `_status` (`case given(_status, _)`), so misattribution would span 21 and fire.

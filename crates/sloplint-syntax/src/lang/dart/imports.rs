@@ -58,6 +58,7 @@ fn is_barrel_edge(kind: &str) -> bool {
         || kind == "comment"
         || kind == "block_comment"
         || kind == "documentation_block_comment"
+        || kind == "documentation_comment"
 }
 
 fn dart_external_root(module: &str) -> Option<&str> {

@@ -40,6 +40,9 @@ module.exports = grammar({
     [$._macro_qualifier_bare, $.type_specifier, $.sized_type_specifier],
     [$._macro_qualifier_bare, $.sized_type_specifier],
     [$.macro_qualifier, $._macro_qualifier_bare, $.type_specifier],
+    // Upstream tree-sitter-c PR #331 (open): covers the fixed-enum-underlying
+    // ambiguity (`typedef enum E : unsigned short ...`).
+    [$.sized_type_specifier, $.enum_specifier],
     [$.type_specifier, $._declarator],
     [$.type_specifier, $.expression],
     [$.type_specifier, $.expression, $.macro_type_specifier],
@@ -1306,21 +1309,17 @@ module.exports = grammar({
       choice(
         seq(
           field('name', $._type_identifier),
-          optional($._enum_underlying_type),
+          optional(seq(':', field('underlying_type', choice($.primitive_type, $.sized_type_specifier, $._type_identifier)))),
           field('body', optional($.enumerator_list)),
         ),
         seq(
-          optional($._enum_underlying_type),
+          optional(seq(':', field('underlying_type', choice($.primitive_type, $.sized_type_specifier, $._type_identifier)))),
           field('body', $.enumerator_list),
         ),
       ),
       optional($.attribute_specifier),
     ),
 
-    _enum_underlying_type: $ => prec.right(seq(
-      ':',
-      field('underlying_type', choice($.primitive_type, $.sized_type_specifier)),
-    )),
 
     enumerator_list: $ => seq(
       '{',
@@ -1599,15 +1598,9 @@ module.exports = grammar({
 
     case_statement: $ => prec.right(seq(
       choice(
-        seq('case', field('value', $.expression)),
-        // sloplint: GNU case range, `case '0' ... '9':` (gcc extension,
-        // accepted by gcc -std=gnu2x and clang).
-        seq(
-          'case',
-          field('value', $.expression),
-          '...',
-          field('end', $.expression),
-        ),
+        // Upstream tree-sitter-c PR #331 (open): GNU case range extension
+        // `case low ... high:` (gcc/clang). Same shape as PR #329.
+        seq('case', field('value', $.expression), optional(seq('...', field('end', $.expression)))),
         'default',
       ),
       ':',

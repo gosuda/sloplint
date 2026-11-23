@@ -21,7 +21,7 @@ pub(crate) fn decl_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s st
         return;
     }
     for c in named_children(n) {
-        if c.kind() == "initialized_variable_definition"
+        if c.kind() == "initialized_variable_declaration"
             && !has_anon(c, "final")
             && !has_anon(c, "const")
             && let Some(nm) = child_by_field(c, "name")
@@ -71,10 +71,10 @@ pub(crate) fn write_roots<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s s
     if n.kind() != "unary_expression" {
         return;
     }
-    let first_anon = (0..n.child_count())
-        .filter_map(|i| n.child(i))
-        .find(|c| !c.is_named());
-    if !first_anon.is_some_and(|c| c.kind() == "++" || c.kind() == "--") {
+    // Upstream 0.3.0 names the operator (`operator: (increment_operator)`);
+    // the anonymous `++` / `--` tokens are gone.
+    let is_incr = child_by_field(n, "operator").is_some_and(|o| o.kind() == "increment_operator");
+    if !is_incr {
         return;
     }
     for c in named_children(n) {

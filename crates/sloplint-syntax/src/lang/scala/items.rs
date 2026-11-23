@@ -6,7 +6,9 @@ use tree_sitter::Node;
 
 use super::calls::{call_identity, func_node};
 use super::funcs::{in_test_dir, seg_last};
-use super::patterns::{is_given_tuple_type, is_pattern_binder, is_value_name};
+use super::patterns::{
+    given_extractor_binders, is_given_tuple_type, is_pattern_binder, is_value_name,
+};
 use crate::hooks::{
     Container, Cx, TypeHead, any_named_child, child_by_field, has_child_kind, named_children,
     narrow, pos_of, text, trimmed,
@@ -290,6 +292,14 @@ pub(crate) fn match_arm<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<WildcardArm>
             // A `given (Int, String)` arm matches a tuple-typed instance;
             // it is not a variant constructor and must not inflate the
             // enum-like variant count.
+            variants += 1;
+            case_class_count += 1;
+        } else if p.kind() == "given_pattern" && given_extractor_binders(cx, p).is_some() {
+            // `case given(value)` is a Scala 2 extractor application, not a
+            // given of tuple type: it is a variant constructor like a case
+            // class pattern. Genuine Scala 3 given types (`case given T`,
+            // `case given (Int, String)`) bind nothing and stay out of the
+            // count.
             variants += 1;
             case_class_count += 1;
         }

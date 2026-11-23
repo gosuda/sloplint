@@ -2,8 +2,9 @@
 //! `vendor/tree-sitter-dart`.
 //!
 //! Fix repros are accepted by `dart format --output=none` (Dart 3.13.5, no
-//! experiment flags) and must parse cleanly; the published 0.2.0 crate rejects
-//! them. Controls are rejected by the same tool and must keep a parse error.
+//! experiment flags) and must parse cleanly; 20 of the 24 are fixed by
+//! upstream 0.3.0 itself, and the remaining 4 only by `sloplint-grammar.patch`.
+//! Controls are rejected by the same tool and must keep a parse error.
 //! One non-regression guard passes on both grammars.
 //!
 //! Over-accepts and residue (version pins, experimental augmentation syntax,
@@ -147,6 +148,16 @@ fn an_extension_type_representation_may_end_in_a_trailing_comma() {
 }
 
 #[test]
+fn a_function_typed_extension_type_representation_parses() {
+    let analysis = run_clean("extension type E(int f(String s)) {}\nvoid main() {}\n");
+    assert!(
+        type_names(&analysis).contains(&"E"),
+        "type E recorded: {:?}",
+        type_names(&analysis)
+    );
+}
+
+#[test]
 fn enum_primary_headers_parse() {
     let analysis = run_clean("enum E() {}\nenum const E2(int a) { x(0) }\nvoid main() {}\n");
     assert!(
@@ -190,6 +201,38 @@ fn a_const_new_declarator_with_a_body_parses() {
         type_names(&analysis).contains(&"C7"),
         "type C7 recorded: {:?}",
         type_names(&analysis)
+    );
+}
+
+#[test]
+fn a_const_factory_with_a_body_parses() {
+    let analysis =
+        run_clean("class C {\n  const factory C() => C._();\n  const C._();\n}\nvoid main() {}\n");
+    assert!(
+        type_names(&analysis).contains(&"C"),
+        "type C recorded: {:?}",
+        type_names(&analysis)
+    );
+}
+
+#[test]
+fn constructor_invocation_callees_keep_their_names() {
+    let analysis = run_clean(
+        "void main() {\n  Logger.new(msg);\n  Foo<int>.named(1);\n  p.Foo.named(2);\n  Foo<int>(3);\n  Foo<int>.new(x);\n  Foo<int>.new /* g */ (y);\n  Logger.new /* reason */ (message);\n}\n",
+    );
+    let callees: Vec<&str> = analysis.facts.calls.iter().map(|c| c.callee).collect();
+    assert_eq!(
+        callees,
+        vec![
+            "Logger.new",
+            "named",
+            "p.Foo.named",
+            "Foo",
+            "new",
+            "new",
+            "Logger.new"
+        ],
+        "constructor callees: {callees:?}"
     );
 }
 
@@ -396,5 +439,20 @@ fn a_truncated_null_aware_cascade_still_reports_a_parse_error() {
     assert!(
         run("main() => 1?.{;\n").parse_error.is_some(),
         "truncated null-aware cascade must not parse"
+    );
+}
+
+#[test]
+fn comment_between_base_and_new_stays_in_the_callee() {
+    // A comment between the base and the `.new` suffix rides along in the
+    // dotted callee text; `CalleePattern` matching skips comments, so a
+    // configured `Logger.new` pattern still matches this call.
+    let analysis =
+        run_clean("void main() {\n  Logger /* reason */ .new(message);\n  Logger.new(other);\n}\n");
+    let callees: Vec<&str> = analysis.facts.calls.iter().map(|c| c.callee).collect();
+    assert_eq!(
+        callees,
+        vec!["Logger /* reason */ .new", "Logger.new"],
+        "constructor callees: {callees:?}"
     );
 }

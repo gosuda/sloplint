@@ -29,6 +29,14 @@ struct ParamCell<'n> {
 }
 
 fn param_from<'s>(cx: &Cx<'_, 's>, cell: ParamCell<'_>, out: &mut Vec<Param<'s>>) {
+    // A nested formal parameter list makes this a function-typed (callback)
+    // parameter. Its direct `type` child is only the return type, so
+    // classifying by it would report e.g. `bool first()` as a boolean flag.
+    // The base grammar gave these formals no `name` field and skipped them;
+    // keep them skipped to preserve findings.
+    if any_named_child(cell.node, |c| c.kind() == "formal_parameter_list") {
+        return;
+    }
     let Some(nm) = child_by_field(cell.node, "name") else {
         return;
     };
@@ -42,6 +50,7 @@ fn param_from<'s>(cx: &Cx<'_, 's>, cell: ParamCell<'_>, out: &mut Vec<Param<'s>>
                 | "comment"
                 | "block_comment"
                 | "documentation_block_comment"
+                | "documentation_comment"
         )
     });
     out.push(Param {
@@ -92,21 +101,21 @@ fn params_from_list<'s>(cx: &Cx<'_, 's>, list: Node<'_>, out: &mut Vec<Param<'s>
 
 fn sole_call_of(body: Node<'_>) -> Option<usize> {
     let only = only_named_child_matching(body, |c| {
-        c.kind() != "comment" && c.kind() != "block_comment"
+        c.kind() != "comment" && c.kind() != "block_comment" && c.kind() != "documentation_comment"
     })?;
-    if only.kind() == "call_expression" {
+    if only.kind() == "call_expression" || only.kind() == "constructor_invocation" {
         return Some(only.id());
     }
     if only.kind() != "block" {
         return None;
     }
     let stmt = only_named_child_matching(only, |c| {
-        c.kind() != "comment" && c.kind() != "block_comment"
+        c.kind() != "comment" && c.kind() != "block_comment" && c.kind() != "documentation_comment"
     })?;
     if stmt.kind() != "return_statement" && stmt.kind() != "expression_statement" {
         return None;
     }
-    first_named_child_matching(stmt, &["call_expression"]).map(|c| c.id())
+    first_named_child_matching(stmt, &["call_expression", "constructor_invocation"]).map(|c| c.id())
 }
 
 fn is_fn_kind(kind: &str) -> bool {
@@ -227,7 +236,12 @@ pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
     let (doc, doc_pos) = preceding_comments(
         cx,
         n,
-        &["comment", "block_comment", "documentation_block_comment"],
+        &[
+            "comment",
+            "block_comment",
+            "documentation_block_comment",
+            "documentation_comment",
+        ],
         &[],
     );
     Some(FunctionHead {

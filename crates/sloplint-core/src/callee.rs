@@ -90,6 +90,18 @@ impl CalleePattern {
         if self.new_only && kind != CallKind::New {
             return false;
         }
+        // Adapters keep comments inside dotted callee spans (a comment may
+        // sit between the base and the `.new` suffix), and patterns name the
+        // code. Strip comments first so `Logger /* why */ .new` still
+        // matches a configured `Logger.new` pattern.
+        let cleaned;
+        let callee = match strip_comments(callee) {
+            Some(text) => {
+                cleaned = text;
+                &cleaned
+            }
+            None => callee,
+        };
         let Some((tail, heads)) = self.segments.split_last() else {
             return false;
         };
@@ -293,6 +305,59 @@ fn split_pattern(text: &str) -> Vec<&str> {
     }
     parts.push(&text[start..]);
     parts
+}
+
+/// Callee text with `/* */` and `//` comments removed, or `None` when the
+/// text holds no comment marker. String members stay intact: a marker
+/// inside `'...'` or `"..."` is code, not a comment.
+fn strip_comments(callee: &str) -> Option<String> {
+    if !callee.contains("/*") && !callee.contains("//") {
+        return None;
+    }
+    let mut out = String::with_capacity(callee.len());
+    let mut chars = callee.char_indices().peekable();
+    while let Some((_, c)) = chars.next() {
+        if c == '"' || c == '\'' || c == '`' {
+            out.push(c);
+            while let Some((_, q)) = chars.next() {
+                out.push(q);
+                if q == '\\' {
+                    if let Some((_, escaped)) = chars.next() {
+                        out.push(escaped);
+                    }
+                } else if q == c {
+                    break;
+                }
+            }
+            continue;
+        }
+        if c == '/' {
+            match chars.peek() {
+                Some((_, '*')) => {
+                    chars.next();
+                    while let Some((_, q)) = chars.next() {
+                        if q == '*' && chars.peek().is_some_and(|(_, s)| *s == '/') {
+                            chars.next();
+                            break;
+                        }
+                    }
+                    continue;
+                }
+                Some((_, '/')) => {
+                    while let Some((_, q)) = chars.next() {
+                        if q == '\n' {
+                            out.push('\n');
+                            break;
+                        }
+                    }
+                    continue;
+                }
+                _ => {}
+            }
+        }
+        out.push(c);
+    }
+    Some(out)
 }
 
 #[cfg(test)]

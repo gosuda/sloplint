@@ -3,6 +3,7 @@ use tree_sitter::Node;
 
 use super::calls::func_node;
 use super::items::first_ident;
+use super::patterns::shadow_names;
 use crate::hooks::{
     Cx, FileSetKind, child_by_field, first_named_child, named_children, pos_of, text,
 };
@@ -188,7 +189,7 @@ fn named_arg_verdict<'s>(cx: &Cx<'_, 's>, n: Node<'_>, arg_name: &str) -> Option
                 // sibling comprehension or later arm already ended, so its
                 // binders are out of scope at the call.
                 if d.start_byte() <= n.start_byte() && n.end_byte() <= d.end_byte() {
-                    super::patterns::shadow_names(cx, d, &mut bound_names);
+                    shadow_names(cx, d, &mut bound_names);
                 }
             }
         }

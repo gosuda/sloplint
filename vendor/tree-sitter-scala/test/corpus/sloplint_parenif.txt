@@ -71,7 +71,7 @@ def f =
     (identifier)
     (indented_block
       (if_expression
-        (split_call_condition
+        (call_expression
           (field_expression
             (identifier)
             (identifier))
@@ -82,6 +82,50 @@ def f =
                 (identifier)
                 (operator_identifier)
                 (integer_literal)))))
+        (indented_block
+          (call_expression
+            (identifier)
+            (arguments
+              (string))))
+        (indented_block
+          (call_expression
+            (identifier)
+            (arguments
+              (string))))))))
+
+================================================================================
+Paren-less if with then on the following line (sloplint SC-PARENIF)
+================================================================================
+
+val x = Some(10)
+
+def f =
+   if x.exists
+         (p)
+   then
+      println("Yes")
+   else
+      println("No")
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (val_definition
+    (identifier)
+    (call_expression
+      (identifier)
+      (arguments
+        (integer_literal))))
+  (function_definition
+    (identifier)
+    (indented_block
+      (if_expression
+        (split_call_condition
+          (field_expression
+            (identifier)
+            (identifier))
+          (arguments
+            (identifier)))
         (indented_block
           (call_expression
             (identifier)

@@ -29,4 +29,5 @@ const z = bitpack(3);
     (identifier)
     (call_expression
       function: (identifier)
-      (integer))))
+      arguments: (arguments
+        (integer)))))

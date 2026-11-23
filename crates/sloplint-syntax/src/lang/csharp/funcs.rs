@@ -323,7 +323,8 @@ pub(crate) fn closure_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<FunctionH
         return None;
     }
     let mut params = Vec::new();
-    if let Some(pl) = child_by_field(n, "parameters") {
+    let mut cursor = n.walk();
+    for pl in n.children_by_field_name("parameters", &mut cursor) {
         closure_param(cx, pl, &mut params);
     }
     Some(FunctionHead {

@@ -18,6 +18,7 @@ val foo =
     (indented_block
       (instance_expression
         (type_identifier)
+        (template_body)
         (comment)
         (end_marker)))))
 
@@ -96,4 +97,5 @@ val foo =
     (indented_block
       (instance_expression
         (type_identifier)
+        (template_body)
         (end_marker)))))

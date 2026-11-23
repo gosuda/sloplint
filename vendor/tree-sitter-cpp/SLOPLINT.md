@@ -88,7 +88,12 @@ reproduced on real code. Every repro below was first accepted by
 - A pointer may appear in the allocated type of `new`: `new int*[n];`.
 - `operator_name` is a valid member-access target: `x.operator==(y);`,
   `x->operator()(1);`, `this->Base::operator=(o);`. `->*` is a valid member
-  access operator: `config->*field;`.
+  access operator: `config->*field;`. The `field_expression` arm
+  (`$.operator_name` in `field('field', ...)`) and the
+  `[$.field_expression, $.template_method]` conflict are textually identical
+  to upstream commit `4910efc` ("fix: Support explicit calls to overloaded
+  operators", closes #252, on master past v0.23.4); the `'->*'` operator
+  spelling is a self-authored extension with no upstream source.
 - New conflicts for the new ambiguities: `storage_class_specifier` with
   `template_instantiation`, `field_expression` and
   `qualified_field_identifier` each with `template_method`, `type_specifier`

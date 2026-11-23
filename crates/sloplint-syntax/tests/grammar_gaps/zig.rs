@@ -11,6 +11,7 @@ use std::sync::LazyLock;
 
 use sloplint_core::lang::Lang;
 use sloplint_core::role::CodeRole;
+use sloplint_core::{Confidence, CustomRuleSpec, Severity};
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
 
 static NO_CUSTOM: LazyLock<CustomRules> =
@@ -173,6 +174,55 @@ fn bitpack_stays_usable_as_an_identifier() {
     ));
 }
 
+// --- Custom call queries follow the upstream `arguments` wrapper -------------
+
+fn custom_call_rules(query: &str) -> CustomRules {
+    CustomRules::compile(&[CustomRuleSpec {
+        id: "custom/zig-call-shape".to_string(),
+        language: "zig".to_string(),
+        severity: Severity::Minor,
+        confidence: Confidence::Medium,
+        message: "call hit".to_string(),
+        why: "test why".to_string(),
+        fix: "test fix".to_string(),
+        query: query.to_string(),
+        include: Vec::new(),
+        exclude: Vec::new(),
+    }])
+    .expect("custom call query compiles")
+}
+
+fn run_with_custom<'a>(source: &'a str, rules: &'a CustomRules) -> Analysis<'a> {
+    let input = FileInput {
+        lang: Lang::Zig,
+        path: "call.zig",
+        source,
+        role: CodeRole::Library,
+    };
+    analyze(&mut Parsers::new(), &input, rules)
+}
+
+#[test]
+fn custom_call_query_uses_the_arguments_wrapper() {
+    let source = "const _ = log(\"hello\");\n";
+    assert_raw_clean(source);
+    let migrated_rules = custom_call_rules(
+        "(call_expression function: (identifier) @callee arguments: (arguments (string) @match))",
+    );
+    let migrated = run_with_custom(source, &migrated_rules);
+    assert_eq!(
+        migrated.custom_hits.len(),
+        1,
+        "the documented arguments shape matches the call"
+    );
+    let legacy_rules =
+        custom_call_rules("(call_expression function: (identifier) @callee (string) @match)");
+    let legacy = run_with_custom(source, &legacy_rules);
+    assert!(
+        legacy.custom_hits.is_empty(),
+        "the pre-rebase direct-child shape still compiles but matches nothing"
+    );
+}
 // --- Controls that already parsed and must keep parsing -----------------------
 
 #[test]
