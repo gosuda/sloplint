@@ -185,6 +185,64 @@ mod tests {
 }
 
 #[test]
+fn mixed_canonical_paths_survive_unrelated_nested_globs() {
+    for unrelated in [
+        "mod other { use simulated::*; }",
+        "mod other { use simulated::{nested::{*}}; }",
+        "fn other() { use simulated::*; }",
+    ] {
+        for function in ["std::thread::sleep", "::std::thread::sleep"] {
+            for duration in ["std::time::Duration", "::std::time::Duration"] {
+                let source = format!(
+                    "{unrelated}\nfn wait() {{\n    {function}({duration}::ZERO);\n    {function}({duration}::from_millis(0));\n    {function}({duration}::from_millis(1));\n}}\n"
+                );
+                assert_eq!(sleep_lines(&source), [5], "{source}");
+            }
+        }
+    }
+}
+
+#[test]
+fn canonical_paths_ignore_globs_in_separate_blocks_and_outer_modules() {
+    let source = r#"fn wait() {
+    { use simulated::*; }
+    ::std::thread::sleep(std::time::Duration::ZERO);
+    std::thread::sleep(::std::time::Duration::from_millis(1));
+}
+mod outer {
+    use simulated::*;
+    mod inner {
+        fn wait() {
+            ::std::thread::sleep(std::time::Duration::ZERO);
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+    }
+}
+"#;
+    assert_eq!(sleep_lines(source), [4, 11]);
+}
+
+#[test]
+fn enclosing_globs_keep_relative_canonical_paths_ambiguous() {
+    let source = r#"mod checks {
+    use simulated::{nested::{*}};
+    fn wait() {
+        ::std::thread::sleep(std::time::Duration::ZERO);
+        ::std::thread::sleep(::std::time::Duration::ZERO);
+        std::thread::sleep(::std::time::Duration::from_millis(1));
+    }
+}
+fn wait() {
+    ::std::thread::sleep(std::time::Duration::ZERO);
+    ::std::thread::sleep(::std::time::Duration::ZERO);
+    use simulated::*;
+    std::thread::sleep(::std::time::Duration::from_millis(1));
+}
+"#;
+    assert_eq!(sleep_lines(source), [4, 10]);
+}
+
+#[test]
 fn absolute_paths_do_not_resolve_through_local_import_aliases() {
     let source = r#"use std::thread as worker;
 use std::thread::sleep as pause;
@@ -202,9 +260,11 @@ fn wait(delay: std::time::Duration) {
 fn absolute_standard_paths_keep_visible_root_ambiguity() {
     for prefix in [
         "use simulated::*;",
+        "use simulated::{nested::{*}};",
         "extern crate simulated as std;",
         "use simulated as std;",
         "mod std { pub mod thread { pub fn sleep(_: u64) {} } }",
+        "mod other { use simulated as std; }",
     ] {
         let source = format!("{prefix} fn wait() {{ ::std::thread::sleep(1); }}");
         assert!(sleep_lines(&source).is_empty(), "{source}");

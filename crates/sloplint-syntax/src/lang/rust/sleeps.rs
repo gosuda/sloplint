@@ -18,15 +18,8 @@ pub(crate) fn blocking_sleep(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
     let function = child_by_field(n, "function")?;
     let mut parts = [""; 4];
     let (length, absolute) = path_parts(function, cx, &mut parts)?;
-    let standard = if absolute {
-        ABS_STD_DURATION
-    } else {
-        STD_DURATION
-    };
     let known = match &parts[..length] {
-        ["std", "thread", "sleep"] => {
-            names(cx, FileSetKind::SleepDurationTypes).contains(&standard)
-        }
+        ["std", "thread", "sleep"] => standard_path(cx, absolute),
         [module, "sleep"] if !absolute && root_scope(cx) => {
             names(cx, FileSetKind::SleepModules).contains(module)
         }
@@ -39,6 +32,48 @@ pub(crate) fn blocking_sleep(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
         return None;
     }
     Some(pos_of(n))
+}
+
+fn standard_path(cx: &Cx<'_, '_>, absolute: bool) -> bool {
+    let known = names(cx, FileSetKind::SleepDurationTypes);
+    if absolute {
+        return known.contains(&ABS_STD_DURATION);
+    }
+    known.contains(&STD_DURATION) || (known.contains(&ABS_STD_DURATION) && !enclosing_glob(cx))
+}
+
+fn enclosing_glob(cx: &Cx<'_, '_>) -> bool {
+    // Module imports do not enter child modules. Block imports remain in scope
+    // throughout their block, including before the use declaration itself.
+    for scope in cx.ancestors().take_while(|node| node.kind() != "mod_item") {
+        if matches!(scope.kind(), "source_file" | "declaration_list" | "block")
+            && uncommented_children(scope)
+                .any(|child| child.kind() == "use_declaration" && contains_glob(child))
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn contains_glob(import: Node<'_>) -> bool {
+    let mut cursor = import.walk();
+    loop {
+        if cursor.node().kind() == "use_wildcard" {
+            return true;
+        }
+        if cursor.goto_first_child() {
+            continue;
+        }
+        loop {
+            if cursor.goto_next_sibling() {
+                break;
+            }
+            if !cursor.goto_parent() {
+                return false;
+            }
+        }
+    }
 }
 
 fn root_scope(cx: &Cx<'_, '_>) -> bool {
@@ -141,14 +176,7 @@ fn zero_duration(n: Node<'_>, cx: &Cx<'_, '_>) -> bool {
         return false;
     }
     match &parts[..length - 1] {
-        ["std", "time", "Duration"] => {
-            let standard = if absolute {
-                ABS_STD_DURATION
-            } else {
-                STD_DURATION
-            };
-            names(cx, FileSetKind::SleepDurationTypes).contains(&standard)
-        }
+        ["std", "time", "Duration"] => standard_path(cx, absolute),
         [alias] if !absolute && root_scope(cx) => {
             names(cx, FileSetKind::SleepDurationTypes).contains(alias)
         }
@@ -280,6 +308,8 @@ fn imported_names<'s>(cx: &Cx<'_, 's>, kind: FileSetKind) -> Vec<&'s str> {
                     if n.parent() == Some(root) {
                         return Vec::new();
                     }
+                    // Canonical relative paths can recover their identity at
+                    // the call site when this glob belongs to another scope.
                     found.retain(|candidate| *candidate == ABS_STD_DURATION);
                     continue;
                 }

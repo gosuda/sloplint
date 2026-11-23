@@ -125,6 +125,9 @@ common `setattr` or `patch.object` shapes also disable recognition for the file.
 Qualified `builtins.setattr` and `delattr` require an explicit, unshadowed
 module import or alias. These built-ins take object targets; only recognized
 patch helpers accept a dotted string such as `"time.sleep"` as a module target.
+The mutation veto also covers a local object that shadows an imported module's
+name. Without object identity, the adapter cannot prove that the target is a
+separate fake; this can hide real sleeps through independently imported aliases.
 
 Java static wildcard imports remain a source of ambiguity even beside an
 explicit `Thread.sleep` import. An imported `sleep(int)` can be selected over
@@ -150,9 +153,14 @@ are outside this rule. Local-only imports, ambiguous wildcard imports, indirect
 aliases, cross-file type resolution, and arbitrary runtime monkey-patching are
 not resolved. Rust root aliases are not assumed to be visible in nested
 modules. Canonical `::std` calls and zero durations survive nested module globs,
-which cannot redirect the absolute root. File-scope globs and explicit `std`
-shadowing remain ambiguous. Leading `::` on a local import alias does not prove
-standard-library identity because absolute path resolution differs by
+which cannot redirect the absolute root. Relative canonical paths remain
+recognizable outside the scopes of nested globs. A glob in an enclosing block
+or the current module keeps those relative paths ambiguous; imports from an
+outer module do not enter a child module under Rust's
+[item scope rules](https://doc.rust-lang.org/reference/names/scopes.html#item-scopes).
+File-scope globs and explicit `std` shadowing still veto recognition throughout
+the file. Leading `::` on a local import alias does not prove standard-library
+identity because absolute path resolution differs by
 [Rust edition](https://doc.rust-lang.org/reference/paths.html#path-qualifiers).
 C# namespace aliases and nested using directives remain unclassified.
 The rule does not prove

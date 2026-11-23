@@ -4,4 +4,6 @@ src/lib.rs:7 info agent/no-sleep-in-tests
 src/lib.rs:14 info agent/no-sleep-in-tests
 tests/clock.rs:5 info agent/no-sleep-in-tests
 tests/clock.rs:6 info agent/no-sleep-in-tests
+tests/scoped_globs.rs:7 info agent/no-sleep-in-tests
+tests/scoped_globs.rs:8 info agent/no-sleep-in-tests
 tests/support/wait.rs:2 info agent/no-sleep-in-tests
