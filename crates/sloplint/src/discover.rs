@@ -27,15 +27,19 @@ pub struct Discovery {
 }
 
 pub fn discover(root: &Path, config: &Config, threads: usize) -> Result<Discovery, RunError> {
-    let patterns: Vec<String> = config
+    let pruned: Vec<String> = config
         .project
         .exclude
         .iter()
         .chain(&config.project.extend_exclude)
-        .chain(&config.project.data_globs)
         .cloned()
         .collect();
-    let excludes = glob_set(&patterns, "project.exclude", Separators::Any)?;
+    let excludes = glob_set(&pruned, "project.exclude", Separators::Any)?;
+    let data = glob_set(
+        &config.project.data_globs,
+        "project.data_globs",
+        Separators::Any,
+    )?;
     let shared = Mutex::new(Found::default());
     walker(root, excludes)
         .threads(threads)
@@ -43,6 +47,7 @@ pub fn discover(root: &Path, config: &Config, threads: usize) -> Result<Discover
         .visit(&mut Collect {
             root,
             config,
+            data: &data,
             shared: &shared,
         });
     let Found {
@@ -83,7 +88,7 @@ impl Found {
         self.errors.append(&mut other.errors);
     }
 
-    fn record(&mut self, root: &Path, config: &Config, entry: &DirEntry) {
+    fn record(&mut self, root: &Path, config: &Config, data: &GlobSet, entry: &DirEntry) {
         let Some(kind) = entry.file_type() else {
             return;
         };
@@ -99,9 +104,9 @@ impl Found {
             self.manifests.insert((mkind, dir));
         }
         let decision = if kind.is_file() {
-            decide_file_name(relative, config)
+            decide_file_name(relative, config, data)
         } else {
-            decide_non_file_name(relative, config)
+            decide_non_file_name(relative, config, data)
         };
         match decision {
             NameDecision::Analyze { rel, lang } => self.entries.push(Entry {
@@ -149,19 +154,29 @@ pub(crate) enum NameDecision {
     Ignored,
 }
 
-pub(crate) fn decide_file_name(relative: &Path, config: &Config) -> NameDecision {
-    decide_name(relative, true, config)
+pub(crate) fn decide_file_name(relative: &Path, config: &Config, data: &GlobSet) -> NameDecision {
+    decide_name(relative, true, config, data)
 }
 
-pub(crate) fn decide_non_file_name(relative: &Path, config: &Config) -> NameDecision {
-    decide_name(relative, false, config)
+pub(crate) fn decide_non_file_name(
+    relative: &Path,
+    config: &Config,
+    data: &GlobSet,
+) -> NameDecision {
+    decide_name(relative, false, config, data)
 }
 
 // Decides from the name text alone, never the filesystem: callers hold names of entries that may not exist.
-fn decide_name(relative: &Path, is_file: bool, config: &Config) -> NameDecision {
+fn decide_name(relative: &Path, is_file: bool, config: &Config, data: &GlobSet) -> NameDecision {
     match normalize_rel_path(relative) {
         Some(rel) => match enabled_lang(&rel, config) {
-            Some(lang) if is_file => NameDecision::Analyze { rel, lang },
+            Some(lang) if is_file => {
+                if data.is_match(&rel) {
+                    NameDecision::Skipped("data")
+                } else {
+                    NameDecision::Analyze { rel, lang }
+                }
+            }
             Some(_) => NameDecision::Skipped("non-regular"),
             None => NameDecision::Ignored,
         },
@@ -178,6 +193,7 @@ fn decide_name(relative: &Path, is_file: bool, config: &Config) -> NameDecision 
 struct Collect<'a> {
     root: &'a Path,
     config: &'a Config,
+    data: &'a GlobSet,
     shared: &'a Mutex<Found>,
 }
 
@@ -186,6 +202,7 @@ impl<'a> ParallelVisitorBuilder<'a> for Collect<'a> {
         Box::new(Visitor {
             root: self.root,
             config: self.config,
+            data: self.data,
             local: Found::default(),
             shared: self.shared,
         })
@@ -195,6 +212,7 @@ impl<'a> ParallelVisitorBuilder<'a> for Collect<'a> {
 struct Visitor<'a> {
     root: &'a Path,
     config: &'a Config,
+    data: &'a GlobSet,
     local: Found,
     shared: &'a Mutex<Found>,
 }
@@ -202,7 +220,7 @@ struct Visitor<'a> {
 impl ParallelVisitor for Visitor<'_> {
     fn visit(&mut self, result: Result<DirEntry, ignore::Error>) -> WalkState {
         match result {
-            Ok(entry) => self.local.record(self.root, self.config, &entry),
+            Ok(entry) => self.local.record(self.root, self.config, self.data, &entry),
             Err(error) => self.local.errors.push(error.to_string()),
         }
         WalkState::Continue
@@ -273,14 +291,25 @@ mod tests {
     use sloplint_core::lang::Lang;
 
     use super::{NameDecision, decide_file_name, decide_non_file_name};
+    use crate::globs::{Separators, glob_set};
+
+    fn data_set() -> globset::GlobSet {
+        glob_set(
+            &Config::default().project.data_globs,
+            "project.data_globs",
+            Separators::Any,
+        )
+        .expect("default data globs build")
+    }
 
     #[test]
     fn non_utf8_skip_decision_is_hermetic() {
         let config = Config::default();
+        let data = data_set();
         let valid = Path::new("src/lib.rs");
         assert!(
             matches!(
-                decide_file_name(valid, &config),
+                decide_file_name(valid, &config, &data),
                 NameDecision::Analyze { .. }
             ),
             "the valid sibling analyzes"
@@ -291,7 +320,7 @@ mod tests {
             let bad = Path::new(std::ffi::OsStr::from_bytes(b"other/bad\xff.rs"));
             assert!(
                 matches!(
-                    decide_file_name(bad, &config),
+                    decide_file_name(bad, &config, &data),
                     NameDecision::Skipped("non-utf8-name")
                 ),
                 "the invalid-byte name is a counted skip"
@@ -302,7 +331,7 @@ mod tests {
             let standin = Path::new("other/bad\u{FFFD}.rs");
             assert!(
                 matches!(
-                    decide_file_name(standin, &config),
+                    decide_file_name(standin, &config, &data),
                     NameDecision::Analyze { .. }
                 ),
                 "the standin name analyzes"
@@ -313,18 +342,19 @@ mod tests {
     #[test]
     fn lossy_equal_file_decision_is_hermetic() {
         let config = Config::default();
+        let data = data_set();
         let valid = Path::new("other/bad\u{FFFD}.rs");
         let link = Path::new("other/link.rs");
         assert!(
             matches!(
-                decide_file_name(valid, &config),
+                decide_file_name(valid, &config, &data),
                 NameDecision::Analyze { .. }
             ),
             "the valid name analyzes"
         );
         assert!(
             matches!(
-                decide_non_file_name(link, &config),
+                decide_non_file_name(link, &config, &data),
                 NameDecision::Skipped("non-regular")
             ),
             "the link is a counted skip"
@@ -335,7 +365,7 @@ mod tests {
             let invalid = Path::new(std::ffi::OsStr::from_bytes(b"other/bad\xff.rs"));
             assert!(
                 matches!(
-                    decide_file_name(invalid, &config),
+                    decide_file_name(invalid, &config, &data),
                     NameDecision::Skipped("non-utf8-name")
                 ),
                 "the invalid-byte name is a counted skip"
@@ -346,18 +376,19 @@ mod tests {
     #[test]
     fn lossy_equal_dir_decision_is_hermetic() {
         let config = Config::default();
+        let data = data_set();
         let pipe = Path::new("parent/scope\u{FFFD}/pipe.rs");
         let child = Path::new("parent/scope\u{FFFD}/b.rs");
         assert!(
             matches!(
-                decide_non_file_name(pipe, &config),
+                decide_non_file_name(pipe, &config, &data),
                 NameDecision::Skipped("non-regular")
             ),
             "the FIFO is a counted skip"
         );
         assert!(
             matches!(
-                decide_file_name(child, &config),
+                decide_file_name(child, &config, &data),
                 NameDecision::Analyze { .. }
             ),
             "the valid child analyzes"
@@ -368,7 +399,7 @@ mod tests {
             let invalid_child = Path::new(std::ffi::OsStr::from_bytes(b"parent/scope\xff/b.rs"));
             assert!(
                 matches!(
-                    decide_file_name(invalid_child, &config),
+                    decide_file_name(invalid_child, &config, &data),
                     NameDecision::Skipped("non-utf8-name")
                 ),
                 "the invalid-byte child is a counted skip"
@@ -379,8 +410,9 @@ mod tests {
     #[test]
     fn boundary_non_utf8_skip_decision_is_hermetic() {
         let config = Config::default();
+        let data = data_set();
         let valid = Path::new("src/bad\u{FFFD}.rs");
-        let NameDecision::Analyze { rel, lang } = decide_file_name(valid, &config) else {
+        let NameDecision::Analyze { rel, lang } = decide_file_name(valid, &config, &data) else {
             panic!("valid U+FFFD name must analyze");
         };
         assert_eq!(rel, "src/bad\u{FFFD}.rs");
@@ -391,7 +423,7 @@ mod tests {
             let bad = Path::new(std::ffi::OsStr::from_bytes(b"src/bad\xff.rs"));
             assert!(
                 matches!(
-                    decide_file_name(bad, &config),
+                    decide_file_name(bad, &config, &data),
                     NameDecision::Skipped("non-utf8-name")
                 ),
                 "invalid-byte name is a counted skip"
@@ -402,11 +434,30 @@ mod tests {
             let second = Path::new("src/other\u{FFFD}.rs");
             assert!(
                 matches!(
-                    decide_file_name(second, &config),
+                    decide_file_name(second, &config, &data),
                     NameDecision::Analyze { .. }
                 ),
                 "replacement-character names analyze where raw bytes are unrepresentable"
             );
         }
+    }
+    #[test]
+    fn testdata_file_is_a_counted_data_skip() {
+        let config = Config::default();
+        let data = data_set();
+        assert!(
+            matches!(
+                decide_file_name(Path::new("sub/testdata/x.lgo"), &config, &data),
+                NameDecision::Skipped("data")
+            ),
+            "a supported file under testdata is a counted skip"
+        );
+        assert!(
+            matches!(
+                decide_file_name(Path::new("sub/x.lgo"), &config, &data),
+                NameDecision::Analyze { .. }
+            ),
+            "the sibling outside testdata analyzes"
+        );
     }
 }
