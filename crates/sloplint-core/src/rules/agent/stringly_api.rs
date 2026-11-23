@@ -66,6 +66,9 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for StringlyApi {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        if matches!(facts.lang, Lang::Dafny) {
+            return;
+        }
         // Consecutive same-type binders `(x y z : Nat)` are the canonical
         // Lean statement shape, and bundling them would break `rw`
         // ergonomics: there is no per-binder narrowing that keeps a true

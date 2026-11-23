@@ -10,6 +10,8 @@ mod callback_functions;
 mod cpp_scopes;
 #[path = "analyze_facts/csharp_scopes.rs"]
 mod csharp_scopes;
+#[path = "analyze_facts/dafny_print_calls.rs"]
+mod dafny_print_calls;
 #[path = "analyze_facts/dart_scopes.rs"]
 mod dart_scopes;
 #[path = "analyze_facts/declaration_scopes.rs"]

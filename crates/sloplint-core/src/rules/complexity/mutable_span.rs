@@ -69,6 +69,9 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for MutableSpan {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        if matches!(facts.lang, Lang::Dafny) {
+            return;
+        }
         let thresholds = self.effective_thresholds(facts.lang);
         for binding in &facts.bindings {
             if binding.write_lines < 2 {
