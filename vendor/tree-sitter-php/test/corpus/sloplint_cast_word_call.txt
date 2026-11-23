@@ -1,0 +1,51 @@
+==========================
+Cast words as plain function names
+==========================
+
+<?php
+function int($x) { return $x; }
+echo int(1);
+
+---
+
+(program
+  (php_tag)
+  (function_definition
+    (name)
+    (formal_parameters
+      (simple_parameter
+        (variable_name
+          (name))))
+    (compound_statement
+      (return_statement
+        (variable_name
+          (name)))))
+  (echo_statement
+    (function_call_expression
+      (name)
+      (arguments
+        (argument
+          (integer))))))
+
+==========================
+Cast words as constant subscripts
+==========================
+
+<?php
+const OBJECT = [1];
+echo OBJECT[0];
+
+---
+
+(program
+  (php_tag)
+  (const_declaration
+    (const_element
+      (name)
+      (array_creation_expression
+        (array_element_initializer
+          (integer)))))
+  (echo_statement
+    (subscript_expression
+      (name)
+      (integer))))
