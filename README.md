@@ -112,7 +112,7 @@ major_at = 18                          # minor_at still comes from the preset
 level = "minor"                       # enables a rule the standard profile leaves off
 ```
 
-A `[languages.<key>]` table sets `log_callees`, the call names the language treats as log calls. `grep/contiguous-log-literal` and `slop/zombie-catch` read it. `sloplint init` writes one such table per language with the default names.
+A `[languages.<key>]` table sets `log_callees`, the call names the language treats as log calls. `grep/contiguous-log-literal` and `slop/zombie-catch` read it. `sloplint init` writes one such table per language with the default names. Lean ignores configured log callees: `grep/contiguous-log-literal` stays off Lean because elaborator diagnostics and `#do` test scaffolding leave no syntactic signal for a true positive.
 
 ### Ratchet mode
 
@@ -237,7 +237,7 @@ Role shifts lower findings by role (K = keep, L1 = lower one rung, L2 = lower tw
 | complexity/mutable-span | Off | Off | Off | info | low | K | L1 | K | O | L1 | Flags bindings written on 2+ lines spanning >= cut lines. Writes count on the innermost binding of a name. In Logos the cutoffs rise to at least 30/45/60/90 lines |
 | complexity/boolean-params | Off | Off | Off | info | low | L1 | O | L1 | O | O | Flags exported fns with >= 2 Bool or bool-defaulted params, skipping variadic, keyword-only, and overloads |
 | complexity/import-fan-out | Off | Off | minor | major | medium | L1 | L1 | K | L1 | L1 | Counts distinct third-party package roots of module-scope imports; barrel reexport-only files skipped |
-| grep/contiguous-log-literal | Off | Off | Off | info | low | K | O | L1 | O | O | Flags message-bearing log calls with missing, dynamic, or short static messages; a literal, template, interpolation, or concatenation passes only when its longest static run reaches 8 chars. In Bash, option words such as `-n` are arguments like any other word. Off for TLA+ |
+| grep/contiguous-log-literal | Off | Off | Off | info | low | K | O | L1 | O | O | Flags message-bearing log calls with missing, dynamic, or short static messages; a literal, template, interpolation, or concatenation passes only when its longest static run reaches 8 chars. In Bash, option words such as `-n` are arguments like any other word. Off for Lean. Off for TLA+ |
 | grep/generic-name | Off | Off | minor | minor | low | L1 | O | K | O | O | Flags exported fns named from the generic denylist. Off for TLA+ |
 | grep/homonym-definitions | Off | Off | Off | info | low | K | O | K | O | O | Flags free fn or type names defined in >= 8 files (5 strict) of one package; definition sites in test, bench or example code are not counted. Off for Alloy. Off for Logos. Off for TLA+ |
 | grep/multiline-argument | Off | Off | Off | info | low | K | O | L1 | O | O | Strict-only: flags collection args spanning >= 15 lines outside tests, generated files, and binding initializers |

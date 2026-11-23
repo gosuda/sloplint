@@ -69,6 +69,13 @@ impl FileRule for StringlyApi {
         if matches!(facts.lang, Lang::Dafny) {
             return;
         }
+        // Consecutive same-type binders `(x y z : Nat)` are the canonical
+        // Lean statement shape, and bundling them would break `rw`
+        // ergonomics: there is no per-binder narrowing that keeps a true
+        // positive, so the rule stays off Lean.
+        if matches!(facts.lang, Lang::Lean) {
+            return;
+        }
         for function in &facts.functions {
             if !function.actionable_api() || function.is_overload {
                 continue;
