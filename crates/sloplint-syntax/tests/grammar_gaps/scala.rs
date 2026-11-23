@@ -515,3 +515,19 @@ fn parenthesized_using_argument_records_no_phantom_call() {
     let analysis = run_clean(source);
     assert_eq!(callees(&analysis), ["f"]);
 }
+
+#[test]
+fn nested_using_call_after_first_argument_stays_a_call() {
+    // A context-argument marker must start the argument list, so `using(2)`
+    // after a comma is an ordinary call to a method named `using`, not the
+    // marker. Both callees are recorded.
+    let source = concat!(
+        "object O {\n",
+        "  def using(x: Int) = x\n",
+        "  def twice(a: Int, b: Int) = a\n",
+        "  val n = twice(0, using(2))\n",
+        "}\n",
+    );
+    let analysis = run_clean(source);
+    assert_eq!(callees(&analysis), ["twice", "using"]);
+}
