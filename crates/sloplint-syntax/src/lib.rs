@@ -282,8 +282,11 @@ fn lean_command_rescue<'s>(
             bad.extend(lean_gap_spans(root, &text, &line_starts));
             (lean_command_groups(root), bad)
         };
-        if groups.is_empty() || bad.is_empty() {
+        if groups.is_empty() {
             return None;
+        }
+        if bad.is_empty() {
+            return lean_fragment_fallback(parsers, input, &tree, custom, first_pos);
         }
         let mut fresh = false;
         for &(start, end) in &groups {
@@ -327,6 +330,120 @@ fn lean_command_rescue<'s>(
         }
     }
     None
+}
+
+/// Top-level Lean command node kinds: the grammar's `_command` alternation
+/// plus `import` and the `module` preamble. Fragments of a failed command
+/// carry term kinds (`identifier`, `binders`, `app`, ...) instead.
+const LEAN_COMMAND_KINDS: &[&str] = &[
+    "import",
+    "prelude",
+    "check",
+    "eval",
+    "print",
+    "reduce",
+    "namespace",
+    "section",
+    "end",
+    "variable",
+    "universe",
+    "open",
+    "export",
+    "attribute_cmd",
+    "initialize",
+    "set_option",
+    "deriving_cmd",
+    "assert_cmd",
+    "decl_doc_cmd",
+    "grind_pattern_cmd",
+    "alias_cmd",
+    "notation_decl_cmd",
+    "syntax_cmd",
+    "macro_cmd",
+    "macro_rules_cmd",
+    "elab_rules_cmd",
+    "elab_cmd",
+    "omit",
+    "register_cmd",
+    "unif_hint_cmd",
+    "declare_syntax_cat_cmd",
+    "mutual",
+    "hash_cmd",
+    "custom_command",
+    "run_meta_cmd",
+    "include_cmd",
+    "lake_cmd",
+    "declaration",
+];
+
+/// Whether a top-level node is a complete Lean command rather than a
+/// fragment of a failed one.
+fn is_lean_command(node: Node<'_>) -> bool {
+    LEAN_COMMAND_KINDS.contains(&node.kind())
+}
+
+/// Last resort for a root no error span names. An `ERROR` root can expose
+/// the failed command as loose fragments with neither child errors nor
+/// token gaps, so the span rescue has nothing to blank. Blank the rows of
+/// every child run that is not a recognized command and reparse once: when
+/// a single command failed, the rest parses clean and is analyzed with the
+/// fragment rows tainted. Anything else still fails closed to `None`, and a
+/// tree blanked down to nothing keeps the old contract.
+fn lean_fragment_fallback<'s>(
+    parsers: &mut Parsers<'_>,
+    input: &FileInput<'s>,
+    tree: &Tree,
+    custom: &'s CustomRules,
+    first_pos: Option<Pos>,
+) -> Option<Analysis<'s>> {
+    let root = tree.root_node();
+    let mut text = input.source.as_bytes().to_vec();
+    let mut line_starts = vec![0usize];
+    for (at, &byte) in text.iter().enumerate() {
+        if byte == b'\n' {
+            line_starts.push(at + 1);
+        }
+    }
+    let mut tainted: Vec<(u32, u32)> = Vec::new();
+    let mut blanked = false;
+    let mut cursor = root.walk();
+    for child in root.children(&mut cursor) {
+        if is_lean_command(child) {
+            continue;
+        }
+        let (start, end) = (child.start_position().row, child.end_position().row);
+        tainted.push((hooks::narrow(start) + 1, hooks::narrow(end) + 1));
+        for row in start..=end {
+            let (lo, hi) = (
+                *line_starts.get(row).unwrap_or(&text.len()),
+                line_starts.get(row + 1).copied().unwrap_or(text.len()),
+            );
+            for byte in &mut text[lo..hi] {
+                if *byte != b'\n' {
+                    *byte = b' ';
+                }
+            }
+        }
+        blanked = true;
+    }
+    if !blanked {
+        return None;
+    }
+    let source = std::str::from_utf8(&text).ok()?;
+    let reparse = parsers.parse(input.lang, source);
+    if reparse.root_node().has_error() {
+        return None;
+    }
+    if reparse.root_node().named_child_count() == 0 {
+        return None;
+    }
+    let mut analysis = clean_analysis(parsers, input, input.lang, &reparse, custom);
+    merge_comments(parsers, input, tree, &mut analysis);
+    analysis.parse_error =
+        Some(first_pos.unwrap_or_else(|| lean_group_pos(&text, &line_starts, &tainted)));
+    analysis.partial = true;
+    analysis.tainted = TaintedLines::new(tainted);
+    Some(analysis)
 }
 
 /// Partition a Lean parse into top-level command row ranges (0-based,

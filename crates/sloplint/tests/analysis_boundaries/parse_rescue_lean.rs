@@ -205,3 +205,65 @@ fn boundary_lean_fully_unparseable_file_still_reports_only_parse_error() {
     assert_eq!(&*pe.rule, "meta/parse-error");
     assert_eq!(&*pe.path, "src/satisfies.lean");
 }
+
+/// `ERROR`-root whole-file wrap with no attributable span: the unsupported
+/// loop as the final command leaves clean complete commands plus loose
+/// fragments with neither child errors nor token gaps. Recovery must blank
+/// the fragment run and keep the healthy prefix analyzed.
+#[test]
+fn boundary_lean_gapless_error_root_keeps_prefix() {
+    let (_t, root) = tmp();
+    put(
+        &root,
+        "src/noafter.lean",
+        "import Lean\n\
+         \n\
+         open Lean Meta Std.HashSet\n\
+         \n\
+         variable [BEq α] [Hashable α]\n\
+         \n\
+         def good (x : Nat) : Nat := x\n\
+         \n\
+         def anyM [Monad m] (s : HashSet α) (f : α → m Bool) : m Bool := do\n\
+         \x20 for a in s do\n\
+         \x20   if ← f a then\n\
+         \x20     return true\n\
+         \x20 return false\n",
+    );
+    let r = run_ok(&super::RunOptions {
+        strictness: Some(super::Strictness::Strict),
+        mode: Some(super::Mode::Threshold),
+        rule_filter: super::filt(&["grep/no-wildcard-import", "meta/*"]),
+        ..base(&root)
+    });
+    let pe = r
+        .findings
+        .iter()
+        .find(|f| &*f.rule == "meta/parse-error" && &*f.path == "src/noafter.lean")
+        .unwrap_or_else(|| {
+            panic!(
+                "the wrapped command must still be reported: {:?}",
+                r.findings
+            )
+        });
+    assert_eq!(
+        pe.line, 9,
+        "the parse error must point at the bad command, not line 1"
+    );
+    let wildcards: Vec<_> = r
+        .findings
+        .iter()
+        .filter(|f| &*f.rule == "grep/no-wildcard-import" && &*f.path == "src/noafter.lean")
+        .collect();
+    assert_eq!(
+        wildcards.len(),
+        3,
+        "the surviving `open` keeps all three namespace findings: {:?}",
+        r.findings
+    );
+    assert!(
+        wildcards.iter().all(|f| f.line == 3),
+        "no finding may move onto the blanked command: {:?}",
+        r.findings
+    );
+}
