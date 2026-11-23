@@ -734,9 +734,7 @@ module.exports = grammar({
 
     call_expression: $ => prec(PREC.MEMBER, seq(
       field('function', $.expression),
-      '(',
-      optionalCommaSep($.expression),
-      ')',
+      field('arguments', $.arguments),
     )),
 
     anonymous_struct_initializer: $ => seq('.', $.initializer_list),
