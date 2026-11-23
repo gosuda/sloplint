@@ -148,6 +148,16 @@ fn an_extension_type_representation_may_end_in_a_trailing_comma() {
 }
 
 #[test]
+fn a_function_typed_extension_type_representation_parses() {
+    let analysis = run_clean("extension type E(int f(String s)) {}\nvoid main() {}\n");
+    assert!(
+        type_names(&analysis).contains(&"E"),
+        "type E recorded: {:?}",
+        type_names(&analysis)
+    );
+}
+
+#[test]
 fn enum_primary_headers_parse() {
     let analysis = run_clean("enum E() {}\nenum const E2(int a) { x(0) }\nvoid main() {}\n");
     assert!(
@@ -190,6 +200,17 @@ fn a_const_new_declarator_with_a_body_parses() {
     assert!(
         type_names(&analysis).contains(&"C7"),
         "type C7 recorded: {:?}",
+        type_names(&analysis)
+    );
+}
+
+#[test]
+fn a_const_factory_with_a_body_parses() {
+    let analysis =
+        run_clean("class C {\n  const factory C() => C._();\n  const C._();\n}\nvoid main() {}\n");
+    assert!(
+        type_names(&analysis).contains(&"C"),
+        "type C recorded: {:?}",
         type_names(&analysis)
     );
 }
