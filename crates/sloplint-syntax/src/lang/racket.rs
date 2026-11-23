@@ -6,7 +6,9 @@
 //! one walker role, so `list` maps to `Role::Function` and every
 //! other list-shaped construct is classified by the head table below
 //! but realized only where its role is available. See
-//! the documented gaps (branches, loops, calls, imports, types).
+//! the documented gaps (branches, loops, calls, types). Relative-string
+//! `require` specs are recorded as import facts; bare module symbols and
+//! installed-collection `(lib ...)` specs are not resolvable and stay out.
 //!
 //! The grammar defines fields on no node kind, so every lookup below
 //! is positional over `named_children`, never `child_by_field`.
@@ -15,8 +17,9 @@
 //! commented-out datum are not code and report no function.
 
 mod head;
+mod imports;
 
-use sloplint_core::facts::{Param, PrimitiveKind, Visibility};
+use sloplint_core::facts::{Import, Param, PrimitiveKind, Visibility};
 use tree_sitter::Node;
 
 use crate::hooks::{
@@ -25,6 +28,7 @@ use crate::hooks::{
 use crate::spec::Role;
 
 use head::{Head, lookup_head};
+use imports::{provide_list_names, push_require_spec};
 
 pub(crate) static TABLE: crate::lang::Table = &[
     ("list", Role::Function),
@@ -103,7 +107,10 @@ fn in_non_code(cx: &Cx<'_, '_>) -> bool {
     for ancestor in cx.ancestors() {
         let head = match ancestor.kind() {
             "sexp_comment" | "hash" => return true,
-            "quote" | "syntax" | "box" | "graph" => {
+            // A vector literal is data like a quotation: its contents are
+            // datum unless an unquote escape pairs them with an enclosing
+            // quasiquote, in which case the vector stays transparent.
+            "vector" | "quote" | "syntax" | "box" | "graph" => {
                 if escapes.is_empty() {
                     return true;
                 }
@@ -399,6 +406,22 @@ impl LangHooks for RacketHooks {
         None
     }
 
+    fn imports<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Import<'s>>) {
+        if n.kind() != "list" || in_non_code(cx) {
+            return;
+        }
+        let mut kids = code_children(n).into_iter();
+        let Some(head) = kids.next() else {
+            return;
+        };
+        if head.kind() != "symbol" || text(cx, head) != "require" {
+            return;
+        }
+        for spec in kids {
+            push_require_spec(cx, spec, out);
+        }
+    }
+
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         if n.kind() != "list" || in_non_code(cx) {
             return None;
@@ -482,65 +505,6 @@ impl LangHooks for RacketHooks {
                 }
             }
         }
-    }
-}
-
-/// Names a `(provide ...)` sub-list exports: `(all-defined-out)`
-/// expands to every top-level defined function, `(contract-out
-/// [name ...] ...)` to each clause name, `(rename-out [in out] ...)`
-/// to each external name. Anything else is skipped.
-fn provide_list_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, spec: Node<'_>, out: &mut Vec<&'s str>) {
-    let mut kids = code_children(spec).into_iter();
-    let Some(head) = kids.next() else {
-        return;
-    };
-    if head.kind() != "symbol" {
-        return;
-    }
-    match text(cx, head) {
-        "all-defined-out" => {
-            for child in named_children(root) {
-                if child.kind() != "list" {
-                    continue;
-                }
-                let mut inner = code_children(child).into_iter();
-                let Some(inner_head) = inner.next() else {
-                    continue;
-                };
-                if inner_head.kind() == "symbol"
-                    && matches!(lookup_head(text(cx, inner_head)), Some(Head::Define))
-                    && let Some(name) = define_name(cx, child)
-                {
-                    out.push(name);
-                }
-            }
-        }
-        "contract-out" => {
-            for clause in kids {
-                if clause.kind() == "list"
-                    && let Some(name) = first_symbol(cx, clause)
-                {
-                    out.push(name);
-                }
-            }
-        }
-        "rename-out" => {
-            // Visibility is resolved against the internal binding, so
-            // record the local name — `(rename-out [local alias])`
-            // makes `local` an exported function.
-            for pair in kids {
-                if pair.kind() != "list" {
-                    continue;
-                }
-                let mut inner = code_children(pair).into_iter();
-                if let Some(local) = inner.next()
-                    && local.kind() == "symbol"
-                {
-                    out.push(text(cx, local));
-                }
-            }
-        }
-        _ => {}
     }
 }
 

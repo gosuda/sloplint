@@ -12,7 +12,7 @@ use sloplint_core::text::normalize_rel_path;
 use sloplint_core::{CustomRuleSpec, FailOn};
 
 use crate::discover;
-use crate::error::RunError;
+use crate::error::{RunError, io_error};
 use crate::fileio::{Capped, Links, read_capped, read_capped_string};
 use crate::globs::{Separators, glob_set};
 
@@ -70,11 +70,15 @@ struct CustomFragment<'a> {
     custom_rules: &'a [CustomRuleSpec],
 }
 
-pub fn locate(cwd: &Path, root: Option<&Path>, config: Option<&Path>) -> Location {
+pub fn locate(
+    cwd: &Path,
+    root: Option<&Path>,
+    config: Option<&Path>,
+) -> Result<Location, RunError> {
     let config_path = config.map(|path| cwd.join(path));
-    match (root, config_path) {
+    let location = match (root, config_path) {
         (Some(root), config_path) => Location {
-            root: root.to_path_buf(),
+            root: cwd.join(root),
             config_path,
         },
         (None, Some(config_path)) => Location {
@@ -87,7 +91,26 @@ pub fn locate(cwd: &Path, root: Option<&Path>, config: Option<&Path>) -> Locatio
             root: find_root(cwd),
             config_path: None,
         },
+    };
+    let resolved = fs::canonicalize(&location.root).map_err(|source| {
+        if (source.kind() == io::ErrorKind::NotFound
+            || source.kind() == io::ErrorKind::NotADirectory)
+            && (root.is_some() || location.config_path.is_some())
+        {
+            RunError::PathNotFound {
+                path: location.root.clone(),
+            }
+        } else {
+            io_error(&location.root, source)
+        }
+    })?;
+    if root.is_some() && !resolved.is_dir() {
+        return Err(RunError::NotADirectory { path: resolved });
     }
+    Ok(Location {
+        root: resolved,
+        config_path: location.config_path,
+    })
 }
 
 /// Config files are read once with no preceding existence probe, so a symlink swap cannot slip

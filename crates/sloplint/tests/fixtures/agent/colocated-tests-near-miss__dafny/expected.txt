@@ -1,0 +1,4 @@
+# `service.dfy` exports two public methods with a test file in the same
+# package (`src`) that names another module, so the rule would report the
+# service module on languages where the verifier-as-test model does not
+# apply. Dafny verifies instead of unit-testing, so the rule stays silent.

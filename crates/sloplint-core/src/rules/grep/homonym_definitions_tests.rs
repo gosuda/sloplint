@@ -443,3 +443,35 @@ proptest! {
         );
     }
 }
+
+#[test]
+fn logos_definitions_stay_silent() {
+    const PATHS: [&str; 6] = ["a.lgo", "b.lgo", "c.lgo", "d.lgo", "e.lgo", "f.lgo"];
+    let owned: Vec<WorldFacts> = PATHS
+        .iter()
+        .map(|_| {
+            let mut current = facts(vec![site("ReconcileLedger", 2)]);
+            current.lang = Lang::Logos;
+            current
+        })
+        .collect();
+    let world: Vec<WorldFile> = owned
+        .iter()
+        .zip(PATHS)
+        .map(|(facts, path)| WorldFile {
+            parsed: true,
+            path,
+            facts,
+        })
+        .collect();
+    let rule = HomonymDefinitions {
+        allow: HashSet::new(),
+        min_files: 5,
+    };
+    let mut out = Vec::new();
+    rule.check(&world, &mut out);
+    assert!(
+        out.is_empty(),
+        "six Logos files sharing one name stay silent: {out:?}"
+    );
+}

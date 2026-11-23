@@ -525,3 +525,40 @@ fn hidden_member_stays_out_of_a_wildcard_import() {
         "the hidden name binds; only the post-match write lands outside"
     );
 }
+
+#[test]
+fn symbolic_param_shadowing_method_is_not_a_write() {
+    // A parameter named `++` shadows the outer `def ++`: `++(count = 1)`
+    // calls the parameter value's `apply`, so the named argument is not
+    // an assignment and no write lands on the outer `count`.
+    let source = "class Sink {\n  def apply(count: Int): Int = count\n}\ndef ++(other: Int): Int = 0\ndef run(++ : Sink): Int = {\n  var count = 0\n  ++(count = 1)\n  count\n}\n";
+    with_scala_bindings(source, |found| {
+        let counts = named_all(found, "count");
+        assert_eq!(counts.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            counts[0].write_lines, 0,
+            "the shadowing parameter's named argument records no write: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn default_arg_call_past_same_clause_param_records_the_write() {
+    // A parameter is not in scope in its own parameter clause (SLS 4.6), so
+    // a call inside a default value that names a same-clause parameter
+    // resolves to the outer method of that name. The assignment is a real
+    // write, not a named argument.
+    let source = "object T {\n  def sink(ignored: Unit): Int = 0\n  def run(sink: Unit => Int, value: Int = { var count = 0; sink(count = 1); count }): Int = value\n}\n";
+    with_scala_bindings(source, |found| {
+        let counts = named_all(found, "count");
+        assert_eq!(
+            counts.len(),
+            1,
+            "the default block holds one count binding: {found:?}"
+        );
+        assert_eq!(
+            counts[0].write_lines, 1,
+            "the call through the outer method records the write: {found:?}"
+        );
+    });
+}

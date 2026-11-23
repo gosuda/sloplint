@@ -180,7 +180,12 @@ mod tests {
         let before = "@a/*c*/(int, int) f() => (1, 2);\n@bcdefg(1) int g() => 1;\n";
         let indent = "  ";
         let line_start = before.find('\n').expect("two lines") + 1;
-        let after = format!("{}{}{}", &before[..line_start], indent, &before[line_start..]);
+        let after = format!(
+            "{}{}{}",
+            &before[..line_start],
+            indent,
+            &before[line_start..]
+        );
 
         let mut parser = parser();
         let mut tree = parser.parse(before, None).unwrap();

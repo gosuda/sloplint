@@ -20,6 +20,7 @@ const PROFILES: [Strictness; 4] = [
 
 #[derive(Debug, Clone, Default)]
 pub struct RulesRequest {
+    /// Working directory used to resolve relative root and config paths.
     pub cwd: PathBuf,
     pub root: Option<PathBuf>,
     pub config: Option<PathBuf>,
@@ -79,7 +80,7 @@ pub fn render(request: &RulesRequest) -> Result<String, RunError> {
         &request.cwd,
         request.root.as_deref(),
         request.config.as_deref(),
-    );
+    )?;
     let loaded = project::load(
         &location,
         Overrides {

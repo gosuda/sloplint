@@ -12,6 +12,8 @@ mod cpp_scopes;
 mod csharp_closures;
 #[path = "analyze_facts/csharp_scopes.rs"]
 mod csharp_scopes;
+#[path = "analyze_facts/dafny_print_calls.rs"]
+mod dafny_print_calls;
 #[path = "analyze_facts/dart_scopes.rs"]
 mod dart_scopes;
 #[path = "analyze_facts/declaration_scopes.rs"]
@@ -42,6 +44,8 @@ mod is_method;
 mod java_scopes;
 #[path = "analyze_facts/kotlin_scopes.rs"]
 mod kotlin_scopes;
+#[path = "analyze_facts/lean_interpolated_strings.rs"]
+mod lean_interpolated_strings;
 #[path = "analyze_facts/macro_attr.rs"]
 mod macro_attr;
 #[path = "analyze_facts/member_pointer.rs"]
@@ -52,6 +56,8 @@ mod objc_scopes;
 mod ocaml_r_scopes;
 #[path = "analyze_facts/odin_scopes.rs"]
 mod odin_scopes;
+#[path = "analyze_facts/parse_budget.rs"]
+mod parse_budget;
 #[path = "analyze_facts/parse_error_position.rs"]
 mod parse_error_position;
 #[path = "analyze_facts/php_scopes.rs"]
@@ -62,6 +68,8 @@ mod powershell_scopes;
 mod python_scopes;
 #[path = "analyze_facts/qt_access.rs"]
 mod qt_access;
+#[path = "analyze_facts/racket_requires.rs"]
+mod racket_requires;
 #[path = "analyze_facts/ruby_scopes.rs"]
 mod ruby_scopes;
 #[path = "analyze_facts/rust_scopes.rs"]

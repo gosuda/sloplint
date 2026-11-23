@@ -1,1 +1,1 @@
-# A named import lists exactly what it takes.
+# Named imports, canonical `import X.*`, and parameterized `import M(...).*` stay silent: wildcards are the canonical import form.
