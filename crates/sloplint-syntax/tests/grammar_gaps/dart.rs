@@ -216,6 +216,19 @@ fn a_const_factory_with_a_body_parses() {
 }
 
 #[test]
+fn constructor_invocation_callees_keep_their_names() {
+    let analysis = run_clean(
+        "void main() {\n  Logger.new(msg);\n  Foo<int>.named(1);\n  p.Foo.named(2);\n  Foo<int>(3);\n}\n",
+    );
+    let callees: Vec<&str> = analysis.facts.calls.iter().map(|c| c.callee).collect();
+    assert_eq!(
+        callees,
+        vec!["Logger.new", "named", "p.Foo.named", "Foo"],
+        "constructor callees: {callees:?}"
+    );
+}
+
+#[test]
 fn an_empty_name_factory_redirect_under_a_primary_header_parses() {
     let analysis = run_clean("class D(final int x) {\n  factory() = D;\n}\nvoid main() {}\n");
     assert!(

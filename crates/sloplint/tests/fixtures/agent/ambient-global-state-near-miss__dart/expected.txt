@@ -1,1 +1,2 @@
 # final binding is immutable: no finding.
+# reassigned callback parameter shadows the global: no finding.
