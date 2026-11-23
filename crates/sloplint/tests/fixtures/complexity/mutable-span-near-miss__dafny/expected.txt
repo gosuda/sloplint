@@ -2,3 +2,6 @@
 # outer `i` (declared line 3, written line 4); misattribution would span 31+
 # and fire. `var (a2, b2)` binds both names, so the line-36 write hits the
 # destructured binding, not the outer `a2`.
+# `loop-counter.dfy` rewrites `i` over lines 15-33 (span 18, at the
+# 15-line minor threshold): an ordinary imperative counter the rule would
+# flag on languages without Dafny's verification model.

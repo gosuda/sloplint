@@ -119,6 +119,9 @@ fn add_definitions<'a>(
     flat: &mut Vec<(Lang, &'a str, SiteRef<'a>)>,
 ) {
     let facts = file.facts;
+    if facts.lang == Lang::Dafny {
+        return;
+    }
     let package = facts.package.as_str();
     for site in &facts.definitions {
         if INFO.roles.eligible(facts.role, &facts.regions, site.line)
@@ -152,6 +155,9 @@ impl HomonymDefinitions {
                 let mut buckets: [Bucket<'a>; NAME_SHARDS] = std::array::from_fn(|_| Vec::new());
                 for (offset, file) in chunk_files.iter().enumerate() {
                     let facts = file.facts;
+                    if facts.lang == Lang::Dafny {
+                        continue;
+                    }
                     let package = facts.package.as_str();
                     for site in &facts.definitions {
                         if self.allow.contains(site.name.as_ref())
