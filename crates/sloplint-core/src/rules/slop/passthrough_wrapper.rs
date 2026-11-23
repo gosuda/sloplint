@@ -46,6 +46,9 @@ struct PassthroughWrapper;
 
 impl FileRule for PassthroughWrapper {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        if matches!(facts.lang, Lang::Alloy) {
+            return;
+        }
         if facts.lang == Lang::Logos {
             return;
         }

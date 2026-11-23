@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::Strictness;
 use crate::facts::FileFacts;
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Thresholds};
 use crate::rules::{parse_options, threshold_options};
@@ -63,6 +64,9 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for NestingDepth {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        if matches!(facts.lang, Lang::Alloy) {
+            return;
+        }
         for function in &facts.functions {
             let Some(severity) = self.thresholds.grade(function.max_depth) else {
                 continue;

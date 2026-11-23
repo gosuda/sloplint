@@ -64,6 +64,9 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for CognitiveDepth {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        if matches!(facts.lang, Lang::Alloy) {
+            return;
+        }
         // TLA+ packs nested quantifiers, IFs and PlusCal branches into one
         // operator by design; the idiomatic action style scores like deeply
         // nested procedural code, and the outliers are generated PlusCal

@@ -81,6 +81,9 @@ impl WorldRule for ColocatedTests {
             }
         }
         for file in files {
+            if file.facts.lang == Lang::Alloy {
+                continue;
+            }
             if file.facts.lang == Lang::Dafny {
                 continue;
             }
@@ -229,6 +232,9 @@ fn import_covered<'a>(files: &[WorldFile<'a>]) -> HashSet<&'a str> {
     let mut keys: HashMap<(&'a str, String), PackageKeys<'a>> = HashMap::new();
     let crates = rust_crates(files);
     for file in files {
+        if file.facts.lang == Lang::Alloy {
+            continue;
+        }
         if !is_evidence(file) {
             continue;
         }

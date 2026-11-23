@@ -104,6 +104,11 @@ pub fn import_keys(lang: Lang, importer: &str, spec: &str) -> Vec<String> {
             drop_trailing_index(&mut segs);
             suffix_keys(&segs)
         }
+        Lang::Racket => {
+            let mut segs = Vec::new();
+            racket_segments(importer, spec, &mut segs);
+            suffix_keys(&segs)
+        }
         Lang::Java | Lang::Kotlin | Lang::Scala | Lang::CSharp => {
             let mut segs = Vec::new();
             dotted_segments(spec, &mut segs);
@@ -115,6 +120,39 @@ pub fn import_keys(lang: Lang, importer: &str, spec: &str) -> Vec<String> {
             suffix_keys(&segs)
         }
     }
+}
+
+fn racket_segments(importer: &str, spec: &str, segs: &mut Vec<String>) {
+    let spec = spec
+        .strip_suffix(".rkt")
+        .or_else(|| spec.strip_suffix(".rktl"))
+        .or_else(|| spec.strip_suffix(".rktd"))
+        .unwrap_or(spec);
+    if spec.starts_with('.') {
+        resolve_relative(importer, spec, segs);
+        return;
+    }
+    let mut owned = String::from("./");
+    owned.push_str(spec);
+    resolve_relative(importer, &owned, segs);
+}
+
+/// Relative path normalization shared by the TypeScript and Racket arms.
+/// The caller strips language extensions: TypeScript drops JavaScript
+/// suffixes afterwards, Racket keeps the dotted stem its libraries use.
+fn resolve_relative(importer: &str, spec: &str, segs: &mut Vec<String>) {
+    let mut parts: Vec<&str> = dir_segments(split_dir(importer).0);
+    for seg in spec.split('/') {
+        match seg {
+            "." | "" => {}
+            ".." => {
+                let _ = parts.pop();
+            }
+            _ => parts.push(seg),
+        }
+    }
+    let start = parts.len().saturating_sub(MAX_KEY_SEGMENTS);
+    push_all(segs, &parts[start..]);
 }
 
 fn rust_import_keys(importer: &str, spec: &str) -> Vec<String> {
@@ -427,18 +465,7 @@ fn ts_segments(importer: &str, spec: &str, segs: &mut Vec<String>) {
         tail_segments(spec, &['/'], segs);
         return;
     }
-    let mut parts: Vec<&str> = dir_segments(split_dir(importer).0);
-    for seg in spec.split('/') {
-        match seg {
-            "." | "" => {}
-            ".." => {
-                let _ = parts.pop();
-            }
-            _ => parts.push(seg),
-        }
-    }
-    let start = parts.len().saturating_sub(MAX_KEY_SEGMENTS);
-    push_all(segs, &parts[start..]);
+    resolve_relative(importer, spec, segs);
     strip_js_extension(segs.last_mut());
 }
 

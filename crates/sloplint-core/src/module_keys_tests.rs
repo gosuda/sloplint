@@ -392,3 +392,34 @@ fn rust_module_keys_match_the_library_keys_of_the_reexport_source() {
         library_keys(Lang::Rust, "crates/log-core/src/emit.rs")
     );
 }
+#[test]
+fn racket_relative_requires_cover_same_dir_and_parent_modules() {
+    assert!(shared(Lang::Racket, "sdsl/ifc/machine.rkt", "machine.rkt"));
+    assert!(shared(
+        Lang::Racket,
+        "sdsl/synthcl/lang/typecheck.rkt",
+        "../lang/typecheck.rkt"
+    ));
+}
+
+#[test]
+fn racket_require_never_covers_a_sibling_module() {
+    let imp = import_keys(Lang::Racket, "sdsl/ifc/test.rkt", "machine.rkt");
+    let other = library_keys(Lang::Racket, "sdsl/ifc/other.rkt");
+    assert!(!imp.iter().any(|key| other.contains(key)));
+}
+
+#[test]
+fn racket_dotted_stems_survive_import_resolution() {
+    let imp = import_keys(Lang::Racket, "pkg/test/check.rkt", "../lib/api.js.rkt");
+    let lib = library_keys(Lang::Racket, "pkg/lib/api.js.rkt");
+    assert!(
+        imp.iter().any(|key| lib.contains(key)),
+        "a dotted Racket stem must meet its library, import {imp:?} library {lib:?}"
+    );
+    let sibling = library_keys(Lang::Racket, "pkg/lib/api.rkt");
+    assert!(
+        !imp.iter().any(|key| sibling.contains(key)),
+        "the dotted import must not credit its undotted sibling, import {imp:?} sibling {sibling:?}"
+    );
+}

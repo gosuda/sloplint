@@ -79,6 +79,9 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for UniquePatchAnchors {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        if matches!(facts.lang, Lang::Alloy) {
+            return;
+        }
         // TLA+ repeats blocks by design: generated PlusCal translations,
         // TLC trace and model records, and proof-step BY references repeat
         // identical blocks, so every firing is noise.

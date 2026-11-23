@@ -66,6 +66,8 @@ mod powershell_scopes;
 mod python_scopes;
 #[path = "analyze_facts/qt_access.rs"]
 mod qt_access;
+#[path = "analyze_facts/racket_requires.rs"]
+mod racket_requires;
 #[path = "analyze_facts/ruby_scopes.rs"]
 mod ruby_scopes;
 #[path = "analyze_facts/rust_scopes.rs"]

@@ -1,0 +1,2 @@
+# A library no test imports still fires: colocated-tests stays on Racket.
+pkg/lib/util.rkt:1 info agent/colocated-tests

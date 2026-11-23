@@ -53,6 +53,9 @@ struct EchoComment;
 
 impl FileRule for EchoComment {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        if matches!(facts.lang, Lang::Racket) {
+            return;
+        }
         // TLA+ documents operators with banner titles and spec sentences
         // that share every word with the operator name; no signal separates
         // a title from an echo, so every firing is noise.
