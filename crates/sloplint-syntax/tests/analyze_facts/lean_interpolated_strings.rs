@@ -92,3 +92,14 @@ fn percent_before_word_stays_literal() {
         "`disk 95% done: ` is 15 chars"
     );
 }
+
+const ESCAPED_UNICODE: &str = "def main : IO Unit := do\n  IO.println s!\"\\u{1F600}!\"\n";
+
+#[test]
+fn unicode_escape_spelling_does_not_inflate_the_run() {
+    assert_eq!(
+        arg_run(ESCAPED_UNICODE, "IO.println"),
+        1,
+        "`\\u{{1F600}}` is one output char, so only `!` survives the break"
+    );
+}

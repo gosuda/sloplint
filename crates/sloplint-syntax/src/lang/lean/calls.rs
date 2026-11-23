@@ -39,7 +39,9 @@ fn lean_callee_root(callee: &str) -> Option<&str> {
 /// run in the gaps between the parsed `interpolation` hole spans: the
 /// grammar marks every hole, so primed identifiers and nested calls never
 /// leak into the measurement. Escapes break runs but `%` stays literal;
-/// the linter only compares against an 8-char floor.
+/// the linter only compares against an 8-char floor. A `\u{...}` escape
+/// skips to its closing brace, so the multi-char spelling never inflates
+/// the neighboring run.
 fn lean_literal_run(segment: &str) -> u32 {
     let mut best = 0u32;
     let mut run = 0u32;
@@ -48,7 +50,17 @@ fn lean_literal_run(segment: &str) -> u32 {
         if c == '\\' {
             best = best.max(run);
             run = 0;
-            chars.next();
+            if chars.as_str().starts_with("u{") {
+                chars.next();
+                chars.next();
+                for c in chars.by_ref() {
+                    if c == '}' {
+                        break;
+                    }
+                }
+            } else {
+                chars.next();
+            }
         } else {
             run += 1;
         }
