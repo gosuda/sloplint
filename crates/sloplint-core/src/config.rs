@@ -515,7 +515,12 @@ const DEFAULT_LOG_CALLEES: [(&str, &str); 30] = [
     // which the Alloy `name` regex cannot produce, so no callee can ever
     // match it and the log-literal rules stay silent.
     ("alloy", "alloy.__no_log_callee__!"),
-    ("dafny", "print"),
+    // Dafny `print` writes program output (pretty-printer fragments and
+    // test-oracle output), not log lines: mapping it as a log callee
+    // reports every printer as unsearchable logging. The sentinel ends in
+    // `!`, which the Dafny `identifier` regex cannot produce, so no callee
+    // can ever match it and the log-literal rules stay silent.
+    ("dafny", "dafny.__no_log_callee__!"),
     (
         "racket",
         "log-info,log-warning,log-error,log-debug,log-fatal,displayln,printf,eprintf",
@@ -524,7 +529,7 @@ const DEFAULT_LOG_CALLEES: [(&str, &str); 30] = [
 
 const DEFAULT_EXCLUDE: &str = "**/node_modules/**,**/target/**,**/vendor/**,**/dist/**,**/build/**,**/.venv/**,**/venv/**,**/__pycache__/**,**/*.d.ts,**/.git/**,**/.sloplint/**";
 
-const DEFAULT_TEST_GLOBS: &str = "**/tests/**,**/test/**,**/__tests__/**,**/*_test.go,**/*_test.lgo,**/test_*.py,**/*_test.py,**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,**/*_test.c,**/test_*.c,**/*_test.cc,**/*_test.cpp,**/*_test.cxx,**/*_unittest.cc,**/test_*.cc,**/test_*.cpp,**/*Tests.m,**/*Tests.cs,**/*Test.cs,**/*.Tests/**,**/*_test.dart,**/*Spec.scala,**/*Test.scala,**/*Suite.scala,**/*.test.js,**/*.test.jsx,**/*.test.mjs,**/*.test.cjs,**/*.spec.js,**/*.spec.jsx,**/*.spec.mjs,**/*.spec.cjs,**/*Test.java,**/*Tests.java,**/*Test.kt,**/*Tests.kt,**/Tests/**,**/*Tests.swift,**/*Test.php,**/*_spec.rb,**/*_test.rb,**/spec/**,**/*.bats,**/test_*.sh,**/*_test.sh,**/tests/**/*.sh,**/*.Tests.ps1,**/*.tests.ps1,**/tests/**/*.ps1";
+const DEFAULT_TEST_GLOBS: &str = "**/tests/**,**/test/**,**/__tests__/**,**/*_test.go,**/*_test.lgo,**/test_*.py,**/*_test.py,**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,**/*_test.c,**/test_*.c,**/*_test.cc,**/*_test.cpp,**/*_test.cxx,**/*_unittest.cc,**/test_*.cc,**/test_*.cpp,**/*Tests.m,**/*Tests.cs,**/*Test.cs,**/*.Tests/**,**/*_test.dart,**/*Spec.scala,**/*Test.scala,**/*Suite.scala,**/*.test.js,**/*.test.jsx,**/*.test.mjs,**/*.test.cjs,**/*.spec.js,**/*.spec.jsx,**/*.spec.mjs,**/*.spec.cjs,**/*Test.java,**/*Tests.java,**/*Test.kt,**/*Tests.kt,**/Tests/**,**/*Tests.swift,**/*Test.php,**/*_spec.rb,**/*_test.rb,**/spec/**,**/*.bats,**/test_*.sh,**/*_test.sh,**/tests/**/*.sh,**/*.Tests.ps1,**/*.tests.ps1,**/tests/**/*.ps1,**/test.rkt,**/tests.rkt,**/test.rktl,**/tests.rktl,**/test.rktd,**/tests.rktd";
 
 const DEFAULT_BENCH_GLOBS: &str = "**/benches/**,**/bench/**,**/benchmarks/**,**/benchmark/**,**/fuzz/**,**/fuzz_targets/**,**/*_bench.rs,**/*.bench.ts,**/*.bench.tsx,**/*.bench.js,**/*.bench.mjs,**/*_bench.py,**/bench_*.py,**/*_benchmark.cc,**/*_benchmark.cpp,**/*_bench.cc,**/*_bench.cpp,**/*_fuzzer.cc,**/*_fuzzer.cpp,**/src/jmh/**";
 

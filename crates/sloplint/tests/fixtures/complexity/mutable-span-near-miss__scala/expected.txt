@@ -1,3 +1,10 @@
 # Near-miss: val is never rewritten after declaration.
 # shadowed-generator.scala: outer `total` is written once on line 4; the line-27 write targets the nested block's own `total` under the `for` generator, so misattribution would span 23 and fire.
 # given-shadow.scala: outer `_status` is written once on line 4; the line-25 arm write targets the extractor's own `_status` (`case given(_status, _)`), so misattribution would span 21 and fire.
+# shadowed-param.scala: the `++` parameter shadows the outer method, so
+# `++(count = 1)` is a named argument through the parameter's `apply` and
+# records no write; without the guard the write at line 38 would span 30 and fire.
+# ctor-param-apply.scala: the `val sink` constructor parameter shadows the
+# outer method, so `sink(count = 1)` in the default calls the parameter's
+# `apply` and records no write; without the guard the write at line 39 would
+# span 30 and fire.

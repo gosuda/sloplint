@@ -6,6 +6,7 @@ use super::{parse_options, string_values};
 use crate::config::Strictness;
 use crate::facts::{FileFacts, Import, ImportKind};
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
 
@@ -60,6 +61,11 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for NoRenameImport {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        // `import M as N` namespacing and `export X as Y` are the documented
+        // Quint module-reuse idioms, so the rule stays off Quint.
+        if matches!(facts.lang, Lang::Quint) {
+            return;
+        }
         let mut everywhere: HashMap<&str, u32> = HashMap::new();
         let mut production: HashMap<&str, u32> = HashMap::new();
         for import in &facts.imports {

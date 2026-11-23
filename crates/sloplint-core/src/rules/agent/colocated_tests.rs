@@ -73,11 +73,17 @@ impl WorldRule for ColocatedTests {
         let imported = import_covered(files);
         let mut evidenced: HashSet<(&str, &str)> = HashSet::new();
         for file in files {
+            if matches!(file.facts.lang, Lang::Dafny | Lang::Alloy) {
+                continue;
+            }
             if is_evidence(file) {
                 evidenced.insert((coverage_scope(file.facts.lang), file.facts.package.as_str()));
             }
         }
         for file in files {
+            if matches!(file.facts.lang, Lang::Dafny | Lang::Alloy) {
+                continue;
+            }
             if self.skipped(file) {
                 continue;
             }
@@ -96,6 +102,11 @@ impl WorldRule for ColocatedTests {
 impl ColocatedTests {
     fn skipped(&self, file: &WorldFile<'_>) -> bool {
         let facts: &WorldFacts = file.facts;
+        // TLA+ has no colocated-test convention: TLC and SANY check specs,
+        // and the flagged files include the test models themselves.
+        if matches!(facts.lang, Lang::Tlaplus) {
+            return true;
+        }
         if facts.role != CodeRole::Library
             || facts.public_functions == 0
             || self.exclude.is_match(file.path)
@@ -218,6 +229,9 @@ fn import_covered<'a>(files: &[WorldFile<'a>]) -> HashSet<&'a str> {
     let mut keys: HashMap<(&'a str, String), PackageKeys<'a>> = HashMap::new();
     let crates = rust_crates(files);
     for file in files {
+        if file.facts.lang == Lang::Alloy {
+            continue;
+        }
         if !is_evidence(file) {
             continue;
         }

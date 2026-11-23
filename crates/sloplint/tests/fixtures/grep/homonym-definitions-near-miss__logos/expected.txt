@@ -1,1 +1,1 @@
-# Only 4 files define the name, below strict min_files=5.
+# Five files share one name, at strict min_files=5, but the rule stays silent for Lang::Logos.

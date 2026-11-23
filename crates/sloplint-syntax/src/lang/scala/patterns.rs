@@ -251,8 +251,8 @@ pub(crate) fn given_extractor_binders<'s>(cx: &Cx<'_, 's>, node: Node<'_>) -> Op
 }
 
 fn push_pattern_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str>) {
-    let mut pending = vec![root];
-    while let Some(node) = pending.pop() {
+    let mut pending = vec![(root, root.parent())];
+    while let Some((node, parent)) = pending.pop() {
         if is_given_tuple_type(cx, node) {
             // `case given (Int, String)` is a given of tuple type, not a
             // `given(...)` extractor; its members bind no locals. A real
@@ -270,23 +270,35 @@ fn push_pattern_names<'s>(cx: &Cx<'_, 's>, root: Node<'_>, out: &mut Vec<&'s str
             continue;
         }
         if node.kind() == "identifier" {
-            if is_pattern_binder(cx, node) {
+            if is_pattern_binder(cx, node, parent) {
                 out.push(text(cx, node));
             }
         } else if node.kind() == "named_pattern" {
             // `Doc(_id = id)`: the label selects a field — it is not a
             // binder, so only the right-hand pattern is walked.
-            pending.extend(named_children(node).into_iter().skip(1).rev());
+            pending.extend(
+                named_children(node)
+                    .into_iter()
+                    .skip(1)
+                    .rev()
+                    .map(|child| (child, Some(node))),
+            );
         } else if node.kind() != "wildcard" {
-            pending.extend(named_children(node).into_iter().rev());
+            pending.extend(
+                named_children(node)
+                    .into_iter()
+                    .rev()
+                    .map(|child| (child, Some(node))),
+            );
         }
     }
 }
 
-pub(crate) fn is_pattern_binder(cx: &Cx<'_, '_>, node: Node<'_>) -> bool {
+/// `parent` is the immediate tree parent, including stable-identifier wrappers.
+pub(crate) fn is_pattern_binder(cx: &Cx<'_, '_>, node: Node<'_>, parent: Option<Node<'_>>) -> bool {
     // A name before `@` (`x @ Some(y)`, `` `x` @ ``, `X @ ``) is always a
     // binder — the capture's name is never a stable reference.
-    if node.parent().is_some_and(|p| {
+    if parent.is_some_and(|p| {
         p.kind() == "capture_pattern"
             && child_by_field(p, "name").is_some_and(|m| m.id() == node.id())
     }) {
@@ -301,9 +313,7 @@ pub(crate) fn is_pattern_binder(cx: &Cx<'_, '_>, node: Node<'_>) -> bool {
     {
         return false;
     }
-    // The raw tree parent: `stable_identifier` and friends are not tracked
-    // levels, so `cx.parent_of` would surface an ancestor instead.
-    let Some(parent) = node.parent() else {
+    let Some(parent) = parent else {
         return true;
     };
     !matches!(
@@ -315,8 +325,8 @@ pub(crate) fn is_pattern_binder(cx: &Cx<'_, '_>, node: Node<'_>) -> bool {
 // An identifier that names a value slot but binds nothing: the interpolator
 // head of `s"..."` and a word-form infix operator (`a foo b`). Neither is a
 // local, and registering them steals writes from real variables.
-pub(crate) fn is_value_name(node: Node<'_>) -> bool {
-    let Some(parent) = node.parent() else {
+pub(crate) fn is_value_name(node: Node<'_>, parent: Option<Node<'_>>) -> bool {
+    let Some(parent) = parent else {
         return false;
     };
     if matches!(

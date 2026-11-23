@@ -95,6 +95,51 @@ fn unquote(name: &str) -> &str {
 // reading is the modern default); Some(true) when an in-scope def has
 // that parameter; Some(false) when every in-scope `def f` lacks it —
 // in Scala 2.12 scripts that shape is a `Unit`-valued assignment.
+
+// Whether `def` declares `name` as a parameter of a clause that ends before
+// `pos`: only those clauses are in scope at a call site nested in the
+// function's own parameter list — a formal is out of its own clause.
+fn preceding_clause_param_named<'s>(
+    cx: &Cx<'_, 's>,
+    def: Node<'_>,
+    pos: usize,
+    name: &str,
+) -> bool {
+    named_children(def).iter().any(|c| {
+        c.kind() == "parameters"
+            && c.end_byte() <= pos
+            && named_children(*c).iter().any(|param| {
+                param.kind() == "parameter"
+                    && child_by_field(*param, "name")
+                        .is_some_and(|nm| unquote(text(cx, nm)) == name)
+            })
+    })
+}
+
+// Whether `def` (or its declaration twin) names `name` as a parameter: a
+// parameter shadows an outer method of the same name, so a call through it
+// targets the parameter value's `apply`, not the method's parameter list.
+fn def_param_named<'s>(cx: &Cx<'_, 's>, def: Node<'_>, name: &str) -> bool {
+    named_children(def).iter().any(|c| {
+        c.kind() == "parameters"
+            && named_children(*c).iter().any(|param| {
+                param.kind() == "parameter"
+                    && child_by_field(*param, "name")
+                        .is_some_and(|nm| unquote(text(cx, nm)) == name)
+            })
+    })
+}
+// Whether `node` is a `class_parameter` declaring `name`: a constructor
+// parameter is a value in scope throughout the class body, so a call
+// through it targets the parameter's `apply`, not an outer method of the
+// same name. The grammar holds it as `class_parameter` under a
+// `class_parameters` clause list, not as a definition, so the binding scan
+// in the verdict walk misses it without this check.
+fn class_param_named<'s>(cx: &Cx<'_, 's>, node: Node<'_>, name: &str) -> bool {
+    node.kind() == "class_parameter"
+        && child_by_field(node, "name").is_some_and(|nm| unquote(text(cx, nm)) == name)
+}
+
 fn named_arg_verdict<'s>(cx: &Cx<'_, 's>, n: Node<'_>, arg_name: &str) -> Option<bool> {
     let args = n.parent().filter(|p| p.kind() == "arguments")?;
     let call = args.parent().filter(|p| p.kind() == "call_expression")?;
@@ -109,6 +154,26 @@ fn named_arg_verdict<'s>(cx: &Cx<'_, 's>, n: Node<'_>, arg_name: &str) -> Option
     let mut scope = n.parent();
     while let Some(s) = scope {
         scope = s.parent();
+        // A parameter of an enclosing function shadows an outer `def` of
+        // the same name only where the parameter is in scope at the call:
+        // the body, the return type, and defaults in subsequent parameter
+        // clauses — never its own clause. A call inside the function's own
+        // parameter list consults only the clauses that end before it.
+        if s.kind() == "function_definition" || s.kind() == "function_declaration" {
+            let in_own_params = named_children(s).iter().any(|c| {
+                c.kind() == "parameters"
+                    && c.start_byte() <= n.start_byte()
+                    && n.end_byte() <= c.end_byte()
+            });
+            let shadowed = if in_own_params {
+                preceding_clause_param_named(cx, s, n.start_byte(), fname)
+            } else {
+                def_param_named(cx, s, fname)
+            };
+            if shadowed {
+                return None;
+            }
+        }
         // A local binding of the callee name — `val f`, a `for` binder or a
         // `case` pattern — shadows every outer `def f`, so the named
         // argument belongs to the value's `apply`, not to the method's
@@ -130,6 +195,25 @@ fn named_arg_verdict<'s>(cx: &Cx<'_, 's>, n: Node<'_>, arg_name: &str) -> Option
         }
         if bound.iter().any(|(name, _)| unquote(name) == fname)
             || bound_names.iter().any(|name| unquote(name) == fname)
+        {
+            return None;
+        }
+        // A constructor parameter of an enclosing class shadows an outer
+        // method of the same name everywhere in the class body. Like a
+        // method's own formals, a parameter is out of scope in its own
+        // clause, so only clauses ending before the call count: never the
+        // clause list the walk stands on when the call sits inside a
+        // constructor default, and never a later clause.
+        let mut holders = Vec::new();
+        for d in named_children(s) {
+            if d.kind() == "class_parameters" && d.end_byte() <= n.start_byte() {
+                holders.push(d);
+            }
+        }
+        if holders
+            .iter()
+            .flat_map(|h| named_children(*h))
+            .any(|p| class_param_named(cx, p, fname))
         {
             return None;
         }

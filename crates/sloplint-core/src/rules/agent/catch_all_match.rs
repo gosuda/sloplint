@@ -48,7 +48,10 @@ struct CatchAllMatch;
 
 impl FileRule for CatchAllMatch {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
-        if matches!(facts.lang, Lang::Go | Lang::Logos) {
+        // Lean's equation compiler checks exhaustiveness, and wildcards over
+        // infinite or open types (Nat, List, Expr, ...) are mandatory: the
+        // facts carry no type information, so every Lean firing is a guess.
+        if matches!(facts.lang, Lang::Go | Lang::Logos | Lang::Lean) {
             return;
         }
         for arm in &facts.wildcard_arms {

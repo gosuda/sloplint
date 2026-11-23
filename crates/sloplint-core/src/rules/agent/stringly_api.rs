@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::Strictness;
 use crate::facts::{FileFacts, Param, PrimitiveKind};
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Thresholds};
 use crate::rules::{parse_options, threshold_options};
@@ -65,6 +66,11 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for StringlyApi {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        // Consecutive same-type binders are conventional proof statements
+        // in Dafny and Lean; bundling them would change how lemmas apply.
+        if matches!(facts.lang, Lang::Dafny | Lang::Lean) {
+            return;
+        }
         for function in &facts.functions {
             if !function.actionable_api() || function.is_overload {
                 continue;

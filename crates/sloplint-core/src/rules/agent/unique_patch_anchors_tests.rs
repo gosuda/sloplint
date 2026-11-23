@@ -299,3 +299,70 @@ fn preset_pins_off_at_standard_and_info_at_strict() {
         "strict flags the shared block on a positive input"
     );
 }
+
+const GUARD: [&str; 6] = [
+    "v, err := parse_value(input_data)",
+    "if err != nil {",
+    "note_format(spec_item, errs_list, err)",
+    "return true",
+    "}",
+    "next_step(v)",
+];
+
+fn guard_source(copies: usize) -> (String, Vec<Function<'static>>) {
+    let mut source = String::new();
+    let mut functions = Vec::new();
+    for index in 0..copies {
+        let first = u32::try_from(source.lines().count() + 1).unwrap_or(u32::MAX);
+        source.push_str(&format!("fn case{index}() {{\n"));
+        for line in GUARD {
+            source.push_str(line);
+            source.push('\n');
+        }
+        source.push_str("}\n\n");
+        let last = u32::try_from(source.lines().count()).unwrap_or(u32::MAX);
+        functions.push(function("case", first, last));
+    }
+    (source, functions)
+}
+
+fn check_lang(lang: Lang, source: &str, functions: Vec<Function<'_>>) -> Vec<String> {
+    let rule = UniquePatchAnchors {
+        window: 6,
+        min_repeats: 3,
+    };
+    let mut owned = facts(source, functions);
+    owned.lang = lang;
+    let mut out = Vec::new();
+    rule.check(&owned, &mut out);
+    out.into_iter().map(|finding| finding.message).collect()
+}
+
+#[test]
+fn logos_triple_err_guard_stays_silent() {
+    let (source, functions) = guard_source(3);
+    assert!(
+        check_lang(Lang::Logos, &source, functions).is_empty(),
+        "three identical Logos err guards stay silent under the Logos floor"
+    );
+}
+
+#[test]
+fn triple_err_guard_still_fires_for_rust() {
+    let (source, functions) = guard_source(3);
+    assert_eq!(
+        check_lang(Lang::Rust, &source, functions).len(),
+        1,
+        "the same triple repeat still fires for Rust"
+    );
+}
+
+#[test]
+fn logos_quintuple_block_still_fires() {
+    let (source, functions) = guard_source(5);
+    assert_eq!(
+        check_lang(Lang::Logos, &source, functions).len(),
+        1,
+        "five identical Logos blocks still fire at the Logos floor"
+    );
+}

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::Strictness;
 use crate::facts::{Ambient, AmbientKind, FileFacts};
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
 use crate::rules::{parse_options, string_values};
@@ -149,6 +150,15 @@ fn joins<'a>(facts: &'a FileFacts<'_>) -> Joins<'a> {
 
 impl FileRule for AmbientGlobalState {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        if facts.lang == Lang::Logos {
+            return;
+        }
+        // Quint state is module-level `var` declarations: the language's
+        // core construct, not shareable ambient state. The Quint adapter
+        // emits no EnvRead facts, so every firing is a `var` declaration.
+        if matches!(facts.lang, Lang::Quint) {
+            return;
+        }
         if self.allow_files.is_match(facts.path) {
             return;
         }
@@ -542,5 +552,20 @@ mod tests {
         let set = builder.build().expect("allow_files builds");
         assert!(set.is_match("src/main.lgo"));
         assert!(set.is_match("cmd/tool/main.lgo"));
+    }
+    #[test]
+    fn logos_globals_stay_silent() {
+        let mut checked = facts(
+            "package probe\n\nvar Counter int\n",
+            vec![
+                site(AmbientKind::GlobalMutable, "Counter", 3, None),
+                site(AmbientKind::GlobalWrite, "Counter", 5, Some(0)),
+            ],
+        );
+        checked.lang = Lang::Logos;
+        assert!(
+            positioned(&rule(), &checked).is_empty(),
+            "Logos harness globals are idiomatic and stay silent"
+        );
     }
 }

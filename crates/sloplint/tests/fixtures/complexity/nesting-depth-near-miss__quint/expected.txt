@@ -1,1 +1,1 @@
-# Four nested conditions stay below the strict rung.
+# Nested predicates and dispatch chains stay silent: the nesting is the modeled transition logic.

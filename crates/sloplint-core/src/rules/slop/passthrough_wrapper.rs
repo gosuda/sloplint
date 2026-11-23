@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use crate::config::Strictness;
 use crate::facts::{ArgShape, Call, FileFacts, Function};
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift};
 use crate::rules::EmptyOptions;
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, parse_options};
@@ -45,6 +46,12 @@ struct PassthroughWrapper;
 
 impl FileRule for PassthroughWrapper {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        if matches!(facts.lang, Lang::Alloy) {
+            return;
+        }
+        if facts.lang == Lang::Logos {
+            return;
+        }
         let index = forward_index(facts);
         for function in &facts.functions {
             let Some(callee) = forwarded_callee(facts, &index, function) else {
@@ -756,5 +763,19 @@ mod tests {
         functions[0].receiver = Some("c");
         let calls = vec![call("o.items.get", Some("o"), true, vec![ident_arg("key")])];
         assert_eq!(flagged("func (c *Cache) Get() {}\n", functions, calls), 1);
+    }
+    #[test]
+    fn logos_forwarder_stays_silent() {
+        let (functions, calls) = forward_facts();
+        let strict = preset(Strictness::Strict);
+        let rule = build(strict.options, &Settings::default()).expect("strict preset builds");
+        let mut owned = facts("package probe\n", functions, calls);
+        owned.lang = Lang::Logos;
+        let mut out = Vec::new();
+        rule.check(&owned, &mut out);
+        assert!(
+            out.is_empty(),
+            "Logos exported-over-unexported forwarders stay silent: {out:?}"
+        );
     }
 }

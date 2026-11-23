@@ -42,6 +42,7 @@ use scopes::{Scopes, scopes};
 use store::{load_baseline, record_baseline};
 #[derive(Debug, Clone, Default)]
 pub struct RunOptions {
+    /// Working directory used to resolve relative root, config, and input paths.
     pub cwd: PathBuf,
     pub root: Option<PathBuf>,
     pub config: Option<PathBuf>,
@@ -107,23 +108,7 @@ pub fn implicit_scope(
     root: Option<&Path>,
     config: Option<&Path>,
 ) -> Result<Vec<PathBuf>, RunError> {
-    let explicit = root.is_some();
-    let location = project::locate(cwd, root, config);
-    let root = fs::canonicalize(&location.root).map_err(|source| {
-        if (source.kind() == io::ErrorKind::NotFound
-            || source.kind() == io::ErrorKind::NotADirectory)
-            && (explicit || config.is_some())
-        {
-            RunError::PathNotFound {
-                path: location.root.clone(),
-            }
-        } else {
-            io_error(&location.root, source)
-        }
-    })?;
-    if explicit && !root.is_dir() {
-        return Err(RunError::NotADirectory { path: root });
-    }
+    let root = project::locate(cwd, root, config)?.root;
     let here = fs::canonicalize(cwd).map_err(|source| io_error(cwd, source))?;
     Ok(if here != root && here.starts_with(&root) {
         vec![cwd.to_path_buf()]
@@ -133,22 +118,8 @@ pub fn implicit_scope(
 }
 
 pub fn execute(opts: &RunOptions) -> Result<Execution, RunError> {
-    let location = project::locate(&opts.cwd, opts.root.as_deref(), opts.config.as_deref());
-    let root = fs::canonicalize(&location.root).map_err(|source| {
-        if (source.kind() == io::ErrorKind::NotFound
-            || source.kind() == io::ErrorKind::NotADirectory)
-            && (opts.root.is_some() || opts.config.is_some())
-        {
-            RunError::PathNotFound {
-                path: location.root.clone(),
-            }
-        } else {
-            io_error(&location.root, source)
-        }
-    })?;
-    if opts.root.is_some() && !root.is_dir() {
-        return Err(RunError::NotADirectory { path: root });
-    }
+    let location = project::locate(&opts.cwd, opts.root.as_deref(), opts.config.as_deref())?;
+    let root = location.root.clone();
     let loaded = project::load(
         &location,
         Overrides {

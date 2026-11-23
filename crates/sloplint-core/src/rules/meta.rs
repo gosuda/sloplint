@@ -7,7 +7,7 @@ use crate::rules::{Build, Family, Preset, RuleInfo};
 pub(crate) const PARSE_ERROR: RuleInfo = RuleInfo {
     id: "meta/parse-error",
     family: Family::Meta,
-    summary: "syntax errors that stop analysis of a file",
+    summary: "syntax errors that prevent complete analysis of a file",
     why: "Code with syntax errors cannot be analyzed reliably.",
     confidence: Confidence::High,
     roles: RolePolicy::KEEP,
@@ -82,8 +82,23 @@ pub(crate) fn parse_error_finding(text: &SourceText, pos: Pos) -> Finding {
         pos,
         PARSE_ERROR.id,
         Severity::Minor,
-        "syntax error; other rules skipped for this file".to_string(),
+        "syntax error; analysis is incomplete".to_string(),
         "fix the syntax error at this position".to_string(),
+    )
+}
+
+/// A file the parser could not finish inside its time budget keeps one
+/// `meta/parse-error` finding like any unanalyzable file, but says so:
+/// there may be no syntax error at all, only a construct the grammar
+/// cannot get through in reasonable time.
+pub(crate) fn parse_timeout_finding(text: &SourceText, pos: Pos) -> Finding {
+    Finding::at_source(
+        text,
+        pos,
+        PARSE_ERROR.id,
+        Severity::Minor,
+        "parse timed out; other rules skipped for this file".to_string(),
+        "split the file or simplify the construct the parser stalls on".to_string(),
     )
 }
 

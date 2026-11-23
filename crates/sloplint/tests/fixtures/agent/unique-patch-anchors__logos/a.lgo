@@ -26,6 +26,24 @@ func StepThird(input int, output *int) {
 	StoreResult(output, epsilonValue)
 	FinishThird()
 }
+func StepFourth(input int, output *int) {
+	alphaValue := ComputeFirst(input)
+	betaValue := ComputeSecond(alphaValue)
+	gammaValue := ComputeThird(betaValue)
+	deltaValue := ComputeFourth(gammaValue)
+	epsilonValue := ComputeFifth(deltaValue)
+	StoreResult(output, epsilonValue)
+	FinishFourth()
+}
+func StepFifth(input int, output *int) {
+	alphaValue := ComputeFirst(input)
+	betaValue := ComputeSecond(alphaValue)
+	gammaValue := ComputeThird(betaValue)
+	deltaValue := ComputeFourth(gammaValue)
+	epsilonValue := ComputeFifth(deltaValue)
+	StoreResult(output, epsilonValue)
+	FinishFifth()
+}
 func ComputeFirst(x int) int {
 	return x
 }
@@ -45,3 +63,5 @@ func StoreResult(o *int, v int) {}
 func FinishFirst() {}
 func FinishSecond() {}
 func FinishThird() {}
+func FinishFourth() {}
+func FinishFifth() {}

@@ -94,6 +94,9 @@ impl WorldRule for HomonymDefinitions {
         }
         let mut flat: Vec<(Lang, &str, SiteRef<'_>)> = Vec::new();
         for file in files {
+            if file.facts.lang == Lang::Alloy {
+                continue;
+            }
             add_definitions(file, &reported, &mut flat);
         }
         flat.sort_by(|a, b| {
@@ -119,6 +122,9 @@ fn add_definitions<'a>(
     flat: &mut Vec<(Lang, &'a str, SiteRef<'a>)>,
 ) {
     let facts = file.facts;
+    if matches!(facts.lang, Lang::Dafny | Lang::Logos) {
+        return;
+    }
     let package = facts.package.as_str();
     for site in &facts.definitions {
         if INFO.roles.eligible(facts.role, &facts.regions, site.line)
@@ -151,7 +157,16 @@ impl HomonymDefinitions {
             .map(|(chunk_index, chunk_files)| {
                 let mut buckets: [Bucket<'a>; NAME_SHARDS] = std::array::from_fn(|_| Vec::new());
                 for (offset, file) in chunk_files.iter().enumerate() {
+                    if file.facts.lang == Lang::Alloy {
+                        continue;
+                    }
                     let facts = file.facts;
+                    // Init, Next, vars, Inv and friends are defined per
+                    // module by design in TLA+: renaming them across
+                    // hundreds of files is unthinkable.
+                    if matches!(facts.lang, Lang::Dafny | Lang::Logos | Lang::Tlaplus) {
+                        continue;
+                    }
                     let package = facts.package.as_str();
                     for site in &facts.definitions {
                         if self.allow.contains(site.name.as_ref())
