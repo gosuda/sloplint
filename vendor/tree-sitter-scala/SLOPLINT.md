@@ -34,7 +34,7 @@
   two `_definition`/`_pattern` supertype-inlined notes and one
   pre-existing unnecessary-conflict note
   (`_simple_expression`, `_single_lambda_param`).
-- Test: `tree-sitter test` in this directory: 366/366 (upstream cases
+- Test: `tree-sitter test` in this directory: 367/367 (upstream cases
   plus the sloplint files below).
 
 ## Changes to grammar.js
@@ -82,13 +82,19 @@ on pristine HEAD):
   instead of `colonEol`, so an end-of-line colon after a braced
   parameter keeps the fewer-braces colon-argument reading and both
   spellings produce the flat upstream tree.
+- SC-PARENIF_NEXT: when `then` sits on the line after the condition
+  arguments (`if x.exists` + `(p)` + `then`), the condition keeps the
+  `split_call_condition` reading (function plus arguments across the
+  line break) instead of failing. Upstream e2f0983 covers only the
+  same-line `then`; covered by `sloplint_parenif.txt`.
 
 Dropped hunks (upstream now covers them, each verified clean on HEAD):
 
 - SC-INSTAR (`_asterisk` in `infix_pattern`; upstream 2fd3302, same fix
   plus a precedence repair).
-- SC-PARENIF (`split_call_condition`; upstream e2f0983 continues the
-  condition in the scanner instead).
+- SC-PARENIF (`split_call_condition` for same-line `then`; upstream
+  e2f0983 continues the condition in the scanner instead; the
+  next-line-`then` shape keeps the narrow SC-PARENIF_NEXT rule above).
 - SC-ENDNEW (dedicated `instance_expression` alternative; upstream
   dc2b699 closes empty colon bodies, see the guard hunk below).
 - SC-SOFTKW_PARAM (`given` as a parameter name; upstream 51aae0f).
