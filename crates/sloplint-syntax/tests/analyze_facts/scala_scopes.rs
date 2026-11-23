@@ -327,3 +327,19 @@ fn symbolic_named_argument_is_not_a_write() {
         );
     });
 }
+
+#[test]
+fn symbolic_call_with_unlisted_name_records_the_write() {
+    // A symbolic callee resolves like any other: `++(%% = 2)` consults the
+    // visible `def ++`, whose parameter list has no `%%`, so the assignment
+    // writes `%%` instead of vanishing as a named argument.
+    let source = "object T {\n  def ++(arg: Unit): Int = 0\n  def m(): Int = {\n    var %% = 0\n    ++(%% = 2)\n    %%\n  }\n}\n";
+    with_scala_bindings(source, |found| {
+        let names = named_all(found, "%%");
+        assert_eq!(names.len(), 1, "one binding for the var: {found:?}");
+        assert_eq!(
+            names[0].write_lines, 1,
+            "the assignment to the non-parameter name records the write: {found:?}"
+        );
+    });
+}

@@ -98,7 +98,9 @@ fn named_arg_verdict<'s>(cx: &Cx<'_, 's>, n: Node<'_>, arg_name: &str) -> Option
     let args = n.parent().filter(|p| p.kind() == "arguments")?;
     let call = args.parent().filter(|p| p.kind() == "call_expression")?;
     let func = func_node(call)?;
-    if func.kind() != "identifier" {
+    // Symbolic callees resolve the same way: `++(%% = 2)` consults the
+    // visible `def ++` instead of defaulting to a named argument.
+    if !matches!(func.kind(), "identifier" | "operator_identifier") {
         return None;
     }
     let fname = unquote(text(cx, func));
