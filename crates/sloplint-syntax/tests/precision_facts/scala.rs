@@ -305,6 +305,74 @@ fn given_tuple_type_arm_does_not_count_as_variant() {
 }
 
 #[test]
+fn all_wildcard_given_extractor_counts_as_variant() {
+    // `case given(_, _)` applies the extractor with wildcard members: it
+    // binds nothing, but the arm is still a variant constructor. Before
+    // the fix the arm needed a named binder to count, so wildcard-only
+    // members suppressed the catch-all warning.
+    const GIVEN_WILDCARDS: &str = r#"def handle(x: Any): Int = x match {
+  case given(_, _) => 1
+  case Other() => 2
+  case _ => 0
+}
+"#;
+    let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
+    let analysis = analyze_src(&mut Parsers::new(), &custom, GIVEN_WILDCARDS, "src/M.scala");
+    assert!(analysis.parse_error.is_none(), "parses");
+    let arm = analysis
+        .facts
+        .wildcard_arms
+        .iter()
+        .find(|a| a.variant_count == 2)
+        .expect("wildcard-only given arm counts as a variant");
+    assert!(
+        arm.enum_like,
+        "extractor plus constructor make it enum-like"
+    );
+    assert!(!arm.has_nullable_ctor, "no Some/None/Ok/Err siblings");
+}
+
+#[test]
+fn imported_alias_given_tuple_does_not_count_as_variant() {
+    // `case given(_status, other)` is a given of tuple type when both
+    // members are type aliases in scope through an import: it binds
+    // nothing and stays out of the variant count, so one constructor arm
+    // plus the wildcard is not enum-like. Before the fix the missed
+    // import made the arm an extractor and the wildcard fired alongside
+    // the one real constructor.
+    const GIVEN_IMPORTED_ALIASES: &str = r#"object Types {
+  type _status = Int
+  type other = String
+}
+def handle(x: Any): Int = {
+  import Types.*
+  x match {
+    case given(_status, other) => 1
+    case Other() => 2
+    case _ => 0
+  }
+}
+"#;
+    let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
+    let analysis = analyze_src(
+        &mut Parsers::new(),
+        &custom,
+        GIVEN_IMPORTED_ALIASES,
+        "src/M.scala",
+    );
+    assert!(analysis.parse_error.is_none(), "parses");
+    assert_eq!(
+        analysis.facts.wildcard_arms.len(),
+        1,
+        "one wildcard arm: {arms:?}",
+        arms = analysis.facts.wildcard_arms
+    );
+    let arm = &analysis.facts.wildcard_arms[0];
+    assert_eq!(arm.variant_count, 1, "only the constructor arm counts");
+    assert!(!arm.enum_like, "one constructor is not enum-like");
+}
+
+#[test]
 fn call_binding_and_assertion_shapes() {
     let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
     let analysis = analyze_src(&mut Parsers::new(), &custom, CALLS, "src/M.scala");
