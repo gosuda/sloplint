@@ -1260,7 +1260,15 @@ module.exports = function defineGrammar(dialect) {
       ),
 
       function_call_expression: $ => prec(PREC.CALL, seq(
-        field('function', choice($._name, $._callable_expression)),
+        field('function', choice(
+          $._name,
+          // Cast words double as plain function names (`int($x)`), so the
+          // constant spellings are callable even though `_name` only covers
+          // the class-name subset. Real casts keep their parentheses, so
+          // this cannot match a `cast_expression`.
+          alias(choice(...CAST_TYPE_CONSTANT_NAMES.map(type => keyword(type, false))), $.name),
+          $._callable_expression,
+        )),
         field('arguments', $.arguments),
       )),
 
@@ -1370,6 +1378,10 @@ module.exports = function defineGrammar(dialect) {
         $.parenthesized_expression,
         $._dereferencable_scalar,
         $._name,
+        // A constant spelling (`OBJECT[0]`) dereferences the constant, not a
+        // class: the keyword token cannot reach `_name`, which only covers
+        // the class-name subset.
+        alias(choice(...CAST_TYPE_CONSTANT_NAMES.map(type => keyword(type, false))), $.name),
       )),
 
       _dereferencable_scalar: $ => prec(PREC.DEREF, choice(

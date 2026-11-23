@@ -31,7 +31,35 @@
  
        trait_declaration: $ => seq(
          optional(field('attributes', $.attribute_list)),
-@@ -1395,7 +1401,10 @@
+@@ -1254,7 +1260,15 @@
+       ),
+ 
+       function_call_expression: $ => prec(PREC.CALL, seq(
+-        field('function', choice($._name, $._callable_expression)),
++        field('function', choice(
++          $._name,
++          // Cast words double as plain function names (`int($x)`), so the
++          // constant spellings are callable even though `_name` only covers
++          // the class-name subset. Real casts keep their parentheses, so
++          // this cannot match a `cast_expression`.
++          alias(choice(...CAST_TYPE_CONSTANT_NAMES.map(type => keyword(type, false))), $.name),
++          $._callable_expression,
++        )),
+         field('arguments', $.arguments),
+       )),
+ 
+@@ -1364,6 +1378,10 @@
+         $.parenthesized_expression,
+         $._dereferencable_scalar,
+         $._name,
++        // A constant spelling (`OBJECT[0]`) dereferences the constant, not a
++        // class: the keyword token cannot reach `_name`, which only covers
++        // the class-name subset.
++        alias(choice(...CAST_TYPE_CONSTANT_NAMES.map(type => keyword(type, false))), $.name),
+       )),
+ 
+       _dereferencable_scalar: $ => prec(PREC.DEREF, choice(
+@@ -1395,7 +1413,10 @@
        _simple_string_member_access_expression: $ => prec(PREC.MEMBER, seq(
          field('object', $.variable_name),
          '->',
@@ -43,7 +71,7 @@
        )),
  
        _simple_string_subscript_unary_expression: $ => prec.left(seq('-', $.integer)),
-@@ -1475,6 +1484,7 @@
+@@ -1475,6 +1496,7 @@
          repeat(choice(
            alias(token(choice('\\\\', '\\\'')), $.escape_sequence),
            $.string_content,
@@ -51,7 +79,7 @@
          )),
          '\'',
        ),
-@@ -1494,13 +1504,10 @@
+@@ -1494,13 +1516,10 @@
          optional('"'),
          field('identifier', $.heredoc_start),
          optional(token.immediate('"')),
