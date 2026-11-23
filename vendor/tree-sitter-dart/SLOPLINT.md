@@ -137,10 +137,12 @@ Kept by the patch (6 shapes, invalid nowhere, rejected by pristine 0.3.0):
 - `class C(var f()) {}` (residue `declaring_parameter.dart:8`) parses clean on
   pristine upstream 0.3.0: fixed upstream, residue entry removed below.
 - Null-aware case heads (`case b?[c]:`) still error on the new tree: residue kept.
-- Tests: `crates/sloplint-syntax/tests/grammar_gaps/dart.rs`, 38 tests, all green
+- Tests: `crates/sloplint-syntax/tests/grammar_gaps/dart.rs`, 39 tests, all green
   on the vendored grammar. 6 fix tests fail on pristine upstream 0.3.0 (the
-  patch-kept shapes); the other 20 fix shapes pass on both. The 12 that pass on
-  both before and after are 11 error-controls and one non-regression guard.
+  patch-kept shapes); the other 21 fix shapes pass on both, including the
+  constructor-invocation callee-name pin (an adapter pin, green on any 0.3.0
+  tree). The 12 that pass on both before and after are 11 error-controls and
+  one non-regression guard.
 
 ## Acceptance status
 
