@@ -8,6 +8,7 @@ use super::unique_patch_lines::{is_comment_line, is_strong_line, is_substantive,
 use crate::config::Strictness;
 use crate::facts::{FileFacts, Function, Pos};
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift, role_at};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, parse_options};
 
@@ -77,6 +78,12 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for UniquePatchAnchors {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        // TLA+ repeats blocks by design: generated PlusCal translations,
+        // TLC trace and model records, and proof-step BY references repeat
+        // identical blocks, so every firing is noise.
+        if matches!(facts.lang, Lang::Tlaplus) {
+            return;
+        }
         let segments = kept_segments(facts.source);
         for run in self.repeated_runs(&segments) {
             self.report(facts, &segments, &run, out);

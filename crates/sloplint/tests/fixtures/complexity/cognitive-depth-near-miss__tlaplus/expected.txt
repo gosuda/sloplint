@@ -1,0 +1,1 @@
+# Nested IFs under a quantifier score 14, but the rule stays silent on TLA+.
