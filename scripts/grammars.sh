@@ -250,11 +250,24 @@ cmd_verify() {
       diffs=1
     fi
   done < <(cd "$work/upstream" && find . -name grammar.js -not -path "./node_modules/*" | sort)
-  # Compare regenerated parser artifacts where both sides exist.
+  # Compare regenerated parser artifacts. The cpp and lean vendors commit
+  # src/parser.c.gz instead of src/parser.c (decompressed by build.rs), so
+  # compare against the decompressed artifact; a regenerated artifact with
+  # no vendor counterpart fails instead of passing silently.
   while IFS= read -r rf; do
     rel="${rf#./}"
-    if [ -f "$ROOT/vendor/$name/$rel" ] && ! cmp -s "$work/upstream/$rel" "$ROOT/vendor/$name/$rel"; then
-      printf 'grammars.sh verify: %s: differs: %s\n' "$name" "$rel" >&2
+    if [ "$rel" = "src/parser.c" ] && [ ! -f "$ROOT/vendor/$name/$rel" ] && [ -f "$ROOT/vendor/$name/$rel.gz" ]; then
+      if ! gzip -dc "$ROOT/vendor/$name/$rel.gz" 2>"$work/gunzip.err" | cmp -s - "$work/upstream/$rel"; then
+        printf 'grammars.sh verify: %s: differs: %s (against committed %s)\n' "$name" "$rel" "$rel.gz" >&2
+        diffs=1
+      fi
+    elif [ -f "$ROOT/vendor/$name/$rel" ]; then
+      if ! cmp -s "$work/upstream/$rel" "$ROOT/vendor/$name/$rel"; then
+        printf 'grammars.sh verify: %s: differs: %s\n' "$name" "$rel" >&2
+        diffs=1
+      fi
+    else
+      printf 'grammars.sh verify: %s: missing vendor artifact: %s\n' "$name" "$rel" >&2
       diffs=1
     fi
   done < <(cd "$work/upstream" && find . -path "*/src/grammar.json" -o -path "*/src/node-types.json" -o -path "*/src/parser.c" | sort)
