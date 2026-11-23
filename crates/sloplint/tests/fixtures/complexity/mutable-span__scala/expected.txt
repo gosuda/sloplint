@@ -1,3 +1,7 @@
+# default-arg-write.scala: the `sink` parameter is out of scope in its own
+# clause, so `sink(count = 1)` in the default calls the outer method and the
+# assignment writes `count` (binding line 4, writes lines 5 and 35, span 30).
+src/default-arg-write.scala:4 info complexity/mutable-span
 # id-label.scala: `case Doc(_id = id)` — the `_id` label is a field selector,
 # not a binder, so writes to the outer `var _id` inside the case still track
 # onto its binding (writes at 6 and 39).
@@ -17,7 +21,3 @@ src/pattern-vars.scala:45 info complexity/mutable-span
 src/pattern-vars.scala:46 info complexity/mutable-span
 # Positive: var declared line 3, last write line 36, span 33 >= strict major_at 30.
 src/spread.scala:3 info complexity/mutable-span
-# default-arg-write.scala: the `sink` parameter is out of scope in its own
-# clause, so `sink(count = 1)` in the default calls the outer method and the
-# assignment writes `count` (binding line 4, writes lines 5 and 35, span 30).
-src/default-arg-write.scala:4 info complexity/mutable-span
