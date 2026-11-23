@@ -6,7 +6,9 @@
 //! one walker role, so `list` maps to `Role::Function` and every
 //! other list-shaped construct is classified by the head table below
 //! but realized only where its role is available. See
-//! the documented gaps (branches, loops, calls, imports, types).
+//! the documented gaps (branches, loops, calls, types). Relative-string
+//! `require` specs are recorded as import facts; bare module symbols and
+//! installed-collection `(lib ...)` specs are not resolvable and stay out.
 //!
 //! The grammar defines fields on no node kind, so every lookup below
 //! is positional over `named_children`, never `child_by_field`.
@@ -16,11 +18,14 @@
 
 mod head;
 
-use sloplint_core::facts::{Param, PrimitiveKind, Visibility};
+use std::borrow::Cow;
+
+use sloplint_core::facts::{Import, ImportKind, ImportScope, Param, PrimitiveKind, Visibility};
 use tree_sitter::Node;
 
 use crate::hooks::{
-    CallHead, Cx, FunctionHead, LangHooks, named_children, pos_of, preceding_comments, text,
+    CallHead, Cx, FunctionHead, LangHooks, last_segment, named_children, pos_of,
+    preceding_comments, strip_quotes, text,
 };
 use crate::spec::Role;
 
@@ -391,12 +396,77 @@ fn visibility_of(cx: &Cx<'_, '_>, name: &str) -> Visibility {
     }
 }
 
+fn push_require_spec<'s>(cx: &Cx<'_, 's>, spec: Node<'_>, out: &mut Vec<Import<'s>>) {
+    match spec.kind() {
+        "string" => push_string_require(cx, spec, out),
+        "list" => {
+            let mut kids = code_children(spec).into_iter();
+            let Some(head) = kids.next() else {
+                return;
+            };
+            if head.kind() != "symbol" {
+                return;
+            }
+            if matches!(text(cx, head), "lib" | "planet") {
+                return;
+            }
+            for child in kids {
+                push_require_spec(cx, child, out);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn push_string_require<'s>(cx: &Cx<'_, 's>, spec: Node<'_>, out: &mut Vec<Import<'s>>) {
+    let module = strip_quotes(text(cx, spec));
+    if module.is_empty() {
+        return;
+    }
+    out.push(Import {
+        pos: pos_of(spec),
+        module: Cow::Borrowed(module),
+        name: last_segment(module, &["/"]),
+        alias: None,
+        kind: ImportKind::Namespace,
+        scope: ImportScope::Module,
+        in_test: is_test_path(cx.path),
+        is_reexport: false,
+        external_root: None,
+    });
+}
+
+fn is_test_path(path: &str) -> bool {
+    let mut segments = path.split('/');
+    let file = segments.next_back().unwrap_or(path);
+    if file == "test.rkt" || file == "tests.rkt" {
+        return true;
+    }
+    segments.any(|segment| segment == "test" || segment == "tests")
+}
+
 impl LangHooks for RacketHooks {
     fn call<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<CallHead<'s>> {
         let _ = (n, cx);
         // Unreachable: `list` serves `Role::Function`, so the walker
         // never consults `call`. Racket calls stay unmapped.
         None
+    }
+
+    fn imports<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<Import<'s>>) {
+        if n.kind() != "list" || in_non_code(cx) {
+            return;
+        }
+        let mut kids = code_children(n).into_iter();
+        let Some(head) = kids.next() else {
+            return;
+        };
+        if head.kind() != "symbol" || text(cx, head) != "require" {
+            return;
+        }
+        for spec in kids {
+            push_require_spec(cx, spec, out);
+        }
     }
 
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {

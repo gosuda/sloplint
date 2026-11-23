@@ -104,6 +104,11 @@ pub fn import_keys(lang: Lang, importer: &str, spec: &str) -> Vec<String> {
             drop_trailing_index(&mut segs);
             suffix_keys(&segs)
         }
+        Lang::Racket => {
+            let mut segs = Vec::new();
+            racket_segments(importer, spec, &mut segs);
+            suffix_keys(&segs)
+        }
         Lang::Java | Lang::Kotlin | Lang::Scala | Lang::CSharp => {
             let mut segs = Vec::new();
             dotted_segments(spec, &mut segs);
@@ -115,6 +120,21 @@ pub fn import_keys(lang: Lang, importer: &str, spec: &str) -> Vec<String> {
             suffix_keys(&segs)
         }
     }
+}
+
+fn racket_segments(importer: &str, spec: &str, segs: &mut Vec<String>) {
+    let spec = spec
+        .strip_suffix(".rkt")
+        .or_else(|| spec.strip_suffix(".rktl"))
+        .or_else(|| spec.strip_suffix(".rktd"))
+        .unwrap_or(spec);
+    if spec.starts_with('.') {
+        ts_segments(importer, spec, segs);
+        return;
+    }
+    let mut owned = String::from("./");
+    owned.push_str(spec);
+    ts_segments(importer, &owned, segs);
 }
 
 fn rust_import_keys(importer: &str, spec: &str) -> Vec<String> {
