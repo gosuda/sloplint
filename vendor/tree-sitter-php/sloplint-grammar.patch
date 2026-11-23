@@ -1,6 +1,6 @@
 --- a/common/define-grammar.js
 +++ b/common/define-grammar.js
-@@ -99,7 +99,6 @@
+@@ -106,7 +106,6 @@
        [$.if_statement],
  
        [$.namespace_name],
@@ -8,7 +8,7 @@
        [$.parenthesized_expression, $.argument],
      ],
  
-@@ -115,6 +114,13 @@
+@@ -122,6 +121,13 @@
        $.heredoc_start,
        $.heredoc_end,
        $.nowdoc_string,
@@ -22,7 +22,7 @@
        $.sentinel_error, // Unused token used to indicate error recovery mode
      ],
  
-@@ -306,7 +312,7 @@
+@@ -314,7 +320,7 @@
          field('body', $.namespace_use_group),
        ),
  
@@ -31,37 +31,35 @@
  
        trait_declaration: $ => seq(
          optional(field('attributes', $.attribute_list)),
-@@ -998,6 +1004,11 @@
-         choice(
-           $.primary_expression,
-           field('arguments', $.arguments),
-+          // `clone` takes a full expression in PHP, so `clone $a = $b` and
-+          // `clone $a ??= $b` (and chains through further `clone`s) parse with
-+          // the assignment as the clone operand.
-+          $.assignment_expression,
-+          $.augmented_assignment_expression,
-         ),
+@@ -1254,7 +1260,15 @@
        ),
  
-@@ -1256,6 +1267,17 @@
-         $.relative_scope,
+       function_call_expression: $ => prec(PREC.CALL, seq(
+-        field('function', choice($._name, $._callable_expression)),
++        field('function', choice(
++          $._name,
++          // Cast words double as plain function names (`int($x)`), so the
++          // constant spellings are callable even though `_name` only covers
++          // the class-name subset. Real casts keep their parentheses, so
++          // this cannot match a `cast_expression`.
++          alias(choice(...CAST_TYPE_CONSTANT_NAMES.map(type => keyword(type, false))), $.name),
++          $._callable_expression,
++        )),
+         field('arguments', $.arguments),
+       )),
+ 
+@@ -1364,6 +1378,10 @@
+         $.parenthesized_expression,
+         $._dereferencable_scalar,
          $._name,
-         $._dereferencable_expression,
-+        // Class names that coincide with cast keywords (e.g. `Binary::class`).
-+        // `binary`, `boolean`, `double`, `integer` and `real` are valid class
-+        // names in PHP; the remaining cast keywords are reserved words and
-+        // stay rejected here.
-+        alias(choice(
-+          keyword('binary', false),
-+          keyword('boolean', false),
-+          keyword('double', false),
-+          keyword('integer', false),
-+          keyword('real', false),
-+        ), $.name),
-       ),
++        // A constant spelling (`OBJECT[0]`) dereferences the constant, not a
++        // class: the keyword token cannot reach `_name`, which only covers
++        // the class-name subset.
++        alias(choice(...CAST_TYPE_CONSTANT_NAMES.map(type => keyword(type, false))), $.name),
+       )),
  
-       relative_scope: _ => prec(PREC.SCOPE, choice(
-@@ -1379,7 +1401,10 @@
+       _dereferencable_scalar: $ => prec(PREC.DEREF, choice(
+@@ -1395,7 +1413,10 @@
        _simple_string_member_access_expression: $ => prec(PREC.MEMBER, seq(
          field('object', $.variable_name),
          '->',
@@ -73,7 +71,7 @@
        )),
  
        _simple_string_subscript_unary_expression: $ => prec.left(seq('-', $.integer)),
-@@ -1459,6 +1484,7 @@
+@@ -1475,6 +1496,7 @@
          repeat(choice(
            alias(token(choice('\\\\', '\\\'')), $.escape_sequence),
            $.string_content,
@@ -81,7 +79,7 @@
          )),
          '\'',
        ),
-@@ -1478,13 +1504,10 @@
+@@ -1494,13 +1516,10 @@
          optional('"'),
          field('identifier', $.heredoc_start),
          optional(token.immediate('"')),
