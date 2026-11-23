@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::Strictness;
 use crate::facts::FileFacts;
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Thresholds};
 use crate::rules::{parse_options, threshold_options};
@@ -63,6 +64,13 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for CognitiveDepth {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        // TLA+ packs nested quantifiers, IFs and PlusCal branches into one
+        // operator by design; the idiomatic action style scores like deeply
+        // nested procedural code, and the outliers are generated PlusCal
+        // translations. Thresholds assume procedural code.
+        if matches!(facts.lang, Lang::Tlaplus) {
+            return;
+        }
         for function in &facts.functions {
             if function.max_depth < 2 {
                 continue;

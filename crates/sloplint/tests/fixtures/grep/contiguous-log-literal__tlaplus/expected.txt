@@ -1,1 +1,0 @@
-a.tla:2 info grep/contiguous-log-literal
