@@ -511,11 +511,16 @@ const DEFAULT_LOG_CALLEES: [(&str, &str); 30] = [
     ),
     ("quint", "print"),
     ("tlaplus", "Print,PrintT"),
-    // Alloy has no logging or output facility. The sentinel ends in `!`,
-    // which the Alloy `name` regex cannot produce, so no callee can ever
-    // match it and the log-literal rules stay silent.
-    ("alloy", "alloy.__no_log_callee__!"),
-    ("dafny", "print"),
+     // Alloy has no logging or output facility. The sentinel ends in `!`,
+     // which the Alloy `name` regex cannot produce, so no callee can ever
+     // match it and the log-literal rules stay silent.
+     ("alloy", "alloy.__no_log_callee__!"),
+     // Dafny `print` writes program output (pretty-printer fragments and
+     // test-oracle output), not log lines: mapping it as a log callee
+     // reports every printer as unsearchable logging. The sentinel ends in
+     // `!`, which the Dafny `identifier` regex cannot produce, so no callee
+     // can ever match it and the log-literal rules stay silent.
+    ("dafny", "dafny.__no_log_callee__!"),
     (
         "racket",
         "log-info,log-warning,log-error,log-debug,log-fatal,displayln,printf,eprintf",
