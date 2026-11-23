@@ -2,11 +2,13 @@
 //! raw-tree walk because a hidden MISSING recovery node sets `has_error`
 //! without producing a cursor-visible error position.
 //!
-//! The grammar is vendored unpatched at upstream commit `0d28e5d`, so each
-//! test pins a construct class against that revision: a re-vendor that
-//! drops a shape shows up here. There is no external Lean corpus in this
-//! repository, so the fixtures below are the coverage.
+//! The vendored grammar starts from upstream commit `0d28e5d`, with local
+//! fixes recorded in `vendor/tree-sitter-lean/sloplint-grammar.patch`.
+//! Each test pins a construct class so a re-vendor cannot silently drop it.
+//! There is no external Lean corpus in this repository, so the fixtures
+//! below are the coverage.
 
+use std::ops::ControlFlow;
 use std::sync::LazyLock;
 
 use sloplint_core::facts::ImportKind;
@@ -28,17 +30,17 @@ fn run<'s>(path: &'s str, source: &'s str) -> Analysis<'s> {
 }
 
 fn run_clean<'s>(path: &'s str, source: &'s str) -> Analysis<'s> {
-    let analysis = run(path, source);
-    assert!(
-        analysis.parse_error.is_none(),
-        "{path} must parse cleanly, first error at {:?}",
-        analysis.parse_error
-    );
     let tree = parse_raw(source);
     assert!(
         first_problem(&tree).is_none(),
         "{path} has a recovery node: {:?}",
         first_problem(&tree)
+    );
+    let analysis = run(path, source);
+    assert!(
+        analysis.parse_error.is_none(),
+        "{path} must parse cleanly, first error at {:?}",
+        analysis.parse_error
     );
     analysis
 }
@@ -47,7 +49,52 @@ fn parse_raw(source: &str) -> tree_sitter::Tree {
     let language: tree_sitter::Language = tree_sitter_lean::LANGUAGE.into();
     let mut parser = tree_sitter::Parser::new();
     parser.set_language(&language).expect("lean language loads");
-    parser.parse(source, None).expect("parser returns a tree")
+    let mut checks = 0;
+    let mut progress = |_: &tree_sitter::ParseState| {
+        checks += 1;
+        if checks > 10_000 {
+            ControlFlow::Break(())
+        } else {
+            ControlFlow::Continue(())
+        }
+    };
+    parser
+        .parse_with_options(
+            &mut |offset, _| source.as_bytes().get(offset..).unwrap_or_default(),
+            None,
+            Some(tree_sitter::ParseOptions::new().progress_callback(&mut progress)),
+        )
+        .expect("parser must advance instead of replaying zero-width layout tokens")
+}
+
+#[test]
+fn malformed_nested_tactic_keeps_progress_and_later_declarations() {
+    let source = "theorem nested (h : True) : True := by\n  have inner : True := by\n    have copy := h\n    exact copy ?\n  have outer := inner\n  exact outer\ndef after : Nat := 0\n";
+    let tree = parse_raw(source);
+    let root = tree.root_node();
+    assert!(root.has_error(), "a dangling named-hole marker is invalid");
+    assert_eq!(root.end_byte(), source.len());
+    let last = root
+        .named_child(root.named_child_count() - 1)
+        .expect("following declaration");
+    assert_eq!(last.kind(), "declaration");
+    let definition = last.named_child(0).expect("definition after the error");
+    assert_eq!(definition.kind(), "def");
+    let name = definition
+        .child_by_field_name("name")
+        .expect("definition name");
+    assert_eq!(name.utf8_text(source.as_bytes()), Ok("after"));
+}
+
+#[test]
+fn nested_tactic_siblings_preserve_function_and_call_facts() {
+    let source = "theorem nested (h : True) : True := by\n  have inner : True := by\n    have copy := h\n    exact copy\n  have outer := inner\n  exact outer\ndef after : Nat := 0\n";
+    let analysis = run_clean("src/nested.lean", source);
+    assert_eq!(function_names(&analysis), ["nested", "after"]);
+    assert!(
+        analysis.facts.calls.iter().any(|call| call.callee == "exact"),
+        "nested tactic applications remain visible to the adapter"
+    );
 }
 
 /// True when the tree holds a visible ERROR node or a MISSING node anywhere.

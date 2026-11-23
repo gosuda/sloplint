@@ -17,9 +17,8 @@ Date: 2026-11-21.
   `open <ns> renaming a → b` fix:
   - `do`-block layout: `try … catch … finally` without separator tokens
     (the scanner now peeks clause keywords at same-indent and marks the
-    line end first, and `pending_newline` is a one-shot in-memory flag —
-    tree-sitter only serializes scanner state on a successful `scan()`,
-    so restoring it in `deserialize` resurrected suppressed newlines).
+    line end first). The scanner progress fix below supersedes the
+    original transient newline replay state.
   - `for x in xs do` loops (`for_loop` with `prec.right(PREC.app + 1)`;
     a `reserved:` keyword block was tried and removed — it stops `using`,
     `with`, `do` etc. falling back to identifiers in argument position,
@@ -58,13 +57,10 @@ Date: 2026-11-21.
     alphanumeric chars join the token (`Aᵒᵖ`, `x⁻¹`, `a⁺` are now
     identifiers — postfix notation on those chars is fixture-drifted
     away, not error-freed).
-  - Multi-level dedents: when a newline lands several indent steps up
-    (a `for … do` or `finally` body followed by a column-0 `def`), the
-    scanner records a `dedent_target` column after the first `_dedent`
-    and keeps emitting `_dedent` — without consuming input — on the next
-    scans until the indent stack reaches it. Previously only one dedent
-    per newline could ever be produced, so the following declaration
-    parsed inside the still-open inner block and errored.
+  - Multi-level dedents leave the triggering physical newline unread
+    until every enclosing block has closed. Each zero-width dedent pops
+    one serialized indentation level; the final newline consumes input.
+    This also preserves sibling statement separators without replay flags.
   - Known upstream-parity gaps (identical ERROR on the pinned upstream,
     unfixed by convention): `simpa using h`, `rcases h with ⟨…⟩`,
     `first | …` alternation, `∀ᶠ`, a comma after a tactic in `by` blocks
@@ -100,10 +96,10 @@ Date: 2026-11-21.
   scanner for dotted and quoted identifiers, nested block/doc/module-doc
   comments, raw string literals with matched `#` counts, and the
   layout-sensitive `_indent`, `_dedent`, `_newline` tokens that delimit
-  tactic and do-block bodies — extended with `mark_end`-guarded word
-  peeks, a non-serialized `pending_newline`, a `dedent_target` column
-  for multi-level dedents, and widened identifier characters (see the
-  grammar patch).
+  tactic and do-block bodies, extended with `mark_end`-guarded word
+  peeks, replay-free multi-level dedents, and widened identifier
+  characters (see the grammar patch). The indentation stack is the
+  complete serialized scanner state.
 - Verification: `tree-sitter test` in this directory, 313/313 corpus
   cases pass (see "Corpus results"). `tree-sitter test` builds the
   plain `src/parser.c`, so after a fresh clone first inflate the
@@ -126,6 +122,31 @@ the rest of the diff, so `src/parser.c` is gitignored and `src/parser.c.gz`
 `tree-sitter test` (cli 0.27.1, this directory, committed parser):
 
 - Total parses: 313; successful parses: 313; failed parses: 0.
+
+## Scanner progress regression
+
+The scanner must either consume input or change serialized state whenever
+it emits a token. A previous `pending_newline` replay flag was deliberately
+excluded from serialization; a GLR recovery branch could therefore reuse
+the same zero-width newline indefinitely at one source position.
+
+The scanner now marks the start of a layout scan. Dedents pop one stack
+entry without consuming the physical newline. Indents and newlines mark
+their consumed input, so there is no transient replay state to restore.
+
+Before this change, the nested malformed tactic in
+`malformed_nested_tactic_keeps_progress_and_later_declarations` exceeded
+10,000 parser progress callbacks. The corrected scanner returns a tree
+with the syntax error and the following definition intact. The callback
+budget is a regression-test guard, not a production fallback.
+
+Focused validation used the committed generated parser and tree-sitter
+0.27.2 runtime: all 314 vendored corpus sources produced byte-identical
+trees before and after the scanner change. A bounded scan of 402
+elegant-mermaid Lean files completed with no resource failures, retained
+all 72 previously clean files, and reported 330 syntax failures. Those
+grammar coverage gaps remain separate work; terminating a parse does not
+make it valid.
 
 ## Node compatibility
 
