@@ -377,11 +377,12 @@ The `macro_attribute` change was measured separately on 412 corpus files
 that carried error nodes (the most error-dense .c/.h files of the big
 repos run): error nodes 19,312 before, 17,937 after; files with any error
 403 before, 397 after; six files fully clean; no clean file went to error.
-`src/parser.c`: 34,392,993 bytes (published: 3,872,012; regenerated unpatched
-with 0.27.1: 3,872,027). States: 4758 (published: 2015). Symbols: 610
+`src/parser.c`: 34,392,993 bytes (PR base: 33,956,993; published: 3,872,012;
+regenerated unpatched with 0.27.1: 3,872,027). States: 7353 total, 4758 large
+(PR base: 7267 total, 4712 large; published: 2015). Symbols: 610
 (published: 360). The literal enumeration of `macro_attribute` costs most of
-the size growth; the upstream enum-underlying/case-range forms add the rest
-of the delta over the 7.5 MB figure recorded earlier.
+the size growth; the upstream enum-underlying/case-range forms add about
+436 KB over the PR base.
 
 - **MSVC `__asm {}` / `_asm {}` blocks** parse as a statement-level
   `ms_asm_statement` wrapping a `ms_asm_block` token soup (identifiers,
