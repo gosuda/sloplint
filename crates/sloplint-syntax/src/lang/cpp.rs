@@ -65,6 +65,10 @@ pub(crate) static TABLE: crate::lang::Table = &[
 pub(crate) struct CppHooks;
 pub(crate) static HOOKS: CppHooks = CppHooks;
 impl LangHooks for CppHooks {
+    fn redundant_else(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
+        c_family::flow::redundant_else(n, cx)
+    }
+
     fn shadow_filter(&self) -> ShadowKind {
         ShadowKind::DeclsAndBinds
     }

@@ -80,13 +80,6 @@ struct Found {
     errors: Vec<String>,
 }
 
-fn manifest_boundary(decision: &NameDecision, relative: &Path) -> Option<(ManifestKind, String)> {
-    if matches!(decision, NameDecision::Skipped("data")) {
-        return None;
-    }
-    manifest_dir(relative)
-}
-
 impl Found {
     fn absorb(&mut self, other: &mut Found) {
         self.entries.append(&mut other.entries);
@@ -111,7 +104,7 @@ impl Found {
             decide_non_file_name(relative, config, data)
         };
         if kind.is_file()
-            && let Some((mkind, dir)) = manifest_boundary(&decision, relative)
+            && let Some((mkind, dir)) = manifest_boundary(relative, data)
         {
             self.manifests.insert((mkind, dir));
         }
@@ -143,13 +136,16 @@ const MANIFESTS: &[(&str, ManifestKind)] = &[
     ("setup.py", ManifestKind::Python),
 ];
 
-fn manifest_dir(relative: &Path) -> Option<(ManifestKind, String)> {
+fn manifest_boundary(relative: &Path, data: &GlobSet) -> Option<(ManifestKind, String)> {
     let name = relative.file_name()?.to_str()?;
     let kind = MANIFESTS
         .iter()
         .find(|(known, _)| *known == name)
         .map(|(_, kind)| *kind)?;
     let rel = normalize_rel_path(relative)?;
+    if is_data_path(&rel, data) {
+        return None;
+    }
     match rel.rfind('/') {
         Some(i) => Some((kind, rel[..i].to_string())),
         None => Some((kind, String::new())),
@@ -237,9 +233,43 @@ impl ParallelVisitor for Visitor<'_> {
     fn visit(&mut self, result: Result<DirEntry, ignore::Error>) -> WalkState {
         match result {
             Ok(entry) => self.local.record(self.root, self.config, self.data, &entry),
-            Err(error) => self.local.errors.push(error.to_string()),
+            Err(error) => match data_error_path(self.root, &error, self.data) {
+                Some(relative) => self.local.skipped.push((relative.to_path_buf(), "data")),
+                None => self.local.errors.push(error.to_string()),
+            },
         }
         WalkState::Continue
+    }
+}
+
+fn data_error_path<'a>(root: &Path, error: &'a ignore::Error, data: &GlobSet) -> Option<&'a Path> {
+    match error {
+        ignore::Error::WithPath { path, err } if err.is_io() => {
+            let relative = path.strip_prefix(root).ok()?;
+            if relative.as_os_str().is_empty() {
+                return None;
+            }
+            let mut rel = normalize_rel_path(relative).unwrap_or_else(|| lossy_rel(relative));
+            if is_data_path(&rel, data) {
+                return Some(relative);
+            }
+            // Recursive globs such as `data/**` include `data/`, not `data`.
+            // Only a directory gets this probe; ordinary file names retain
+            // their existing matching semantics.
+            if !path.symlink_metadata().is_ok_and(|meta| meta.is_dir()) {
+                return None;
+            }
+            rel.push('/');
+            data.is_match(&rel).then_some(relative)
+        }
+        ignore::Error::WithDepth { err, .. } | ignore::Error::WithLineNumber { err, .. } => {
+            data_error_path(root, err, data)
+        }
+        ignore::Error::Partial(errors) => match errors.as_slice() {
+            [error] => data_error_path(root, error, data),
+            _ => None,
+        },
+        _ => None,
     }
 }
 
@@ -587,12 +617,11 @@ mod tests {
             "a data manifest is a counted skip even though .py is supported"
         );
         assert!(
-            manifest_boundary(&decision, rel).is_none(),
+            manifest_boundary(rel, &data).is_none(),
             "a data-skipped manifest registers no package boundary"
         );
-        let plain = decide_file_name(rel, &Config::default(), &data_set());
         assert!(
-            manifest_boundary(&plain, rel).is_some(),
+            manifest_boundary(rel, &data_set()).is_some(),
             "the same manifest outside a data glob still defines its package"
         );
     }

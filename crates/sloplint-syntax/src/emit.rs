@@ -385,6 +385,8 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
                     self.mark_value_return(self.closure_depth);
                 }
             }
+        } else if role == Role::Function {
+            self.push_imports(node);
         }
     }
 

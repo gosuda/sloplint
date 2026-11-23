@@ -86,6 +86,16 @@ pub(crate) trait LangHooks: Sync {
         parent.is_some_and(|p| p.kind() == "else_clause")
     }
 
+    fn redundant_else(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
+        let _ = (n, cx);
+        None
+    }
+
+    fn blocking_sleep(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
+        let _ = (n, cx);
+        None
+    }
+
     fn is_ternary_alternate(&self, _n: Node<'_>, _parent: Option<Node<'_>>) -> bool {
         false
     }

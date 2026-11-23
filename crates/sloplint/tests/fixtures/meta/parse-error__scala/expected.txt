@@ -1,2 +1,2 @@
-# Positive: syntax error; other rules skipped for this file.
+# Positive: syntax error; analysis is incomplete.
 src/broken.scala:2 minor meta/parse-error

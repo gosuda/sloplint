@@ -7221,6 +7221,14 @@
     ],
     [
       "type_parameter_declaration",
+      "_simple_type"
+    ],
+    [
+      "_simple_type",
+      "_type_literal"
+    ],
+    [
+      "type_parameter_declaration",
       "_simple_type",
       "_expression"
     ],
@@ -7233,14 +7241,6 @@
       "_simple_type",
       "generic_type",
       "_expression"
-    ],
-    [
-      "type_parameter_declaration",
-      "_simple_type"
-    ],
-    [
-      "_simple_type",
-      "_type_literal"
     ]
   ],
   "precedences": [],

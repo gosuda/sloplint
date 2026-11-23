@@ -8,6 +8,8 @@ mod c_scopes;
 mod callback_functions;
 #[path = "analyze_facts/cpp_scopes.rs"]
 mod cpp_scopes;
+#[path = "analyze_facts/csharp_closures.rs"]
+mod csharp_closures;
 #[path = "analyze_facts/csharp_scopes.rs"]
 mod csharp_scopes;
 #[path = "analyze_facts/dafny_print_calls.rs"]
@@ -20,6 +22,8 @@ mod declaration_scopes;
 mod directive_docs;
 #[path = "analyze_facts/else_if_chains.rs"]
 mod else_if_chains;
+#[path = "analyze_facts/general_redundant_else.rs"]
+mod general_redundant_else;
 #[path = "analyze_facts/global_write_scope_end.rs"]
 mod global_write_scope_end;
 #[path = "analyze_facts/global_write_shadow.rs"]
@@ -42,8 +46,12 @@ mod is_method;
 mod java_scopes;
 #[path = "analyze_facts/kotlin_scopes.rs"]
 mod kotlin_scopes;
+#[path = "analyze_facts/lean_interpolated_strings.rs"]
+mod lean_interpolated_strings;
 #[path = "analyze_facts/macro_attr.rs"]
 mod macro_attr;
+#[path = "analyze_facts/managed_test_sleeps.rs"]
+mod managed_test_sleeps;
 #[path = "analyze_facts/member_pointer.rs"]
 mod member_pointer;
 #[path = "analyze_facts/objc_scopes.rs"]
@@ -64,10 +72,16 @@ mod powershell_scopes;
 mod python_scopes;
 #[path = "analyze_facts/qt_access.rs"]
 mod qt_access;
+#[path = "analyze_facts/racket_requires.rs"]
+mod racket_requires;
+#[path = "analyze_facts/redundant_else.rs"]
+mod redundant_else;
 #[path = "analyze_facts/ruby_scopes.rs"]
 mod ruby_scopes;
 #[path = "analyze_facts/rust_scopes.rs"]
 mod rust_scopes;
+#[path = "analyze_facts/rust_test_sleeps.rs"]
+mod rust_test_sleeps;
 #[path = "analyze_facts/scala_scopes.rs"]
 mod scala_scopes;
 #[path = "analyze_facts/sole_call_forwarding.rs"]
@@ -80,6 +94,8 @@ mod support;
 mod swift_scopes;
 #[path = "analyze_facts/swift_throws.rs"]
 mod swift_throws;
+#[path = "analyze_facts/test_sleeps.rs"]
+mod test_sleeps;
 #[path = "analyze_facts/walk_scaling.rs"]
 mod walk_scaling;
 #[path = "analyze_facts/web_scopes.rs"]

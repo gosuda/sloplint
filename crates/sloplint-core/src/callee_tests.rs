@@ -349,3 +349,39 @@ fn segments_rev_pairs_colons_left_to_right() {
         );
     }
 }
+
+#[test]
+fn commented_callee_segments_still_match() {
+    assert!(
+        plain("Logger.new", "Logger /* reason */ .new"),
+        "a comment between the base and the suffix must not hide the call"
+    );
+    assert!(
+        plain("Logger.new", "Logger.new"),
+        "the uncommented spelling still matches"
+    );
+    assert!(
+        !plain("Logger.new", "Logger /* reason */ .other"),
+        "a different suffix still misses"
+    );
+    assert_eq!(
+        strip_comments("Logger /* reason */ .new"),
+        Some("Logger  .new".to_string()),
+        "block comments strip out"
+    );
+    assert_eq!(
+        strip_comments("foo // reason\n.bar"),
+        Some("foo \n.bar".to_string()),
+        "line comments strip to the newline"
+    );
+    assert_eq!(
+        strip_comments("obj[\"/*\"]"),
+        Some("obj[\"/*\"]".to_string()),
+        "comment markers inside a string member are code, not a comment"
+    );
+    assert_eq!(
+        strip_comments("Logger.new"),
+        None,
+        "comment-free callees take the zero-alloc path"
+    );
+}

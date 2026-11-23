@@ -35,6 +35,7 @@ fn boundary_error_region_excised_rules_still_run() {
         .find(|f| &*f.rule == "meta/parse-error" && &*f.path == "src/stubs.c")
         .unwrap_or_else(|| panic!("rescued parse must still report the excised region"));
     assert_eq!(pe.line, 1, "parse-error marks the unparseable construct");
+    assert_eq!(pe.message, "syntax error; analysis is incomplete");
     let depth = r
         .findings
         .iter()
@@ -253,4 +254,5 @@ fn boundary_fully_unparseable_file_still_reports_only_parse_error() {
         .find(|f| &*f.rule == "meta/parse-error" && &*f.path == "src/blob.c")
         .unwrap_or_else(|| panic!("unparseable file must report parse-error"));
     assert_eq!(pe.line, 1);
+    assert_eq!(pe.message, "syntax error; analysis is incomplete");
 }

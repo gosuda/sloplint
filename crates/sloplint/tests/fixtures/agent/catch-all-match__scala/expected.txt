@@ -1,1 +1,4 @@
+# given.scala: `case given(value)` is a Scala 2 extractor application, so it
+# counts as a variant constructor; with `Circle` the wildcard stays enum-like.
+src/given.scala:8 info agent/catch-all-match
 src/shapes.scala:9 info agent/catch-all-match

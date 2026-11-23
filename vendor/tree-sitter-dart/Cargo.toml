@@ -12,7 +12,7 @@
 [package]
 edition = "2021"
 name = "tree-sitter-dart"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Kasper Overgård Nielsen <kasper@byolimit.com>"]
 build = "bindings/rust/build.rs"
 include = [

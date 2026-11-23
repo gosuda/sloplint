@@ -1,3 +1,12 @@
+# Provenance for the cherry-picked hunks below (base: upstream tag v0.23.4
+# f41e1a044c8a84ea9fa8577fdd2eab92ec96de02).
+# Upstream commit 4910efca8d2767be9c27436c942aec126736cc6c ("fix: Support
+# explicit calls to overloaded operators", closes #252), carried verbatim:
+# the `operator_name` arm of the `field` choice in `field_expression`,
+# and the `field_expression`/`template_method` conflict entry. All other
+# hunks are self-authored (Qt, macro and Win32 machinery); open PR #375
+# covers standard-syntax gaps only, not these shapes. See
+# vendor/tree-sitter-cpp/SLOPLINT.md.
 --- /tmp/cpp-upstream/grammar.js	2026-11-19 10:17:26.100675059 +0000
 +++ grammar.js	2026-11-19 19:16:46.931870232 +0000
 @@ -55,9 +55,76 @@

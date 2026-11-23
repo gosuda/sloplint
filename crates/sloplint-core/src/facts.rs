@@ -69,6 +69,10 @@ pub struct FileFacts<'s> {
     pub impls: Vec<ImplRef<'s>>,
     pub wildcard_arms: Vec<WildcardArm>,
     pub handlers: Vec<Handler<'s>>,
+    /// Else branches whose preceding branch exits unconditionally and can be flattened.
+    pub redundant_elses: Vec<Pos>,
+    /// Calls to identified wall-clock sleep APIs outside known virtual-time contexts.
+    pub blocking_sleeps: Vec<Pos>,
     pub assertions: Vec<Assertion>,
     pub field_copies: Vec<FieldCopy<'s>>,
     pub dynamic_symbols: Vec<DynamicSymbol>,

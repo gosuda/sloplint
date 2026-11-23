@@ -1,0 +1,2 @@
+# Sibling extensions, outside-root imports and transformer strings give no credit.
+pkg/lib/util.rkt:1 info agent/colocated-tests

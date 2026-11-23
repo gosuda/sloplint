@@ -15,8 +15,8 @@ sloplint finds code patterns that make changes harder to review and apply: deep 
 It is written for developers and for coding agents. The default `agent` output format is stable, machine-parseable text, so an agent can consume findings directly and apply the `fix:` line attached to each one.
 
 - **30 languages**: Rust, TypeScript/TSX, JavaScript/JSX, Python, Go, LoGOs, Java, Kotlin, C#, C, C++, Objective-C, PHP, Ruby, Bash, PowerShell, Swift, R, Scala, Dart, Zig, OCaml, Odin, Starlark, Lean 4, Quint, TLA+, Alloy, Dafny, Racket.
-- **27 builtin rules** in four families (`complexity/`, `grep/`, `slop/`, `agent/`), plus custom tree-sitter queries from `[[custom_rules]]` configuration.
- - **4 strictness profiles** (`minimal`, `basic`, `standard`, `strict`), each monotone in coverage and thresholds. Every rule was measured against real open-source code; a rule stays on at `standard` only when at least 80 percent of sampled findings were judged true after tightening (see [Precision](#precision)).
+- **29 builtin rules** in four families (`complexity/`, `grep/`, `slop/`, `agent/`), plus custom tree-sitter queries from `[[custom_rules]]` configuration.
+- **4 strictness profiles** (`minimal`, `basic`, `standard`, `strict`), each monotone in coverage and thresholds. A rule stays on at `standard` only when at least 80 percent of sampled findings were judged true after tightening; new rules without measured precision start as strict-only advisories (see [Precision](#precision)).
 - **Ratchet mode** freezes today's findings into a baseline, so only new debt fails the build.
 
 sloplint works from syntax alone: tree-sitter parses each file and per-language heuristics lower the tree into facts, so results are approximate by design. It is not a typechecker or a security analyzer, and it applies no patches itself; every finding carries a `fix:` line describing the change a human or agent should make. In C#, property accessors, operators, conversion operators, and destructors count as functions.
@@ -75,13 +75,27 @@ Every run analyzes the project root. With no `PATHS`, only findings under the cu
 
 - **complexity/**: nesting-weighted cognitive depth, nesting depth, mutable-statement spans, boolean params, import fan-out.
 - **grep/**: generic names, homonym definitions across files, renamed and wildcard imports, runtime-built symbols, non-literal log messages, multiline arguments.
-- **slop/**: pass-through wrappers, echo comments, swallowed or double-reported errors, single-implementation abstractions, barrel files, field-copy literals.
-- **agent/**: file size budgets, stringly-typed APIs, missing boundary annotations, untyped error returns, catch-all matches, ambient global state, message-less assertions, ambiguous patch anchors, missing colocated tests.
+- **slop/**: pass-through wrappers, redundant else blocks, echo comments, swallowed or double-reported errors, single-implementation abstractions, barrel files, field-copy literals.
+- **agent/**: file size budgets, stringly-typed APIs, missing boundary annotations, untyped error returns, catch-all matches, ambient global state, message-less assertions, ambiguous patch anchors, missing colocated tests, wall-clock sleeps in tests.
 - **custom/**: tree-sitter queries in `sloplint.toml` or separate files, with captures interpolated into messages, per-rule severity, and path globs. Each rule is bounded per file at 16,384 in-progress matches and 1,024 reported hits: a query that exceeds either cap reports `meta/custom-cap` for rules that are enabled and whose globs match the file, instead of returning partial results silently.
 
 `meta/parse-error` is Minor in every profile, so a default `major` gate does not fail on it. Set the rule to a higher rung or pass `--fail-on minor`. `meta/custom-cap` is Major in every profile: a capped query's results are partial, so a default `major` gate fails until the query is anchored; the cap uses the same eligibility as the rule's own findings, so turning a rule off or excluding the file silences its cap too. An empty `project.languages` list analyzes nothing.
 
+Parsing has a shared ten-second budget per file, checked cooperatively across
+the primary grammar, fallback grammars, and recovery attempts. A timeout reports
+one `meta/parse-error` finding and contributes no syntax facts. Timed-out files
+are not cached, so a later run retries them. The budget limits parsing work; it
+is not a hard memory limit or a deadline for the complete project scan.
+
+Recovery can retain healthy constructs after removing unsupported syntax while
+still reporting the original parse error. Findings in affected constructs are
+discarded, and source byte positions remain unchanged. Lean recovery also
+handles complete commands and parser fragments without discarding neighboring
+healthy commands.
+
 The full rule table, with per-profile levels, role shifts, and predicates, is under [Rule reference](#rule-reference) below; `sloplint rules` prints the effective settings and short summaries for the active profile.
+
+`slop/redundant-else` and `agent/no-sleep-in-tests` adopt selected practices from JustGoodPractices. They are strict-only advisories with explicit language and runtime limits. See [Adopted practices](docs/just-good-practices.md) for examples, exclusions, and the rationale for leaving semantic judgments to review.
 
 ### Severity and confidence
 
@@ -112,7 +126,7 @@ major_at = 18                          # minor_at still comes from the preset
 level = "minor"                       # enables a rule the standard profile leaves off
 ```
 
-A `[languages.<key>]` table sets `log_callees`, the call names the language treats as log calls. `grep/contiguous-log-literal` and `slop/zombie-catch` read it. `sloplint init` writes one such table per language with the default names.
+A `[languages.<key>]` table sets `log_callees`, the call names the language treats as log calls. `grep/contiguous-log-literal` and `slop/zombie-catch` read it. `sloplint init` writes one such table per language with the default names. `grep/contiguous-log-literal` does not run on Lean, including with configured log callees: elaborator diagnostics and `#do` test scaffolding do not provide a reliable syntactic signal for this rule.
 
 ### Ratchet mode
 
@@ -171,7 +185,9 @@ Agent lines read `path:line:col: <rung>/<confidence>: message [rule]`, followed 
 
 ### Skipped files
 
-An unreadable source file stops the run with exit `3` and reports its path and cause. You see skipped files only as `skipped=N` in the summary. By default they never change the exit status. The run skips oversized files, non-UTF-8 files, vanished files, symlinks, non-regular files, files with non-UTF-8 names, generated files, and files under data globs (`testdata`, `test-data`, `__fixtures__`, `__snapshots__`), which are counted as skipped instead of silently excluded. A file counts as generated when a marker phrase appears in a comment of its header, which is the leading run of blank and comment lines in the first 2048 bytes. Code that follows the end of a block comment is not read. A comment uses only its own language's syntax: `//` and `/* */` in Rust, TypeScript, JavaScript, Go, LoGOs, Java, Kotlin, C#, C, C++, Objective-C, Swift, Scala, Dart, Odin, PHP, Quint, and Dafny; `//` alone in Zig; `#` in Python, Ruby, Bash, PowerShell, R, Starlark, and PHP, except a PHP `#[` attribute line; `<# #>` in PowerShell; `(* *)` in OCaml; `\*` lines and `(* *)` blocks in TLA+; `--` lines with `/-` to `-/` blocks in Lean; `//` and `--` lines with `/* */` blocks in Alloy; `;` lines with `#|` to `|#` blocks in Racket; and a `"""` or `'''` docstring in Python and Starlark. An interpreter line that starts with `#!/` or `#! ` is a header line in every language. The marker phrases are `@generated`, `automatically generated`, `auto generated`, `auto-generated`, `autogenerated`, `do not edit`, and `do not modify by hand`. Pass `--fail-on-skipped` (or set `project.fail_on_skipped = true`) to fail with exit `1` instead: threshold mode fails on any skipped file, ratchet mode fails only on files newly skipped since the baseline, and the run names each gating file after the summary.
+An unreadable source file or source directory stops the run with exit `3` and reports its path and cause. The run skips oversized files, non-UTF-8 files, vanished files, symlinks, non-regular files, files with non-UTF-8 names, generated files, and enabled source files matched by `project.data_globs` (by default, `testdata`, `test-data`, `__fixtures__`, and `__snapshots__`). Unsupported data files and files in disabled languages are ignored. Each unreadable data directory contributes one `data` skip; readable data directories are traversed and their enabled source files are counted individually. The summary reports `skipped=N`; skips do not change the exit status unless the skip gate is enabled.
+
+A file counts as generated when a marker phrase appears in a comment of its header, which is the leading run of blank and comment lines in the first 2048 bytes. Code that follows the end of a block comment is not read. A comment uses only its own language's syntax: `//` and `/* */` in Rust, TypeScript, JavaScript, Go, LoGOs, Java, Kotlin, C#, C, C++, Objective-C, Swift, Scala, Dart, Odin, PHP, Quint, and Dafny; `//` alone in Zig; `#` in Python, Ruby, Bash, PowerShell, R, Starlark, and PHP, except a PHP `#[` attribute line; `<# #>` in PowerShell; `(* *)` in OCaml; `\*` lines and `(* *)` blocks in TLA+; `--` lines with `/-` to `-/` blocks in Lean; `//` and `--` lines with `/* */` blocks in Alloy; `;` lines with `#|` to `|#` blocks in Racket; and a `"""` or `'''` docstring in Python and Starlark. An interpreter line that starts with `#!/` or `#! ` is a header line in every language. The marker phrases are `@generated`, `automatically generated`, `auto generated`, `auto-generated`, `autogenerated`, `do not edit`, and `do not modify by hand`. Pass `--fail-on-skipped` (or set `project.fail_on_skipped = true`) to fail with exit `1` instead: threshold mode fails on any skipped file, ratchet mode fails only on files newly skipped since the baseline, and the run names each gating file after the summary.
 
 ## Code roles
 
@@ -182,17 +198,19 @@ Files are `library`, `entry`, `test`, `support`, `bench`, or `example`; `data` p
 - `support`: `**/conftest.py,**/testutil/**,**/testutils/**,**/test_util/**,**/test_utils/**,**/test_helpers/**,**/test_support/**,**/testing/**,**/tests/common/**,**/tests/support/**,**/spec/support/**,**/__mocks__/**`
 - `entry`: `**/src/main.rs,**/src/bin/**,**/build.rs,**/main.go,**/main.lgo,**/cmd/**,**/__main__.py,**/manage.py,**/scripts/**`
 - `data`: `**/testdata/**,**/test-data/**,**/__fixtures__/**,**/__snapshots__/**`
-- `test`: `**/tests/**,**/test/**,**/__tests__/**,**/*_test.go,**/*_test.lgo,**/test_*.py,**/*_test.py,**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,**/*_test.c,**/test_*.c,**/*_test.cc,**/*_test.cpp,**/*_test.cxx,**/*_unittest.cc,**/test_*.cc,**/test_*.cpp,**/*Tests.m,**/*Tests.cs,**/*Test.cs,**/*.Tests/**,**/*_test.dart,**/*Spec.scala,**/*Test.scala,**/*Suite.scala,**/*.test.js,**/*.test.jsx,**/*.test.mjs,**/*.test.cjs,**/*.spec.js,**/*.spec.jsx,**/*.spec.mjs,**/*.spec.cjs,**/*Test.java,**/*Tests.java,**/*Test.kt,**/*Tests.kt,**/Tests/**,**/*Tests.swift,**/*Test.php,**/*_spec.rb,**/*_test.rb,**/spec/**,**/*.bats,**/test_*.sh,**/*_test.sh,**/tests/**/*.sh,**/*.Tests.ps1,**/*.tests.ps1,**/tests/**/*.ps1`
+- `test`: `**/tests/**,**/test/**,**/__tests__/**,**/*_test.go,**/*_test.lgo,**/test_*.py,**/*_test.py,**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,**/*_test.c,**/test_*.c,**/*_test.cc,**/*_test.cpp,**/*_test.cxx,**/*_unittest.cc,**/test_*.cc,**/test_*.cpp,**/*Tests.m,**/*Tests.cs,**/*Test.cs,**/*.Tests/**,**/*_test.dart,**/*Spec.scala,**/*Test.scala,**/*Suite.scala,**/*.test.js,**/*.test.jsx,**/*.test.mjs,**/*.test.cjs,**/*.spec.js,**/*.spec.jsx,**/*.spec.mjs,**/*.spec.cjs,**/*Test.java,**/*Tests.java,**/*Test.kt,**/*Tests.kt,**/Tests/**,**/*Tests.swift,**/*Test.php,**/*_spec.rb,**/*_test.rb,**/spec/**,**/*.bats,**/test_*.sh,**/*_test.sh,**/tests/**/*.sh,**/*.Tests.ps1,**/*.tests.ps1,**/tests/**/*.ps1,**/test.rkt,**/tests.rkt,**/test.rktl,**/tests.rktl,**/test.rktd,**/tests.rktd`
 
 Role shifts lower findings by role (K = keep, L1 = lower one rung, L2 = lower two rungs, O = off); see the [rule reference](#rule-reference) table.
 
 ## Packages
 
-A file belongs to the nearest ancestor directory holding a manifest of its own ecosystem: `package.json` names JavaScript and TypeScript packages, while `pyproject.toml` and `setup.py` name Python packages; files of other languages ignore manifests. Without such an ancestor a Rust file under `crates/` groups by `crates/<name>` while any other Rust file forms the empty package; a Go file groups by its parent directory; files in other languages group by the top-level directory; a root-level file forms the empty package. Only manifests at or below the project root count, so the same file can key differently under a narrower `--root`. A manifest hidden by `project.exclude` does not define a package. Manifest files stay in the lint set, so `setup.py` is still linted as Python, and a cached run re-stamps the key when a manifest appears or disappears.
+A file belongs to the nearest ancestor directory holding a manifest of its own ecosystem: `package.json` names JavaScript and TypeScript packages, while `pyproject.toml` and `setup.py` name Python packages; files of other languages ignore manifests. Without such an ancestor a Rust file under `crates/` groups by `crates/<name>` while any other Rust file forms the empty package; a Go file groups by its parent directory; files in other languages group by the top-level directory; a root-level file forms the empty package. Only manifests at or below the project root count, so the same file can key differently under a narrower `--root`. A manifest hidden by `project.exclude` or `project.data_globs` does not define a package. Non-source manifests do not count as skipped files. Manifest files stay in the lint set, so `setup.py` is still linted as Python, and a cached run re-stamps the key when a manifest appears or disappears.
 
 ## Precision
 
-A finding is true when a senior reviewer would ask for a change. Each rule was measured on the same 15 corpora of real open-source code: a sample of its findings was counted as true, noise, or wrong. A rule stays on at `standard` only when at least 80 percent of its sampled findings are true after tightening. A rule below that bar is `Off` at minimal, basic, and standard and runs only at strict, at `info` with `low` confidence. `--min-confidence` and `--fail-on` decide what gates. Counts below are the pre-tightening samples from the per-rule reports.
+A finding is true when a senior reviewer would ask for a change. The original 27 rules were measured on the same 15 corpora of real open-source code: a sample of their findings was counted as true, noise, or wrong. A rule stays on at `standard` only when at least 80 percent of its sampled findings are true after tightening. A rule below that bar is `Off` at minimal, basic, and standard and runs only at strict, at `info` with `low` confidence. `--min-confidence` and `--fail-on` decide what gates. Counts below are the pre-tightening samples from the per-rule reports.
+
+The new `slop/redundant-else` and `agent/no-sleep-in-tests` rules have not yet been sampled on those corpora. Both stay off through standard and report only `info` with `low` confidence at strict. Their regression fixtures establish behavior, not corpus precision.
 
 | Rule | Sampled | True | Noise | Wrong |
 |---|---|---|---|---|
@@ -226,40 +244,66 @@ A finding is true when a senior reviewer would ask for a change. Each rule was m
 
 `grep/no-rename-import` (0 of 128) and `agent/colocated-tests` (0 of 42) run only at strict, at `info` with `low` confidence. `slop/zombie-catch` (1 of 51) runs only at strict, at `info` with `low` confidence. Zero-true tightenings are redefined predicates and are re-sampled; a re-sample below 80 percent true flips the rule to `Off` or `info` without further review.
 
+## Language applicability
+
+Language applicability is separate from severity. The exclusions below apply in
+all strictness profiles and remain in effect when a rule is explicitly enabled.
+They avoid applying procedural conventions to proof statements, specification
+models, or language idioms that the available syntax facts cannot judge reliably.
+The rule reference also identifies predicates that apply only to certain languages.
+
+| Language | Excluded rules |
+|---|---|
+| Alloy | `complexity/cognitive-depth`, `complexity/nesting-depth`, `grep/homonym-definitions`, `slop/passthrough-wrapper`, `agent/colocated-tests`, `agent/unique-patch-anchors` |
+| Dafny | `complexity/mutable-span`, `grep/homonym-definitions`, `agent/colocated-tests`, `agent/stringly-api` |
+| Go | `agent/catch-all-match` |
+| Lean | `grep/contiguous-log-literal`, `grep/no-wildcard-import`, `agent/catch-all-match`, `agent/stringly-api` |
+| LoGOs | `grep/homonym-definitions`, `slop/passthrough-wrapper`, `agent/ambient-global-state`, `agent/catch-all-match` |
+| Quint | `complexity/cognitive-depth`, `complexity/nesting-depth`, `grep/no-rename-import`, `grep/no-wildcard-import`, `agent/ambient-global-state`, `agent/unique-patch-anchors` |
+| Racket | `slop/echo-comment`, `agent/file-token-budget` |
+| TLA+ | `complexity/cognitive-depth`, `grep/contiguous-log-literal`, `grep/generic-name`, `grep/homonym-definitions`, `slop/echo-comment`, `agent/colocated-tests`, `agent/unique-patch-anchors` |
+
+LoGOs also uses minimum mutable-span cut points of 30/45/60/90 lines and at
+least five repetitions for `agent/unique-patch-anchors`, including when a lower
+threshold is configured. Dafny `print` statements remain ordinary calls rather
+than log-message evidence.
+
 ## Rule reference
 
 Role shifts lower findings by role (K = keep, L1 = lower one rung, L2 = lower two rungs, O = off):
 
 | Rule | minimal | basic | standard | strict | conf | entry | test | support | bench | example | Predicate |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| complexity/cognitive-depth | Off | Off | Off | info | low | K | L1 | K | L1 | K | Scores if/loop/catch with depth weight; flags iff score >= cut and max depth >= 2; JS and TS closures bound to a name score as their own function, and unbound callbacks score as unnamed functions. Off for TLA+ |
+| complexity/cognitive-depth | Off | Off | Off | info | low | K | L1 | K | L1 | K | Scores if/loop/catch with depth weight; flags iff score >= cut and max depth >= 2; JS and TS closures bound to a name score as their own function, and unbound callbacks score as unnamed functions |
 | complexity/nesting-depth | Off | Off | Off | info | low | K | L1 | K | L1 | K | Flags control nesting depth >= cut; JS and TS closures bound to a name score as their own function, and unbound callbacks score as unnamed functions |
 | complexity/mutable-span | Off | Off | Off | info | low | K | L1 | K | O | L1 | Flags bindings written on 2+ lines spanning >= cut lines. Writes count on the innermost binding of a name. In Logos the cutoffs rise to at least 30/45/60/90 lines |
 | complexity/boolean-params | Off | Off | Off | info | low | L1 | O | L1 | O | O | Flags exported fns with >= 2 Bool or bool-defaulted params, skipping variadic, keyword-only, and overloads |
 | complexity/import-fan-out | Off | Off | minor | major | medium | L1 | L1 | K | L1 | L1 | Counts distinct third-party package roots of module-scope imports; barrel reexport-only files skipped |
-| grep/contiguous-log-literal | Off | Off | Off | info | low | K | O | L1 | O | O | Flags message-bearing log calls with missing, dynamic, or short static messages; a literal, template, interpolation, or concatenation passes only when its longest static run reaches 8 chars. In Bash, option words such as `-n` are arguments like any other word. Off for TLA+ |
-| grep/generic-name | Off | Off | minor | minor | low | L1 | O | K | O | O | Flags exported fns named from the generic denylist. Off for TLA+ |
-| grep/homonym-definitions | Off | Off | Off | info | low | K | O | K | O | O | Flags free fn or type names defined in >= 8 files (5 strict) of one package; definition sites in test, bench or example code are not counted. Off for Logos. Off for TLA+ |
+| grep/contiguous-log-literal | Off | Off | Off | info | low | K | O | L1 | O | O | Flags message-bearing log calls with missing, dynamic, or short static messages; a literal, template, interpolation, or concatenation passes only when its longest static run reaches 8 chars. In Bash, option words such as `-n` are arguments like any other word |
+| grep/generic-name | Off | Off | minor | minor | low | L1 | O | K | O | O | Flags exported fns named from the generic denylist |
+| grep/homonym-definitions | Off | Off | Off | info | low | K | O | K | O | O | Flags free fn or type names defined in >= 8 files (5 strict) of one package; definition sites in test, bench or example code are not counted |
 | grep/multiline-argument | Off | Off | Off | info | low | K | O | L1 | O | O | Strict-only: flags collection args spanning >= 15 lines outside tests, generated files, and binding initializers |
 | grep/no-dynamic-symbol | Off | Off | Off | info | low | K | L1 | K | L1 | K | Flags runtime-built symbols except proxy forwarding and string module imports. In Python, JS, TS and Starlark a lookup inside a loop over an inline literal list of strings is exempt |
 | grep/no-rename-import | Off | Off | Off | info | low | K | L1 | K | L1 | K | Flags `import x as y` renames |
 | grep/no-wildcard-import | Off | Off | Off | info | low | K | O | L1 | O | L1 | Flags `*` imports binding open names into non-test module scope; preludes and same-file children exempt |
 | slop/barrel-file | Off | Off | minor | minor | low | K | O | K | O | O | Flags barrels re-exporting from another barrel with resolvable local candidates |
-| slop/echo-comment | Off | Off | minor | minor | medium | K | L1 | K | L1 | K | Flags comments whose stemmed word set exactly equals the function name set. Off for TLA+ |
+| slop/echo-comment | Off | Off | minor | minor | medium | K | L1 | K | L1 | K | Flags comments whose stemmed word set exactly equals the function name set |
 | slop/field-copy | Off | Off | minor | minor | low | K | O | L1 | O | L1 | Flags constructions copying >= 6 fields (4 strict) from one source; method callees, kwargs bags, same-type rebuilds, and copies from the own receiver are excluded |
-| slop/passthrough-wrapper | Off | Off | Off | info | low | K | O | K | O | L1 | Flags sole-call wrappers to simple-path callees outside the receiver, params, deprecated, trait, test, and referenced uses. The receiver includes `self`, `this`, `cls`, `super`, `base`, `parent`, `static`, and the Go named receiver. Off for Logos |
+| slop/passthrough-wrapper | Off | Off | Off | info | low | K | O | K | O | L1 | Flags sole-call wrappers to simple-path callees outside the receiver, params, deprecated, trait, test, and referenced uses. The receiver includes `self`, `this`, `cls`, `super`, `base`, `parent`, `static`, and the Go named receiver |
+| slop/redundant-else | Off | Off | Off | info | low | K | K | K | K | K | C, C++, C#, Go, Java, JS/JSX, Python, Rust, TS/TSX: flags a nonempty else after a direct terminal statement; skips decision chains, binding scopes, and control contexts that prevent safe dedenting. Rust requires discarded statements with a plain identifier condition and explicitly terminated alternative expressions; see [language limits](docs/just-good-practices.md) |
 | slop/single-impl-abstraction | Off | Off | minor | minor | medium | K | O | K | O | O | Flags private traits or interfaces with exactly one concrete same-package implementation |
 | slop/zombie-catch | Off | Off | Off | info | low | K | L1 | K | L1 | K | Strict-only: flags empty handlers at Info; log-and-rethrow arms reported, bare rethrows dropped |
-| agent/ambient-global-state | Off | Off | Off | info | low | O | O | L1 | O | O | Flags package mutables assigned in functions and env reads stored or written through the env object; a write to a shadowing local or parameter is not reported. Off for Logos. In R, `<<-` and `->>` in a function count as global writes, and `options()` does not count as an environment write |
+| agent/ambient-global-state | Off | Off | Off | info | low | O | O | L1 | O | O | Flags package mutables assigned in functions and env reads stored or written through the env object; a write to a shadowing local or parameter is not reported. In R, `<<-` and `->>` in a function count as global writes, and `options()` does not count as an environment write |
 | agent/catch-all-match | Off | Off | Off | info | low | K | L1 | K | L1 | L1 | Flags bare wildcards on Ident, Field, or Path scrutinees with no Some, None, Ok, or Err sibling |
-| agent/colocated-tests | Off | Off | Off | info | low | O | O | O | O | O | Strict-only: stays silent when a language has no test evidence; flags library files with public functions when no same-language test in the package covers them and no same-language test import covers the file; package is the nearest manifest dir of its own ecosystem, else `crates/<name>` for Rust under `crates/`, the empty package for other Rust files, the parent directory for Go, or the top-level directory for other languages; import keys use the last 4 segments (2 or more, single segment only for a top-level module; Python `src/` roots map to the package); relative imports resolve against the importing file; `@/` and `~/` map to `src/`, `@scope/` stays scoped, Java wildcards and non-suffix Go module prefixes do not cover; `-`/`_` match. A Rust test import of `crate::Name`, or of `<name>::Name` for a crate under `crates/<name>`, that names no module covers the root file of that crate when the root defines `Name`, else the module the root re-exports `Name` from, else each module the root glob re-exports, else the root. A test in the same package that exercises a module without sharing its name or importing it does not count as coverage. Off for TLA+ |
+| agent/colocated-tests | Off | Off | Off | info | low | O | O | O | O | O | Strict-only: stays silent when a language has no test evidence; flags library files with public functions when no same-language test in the package covers them and no same-language test import covers the file; package is the nearest manifest dir of its own ecosystem, else `crates/<name>` for Rust under `crates/`, the empty package for other Rust files, the parent directory for Go, or the top-level directory for other languages; import keys use the last 4 segments (2 or more, single segment only for a top-level module; Python `src/` roots map to the package); relative imports resolve against the importing file; `@/` and `~/` map to `src/`, `@scope/` stays scoped, Java wildcards and non-suffix Go module prefixes do not cover; `-`/`_` match. A Rust test import of `crate::Name`, or of `<name>::Name` for a crate under `crates/<name>`, that names no module covers the root file of that crate when the root defines `Name`, else the module the root re-exports `Name` from, else each module the root glob re-exports, else the root. A test in the same package that exercises a module without sharing its name or importing it does not count as coverage |
 | agent/explicit-boundary-types | Off | minor | minor | minor | medium | L1 | O | L1 | O | O | Flags exported fns in TS, Python, Kotlin, Scala, and Dart with missing annotations |
 | agent/file-token-budget | Off | Off | Off | info | low | K | O | O | L1 | L1 | Strict-only: flags files with >= 600 lines outside inline test regions; generated files skipped |
 | agent/informative-assertions | Off | Off | Off | info | low | K | K | K | O | L1 | Flags bare-name or top ==/!= asserts (Rust), Name or Attr (Python), and bool-literal True/False (Go) |
+| agent/no-sleep-in-tests | Off | Off | Off | info | low | O | K | K | O | O | C#, Go, Java, Python, Rust: flags identified standard-library sleep calls only in test or support roles; excludes known zero delays, ambiguous bindings, and recognized Go synctest callbacks. Duration and alias handling follow each runtime; see [language limits](docs/just-good-practices.md) |
 | agent/stringly-api | Off | Off | Off | info | low | L1 | O | L1 | O | O | Flags runs of >= 3 same-kind stringly params (4 to deny); runs break on kind change or defaulted params |
 | agent/typed-error-boundary | Off | Off | Off | info | low | O | O | O | O | O | Flags exported fns whose error slot is anyhow, eyre, Box dyn Error, or an untyped throw |
-| agent/unique-patch-anchors | Off | Off | Off | info | low | K | L1 | K | L1 | K | Flags 8-line (6 strict) blocks repeated >= 3 times inside function bodies. In Logos the minimum rises to 5 repeats. Off for TLA+ |
-| meta/parse-error | minor | minor | minor | minor | high | K | K | K | K | K | Syntax errors that stop analysis of a file |
+| agent/unique-patch-anchors | Off | Off | Off | info | low | K | L1 | K | L1 | K | Flags 8-line (6 strict) blocks repeated >= 3 times inside function bodies. In Logos the minimum rises to 5 repeats |
+| meta/parse-error | minor | minor | minor | minor | high | K | K | K | K | K | Syntax errors, partial parse recovery, and parse-budget timeouts |
 | meta/custom-cap | major | major | major | major | high | K | K | K | K | K | Custom-query hits over the per-file work cap; results are partial |
 | meta/invalid-suppression | major | major | major | major | high | K | K | K | K | K | Suppression directives that name unknown rules or lack a reason |
 | meta/unused-suppression | minor | minor | minor | minor | high | K | K | K | K | K | Suppression directives that match nothing |

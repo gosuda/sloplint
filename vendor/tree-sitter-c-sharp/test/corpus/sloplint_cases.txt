@@ -43,17 +43,14 @@ internal ref partial struct S3 {}
 (compilation_unit
   (struct_declaration
     (modifier)
-    (modifier)
     (identifier)
     (declaration_list))
   (struct_declaration
     (modifier)
     (modifier)
-    (modifier)
     (identifier)
     (declaration_list))
   (struct_declaration
-    (modifier)
     (modifier)
     (identifier)
     (declaration_list)))
@@ -450,9 +447,10 @@ struct V<T> {
     (modifier)
     (identifier)
     (declaration_list
-      (extension_block
-        (predefined_type)
-        (declaration_list
+      (extension_declaration
+        (receiver_parameter
+          (predefined_type))
+        (extension_body
           (method_declaration
             (modifier)
             (modifier)
@@ -472,18 +470,19 @@ struct V<T> {
       (type_parameter
         (identifier)))
     (declaration_list
-      (extension_block
+      (extension_declaration
         (type_parameter_list
           (type_parameter
             (identifier)))
-        (generic_name
-          (identifier)
-          (type_argument_list
-            (identifier)))
+        (receiver_parameter
+          (generic_name
+            (identifier)
+            (type_argument_list
+              (identifier))))
         (type_parameter_constraints_clause
           (identifier)
           (type_parameter_constraint))
-        (declaration_list
+        (extension_body
           (method_declaration
             (modifier)
             (modifier)
@@ -814,11 +813,10 @@ class C {
                     (integer_literal))))))
           (if_statement
             condition: (identifier)
-            consequence: (block))
-          (preproc_if
-            condition: (identifier)
-            (dangling_else
-              alternative: (block))))))))
+            consequence: (block)
+            (preproc_if
+              condition: (identifier)
+              (block))))))))
 
 ================================================================================
 preproc after else-less if and else arm inside preproc_if
@@ -867,10 +865,9 @@ class C {
                 (argument_list))))
           (if_statement
             (identifier)
-            (block))
-          (preproc_if
-            (identifier)
-            (dangling_else
+            (block)
+            (preproc_if
+              (identifier)
               (block
                 (expression_statement
                   (invocation_expression
@@ -981,7 +978,9 @@ class C { }
 
 (compilation_unit
   (preproc_line
-    (integer_literal))
+    (integer_literal)
+    (string_literal
+      (string_literal_content)))
   (class_declaration
     (identifier)
     (declaration_list))
@@ -998,10 +997,16 @@ Console.WriteLine("hi");
 ---
 
 (compilation_unit
-  (preproc_colon
-    (preproc_arg))
-  (preproc_colon
-    (preproc_arg))
+  (ignored_directive
+    kind: (directive_kind)
+    name: (directive_name)
+    separator: (directive_separator)
+    value: (directive_value))
+  (ignored_directive
+    kind: (directive_kind)
+    name: (directive_name)
+    separator: (directive_separator)
+    value: (directive_value))
   (global_statement
     (expression_statement
       (invocation_expression

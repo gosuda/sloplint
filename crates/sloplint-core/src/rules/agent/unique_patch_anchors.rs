@@ -79,17 +79,9 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for UniquePatchAnchors {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
-        // Quint repeats are spec structure: `run` scenario `.then` chains,
-        // `state' = state` frame conditions, `unchanged_*` admin actions,
-        // and expected-tree literals in test tables. No loop or table fold
-        // applies, so the rule stays off Quint.
-        if matches!(facts.lang, Lang::Quint) {
-            return;
-        }
-        // TLA+ repeats blocks by design: generated PlusCal translations,
-        // TLC trace and model records, and proof-step BY references repeat
-        // identical blocks, so every firing is noise.
-        if matches!(facts.lang, Lang::Tlaplus) {
+        // TLA+, Quint, and Alloy repeat modeled transitions, proof steps, and
+        // generated specification blocks that cannot be folded into code.
+        if matches!(facts.lang, Lang::Tlaplus | Lang::Quint | Lang::Alloy) {
             return;
         }
         let min_repeats = self.effective_min_repeats(facts.lang);

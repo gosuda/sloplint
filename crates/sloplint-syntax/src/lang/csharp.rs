@@ -13,6 +13,7 @@ mod decls;
 mod funcs;
 mod items;
 mod shadow;
+mod sleeps;
 
 pub(crate) static TABLE: crate::lang::Table = &[
     ("method_declaration", Role::Function),
@@ -165,6 +166,14 @@ fn using_shadow_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) 
     }
 }
 impl LangHooks for CSharpHooks {
+    fn redundant_else(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
+        crate::lang::c_family::flow::redundant_else(n, cx)
+    }
+
+    fn blocking_sleep(&self, n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
+        sleeps::blocking_sleep(n, cx)
+    }
+
     fn shadow_filter(&self) -> ShadowKind {
         ShadowKind::DeclsAndBinds
     }

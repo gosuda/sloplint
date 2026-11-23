@@ -1,0 +1,3 @@
+a.tsx:4 info slop/redundant-else
+a.tsx:12 info slop/redundant-else
+a.tsx:23 info slop/redundant-else

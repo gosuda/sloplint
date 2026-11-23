@@ -42,10 +42,9 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for NoWildcardImport {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
-        // `import X.*` is the canonical Quint import form, and parameterized
-        // `import M(...).*` has no non-wildcard spelling, so the rule stays
-        // off Quint.
-        if matches!(facts.lang, Lang::Quint) {
+        // Quint wildcard imports and Lean namespace opens are their
+        // standard module mechanisms, without a general named equivalent.
+        if matches!(facts.lang, Lang::Quint | Lang::Lean) {
             return;
         }
         for import in &facts.imports {
@@ -111,6 +110,8 @@ mod tests {
             impls: Vec::new(),
             wildcard_arms: Vec::new(),
             handlers: Vec::new(),
+            redundant_elses: Vec::new(),
+            blocking_sleeps: Vec::new(),
             assertions: Vec::new(),
             field_copies: Vec::new(),
             dynamic_symbols: Vec::new(),

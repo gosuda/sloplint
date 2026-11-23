@@ -56,7 +56,7 @@ impl FileRule for EchoComment {
         // TLA+ documents operators with banner titles and spec sentences
         // that share every word with the operator name; no signal separates
         // a title from an echo, so every firing is noise.
-        if matches!(facts.lang, Lang::Tlaplus) {
+        if matches!(facts.lang, Lang::Tlaplus | Lang::Racket) {
             return;
         }
         for function in &facts.functions {
@@ -174,6 +174,8 @@ mod tests {
             impls: Vec::new(),
             wildcard_arms: Vec::new(),
             handlers: Vec::new(),
+            redundant_elses: Vec::new(),
+            blocking_sleeps: Vec::new(),
             assertions: Vec::new(),
             field_copies: Vec::new(),
             dynamic_symbols: Vec::new(),

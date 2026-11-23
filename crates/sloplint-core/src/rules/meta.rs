@@ -7,7 +7,7 @@ use crate::rules::{Build, Family, Preset, RuleInfo};
 pub(crate) const PARSE_ERROR: RuleInfo = RuleInfo {
     id: "meta/parse-error",
     family: Family::Meta,
-    summary: "syntax errors that stop analysis of a file",
+    summary: "syntax errors that prevent complete analysis of a file",
     why: "Code with syntax errors cannot be analyzed reliably.",
     confidence: Confidence::High,
     roles: RolePolicy::KEEP,
@@ -82,7 +82,7 @@ pub(crate) fn parse_error_finding(text: &SourceText, pos: Pos) -> Finding {
         pos,
         PARSE_ERROR.id,
         Severity::Minor,
-        "syntax error; other rules skipped for this file".to_string(),
+        "syntax error; analysis is incomplete".to_string(),
         "fix the syntax error at this position".to_string(),
     )
 }

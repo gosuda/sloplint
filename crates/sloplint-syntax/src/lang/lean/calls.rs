@@ -2,7 +2,7 @@
 
 use crate::hooks::{CallHead, Cx, child_by_field, narrow, text, trimmed};
 use sloplint_core::facts::{Arg, ArgShape, CallKind};
-use sloplint_core::text::longest_static_chunk;
+use sloplint_core::text::{longest_static_chunk, longest_static_chunk_interp};
 use tree_sitter::Node;
 
 /// Flatten `f x y` (`app(app(f, x), y)`) to the head term and the
@@ -34,10 +34,44 @@ fn lean_callee_root(callee: &str) -> Option<&str> {
     (!root.is_empty()).then_some(root)
 }
 
-/// String argument shapes: plain and raw literals are one static run,
-/// interpolated `s!"..."` strings measure the longest anonymous gap
-/// between `interpolation` children. Escapes inflate plain runs by a
-/// byte or two; the linter only compares against an 8-char floor.
+/// Interpolation holes and complete escape sequences break literal runs.
+/// Count the Unicode characters between their parsed spans, leaving `%`
+/// literal and excluding every digit of fixed-width escape spellings.
+/// Incomplete string boundaries use the shared recovery-tree scanner.
+fn lean_interpolated_static(cx: &Cx<'_, '_>, arg: Node<'_>) -> u32 {
+    let raw = text(cx, arg);
+    let Some(rest) = raw
+        .strip_prefix("s!\"")
+        .or_else(|| raw.strip_prefix("m!\""))
+    else {
+        return longest_static_chunk_interp(raw);
+    };
+    let Some(inner) = rest.strip_suffix('"') else {
+        return longest_static_chunk_interp(raw);
+    };
+    let base = arg.start_byte() + (raw.len() - rest.len());
+    let mut best = 0u32;
+    let mut pos = 0usize;
+    let mut cursor = arg.walk();
+    for child in arg.named_children(&mut cursor) {
+        if !matches!(child.kind(), "interpolation" | "escape_sequence") {
+            continue;
+        }
+        let start = child.start_byte().saturating_sub(base).min(inner.len());
+        let end = child.end_byte().saturating_sub(base).min(inner.len());
+        if start > pos
+            && let Some(gap) = inner.get(pos..start)
+        {
+            best = best.max(narrow(gap.chars().count()));
+        }
+        pos = pos.max(end);
+    }
+    if let Some(gap) = inner.get(pos..) {
+        best = best.max(narrow(gap.chars().count()));
+    }
+    best
+}
+
 fn lean_arg_shape<'s>(cx: &Cx<'_, 's>, arg: Node<'_>) -> ArgShape<'s> {
     match arg.kind() {
         "str_lit" | "raw_string" => {
@@ -53,18 +87,9 @@ fn lean_arg_shape<'s>(cx: &Cx<'_, 's>, arg: Node<'_>) -> ArgShape<'s> {
                 longest_static: longest_static_chunk(&[inner]),
             }
         }
-        "interpolated_str" => {
-            let mut runs = Vec::new();
-            let mut cursor = arg.walk();
-            for child in arg.children(&mut cursor) {
-                if !child.is_named() {
-                    runs.push(text(cx, child));
-                }
-            }
-            ArgShape::Str {
-                longest_static: longest_static_chunk(&runs),
-            }
-        }
+        "interpolated_str" => ArgShape::Str {
+            longest_static: lean_interpolated_static(cx, arg),
+        },
         "identifier" => ArgShape::Ident(text(cx, arg)),
         _ => ArgShape::Other,
     }

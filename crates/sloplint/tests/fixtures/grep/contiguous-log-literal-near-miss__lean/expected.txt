@@ -1,0 +1,2 @@
+# Interpolated logs with long literal runs and bare-identifier log
+# arguments are idiomatic Lean diagnostics, so the rule stays silent.

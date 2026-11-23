@@ -1,0 +1,3 @@
+a.go:6 info slop/redundant-else
+a.go:15 info slop/redundant-else
+a.go:25 info slop/redundant-else

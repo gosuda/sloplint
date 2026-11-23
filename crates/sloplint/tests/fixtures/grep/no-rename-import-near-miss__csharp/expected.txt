@@ -1,1 +1,4 @@
 # plain using, no alias: no finding.
+# ModifierParams.cs: the alias target `Json` matches the modifier lambda
+# parameter, so the alias is suppressed; without closure parameters the
+# import would fire.

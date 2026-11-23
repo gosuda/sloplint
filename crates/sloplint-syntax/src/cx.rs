@@ -114,6 +114,10 @@ pub(crate) enum FileSetKind {
     Type,
     Member,
     Module,
+    SleepModules,
+    SleepFunctions,
+    VirtualTimeModules,
+    SleepDurationTypes,
 }
 
 impl FileSetKind {
@@ -123,13 +127,17 @@ impl FileSetKind {
             FileSetKind::Type => 1,
             FileSetKind::Member => 2,
             FileSetKind::Module => 3,
+            FileSetKind::SleepModules => 4,
+            FileSetKind::SleepFunctions => 5,
+            FileSetKind::VirtualTimeModules => 6,
+            FileSetKind::SleepDurationTypes => 7,
         }
     }
 }
 
 #[derive(Default)]
 pub(crate) struct FileNameSets<'s> {
-    slots: [OnceCell<Vec<&'s str>>; 4],
+    slots: [OnceCell<Vec<&'s str>>; 8],
 }
 
 impl<'s> FileNameSets<'s> {

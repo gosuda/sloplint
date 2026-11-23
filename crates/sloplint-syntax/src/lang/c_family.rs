@@ -3,6 +3,8 @@ use sloplint_core::facts::{
 };
 use tree_sitter::Node;
 
+pub(crate) mod flow;
+
 use crate::hooks::{
     Cx, any_named_child, child_by_field, find_named_child, first_named_child,
     first_named_child_matching, named_children, narrow, only_named_child_matching, pos_of, slice,

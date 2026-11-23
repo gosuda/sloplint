@@ -6,7 +6,9 @@ use tree_sitter::Node;
 
 use super::calls::{call_identity, func_node};
 use super::funcs::{in_test_dir, seg_last};
-use super::patterns::{is_given_tuple_type, is_pattern_binder, is_value_name};
+use super::patterns::{
+    given_extractor_binders, is_given_tuple_type, is_pattern_binder, is_value_name,
+};
 use crate::hooks::{
     Container, Cx, TypeHead, any_named_child, child_by_field, has_child_kind, named_children,
     narrow, pos_of, text, trimmed,
@@ -34,8 +36,10 @@ pub(crate) fn unquote(name: &str) -> &str {
 }
 
 pub(crate) fn collect_idents<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s str, Pos)>) {
-    let mut pending = vec![n];
-    while let Some(node) = pending.pop() {
+    // Node::parent searches from the tree root. Carry each parent so deep
+    // tuple patterns need only one traversal.
+    let mut pending = vec![(n, n.parent())];
+    while let Some((node, parent)) = pending.pop() {
         match node.kind() {
             "wildcard" => {}
             // A val/var pattern's top-level identifier is always a binder,
@@ -45,16 +49,21 @@ pub(crate) fn collect_idents<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'
             // binders too. Only binder positions count: `counters` in
             // `Some(counters.Zero)` is a stable reference, not a new local.
             "identifier" | "operator_identifier"
-                if !is_value_name(node)
+                if !is_value_name(node, parent)
                     && (node.id() == n.id()
                         || (n.kind() == "identifiers"
-                            && node.parent().is_some_and(|p| p.id() == n.id()))
-                        || is_pattern_binder(cx, node)) =>
+                            && parent.is_some_and(|p| p.id() == n.id()))
+                        || is_pattern_binder(cx, node, parent)) =>
             {
                 out.push((unquote(text(cx, node)), pos_of(node)))
             }
             "identifier" | "operator_identifier" => {}
-            _ => pending.extend(named_children(node).into_iter().rev()),
+            _ => pending.extend(
+                named_children(node)
+                    .into_iter()
+                    .rev()
+                    .map(|child| (child, Some(node))),
+            ),
         }
     }
 }
@@ -290,6 +299,14 @@ pub(crate) fn match_arm<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<WildcardArm>
             // A `given (Int, String)` arm matches a tuple-typed instance;
             // it is not a variant constructor and must not inflate the
             // enum-like variant count.
+            variants += 1;
+            case_class_count += 1;
+        } else if p.kind() == "given_pattern" && given_extractor_binders(cx, p).is_some() {
+            // `case given(value)` is a Scala 2 extractor application, not a
+            // given of tuple type: it is a variant constructor like a case
+            // class pattern. Genuine Scala 3 given types (`case given T`,
+            // `case given (Int, String)`) bind nothing and stay out of the
+            // count.
             variants += 1;
             case_class_count += 1;
         }

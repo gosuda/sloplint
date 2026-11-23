@@ -105,6 +105,8 @@ mod tests {
             impls: Vec::new(),
             wildcard_arms: Vec::new(),
             handlers: Vec::new(),
+            redundant_elses: Vec::new(),
+            blocking_sleeps: Vec::new(),
             assertions,
             field_copies: Vec::new(),
             dynamic_symbols: Vec::new(),

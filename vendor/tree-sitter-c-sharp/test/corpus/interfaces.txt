@@ -210,3 +210,4 @@ private interface NoBody;
   (interface_declaration
     (modifier)
     name: (identifier)))
+

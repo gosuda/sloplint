@@ -81,7 +81,8 @@
 
 ; Operator methods
 (method_signature
-  (operator_signature)) @definition.method
+  (operator_signature
+    operator: _ @name)) @definition.method
 
 ; Constructors
 (constructor_signature
@@ -89,22 +90,27 @@
 
 ; Const constructors
 (constant_constructor_signature
-  (identifier) @name) @definition.method
+  name: (identifier) @name) @definition.method
 
 ; Factory constructors
 (factory_constructor_signature
-  (identifier) @name) @definition.method
+  name: (identifier) @name) @definition.method
 
-; Redirecting factory constructors
+; Redirecting factory constructors (name:-qualified so the redirect target
+; is not tagged as a definition)
 (redirecting_factory_constructor_signature
-  (identifier) @name) @definition.method
+  name: (identifier) @name) @definition.method
+
+; Named primary constructors (Dart 3.13)
+(primary_constructor
+  name: (identifier) @name) @definition.method
 
 ; Typedefs
 (type_alias
   (type_identifier) @name) @definition.type
 
 ; Enum constants
-(enum_constant
+(enum_entry
   name: (identifier) @name) @definition.constant
 
 ; Function call references
@@ -116,3 +122,30 @@
     (member_expression property: (identifier) @name)
     (null_aware_member_expression property: (identifier) @name)
   ]) @reference.call
+
+(cascade_call_expression
+  property: (identifier) @name) @reference.call
+
+(call_expression
+  function: (static_member_shorthand
+    (identifier) @name)) @reference.call
+
+; These tag the first segment of a two-segment type. That is the class in
+; `const EdgeInsets.all()` but the import prefix in `new p.Foo()`.
+(new_expression
+  type: (type
+    .
+    (type_identifier) @name)) @reference.class
+
+(const_object_expression
+  type: (type
+    .
+    (type_identifier) @name)) @reference.class
+
+(constructor_invocation
+  type: (type_identifier) @name) @reference.class
+
+(interfaces
+  (type
+    .
+    (type_identifier) @name) @reference.implementation)

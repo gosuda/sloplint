@@ -4,7 +4,7 @@ use tree_sitter::Node;
 
 use crate::hooks::{
     CallHead, Cx, any_named_child, binary_concat, child_by_field, first_named_child,
-    first_named_child_matching, last_named_child, named_children, narrow, pos_of, text,
+    first_named_child_matching, last_named_child, named_children, narrow, pos_of, slice, text,
 };
 
 use super::syntax::{COMMENTS, cut_generics, label_text};
@@ -68,7 +68,7 @@ fn concat_static(cx: &Cx<'_, '_>, e: Node<'_>) -> u32 {
 
 fn collection_shape(n: Node<'_>) -> ArgShape<'static> {
     for c in named_children(n) {
-        if c.kind() == "pair" {
+        if c.kind() == "map_element" || c.kind() == "null_aware_map_element" {
             return ArgShape::Other;
         }
         if c.kind() == "function_expression" {
@@ -145,17 +145,34 @@ fn dart_is_simple_path(n: Node<'_>) -> bool {
     }
 }
 
+fn initializes_via_declaration(parent: Node<'_>, value: Node<'_>) -> bool {
+    (parent.kind() == "initialized_variable_declaration"
+        || parent.kind() == "initialized_identifier"
+        || parent.kind() == "static_final_declaration")
+        && child_by_field(parent, "value").is_some_and(|v| v.id() == value.id())
+}
+
 fn dart_initializes_binding(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     let Some(parent) = cx.parent() else {
         return false;
     };
-    if parent.kind() != "initialized_variable_definition"
-        && parent.kind() != "initialized_identifier"
-        && parent.kind() != "static_final_declaration"
-    {
-        return false;
+    if parent.kind() == "cascade" {
+        // Upstream 0.3.0 wraps the receiver call in a `cascade` node, where
+        // the base attached it directly to the declaration. The declaration
+        // check applies to the cascade itself, and only for its receiver
+        // call (first child), never for section calls.
+        let Some(first) = first_named_child(parent) else {
+            return false;
+        };
+        if first.id() != n.id() {
+            return false;
+        }
+        let Some(gp) = cx.parent_of(parent) else {
+            return false;
+        };
+        return initializes_via_declaration(gp, parent);
     }
-    child_by_field(parent, "value").is_some_and(|v| v.id() == n.id())
+    initializes_via_declaration(parent, n)
 }
 
 pub(crate) fn callee_text<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> &'s str {
@@ -169,6 +186,26 @@ pub(crate) fn callee_text<'s>(cx: &Cx<'_, 's>, func: Node<'_>) -> &'s str {
     cut_generics(text(cx, func))
 }
 
+/// End byte of the `.new` suffix immediately before `args`, skipping
+/// comments: `Logger.new(msg)`, `Foo<int>.new(x)` and
+/// `Logger.new /* why */ (msg)` all end at the `new` token. None when the
+/// suffix is absent (`Foo<int>(3)`) or named (`Foo<int>.named(1)`).
+fn dot_new_end(n: Node<'_>, args: Node<'_>) -> Option<usize> {
+    let mut cursor = n.walk();
+    let kept: Vec<Node> = n
+        .children(&mut cursor)
+        .filter(|c| !COMMENTS.contains(&c.kind()))
+        .collect();
+    let pos = kept.iter().position(|c| c.id() == args.id())?;
+    if pos < 2 {
+        return None;
+    }
+    if kept[pos - 2].kind() != "." || kept[pos - 1].kind() != "new" {
+        return None;
+    }
+    Some(kept[pos - 1].end_byte())
+}
+
 pub(crate) fn call_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
     if n.kind() == "call_expression" {
         let func = child_by_field(n, "function")?;
@@ -177,6 +214,83 @@ pub(crate) fn call_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>
             kind: CallKind::Plain,
             callee_root: callee_root(cx, func),
             is_simple_path: dart_is_simple_path(func),
+            initializes_binding: dart_initializes_binding(cx, n),
+            args: call_args(cx, n),
+        });
+    }
+    if n.kind() == "constructor_invocation" {
+        // Upstream 0.3.0 prefers this node for explicit `.new()` and generic
+        // named constructor calls, where the base emitted `call_expression`
+        // with a member-expression callee. Mirror that callee choice: a
+        // generic invocation reported only the constructor name (`named` for
+        // `Foo<int>.named`, `new` for `Foo<int>.new`), while a plain one kept
+        // the dotted path (`Logger.new`, `p.Foo.named`, `Foo`).
+        let mut start = usize::MAX;
+        let mut end = 0;
+        let mut root = None;
+        let mut has_type_args = false;
+        for c in named_children(n) {
+            if c.kind() == "type_identifier" {
+                if root.is_none() {
+                    root = Some(text(cx, c));
+                }
+                start = start.min(c.start_byte());
+                end = end.max(c.end_byte());
+            } else if c.kind() == "type_arguments" {
+                has_type_args = true;
+            }
+        }
+        let name = root?;
+        let ctor = child_by_field(n, "constructor");
+        let args = child_by_field(n, "arguments");
+        if has_type_args {
+            if let Some(k) = ctor.filter(|k| k.is_named()) {
+                return Some(CallHead {
+                    callee: text(cx, k),
+                    kind: CallKind::Plain,
+                    callee_root: None,
+                    is_simple_path: false,
+                    initializes_binding: dart_initializes_binding(cx, n),
+                    args: call_args(cx, n),
+                });
+            }
+            // `Foo<int>.new(x)` reports `new`: the constructor field never
+            // holds the anonymous `new` token, and a text slice from the
+            // type end always spans `<int>`, so read the suffix tokens
+            // instead. Comments may sit anywhere around them.
+            if let Some(a) = args
+                && dot_new_end(n, a).is_some()
+            {
+                return Some(CallHead {
+                    callee: "new",
+                    kind: CallKind::Plain,
+                    callee_root: None,
+                    is_simple_path: false,
+                    initializes_binding: dart_initializes_binding(cx, n),
+                    args: call_args(cx, n),
+                });
+            }
+        } else if ctor.is_none() {
+            // `Logger.new(msg)` keeps the dotted callee; a comment between
+            // `.new` and the arguments must not drop the suffix.
+            if let Some(a) = args
+                && let Some(stop) = dot_new_end(n, a)
+            {
+                end = stop;
+            }
+        } else if let Some(k) = ctor {
+            end = end.max(k.end_byte());
+        }
+        let callee = if start <= end {
+            cut_generics(slice(cx.src, start, end))
+        } else {
+            name
+        };
+        return Some(CallHead {
+            callee,
+            kind: CallKind::Plain,
+            callee_root: if has_type_args { None } else { Some(name) },
+            is_simple_path: !has_type_args,
             initializes_binding: dart_initializes_binding(cx, n),
             args: call_args(cx, n),
         });

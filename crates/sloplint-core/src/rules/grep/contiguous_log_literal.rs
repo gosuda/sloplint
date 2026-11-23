@@ -72,6 +72,14 @@ fn build(options: toml::Table, settings: &Settings) -> Result<Box<dyn FileRule>,
 
 impl FileRule for ContiguousLogLiteral {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        // Lean logging is elaborator diagnostics and `#do` test scaffolding
+        // (`IO.println x` next to `/-- info: ... -/` asserts the dynamic
+        // output): the adapter now measures interpolated runs truthfully,
+        // but no syntactic signal separates a true positive from that
+        // scaffolding, so the rule stays off Lean.
+        if matches!(facts.lang, Lang::Lean) {
+            return;
+        }
         // Print and PrintT with dynamic arguments are the only
         // observability in TLA+; in test models Print("Test 3", TRUE) IS
         // the test oracle, so every firing is noise.
@@ -188,6 +196,8 @@ mod tests {
             impls: Vec::new(),
             wildcard_arms: Vec::new(),
             handlers: Vec::new(),
+            redundant_elses: Vec::new(),
+            blocking_sleeps: Vec::new(),
             assertions: Vec::new(),
             field_copies: Vec::new(),
             dynamic_symbols: Vec::new(),
