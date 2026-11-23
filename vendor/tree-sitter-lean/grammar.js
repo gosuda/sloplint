@@ -35,14 +35,19 @@ const sep0 = (rule, sep) => optional(sep1(rule, sep));
 
 /* Both forms anchor layout at their first element. An inline body needs a
    frame too: an explicit delimiter or the next outdented line closes it. */
-const body = ($, element, named = true) => choice(
-  seq($._body_inline,
-      sep1(named ? field('inline', element) : element, repeat1(choice(';', $._newline))),
-      optional(';'), $._dedent),
-  seq($._body_indent,
-      sep1(named ? field('stmt', element) : element, repeat1(choice(';', $._newline))),
-      optional(';'), $._dedent),
-);
+const body = ($, element, named = true) => {
+  const separators = repeat1(choice(';', $._newline));
+  if (!named) {
+    return seq(choice($._body_inline, $._body_indent),
+               sep1(element, separators), optional(';'), $._dedent);
+  }
+  return choice(
+    seq($._body_inline, sep1(field('inline', element), separators),
+        optional(';'), $._dedent),
+    seq($._body_indent, sep1(field('stmt', element), separators),
+        optional(';'), $._dedent),
+  );
+};
 
 export default grammar({
   name: 'lean',
