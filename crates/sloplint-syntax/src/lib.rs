@@ -117,6 +117,11 @@ pub fn analyze<'s>(
     if let Some(rescued) = rescue_analysis(parsers, input, input.lang, &tree, custom) {
         return rescued;
     }
+    if input.lang == Lang::Lean {
+        if let Some(rescued) = lean_command_rescue(parsers, input, &tree, custom) {
+            return rescued;
+        }
+    }
     let hooks = lang::hooks_for(input.lang, input.path, parsers.ocaml_interfaces);
     let comments = spec(input.lang).walk_comments(hooks, input, root).comments;
     Analysis {
@@ -224,6 +229,245 @@ fn line_range(node: Node<'_>) -> (u32, u32) {
         hooks::narrow(node.start_position().row) + 1,
         hooks::narrow(node.end_position().row) + 1,
     )
+}
+
+/// Rounds of blank-and-reparse the Lean command rescue gets before giving
+/// up. Each round blanks at least one new command, so the loop always makes
+/// progress; the cap is a backstop for pathological cascades. One bad
+/// command can poison the layout state that follows it — blanking the first
+/// `example` in `BatteriesTest/array_scan.lean` newly breaks the next — so
+/// one round per poisoned command is sometimes needed, more than
+/// [`MAX_RESCUE_ROUNDS`].
+const LEAN_RESCUE_ROUNDS: usize = 8;
+
+/// Per-command recovery for Lean, after [`rescue_analysis`] gives up.
+///
+/// The generic rescue blanks reachable `ERROR` spans and needs at least one
+/// reachable `ERROR` node. Two Lean shapes defeat it: a bad command that
+/// recovery wraps in a file-spanning `ERROR` node — even an `ERROR` root, so
+/// blanking the span redacts the whole file — and a hidden `MISSING` node
+/// with no reachable `ERROR` at all (`MyNat/Inequality.lean`: `(.≤.)`
+/// leaves two zero-width recovery sites while the file is otherwise clean).
+///
+/// Lean lays commands out flat with every command head at column 0, so the
+/// file is partitioned into command groups — maximal runs of top-level
+/// nodes starting at a column-0 node — and every group overlapping a
+/// top-level error span is blanked. Groups are recomputed from each reparse
+/// because blanking one command can unmask, move, or newly break the next;
+/// only a clean reparse is ever analyzed, exactly like the generic rescue.
+/// The reported position is the first error site in document order,
+/// including zero-width recovery sites, so a hidden `MISSING` points at its
+/// command instead of the end of the file.
+fn lean_command_rescue<'s>(
+    parsers: &mut Parsers<'_>,
+    input: &FileInput<'s>,
+    first_tree: &Tree,
+    custom: &'s CustomRules,
+) -> Option<Analysis<'s>> {
+    let first_pos = lean_error_pos(first_tree.root_node());
+    let mut text = input.source.as_bytes().to_vec();
+    let mut line_starts = vec![0usize];
+    for (at, &byte) in text.iter().enumerate() {
+        if byte == b'\n' {
+            line_starts.push(at + 1);
+        }
+    }
+    let mut blanked: HashSet<usize> = HashSet::new();
+    let mut tainted: Vec<(u32, u32)> = Vec::new();
+    let mut tree = first_tree.clone();
+    for _ in 0..LEAN_RESCUE_ROUNDS {
+        let (groups, bad) = {
+            let root = tree.root_node();
+            let mut bad = lean_top_errors(root);
+            bad.extend(lean_gap_spans(root, &text, &line_starts));
+            (lean_command_groups(root), bad)
+        };
+        if groups.is_empty() || bad.is_empty() {
+            return None;
+        }
+        let mut fresh = false;
+        for &(start, end) in &groups {
+            if !bad.iter().any(|&(a, b)| a <= end && b >= start) {
+                continue;
+            }
+            tainted.push((hooks::narrow(start) + 1, hooks::narrow(end) + 1));
+            for row in start..=end {
+                if blanked.insert(row) {
+                    fresh = true;
+                    let (lo, hi) = (
+                        *line_starts.get(row).unwrap_or(&text.len()),
+                        line_starts.get(row + 1).copied().unwrap_or(text.len()),
+                    );
+                    for byte in &mut text[lo..hi] {
+                        if *byte != b'\n' {
+                            *byte = b' ';
+                        }
+                    }
+                }
+            }
+        }
+        if !fresh {
+            return None;
+        }
+        let source = std::str::from_utf8(&text).ok()?;
+        tree = parsers.parse(input.lang, source);
+        if !tree.root_node().has_error() {
+            // A program excised to nothing keeps the old contract: the file
+            // is judged by its syntax error alone.
+            if tree.root_node().named_child_count() == 0 {
+                return None;
+            }
+            let mut analysis = clean_analysis(parsers, input, input.lang, &tree, custom);
+            merge_comments(parsers, input, first_tree, &mut analysis);
+            analysis.parse_error =
+                Some(first_pos.unwrap_or_else(|| lean_group_pos(&text, &line_starts, &tainted)));
+            analysis.partial = true;
+            analysis.tainted = TaintedLines::new(tainted);
+            return Some(analysis);
+        }
+    }
+    None
+}
+
+/// Partition a Lean parse into top-level command row ranges (0-based,
+/// inclusive). A group starts at each column-0 child; indented lines belong
+/// to the preceding group, which keeps a `run_meta` do-block and its flat
+/// interior lines together. Works on a `module` root and on an `ERROR`
+/// root, whose children are the recovered command fragments.
+fn lean_command_groups(root: Node<'_>) -> Vec<(usize, usize)> {
+    let mut groups = Vec::new();
+    let mut cursor = root.walk();
+    let mut start: Option<usize> = None;
+    let mut end = 0;
+    let mut first = true;
+    for child in root.children(&mut cursor) {
+        if !first && child.start_position().column == 0 {
+            if let Some(open) = start.take() {
+                groups.push((open, end));
+            }
+        }
+        let child_start = child.start_position().row;
+        let child_end = child.end_position().row;
+        (start, end) = match start {
+            Some(open) => (Some(open.min(child_start)), end.max(child_end)),
+            None => (Some(child_start), child_end),
+        };
+        first = false;
+    }
+    if let Some(open) = start {
+        groups.push((open, end));
+    }
+    groups
+}
+
+/// Row spans (0-based, inclusive) of the root's direct children that carry
+/// an error. A span test against command groups keeps the blanking
+/// command-granular even when an `ERROR` node straddles group boundaries.
+fn lean_top_errors(root: Node<'_>) -> Vec<(usize, usize)> {
+    let mut bad = Vec::new();
+    let mut cursor = root.walk();
+    for child in root.children(&mut cursor) {
+        if child.has_error() {
+            bad.push((child.start_position().row, child.end_position().row));
+        }
+    }
+    bad
+}
+
+/// Row spans (0-based, inclusive) holding non-whitespace the parse dropped
+/// between the root's direct children (or before the first / after the
+/// last): tokens error recovery skipped without leaving a reachable `ERROR`
+/// or a `MISSING` in the s-expression. The group holding the gap is where
+/// the unparseable command sits.
+fn lean_gap_spans(root: Node<'_>, text: &[u8], line_starts: &[usize]) -> Vec<(usize, usize)> {
+    let mut cursor = root.walk();
+    let kids: Vec<Node<'_>> = root.children(&mut cursor).collect();
+    let mut spans = Vec::new();
+    let mut edge = 0;
+    for child in &kids {
+        let start = child.start_byte();
+        if has_text(&text[edge..start.min(text.len())]) {
+            spans.push((row_of(line_starts, edge), row_of(line_starts, start)));
+        }
+        edge = child.end_byte().max(edge);
+    }
+    if has_text(&text[edge.min(text.len())..]) {
+        spans.push((row_of(line_starts, edge), row_of(line_starts, text.len())));
+    }
+    spans
+}
+
+/// Whether a gap holds anything but ASCII whitespace (comments are child
+/// nodes, never gap content).
+fn has_text(gap: &[u8]) -> bool {
+    gap.iter().any(|&byte| !byte.is_ascii_whitespace())
+}
+
+/// 0-based row containing `offset`, via the file's line starts.
+fn row_of(line_starts: &[usize], offset: usize) -> usize {
+    line_starts
+        .partition_point(|&start| start <= offset)
+        .saturating_sub(1)
+}
+/// First error site in document order, like [`first_error_pos`] but also
+/// matching zero-width nodes with an error beneath them: a hidden `MISSING`
+/// node is invisible to the cursor, while its zero-width parent is
+/// reachable and marks the recovery site (`MyNat/Inequality.lean`). The
+/// root itself is never the site: on an `ERROR` root it spans the whole
+/// file, so the search starts at its children.
+fn lean_error_pos(root: Node<'_>) -> Option<Pos> {
+    let mut cursor = root.walk();
+    if !cursor.goto_first_child() {
+        let empty = root.byte_range().is_empty() && root.has_error();
+        return (root.is_error() || root.is_missing() || empty).then(|| hooks::pos_of(root));
+    }
+    let root_id = root.id();
+    loop {
+        let node = cursor.node();
+        if node.id() != root_id {
+            if node.is_error() || node.is_missing() {
+                return Some(hooks::pos_of(node));
+            }
+            if node.byte_range().is_empty() && node.has_error() {
+                return Some(hooks::pos_of(node));
+            }
+        }
+        if cursor.goto_first_child() {
+            continue;
+        }
+        loop {
+            if cursor.goto_next_sibling() {
+                break;
+            }
+            if !cursor.goto_parent() {
+                return None;
+            }
+        }
+    }
+}
+
+/// Fallback parse-error position when no error site is reachable at all:
+/// the start of the first blanked command. Points at the bad command
+/// instead of the end of the file.
+fn lean_group_pos(text: &[u8], line_starts: &[usize], tainted: &[(u32, u32)]) -> Pos {
+    let line = tainted
+        .iter()
+        .map(|&(start, _)| start)
+        .min()
+        .unwrap_or(1)
+        .max(1);
+    let byte = line_starts
+        .get(
+            usize::try_from(line)
+                .unwrap_or(usize::MAX)
+                .saturating_sub(1),
+        )
+        .copied()
+        .unwrap_or_else(|| text.len());
+    Pos {
+        line,
+        byte: hooks::narrow(byte),
+    }
 }
 
 /// A comment inside an excised region — say a `sloplint-allow-file` directive
