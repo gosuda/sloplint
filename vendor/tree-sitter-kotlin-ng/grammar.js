@@ -31,6 +31,15 @@ module.exports = grammar({
     // accessor tail) and the local variant; the local rule's negative
     // dynamic precedence makes the full property win.
     [$.property_declaration, $.local_property_declaration],
+    // `if (c) while (d) x • '='` merges the loop body's statement and
+    // assignment starts: the parser must read past `=` to see the while
+    // body was a complete expression (interpretation 2 is a dead end —
+    // nothing but `;`/`else` may follow an if branch).
+    [$.statement, $.assignment],
+    // `if (c) while (d) val x • '='` merges the property heads of the
+    // loop body's declaration and local-property variants.
+    [$._property_declaration_head],
+    [$.delegation_specifiers],
 
 
     [$.binary_expression, $.call_expression],
@@ -963,12 +972,18 @@ module.exports = grammar({
         $.block,
         $.expression,
         $.assignment,
+        $.for_statement,
+        $.while_statement,
+        $.do_while_statement,
         ';',
         seq(
           optional(choice(
             $.block,
             $.expression,
             $.assignment,
+            $.for_statement,
+            $.while_statement,
+            $.do_while_statement,
           )),
           optional(';'),
           'else',
@@ -976,6 +991,9 @@ module.exports = grammar({
             $.block,
             $.expression,
             $.assignment,
+            $.for_statement,
+            $.while_statement,
+            $.do_while_statement,
             ';',
           ),
         ),

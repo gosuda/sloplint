@@ -2,6 +2,18 @@
 
 Status: PARTIAL. 18 of the 19 named Kotlin clusters are fixed for their repro shapes. 3 are open. The residual files below are listed by file, with their shape.
 
+Round 14 adds loop statements to `if`/`else` branch bodies (K-IFLOOP):
+`if (m) for (c in ys) D()`, `else while (d) g()`, `if (a) for ((p, q) in m)
+{ … }`, `if (m) do { … } while (d)`. Upstream v1.1.0 has only
+`block`/`expression`/`assignment`/`;` as branch bodies, so `for` lexed as
+an identifier — the braced form `if (m) for (c in ys) { D() }` silently
+mis-parsed as a `for(c in ys)` call with a trailing lambda (no ERROR), and
+the bare-expression form errored at the call site. `for_statement`,
+`while_statement` and `do_while_statement` join all three branch choices,
+with three new conflict declarations (`statement`/`assignment`,
+`_property_declaration_head`, `delegation_specifiers`) for the merged
+if-then state.
+
 Round 13 closes a word-scan hole: `scan_words` uses `iswalnum`, which in the C locale stops at non-ASCII bytes — `isÉ` scanned as `is`, so `var c = 1; get\nisÉ()` lost its bare getter to the `as`/`is`/`in` infix branch. That branch now also requires the lookahead to not continue the word (`iswalnum || '_' || > 127` is rejected), so `isÉ()` reads as a call on the next line and `get` keeps its accessor slot. Note the flag that prompted the investigation, `x\nis Int` at file level, stays an error — `is` also opens `when` entry conditions, so the newline scanner cannot unconditionally continue on it (upstream parity: it fails identically without the `;`). A `;`-followed `get`/`set`/`field` word then reads as an identifier exactly the way a plain `x` does there.
 
 Round 2 adds: K-SOFTID (`open`/`override` usable as identifiers), K-PARENANNO (annotation on a parenthesized function type), K-ARRLIT (empty `[]` in an annotation argument), K-NEWLINECTOR (a newline or doc comment between the class name and the primary-constructor parameter list, which resolves the KSPLITCTOR shape), and K-ARRLIT also resolves the KVARARGARR repro (`= []`). A fresh dogfood pass over 274 corpus files previously flagged with parse errors leaves 171 still erroring; the cleared 102 are concentrated in installerx-revived (Room `indices = []`, `@Composable` paren types), facebook-android-sdk, dbflow, and mlkit (doc comment before the constructor).
@@ -182,3 +194,25 @@ The member-word follower check rejects a repeat of the same accessor
 word — `var x = 1; get\nget` (or `set\nset`) can never be a second
 accessor of the same kind, so the second word now reads as a script
 statement instead of a duplicate getter the parser would reject.
+
+## Round 14 (loop statements as if/else branch bodies)
+
+Adds `for_statement`/`while_statement`/`do_while_statement` to the
+`if`/`else` branch choices (upstream only allowed block/expression/
+assignment), with conflict declarations covering the new merge points
+(`statement`/`assignment`, `_property_declaration_head`,
+`delegation_specifiers`).
+
+Known inherited limitations (verified byte-identical on the pinned
+upstream v1.1.0 parser, not introduced by this round):
+
+- An unbraced loop body on the next line (`for (i in xs)\n  g(i)`) ends
+  the loop after `)` and parses the body as a sibling statement — the
+  scanner's `_semi` wins over `optional(choice(block, statement))`. This
+  happens identically at statement level upstream; the same misparse is
+  now reachable inside `if`/`else` branches, where upstream produced an
+  equally wrong `call_expression(for, i in xs)` mis-shape instead.
+- `;` immediately before `else` (`if (c) x; else y`, any branch kind)
+  errors: a real `;` lexes as the external `_semi`, never as the literal
+  `';'` the `if_expression` rule lists, so the `optional(';')` path is
+  dead. Upstream errors identically on `if (x) f(); else g()`.

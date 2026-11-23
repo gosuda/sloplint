@@ -5511,6 +5511,18 @@
                 "name": "assignment"
               },
               {
+                "type": "SYMBOL",
+                "name": "for_statement"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "while_statement"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "do_while_statement"
+              },
+              {
                 "type": "STRING",
                 "value": ";"
               },
@@ -5534,6 +5546,18 @@
                           {
                             "type": "SYMBOL",
                             "name": "assignment"
+                          },
+                          {
+                            "type": "SYMBOL",
+                            "name": "for_statement"
+                          },
+                          {
+                            "type": "SYMBOL",
+                            "name": "while_statement"
+                          },
+                          {
+                            "type": "SYMBOL",
+                            "name": "do_while_statement"
                           }
                         ]
                       },
@@ -5572,6 +5596,18 @@
                       {
                         "type": "SYMBOL",
                         "name": "assignment"
+                      },
+                      {
+                        "type": "SYMBOL",
+                        "name": "for_statement"
+                      },
+                      {
+                        "type": "SYMBOL",
+                        "name": "while_statement"
+                      },
+                      {
+                        "type": "SYMBOL",
+                        "name": "do_while_statement"
                       },
                       {
                         "type": "STRING",
@@ -7092,6 +7128,16 @@
     [
       "property_declaration",
       "local_property_declaration"
+    ],
+    [
+      "statement",
+      "assignment"
+    ],
+    [
+      "_property_declaration_head"
+    ],
+    [
+      "delegation_specifiers"
     ],
     [
       "binary_expression",
