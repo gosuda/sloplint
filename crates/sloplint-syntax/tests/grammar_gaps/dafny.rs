@@ -465,6 +465,34 @@ fn tuple_var_decls_bind_their_names() {
 }
 
 #[test]
+fn tuple_var_decls_shadow_an_outer_binding() {
+    // `var (a2, b2)` after `var a2` shadows it: the later write hits the
+    // destructured binding, and the outer local keeps only its own writes.
+    let analysis = run_clean(concat!(
+        "method M()\n",
+        "{\n",
+        "  var a2 := 0;\n",
+        "  a2 := 1;\n",
+        "  var (a2, b2) := (1, 2);\n",
+        "  a2 := 5;\n",
+        "}\n",
+    ));
+    let shadowed: Vec<_> = analysis
+        .facts
+        .bindings
+        .iter()
+        .filter(|b| b.name == "a2")
+        .collect();
+    assert_eq!(
+        shadowed.len(),
+        2,
+        "expected outer and destructured `a2` bindings"
+    );
+    assert_eq!(shadowed[0].last_write_line, 4);
+    assert_eq!(shadowed[1].last_write_line, 6);
+}
+
+#[test]
 fn plain_witness_expressions_are_lintable() {
     // `witness e` is compiled — its calls must reach lint facts; only
     // `ghost witness e` is proof-only and skipped.
