@@ -33,6 +33,15 @@ jobs:
           persist-credentials: false
       - run: cargo fmt --all --check
 
+  grammar-manifest:
+    runs-on: depot-ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash scripts/grammars.sh check
+
   release-scripts:
     runs-on: depot-ubuntu-24.04
     timeout-minutes: 30
