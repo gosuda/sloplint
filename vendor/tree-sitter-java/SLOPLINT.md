@@ -59,8 +59,10 @@ grammar.js. Apply it from this directory with
   (`LastFormalParameter: {VariableModifier} UnannType {Annotation} ...`).
   The pre-ellipsis repeat is upstream's fix, kept verbatim. The existing
   `repeat($._annotation)` after `'...'` is intentionally retained although
-  upstream dropped it (see Origin): no corpus case covers it, and removing
-  it would newly error files that parse today.
+  upstream dropped it (see Origin): the vendored corpus case `Annotations
+  before a spread parameter's ellipsis` (`int... @Foo x` in
+  `test/corpus/expressions.txt`) covers it, and removing it would newly
+  error files that parse today.
   `String @N ... xs`, `@N Object @N ... a`, and `String @lib.Valid ... v`
   now parse; the leading `@N` in the second shape still parses as
   `modifiers`, and the pre-ellipsis annotation lands inside
@@ -93,9 +95,9 @@ crate. `crates/sloplint-syntax/tests/grammar_gaps/java.rs` and
 - Annotations after `...` (`void m(String ... @B xs) {}`) were already
   accepted before this patch and still are, even though javac rejects them.
   That leniency predates this lane and is out of scope: removing it would
-  newly error files that parse today. It is pinned by the fifth section of
-  test/corpus/sloplint_varargs_annotations.txt, so dropping the retained
-  repeat from grammar.js fails `tree-sitter test`.
+  newly error files that parse today. Upstream's own corpus case
+  `Annotations before a spread parameter's ellipsis` (`int... @Foo x`)
+  exercises the retained repeat, so the line is pinned by `tree-sitter test`.
 
 ## Known still failing
 

@@ -217,25 +217,3 @@ void dims(String @N [] f) {
     (block
       (return_statement
         (identifier)))))
-
-================================================================================
-Annotations after the ellipsis (kept leniency, javac rejects this)
-================================================================================
-
-void m(String ... @B xs) {
-}
-
---------------------------------------------------------------------------------
-
-(program
-  (method_declaration
-    (void_type)
-    (identifier)
-    (formal_parameters
-      (spread_parameter
-        (type_identifier)
-        (marker_annotation
-          (identifier))
-        (variable_declarator
-          (identifier))))
-    (block)))
