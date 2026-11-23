@@ -22,10 +22,10 @@
 //! fires on the real phenomenon. It runs past the production budget on any
 //! plausible host (202 s of parser CPU here — a 15x faster machine still
 //! exceeds it), so this test never depends on timing: it only asserts the
-//! analysis *returns* — past the fix in about one budget — with a parse
-//! error and no facts, and that a normal file analyzed next on the same
-//! `Parsers` is unaffected. Before the fix the first analysis never
-//! returns and the test fails at the cap below.
+//! analysis *returns* — past the fix in about one budget — as a timeout,
+//! not a syntax error, with no facts, and that a normal file analyzed next
+//! on the same `Parsers` is unaffected. Before the fix the first analysis
+//! never returns and the test fails at the cap below.
 //!
 //! Threading: `Parsers` (and tree-sitter `Parser`) are `Send`, but `spawn`
 //! needs `'static`, so the `Parsers` is built *inside* the thread, runs
@@ -1468,6 +1468,7 @@ struct Summary {
     divergent_had_error: bool,
     divergent_facts_empty: bool,
     divergent_partial: bool,
+    divergent_timed_out: bool,
     healthy_clean: bool,
     healthy_fns: usize,
     healthy_first: String,
@@ -1498,6 +1499,7 @@ fn divergent_lean_parse_is_abandoned_with_a_parse_error() {
                 && div.facts.calls.is_empty()
                 && div.facts.imports.is_empty(),
             divergent_partial: div.partial,
+            divergent_timed_out: div.timed_out,
             healthy_clean: ok.parse_error.is_none(),
             healthy_fns: ok.facts.functions.len(),
             healthy_first: ok
@@ -1523,6 +1525,12 @@ fn divergent_lean_parse_is_abandoned_with_a_parse_error() {
     assert!(
         !s.divergent_partial,
         "timeout is not a rescue: nothing was salvaged"
+    );
+    // Every assertion above also holds for an ordinary syntax failure;
+    // only the timeout status tells the budget apart from one.
+    assert!(
+        s.divergent_timed_out,
+        "the divergent file reports a timeout, not an ordinary syntax error"
     );
     // The shared parser was reset after the cancel: the next file parses
     // from a clean state. Without the reset this file resumes the abandoned

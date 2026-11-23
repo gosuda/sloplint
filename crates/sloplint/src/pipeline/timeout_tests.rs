@@ -1,6 +1,7 @@
-//! A parse the budget cut stays in the run's report but out of the
-//! persistent cache: the timeout reflects host load as much as the source,
-//! so the next run of the unchanged file parses it again.
+//! A parse the budget cut reports the timeout diagnostic, not a syntax
+//! error, and stays in the run's report but out of the persistent cache:
+//! the timeout reflects host load as much as the source, so the next run
+//! of the unchanged file parses it again.
 
 use std::collections::{BTreeSet, HashSet};
 use std::path::Path;
@@ -109,4 +110,28 @@ fn a_timed_out_file_stays_out_of_the_cache_so_the_next_run_parses_it() {
             .is_none(),
         "a timed-out analysis must not be cached: the next run must parse the unchanged file again"
     );
+}
+
+#[test]
+fn a_timed_out_file_reports_the_timeout_diagnostic_not_a_syntax_error() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    with_pipeline(tmp.path(), |pipe| {
+        let slow_input = input("slow.lean", BLANK);
+        let slow = timed_out(analyze(&mut Parsers::new(), &slow_input, pipe.custom));
+        let output = fresh(pipe, "slow.lean", BLANK, &slow).output;
+        assert!(!output.parsed, "a timed-out file counts as unparsed");
+        let [finding] = output.findings.as_slice() else {
+            panic!(
+                "a timed-out file keeps exactly one finding: {:?}",
+                output.findings
+            );
+        };
+        assert_eq!(&*finding.rule, "meta/parse-error");
+        assert_eq!(finding.line, 1, "the timeout anchors at the file start");
+        assert!(
+            finding.message.starts_with("parse timed out"),
+            "the diagnostic names the timeout, not a syntax error: {}",
+            finding.message
+        );
+    });
 }
