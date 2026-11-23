@@ -6,6 +6,7 @@ use crate::callee::CalleePattern;
 use crate::config::Strictness;
 use crate::facts::{ArgShape, Call, FileFacts};
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift};
 use crate::rules::parse_options;
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
@@ -71,6 +72,12 @@ fn build(options: toml::Table, settings: &Settings) -> Result<Box<dyn FileRule>,
 
 impl FileRule for ContiguousLogLiteral {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        // Print and PrintT with dynamic arguments are the only
+        // observability in TLA+; in test models Print("Test 3", TRUE) IS
+        // the test oracle, so every firing is noise.
+        if matches!(facts.lang, Lang::Tlaplus) {
+            return;
+        }
         let Some(patterns) = self.log_callees.get(facts.lang.config_key()) else {
             return;
         };

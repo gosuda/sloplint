@@ -1,1 +1,0 @@
-a.tla:2 minor slop/echo-comment

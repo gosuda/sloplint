@@ -6,6 +6,7 @@ use super::{parse_options, string_values};
 use crate::config::Strictness;
 use crate::facts::{FileFacts, Visibility};
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
 use crate::text::identifier_words;
@@ -84,6 +85,11 @@ fn normalized(name: &str) -> String {
 
 impl FileRule for GenericName {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        // `Process` is the PlusCal domain term for a concurrent process, not
+        // a generic name: flagging it asks authors to rename the vocabulary.
+        if matches!(facts.lang, Lang::Tlaplus) {
+            return;
+        }
         for function in &facts.functions {
             if function.visibility != Visibility::Exported || function.signature_forced {
                 continue;

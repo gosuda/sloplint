@@ -86,6 +86,12 @@ impl FileRule for UniquePatchAnchors {
         if matches!(facts.lang, Lang::Quint) {
             return;
         }
+        // TLA+ repeats blocks by design: generated PlusCal translations,
+        // TLC trace and model records, and proof-step BY references repeat
+        // identical blocks, so every firing is noise.
+        if matches!(facts.lang, Lang::Tlaplus) {
+            return;
+        }
         let min_repeats = self.effective_min_repeats(facts.lang);
         let segments = kept_segments(facts.source);
         for run in self.repeated_runs(&segments, min_repeats) {
