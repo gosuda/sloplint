@@ -152,6 +152,12 @@ impl HomonymDefinitions {
                 let mut buckets: [Bucket<'a>; NAME_SHARDS] = std::array::from_fn(|_| Vec::new());
                 for (offset, file) in chunk_files.iter().enumerate() {
                     let facts = file.facts;
+                    // Init, Next, vars, Inv and friends are defined per
+                    // module by design in TLA+: renaming them across
+                    // hundreds of files is unthinkable.
+                    if matches!(facts.lang, Lang::Tlaplus) {
+                        continue;
+                    }
                     let package = facts.package.as_str();
                     for site in &facts.definitions {
                         if self.allow.contains(site.name.as_ref())
