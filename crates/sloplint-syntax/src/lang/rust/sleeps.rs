@@ -43,7 +43,8 @@ fn identifier(value: &str) -> &str {
 
 fn uncommented_children(n: Node<'_>) -> impl Iterator<Item = Node<'_>> {
     (0..n.named_child_count()).filter_map(move |index| {
-        n.named_child(index)
+        // Tree-sitter's underlying child count and child index are both u32.
+        n.named_child(index as u32)
             .filter(|child| !matches!(child.kind(), "line_comment" | "block_comment"))
     })
 }
