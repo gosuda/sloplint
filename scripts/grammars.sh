@@ -194,16 +194,22 @@ cmd_verify() {
   if [ -n "$patch" ]; then
     # Patches are relative to the vendor directory root, which matches the
     # upstream checkout root. Most patches use git a/b prefixes (-p1); the
-    # ocaml patch is p0-style with timestamps. Try -p1, then -p0.
+    # ocaml patch is p0-style with timestamps and the dafny patch carries
+    # sloplint-relative a/vendor/... paths (-p3). Try each level in turn.
     local patch_level=""
-    if git -C "$work/upstream" apply --check -p1 < "$ROOT/$patch" 2>"$work/apply-err1"; then
-      patch_level="-p1"
-    elif git -C "$work/upstream" apply --check -p0 < "$ROOT/$patch" 2>"$work/apply-err0"; then
-      patch_level="-p0"
-      printf 'grammars.sh verify: %s: patch uses -p0 strip level\n' "$name" >&2
-    else
-      cat "$work/apply-err1" >&2
+    local try_level=""
+    for try_level in -p1 -p0 -p3; do
+      if git -C "$work/upstream" apply --check "$try_level" < "$ROOT/$patch" 2>"$work/apply-err"; then
+        patch_level="$try_level"
+        break
+      fi
+    done
+    if [ -z "$patch_level" ]; then
+      git -C "$work/upstream" apply --check -p1 < "$ROOT/$patch" 2>&1 | head -3 >&2
       die "$name: patch $patch does not apply to $commit"
+    fi
+    if [ "$patch_level" != "-p1" ]; then
+      printf 'grammars.sh verify: %s: patch uses %s strip level\n' "$name" "$patch_level" >&2
     fi
     git -C "$work/upstream" apply "$patch_level" < "$ROOT/$patch"
   fi
