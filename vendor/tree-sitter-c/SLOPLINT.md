@@ -46,8 +46,12 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
   No scanner is used; `complex` is a plain keyword, so a declarator literally
   named `complex` right after a primitive type (as in `complex z;` with a user
   typedef) no longer parses. See the sweep result below.
+  Upstream status: open PR #331 covers only the `_Complex` keyword orderings,
+  via `sized_type_specifier`, not the `complex` macro spelling, so the
+  qualifier approach is kept (it covers both spellings).
 - Thread-local storage: `storage_class_specifier` accepts `_Thread_local`
-  (`_Thread_local int x;`, `static _Thread_local int y;`).
+  (`_Thread_local int x;`, `static _Thread_local int y;`). Textually identical
+  to open upstream PR #331 (`arraypress/tree-sitter-c@0e64952`).
 - Atomic functional form: `macro_type_specifier` accepts `alias('_Atomic',
   $.identifier)` as its name, so `_Atomic(int)` reuses the existing
   `macro_type_specifier` node (`typedef _Atomic(int) t;`,
@@ -57,7 +61,9 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
   element, so an embed directive parses alone in braces or between commas
   (`char d[]={` newline `#embed "x" limit(5)` newline `};`,
   `{1,` newline `#embed <x>` newline `, 2}`). Two embeds in a row with no comma
-  between them are still rejected.
+  between them are still rejected. Same shape as open upstream PR #331; the
+  vendored free-atom list model is kept (it also carries the preproc-split
+  lists below).
 - C23 `#embed` as an expression: `_expression_not_binary` accepts
   `$.preproc_embed`, which matches `#embed <path> (param(args) ...)*` with
   `path` a `string_literal` or `system_lib_string` and each parameter an
@@ -71,11 +77,16 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
   and `$.system_lib_string`, so `__has_include(<endian.h>)`,
   `__has_include("x.h")`, `__has_include_next(<x.h>)` and
   `__has_embed("x")` parse. `__has_attribute(x)` and the other
-  identifier-argument checks already parsed.
-- Fixed enum underlying types: a new hidden `_enum_underlying_type` rule
-  (with `prec.right`) accepts `primitive_type` or `sized_type_specifier` after
-  the colon, in both the named and the anonymous branch
+  identifier-argument checks already parsed. The two upstream additions are
+  textually identical to open upstream PR #331; the comparison-operator item
+  below them is self-authored (no upstream source).
+- Fixed enum underlying types: both `enum_specifier` branches accept an
+  optional `:` followed by `primitive_type`, `sized_type_specifier` or
+  `_type_identifier` as `underlying_type`
   (`enum : unsigned short {A=2};`, `enum E : unsigned short {B=2};`).
+  Textually identical to open upstream PR #331
+  (`arraypress/tree-sitter-c@0e64952`); the added
+  `[$.sized_type_specifier, $.enum_specifier]` conflict is upstream's too.
 - Unnamed bitfields: `_field_declaration_declarator` accepts a bare
   `$.bitfield_clause` in the comma-separated list
   (`struct S{unsigned:0; int x;};`, `struct S{int a:3, :4, b:2;};`).
@@ -224,7 +235,10 @@ Every repro below was first checked with `gcc -fsyntax-only -std=gnu2x`
 - GNU case ranges: `case_statement` accepts
   `case <expr> ... <expr>:` (`case '0' ... '9': return 1;`), the gcc/clang
   extension accepted by `gcc -fsyntax-only -std=gnu2x`. The high bound gets
-  field `end`.
+  field `end`. Textually identical to open upstream PR #331
+  (`arraypress/tree-sitter-c@0e64952`); open upstream PR #329
+  (`lukan-visionmc/tree-sitter-c@65b0d27`) carries the same shape with the
+  high-bound field named `end_value`.
 
 - `__fp16`/`__bf16` dropped from `primitive_type` (reverses an earlier
   sloplint addition): ARM/MSVC shim headers legitimately name user types
@@ -339,6 +353,10 @@ Inputs that are not valid C and so stay errors: `int x = ;`, unterminated
   SDK cluster: typedef qualifier macros, function-pointer typedefs with
   SAL-annotated parameters, MIDL brackets, declaratorless typedefs inside
   `#if`, and `#ifdef`-guarded inheritance.
+- Corpus hygiene: `test/corpus/sloplint_cmsis_asm.txt` was missing the
+  `(translation_unit` root opener every other corpus file carries (the
+  harness compares against `root.to_sexp()`), so that one case failed
+  before and after any grammar change; fixed by adding the opener.
 
 ## Sweep result
 
@@ -359,13 +377,11 @@ The `macro_attribute` change was measured separately on 412 corpus files
 that carried error nodes (the most error-dense .c/.h files of the big
 repos run): error nodes 19,312 before, 17,937 after; files with any error
 403 before, 397 after; six files fully clean; no clean file went to error.
-
-## Size
-
-`src/parser.c`: 7,488,274 bytes (published: 3,872,012; regenerated unpatched
-with 0.27.1: 3,872,027). States: 2122 (published: 2015). Symbols: 367
+`src/parser.c`: 34,392,993 bytes (published: 3,872,012; regenerated unpatched
+with 0.27.1: 3,872,027). States: 4758 (published: 2015). Symbols: 610
 (published: 360). The literal enumeration of `macro_attribute` costs most of
-the size growth.
+the size growth; the upstream enum-underlying/case-range forms add the rest
+of the delta over the 7.5 MB figure recorded earlier.
 
 - **MSVC `__asm {}` / `_asm {}` blocks** parse as a statement-level
   `ms_asm_statement` wrapping a `ms_asm_block` token soup (identifiers,

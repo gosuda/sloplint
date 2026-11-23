@@ -71,7 +71,7 @@ abi = 14
 patch = "vendor/tree-sitter-c/sloplint-grammar.patch"
 patch_status = "upstream-pending"
 patch_upstream = "https://github.com/tree-sitter/tree-sitter-c/pull/331"
-notes = "Annotated tag; commit is the ^{} dereference and matches the crate vcs_info. Master head is the tag commit. Latest release equals vendored. Proof pending per audit lane G2; PR #331 plus #329 overlap the C23 shapes, macro machinery has no upstream source."
+notes = "Annotated tag; commit is the ^{} dereference and matches the crate vcs_info. Master head is the tag commit. Latest release equals vendored. Case-range, enum-underlying, _Thread_local and preproc-argument hunks follow open PR #331 head 0e64952 (PR #329 head 65b0d27 carries the same case-range shape with field end_value); remaining 40 hunks (macro machinery, MIDL, guarded linkage, preproc-split lists) have no upstream source. tree-sitter test 61/61; 61-input corpus sweep: 61 clean before and after."
 
 [[grammar]]
 name = "tree-sitter-c-sharp"
