@@ -38,6 +38,10 @@ enum TokenType {
   RECORD_ANCHOR,
   RECORD_NEWLINE,
   RECORD_COMMA,
+  COMMA,
+  COLON,
+  RECORD_ASSIGN,
+  GENERALIZE_EQ,
   FOR_DO,
   ELSE,
   CATCH,
@@ -320,6 +324,7 @@ static bool scan_block_or_doc_comment(TSLexer *lexer,
   }
 
   if (!scan_block_comment_body(lexer, NULL)) return false;
+  lexer->mark_end(lexer);
   lexer->result_symbol = kind;
   return true;
 }
@@ -349,6 +354,7 @@ static bool scan_raw_string_after_r(TSLexer *lexer) {
         seen++;
       }
       if (seen == hashes) {
+        lexer->mark_end(lexer);
         lexer->result_symbol = RAW_STRING_LITERAL;
         return true;
       }
@@ -447,18 +453,40 @@ static bool scan_brace_close(struct Scanner *scanner, TSLexer *lexer,
   return true;
 }
 
-static bool scan_record_comma(struct Scanner *scanner, TSLexer *lexer) {
+/* Both update sources and record fields use COMMA. RECORD_COMMA is a
+   grammar-context marker: once := or with has identified the record,
+   only a field separator checks Lean's first-field indentation anchor. */
+static bool scan_comma(struct Scanner *scanner, TSLexer *lexer,
+                       const bool *valid_symbols) {
   struct Frame frame = *top_frame(scanner);
-  if (!is_brace(frame)) return false;
   advance(lexer);
   lexer->mark_end(lexer);
-  bool saw_newline = false;
-  uint32_t column = 0;
-  int32_t first = 0;
-  if (!preview_content(lexer, &saw_newline, &column, &first)) return false;
-  if (first != '}' && first != ':' && first != '.' && column < frame.column)
-    return false;
-  lexer->result_symbol = RECORD_COMMA;
+  if (frame.kind == RECORD_FRAME && valid_symbols[RECORD_COMMA]) {
+    bool saw_newline = false;
+    uint32_t column = 0;
+    int32_t first = 0;
+    if (!preview_content(lexer, &saw_newline, &column, &first)) return false;
+    if (first != '}' && first != ':' && first != '.' && column < frame.column)
+      return false;
+  }
+  lexer->result_symbol = COMMA;
+  return true;
+}
+
+static bool scan_colon(struct Scanner *scanner, TSLexer *lexer,
+                       const bool *valid_symbols) {
+  advance(lexer);
+  if (lexer->lookahead == '=') {
+    if (!valid_symbols[RECORD_ASSIGN]) return false;
+    advance(lexer);
+    if (top_frame(scanner)->kind == BRACE_FRAME)
+      top_frame(scanner)->kind = RECORD_FRAME;
+    lexer->result_symbol = RECORD_ASSIGN;
+  } else {
+    if (!valid_symbols[COLON] || lexer->lookahead == ':') return false;
+    lexer->result_symbol = COLON;
+  }
+  lexer->mark_end(lexer);
   return true;
 }
 
@@ -484,64 +512,45 @@ static int scan_clause_word(TSLexer *lexer) {
 }
 
 static bool explicit_close(int32_t c) {
-  return c == ')' || c == ']' || c == '}' || c == ',' ||
-         c == 0x27e9 || c == 0x203a || c == 0x27eb;
+  return c == ')' || c == ']' || c == '}' || c == ',' || c == ':'
+      || c == 0x27e9 || c == 0x203a || c == 0x27eb;
 }
 
-/* A DEDENT retains the triggering newline and changes the complete serialized
-   stack. A normal separator consumes its newline once. Clause boundaries can
-   consume whitespace because the following clause itself joins the bodies. */
-static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
-                        const bool *valid_symbols) {
-  lexer->mark_end(lexer);
-  while (lexer->lookahead == ' ' || lexer->lookahead == '\t'
-      || lexer->lookahead == '\r') skip(lexer);
-  if (lexer->lookahead != '\n' && !lexer->eof(lexer)) return false;
-  bool saw_newline = false;
-  while (lexer->lookahead == ' ' || lexer->lookahead == '\t'
-      || lexer->lookahead == '\r' || lexer->lookahead == '\n') {
-    if (lexer->lookahead == '\n') saw_newline = true;
-    skip(lexer);
-  }
-  if (lexer->eof(lexer)) return pop_layout(scanner, lexer, valid_symbols);
-  if (!saw_newline) return false;
+static bool can_pop_layout(struct Scanner *scanner,
+                           const bool *valid_symbols) {
+  return valid_symbols[DEDENT] && scanner->frames.size > 1
+      && !is_brace(*top_frame(scanner));
+}
+
+/* Determine the pending offside boundary without mutating its frame. A
+   grammar-owned comma, colon or clause must be recognized first: it may
+   continue the current construct even when an inner inline body has a
+   larger first-element column. */
+static int layout_token(struct Scanner *scanner, TSLexer *lexer,
+                        const bool *valid_symbols, bool saw_newline) {
   struct Frame top = *top_frame(scanner);
-  uint32_t indent = lexer->get_column(lexer);
-  if (explicit_close(lexer->lookahead)) {
-    return pop_layout(scanner, lexer, valid_symbols);
-  }
-  if (!is_brace(top) && indent < top.column)
-    return pop_layout(scanner, lexer, valid_symbols);
-  if (lexer->lookahead == '|') return false;
-  if (is_brace(top)) {
-    if (valid_symbols[RECORD_NEWLINE] && indent == top.column) {
-      lexer->mark_end(lexer);
-      lexer->result_symbol = RECORD_NEWLINE;
-      return true;
-    }
+  bool can_pop = can_pop_layout(scanner, valid_symbols);
+  if (lexer->eof(lexer)) return can_pop ? DEDENT : -1;
+  if (explicit_close(lexer->lookahead)) return can_pop ? DEDENT : -1;
+  if (!saw_newline) return -1;
+  uint32_t column = lexer->get_column(lexer);
+  if (!is_brace(top) && column < top.column) return can_pop ? DEDENT : -1;
+  if (lexer->lookahead == '|') return -1;
+  if (is_brace(top))
+    return valid_symbols[RECORD_NEWLINE] && column == top.column
+        ? RECORD_NEWLINE : -1;
+  if (column > top.column && valid_symbols[INDENT]) return INDENT;
+  return column == top.column && valid_symbols[NEWLINE] ? NEWLINE : -1;
+}
+
+static bool emit_layout(struct Scanner *scanner, TSLexer *lexer,
+                        const bool *valid_symbols, int token,
+                        uint32_t column) {
+  if (token < 0) return false;
+  if (token == DEDENT) return pop_layout(scanner, lexer, valid_symbols);
+  if (token == INDENT && !push_frame(scanner, INDENT_FRAME, column))
     return false;
-  }
-  if (indent > top.column && valid_symbols[INDENT]) {
-    if (!push_frame(scanner, INDENT_FRAME, indent)) return false;
-    lexer->mark_end(lexer);
-    lexer->result_symbol = INDENT;
-    return true;
-  }
-  if (indent != top.column || !valid_symbols[NEWLINE]) return false;
-  lexer->mark_end(lexer);
-  if (lexer->lookahead == 'e' || lexer->lookahead == 'c'
-      || lexer->lookahead == 'f' || lexer->lookahead == 'w') {
-    int token = scan_clause_word(lexer);
-    if (token >= 0) {
-      if (valid_symbols[token]) {
-        lexer->mark_end(lexer);
-        lexer->result_symbol = token;
-        return true;
-      }
-      if (pop_layout(scanner, lexer, valid_symbols)) return true;
-    }
-  }
-  lexer->result_symbol = NEWLINE;
+  lexer->result_symbol = (TSSymbol)token;
   return true;
 }
 
@@ -554,23 +563,35 @@ static bool scan(struct Scanner *scanner, TSLexer *lexer,
     return begin_body(scanner, lexer, valid_symbols);
   if (valid_symbols[RECORD_ANCHOR])
     return record_anchor(scanner, lexer);
-  if (valid_symbols[INDENT] || valid_symbols[DEDENT] ||
-      valid_symbols[NEWLINE] || valid_symbols[RECORD_NEWLINE]) {
-    if (scan_layout(scanner, lexer, valid_symbols)) return true;
-  }
-  while (lexer->lookahead == ' ' || lexer->lookahead == '\t'
-      || lexer->lookahead == '\r' || lexer->lookahead == '\n') skip(lexer);
+
+  /* DEDENT retains the triggering whitespace. Separators consume it once.
+     Lookahead never becomes hidden state: every successful zero-width token
+     changes the complete serialized frame stack. */
   lexer->mark_end(lexer);
-  if (lexer->eof(lexer)) return pop_layout(scanner, lexer, valid_symbols);
-  if (lexer->lookahead == '}' &&
-      (valid_symbols[BRACE_CLOSE] || valid_symbols[DEDENT]))
-    return scan_brace_close(scanner, lexer, valid_symbols);
-  if (explicit_close(lexer->lookahead) &&
-      pop_layout(scanner, lexer, valid_symbols)) return true;
-  if (lexer->lookahead == '{' && valid_symbols[BRACE_OPEN])
-    return scan_brace_open(scanner, lexer);
-  if (lexer->lookahead == ',' && valid_symbols[RECORD_COMMA])
-    return scan_record_comma(scanner, lexer);
+  bool saw_newline = false;
+  while (lexer->lookahead == ' ' || lexer->lookahead == '\t'
+      || lexer->lookahead == '\r' || lexer->lookahead == '\n') {
+    if (lexer->lookahead == '\n') saw_newline = true;
+    skip(lexer);
+  }
+  uint32_t column = lexer->get_column(lexer);
+  int layout = layout_token(scanner, lexer, valid_symbols, saw_newline);
+  if (layout != DEDENT) lexer->mark_end(lexer);
+  if (lexer->eof(lexer))
+    return emit_layout(scanner, lexer, valid_symbols, layout, column);
+
+  if (lexer->lookahead == ',' && valid_symbols[COMMA])
+    return scan_comma(scanner, lexer, valid_symbols);
+  if (lexer->lookahead == ':' &&
+      (valid_symbols[COLON] || valid_symbols[RECORD_ASSIGN]))
+    return scan_colon(scanner, lexer, valid_symbols);
+  if (lexer->lookahead == '=' && valid_symbols[GENERALIZE_EQ]) {
+    advance(lexer);
+    if (lexer->lookahead == '=' || lexer->lookahead == '>') return false;
+    lexer->mark_end(lexer);
+    lexer->result_symbol = GENERALIZE_EQ;
+    return true;
+  }
   if (lexer->lookahead == '|') {
     advance(lexer);
     if (lexer->lookahead == '|' || lexer->lookahead == '>') return false;
@@ -587,15 +608,21 @@ static bool scan(struct Scanner *scanner, TSLexer *lexer,
     int token = scan_clause_word(lexer);
     if (token >= 0 && valid_symbols[token]) {
       lexer->mark_end(lexer);
-      lexer->result_symbol = token;
+      lexer->result_symbol = (TSSymbol)token;
       return true;
     }
     if (token >= 0 && token != FOR_DO &&
         pop_layout(scanner, lexer, valid_symbols)) return true;
+    if (emit_layout(scanner, lexer, valid_symbols, layout, column)) return true;
     if (valid_symbols[SCANNED_IDENT])
       return scan_identifier_continue(lexer, false);
     return false;
   }
+  if (emit_layout(scanner, lexer, valid_symbols, layout, column)) return true;
+  if (lexer->lookahead == '}' && valid_symbols[BRACE_CLOSE])
+    return scan_brace_close(scanner, lexer, valid_symbols);
+  if (lexer->lookahead == '{' && valid_symbols[BRACE_OPEN])
+    return scan_brace_open(scanner, lexer);
 
   /* Norm bars `‖ … ‖`. The same glyph opens and closes, disambiguated
      by parser context: prefer CLOSE (only valid once a norm is open and

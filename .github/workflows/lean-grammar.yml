@@ -77,7 +77,7 @@ jobs:
         working-directory: vendor/tree-sitter-lean
         run: |
           export XDG_CACHE_HOME="$RUNNER_TEMP/lean-grammar-cache"
-          timeout 10m tree-sitter test 2>&1 | tee corpus.log
+          timeout 10m tree-sitter test --debug-build 2>&1 | tee corpus.log
       - name: Build bounded parser probe
         id: probe
         if: ${{ !cancelled() && steps.generate.outcome == 'success' }}
@@ -94,7 +94,9 @@ jobs:
       - name: Concrete Lean layout fixtures
         if: ${{ !cancelled() && steps.probe.outcome == 'success' }}
         run: |
-          timeout 1m "$RUNNER_TEMP/lean-parse-probe" crates/sloplint-syntax/tests/testdata/lean-layout.lean \
+          timeout 1m "$RUNNER_TEMP/lean-parse-probe" \
+            crates/sloplint-syntax/tests/testdata/lean-layout.lean \
+            crates/sloplint-syntax/tests/testdata/lean-tactics.lean \
             | tee vendor/tree-sitter-lean/layout-syntax.jsonl
       - name: Pinned production proof syntax
         if: ${{ !cancelled() && steps.probe.outcome == 'success' }}

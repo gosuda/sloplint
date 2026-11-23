@@ -49,6 +49,14 @@ fn parse_raw(source: &str) -> tree_sitter::Tree {
     let language: tree_sitter::Language = tree_sitter_lean::LANGUAGE.into();
     let mut parser = tree_sitter::Parser::new();
     parser.set_language(&language).expect("lean language loads");
+    parse_with_old(&mut parser, source, None)
+}
+
+fn parse_with_old(
+    parser: &mut tree_sitter::Parser,
+    source: &str,
+    old: Option<&tree_sitter::Tree>,
+) -> tree_sitter::Tree {
     let mut checks = 0;
     let mut progress = |_: &tree_sitter::ParseState| {
         checks += 1;
@@ -61,7 +69,7 @@ fn parse_raw(source: &str) -> tree_sitter::Tree {
     parser
         .parse_with_options(
             &mut |offset, _| source.as_bytes().get(offset..).unwrap_or_default(),
-            None,
+            old,
             Some(tree_sitter::ParseOptions::new().progress_callback(&mut progress)),
         )
         .expect("parser must advance instead of replaying zero-width layout tokens")
@@ -522,8 +530,84 @@ fn structured_sequences_and_record_layout_keep_facts() {
 fn term_if_and_outdented_record_fields_remain_invalid() {
     for source in [
         "def bad (flag : Bool) : Nat := if flag then 1\n",
+        "def bad : Nat := by\n  exact 0\n: Nat\ndef after := 1\n",
+        "def bad : Nat := by\n  exact 0\n, Repr\ndef after := 1\n",
         "structure R where\n  x : Nat\n  y : Nat\ndef bad : R :=\n  { x := 1,\n  y := 2 }\n",
     ] {
         assert!(parse_raw(source).root_node().has_error(), "{source}");
     }
+}
+
+#[test]
+fn tactic_patterns_and_nested_sequences_keep_calls() {
+    let source = include_str!("../testdata/lean-tactics.lean");
+    let analysis = run_clean("src/tactics.lean", source);
+    assert_eq!(
+        function_names(&analysis),
+        [
+            "renameEq",
+            "inject",
+            "discardOr",
+            "splitPair",
+            "splitAgain",
+            "repeated",
+            "atAll",
+        ]
+    );
+    for want in [
+        "generalize",
+        "injection",
+        "rintro",
+        "all_goals",
+        "repeat",
+        "exact",
+    ] {
+        assert!(
+            analysis.facts.calls.iter().any(|call| call.callee == want),
+            "{want} must remain a structured call"
+        );
+    }
+}
+
+#[test]
+fn punctuation_closes_inner_bodies_without_losing_declarations() {
+    let source = "structure Label where\n  value : Nat\n  deriving DecidableEq, Repr\ndef typed : Nat := (by exact 0 : Nat)\ndef branches (a b : Bool) : Id Nat := do\n  if a then\n    pure 1\n  else if b then\n    pure 2\n  else\n    pure 3\ndef after : Nat := 4\n";
+    let analysis = run_clean("src/boundaries.lean", source);
+    assert_eq!(function_names(&analysis), ["typed", "branches", "after"]);
+    let sexp = parse_raw(source).root_node().to_sexp();
+    assert_eq!(sexp.matches("(if_then_else ").count(), 2);
+    assert!(sexp.contains("else: (if_then_else "));
+}
+
+#[test]
+fn scanner_layout_state_survives_incremental_edits() {
+    let source = include_str!("../testdata/lean-layout.lean");
+    let language: tree_sitter::Language = tree_sitter_lean::LANGUAGE.into();
+    let mut parser = tree_sitter::Parser::new();
+    parser.set_language(&language).expect("lean language loads");
+    let mut old = parse_raw(source);
+    let offset = source
+        .find("  { x := 1\n    y := 2 }")
+        .expect("inline record")
+        + 9;
+    let before = &source[..offset];
+    let row = before.bytes().filter(|byte| *byte == b'\n').count();
+    let column = before.rsplit('\n').next().expect("current line").len();
+    old.edit(&tree_sitter::InputEdit {
+        start_byte: offset,
+        old_end_byte: offset + 1,
+        new_end_byte: offset + 2,
+        start_position: tree_sitter::Point::new(row, column),
+        old_end_position: tree_sitter::Point::new(row, column + 1),
+        new_end_position: tree_sitter::Point::new(row, column + 2),
+    });
+    let mut edited = source.to_owned();
+    edited.replace_range(offset..offset + 1, "10");
+    let incremental = parse_with_old(&mut parser, &edited, Some(&old));
+    let fresh = parse_raw(&edited);
+    assert!(first_problem(&incremental).is_none());
+    assert_eq!(
+        incremental.root_node().to_sexp(),
+        fresh.root_node().to_sexp()
+    );
 }

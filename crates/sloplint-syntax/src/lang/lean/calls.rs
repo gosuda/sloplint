@@ -98,7 +98,8 @@ fn lean_arg_shape<'s>(cx: &Cx<'_, 's>, arg: Node<'_>) -> ArgShape<'s> {
 pub(crate) fn call_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
     let (head, args) = match n.kind() {
         "app" => flatten_app(n),
-        "tactic_simpa" | "tactic_rcases" => {
+        "tactic_simpa" | "tactic_rcases" | "tactic_rintro" | "tactic_injection"
+        | "tactic_generalize" | "tactic_prefix" => {
             let head = child_by_field(n, "fn")?;
             let mut cursor = n.walk();
             let args = n.children_by_field_name("arg", &mut cursor).collect();
