@@ -1,0 +1,4 @@
+Checks.java:5 info slop/redundant-else
+Checks.java:13 info slop/redundant-else
+Checks.java:22 info slop/redundant-else
+Checks.java:27 info slop/redundant-else

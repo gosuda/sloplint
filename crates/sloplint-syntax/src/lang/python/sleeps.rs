@@ -14,6 +14,13 @@ enum ImportForm {
     Function,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum PatchImport {
+    Function,
+    MockModule,
+    UnittestModule,
+}
+
 pub(crate) fn blocking_sleep(n: Node<'_>, cx: &Cx<'_, '_>) -> Option<Pos> {
     if cx.lang != Lang::Python || n.kind() != "call" {
         return None;
@@ -53,7 +60,7 @@ fn imported_names<'s>(cx: &Cx<'_, 's>, wanted: ImportForm) -> Vec<&'s str> {
     let mut imports = Vec::new();
     for child in named_children(root) {
         if matches!(child.kind(), "import_statement" | "import_from_statement") {
-            import_bindings(child, cx, |name, kind| imports.push((name, kind)));
+            import_bindings(child, cx, |name, kind, _| imports.push((name, kind)));
         }
     }
     if !imports.iter().any(|(_, kind)| *kind == Some(wanted)) {
@@ -65,14 +72,22 @@ fn imported_names<'s>(cx: &Cx<'_, 's>, wanted: ImportForm) -> Vec<&'s str> {
         .collect();
     let mut candidates = HashSet::new();
     let mut rebound = HashSet::new();
+    let mut patches = Vec::new();
+    let mut calls = Vec::new();
     let mut stack = vec![(root, false)];
     while let Some((n, module_scope)) = stack.pop() {
-        if patches_sleep(n, cx, &modules) {
+        if writes_sleep(n, cx, &modules) {
             return Vec::new();
+        }
+        if n.kind() == "call" {
+            calls.push(n);
         }
         if matches!(n.kind(), "import_statement" | "import_from_statement") {
             let mut wildcard = false;
-            import_bindings(n, cx, |name, kind| {
+            import_bindings(n, cx, |name, kind, patch| {
+                if let Some(patch) = patch {
+                    patches.push((name, patch));
+                }
                 if name == "*" {
                     wildcard = true;
                 } else if module_scope && kind == Some(wanted) {
@@ -96,6 +111,12 @@ fn imported_names<'s>(cx: &Cx<'_, 's>, wanted: ImportForm) -> Vec<&'s str> {
                 .map(|child| (child, n.id() == root.id())),
         );
     }
+    if calls
+        .into_iter()
+        .any(|call| patches_sleep(call, cx, &modules, &patches))
+    {
+        return Vec::new();
+    }
     // A binding anywhere in the file vetoes the imported spelling. This loses
     // some separate-scope calls but never treats a shadowing fake as time.sleep.
     let mut names: Vec<_> = candidates.difference(&rebound).copied().collect();
@@ -103,7 +124,7 @@ fn imported_names<'s>(cx: &Cx<'_, 's>, wanted: ImportForm) -> Vec<&'s str> {
     names
 }
 
-fn patches_sleep(n: Node<'_>, cx: &Cx<'_, '_>, modules: &HashSet<&str>) -> bool {
+fn writes_sleep(n: Node<'_>, cx: &Cx<'_, '_>, modules: &HashSet<&str>) -> bool {
     let target = match n.kind() {
         "assignment" | "augmented_assignment" => child_by_field(n, "left"),
         "delete_statement" => Some(n),
@@ -120,33 +141,109 @@ fn patches_sleep(n: Node<'_>, cx: &Cx<'_, '_>, modules: &HashSet<&str>) -> bool 
             {
                 return true;
             }
-            stack.extend(named_children(node));
+            // Nested attributes and subscripts read their object/index. Only
+            // the outer assignment target can replace time.sleep itself.
+            if !matches!(node.kind(), "attribute" | "subscript") {
+                stack.extend(named_children(node));
+            }
         }
     }
-    if n.kind() != "call" {
+    false
+}
+
+fn patches_sleep(
+    n: Node<'_>,
+    cx: &Cx<'_, '_>,
+    modules: &HashSet<&str>,
+    patches: &[(&str, PatchImport)],
+) -> bool {
+    let Some(function) = child_by_field(n, "function") else {
+        return false;
+    };
+    let mutator = mutation_helper(function, cx);
+    let patch = patch_function(function, cx, patches);
+    let object_patch = child_by_field(function, "attribute")
+        .is_some_and(|member| text(cx, member) == "object")
+        && child_by_field(function, "object")
+            .is_some_and(|object| patch_function(object, cx, patches));
+    if !mutator && !patch && !object_patch {
         return false;
     }
     let Some(arguments) = child_by_field(n, "arguments") else {
         return false;
     };
     let args = code_children(arguments);
-    let Some(first) = args.first().copied() else {
+    let Some(target) = argument(&args, 0, "target", cx) else {
         return false;
     };
-    // Literal patch targets also cover aliased patch helpers and decorators.
-    if plain_string(first, cx) == Some("time.sleep") {
+    // Only monkeypatch accepts a dotted string here; built-in setattr/delattr
+    // treat their first argument as the object itself.
+    let dotted_target = patch || (mutator && function.kind() == "attribute");
+    if dotted_target && plain_string(target, cx) == Some("time.sleep") {
         return true;
     }
-    let Some(function) = child_by_field(n, "function") else {
+    (mutator || object_patch)
+        && target.kind() == "identifier"
+        && modules.contains(text(cx, target))
+        && argument(
+            &args,
+            1,
+            if object_patch { "attribute" } else { "name" },
+            cx,
+        )
+        .is_some_and(|attribute| plain_string(attribute, cx) == Some("sleep"))
+}
+
+fn argument<'t>(
+    args: &[Node<'t>],
+    position: usize,
+    keyword: &str,
+    cx: &Cx<'_, '_>,
+) -> Option<Node<'t>> {
+    args.iter()
+        .find(|arg| {
+            arg.kind() == "keyword_argument"
+                && child_by_field(**arg, "name").is_some_and(|name| text(cx, name) == keyword)
+        })
+        .and_then(|arg| child_by_field(*arg, "value"))
+        .or_else(|| {
+            args.iter()
+                .filter(|arg| arg.kind() != "keyword_argument")
+                .nth(position)
+                .copied()
+        })
+}
+
+fn patch_function(function: Node<'_>, cx: &Cx<'_, '_>, patches: &[(&str, PatchImport)]) -> bool {
+    if function.kind() == "identifier" {
+        return patches.contains(&(text(cx, function), PatchImport::Function));
+    }
+    if !child_by_field(function, "attribute").is_some_and(|member| text(cx, member) == "patch") {
+        return false;
+    }
+    let Some(object) = child_by_field(function, "object") else {
         return false;
     };
-    let member = child_by_field(function, "attribute").unwrap_or(function);
-    matches!(text(cx, member), "setattr" | "delattr" | "object")
-        && first.kind() == "identifier"
-        && modules.contains(text(cx, first))
-        && args
-            .get(1)
-            .is_some_and(|arg| plain_string(*arg, cx) == Some("sleep"))
+    if object.kind() == "identifier" {
+        return text(cx, object) == "mocker"
+            || patches.contains(&(text(cx, object), PatchImport::MockModule));
+    }
+    child_by_field(object, "attribute").is_some_and(|member| text(cx, member) == "mock")
+        && child_by_field(object, "object").is_some_and(|root| {
+            root.kind() == "identifier"
+                && patches.contains(&(text(cx, root), PatchImport::UnittestModule))
+        })
+}
+
+fn mutation_helper(function: Node<'_>, cx: &Cx<'_, '_>) -> bool {
+    if function.kind() == "identifier" {
+        return matches!(text(cx, function), "setattr" | "delattr");
+    }
+    child_by_field(function, "attribute")
+        .is_some_and(|member| matches!(text(cx, member), "setattr" | "delattr"))
+        && child_by_field(function, "object").is_some_and(|object| {
+            object.kind() == "identifier" && text(cx, object) == "monkeypatch"
+        })
 }
 
 fn plain_string<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<&'s str> {
@@ -162,7 +259,7 @@ fn plain_string<'s>(n: Node<'_>, cx: &Cx<'_, 's>) -> Option<&'s str> {
 fn import_bindings<'s>(
     n: Node<'_>,
     cx: &Cx<'_, 's>,
-    mut emit: impl FnMut(&'s str, Option<ImportForm>),
+    mut emit: impl FnMut(&'s str, Option<ImportForm>, Option<PatchImport>),
 ) {
     let module = child_by_field(n, "module_name");
     for child in named_children(n) {
@@ -170,7 +267,7 @@ fn import_bindings<'s>(
             continue;
         }
         if child.kind() == "wildcard_import" {
-            emit("*", None);
+            emit("*", None, None);
             continue;
         }
         let (path, alias) = match child.kind() {
@@ -198,7 +295,15 @@ fn import_bindings<'s>(
                     .then_some(ImportForm::Function),
             )
         };
-        emit(name, kind);
+        let patch = match (module.map(|module| text(cx, module)), path, alias.is_some()) {
+            (Some("unittest.mock"), "patch", _) => Some(PatchImport::Function),
+            (Some("unittest"), "mock", _) | (None, "unittest.mock", true) => {
+                Some(PatchImport::MockModule)
+            }
+            (None, "unittest" | "unittest.mock", _) => Some(PatchImport::UnittestModule),
+            _ => None,
+        };
+        emit(name, kind, patch);
     }
 }
 
@@ -229,7 +334,11 @@ fn bound_names<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut HashSet<&'s str>) {
             if node.kind() == "identifier" {
                 out.insert(text(cx, node));
             }
-            stack.extend(named_children(node));
+            // Object and index expressions in assignment/delete targets only
+            // read their names; destructuring targets can introduce bindings.
+            if !matches!(node.kind(), "attribute" | "subscript") {
+                stack.extend(named_children(node));
+            }
         }
     }
 }

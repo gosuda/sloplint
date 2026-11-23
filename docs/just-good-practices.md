@@ -7,6 +7,14 @@ written implementations using sloplint's language adapters and structural facts.
 The source project is [MIT licensed](https://github.com/gosuda/JustGoodPractices/blob/7b80f75de6c626aa4f1466269468935a9b0ef444/LICENSE),
 copyright 2026 GoSuda. No source code or skill text is copied.
 
+The practices share rule IDs, configuration, roles, and output across languages.
+Each language adapter supplies only the facts its syntax can establish.
+
+| Rule | Supported languages |
+|---|---|
+| `slop/redundant-else` | C, C++, C#, Go, Java, JavaScript/JSX, Python, Rust, TypeScript/TSX |
+| `agent/no-sleep-in-tests` | C#, Go, Java, Python, Rust |
+
 Both rules start **off at minimal, basic, and standard**, and **info with low
 confidence at strict**. Their precision has not yet been measured on the
 project's real-code corpus. Positive fixtures prove that a predicate works;
@@ -29,7 +37,7 @@ Add `--fail-on info` to gate on them, or set a rule's `level` explicitly in
 
 `slop/redundant-else` implements the flat-control-flow principle from the
 [source control-flow analyzer](https://github.com/gosuda/JustGoodPractices/blob/7b80f75de6c626aa4f1466269468935a9b0ef444/internal/analyzer/rules_controlflow.go).
-It supports Go, Python, JavaScript, TypeScript, and TSX.
+It detects a nonempty alternative after a branch that exits unconditionally.
 
 ```go
 if failed {
@@ -51,24 +59,43 @@ return nil
 ```
 
 The adapter requires a direct terminal statement at the end of the preceding
-branch: `return`, `break`, or `continue`, plus `throw` in JavaScript/TypeScript
-and `raise` in Python. It does not guess that calls named `panic`, `fatal`, or
+branch: `return`, `break`, or `continue`, plus `throw` in C++, Java, C#,
+JavaScript/TypeScript and `raise` in Python. It does not guess that calls named `panic`, `fatal`, or
 `exit` terminate. A return inside a nested closure or a conditional branch
 does not prove that the outer branch exits.
 
-The check skips else-if chains, empty alternatives, Go initializer scopes,
-and Go/JavaScript/TypeScript alternatives whose direct declarations or labels
-need their existing scope. JavaScript/TypeScript conditionals under unbraced
-control statements are also skipped. Nested blocks must keep their scope when
-applying the suggested change. Expression-valued conditionals in other
-languages remain outside this rule's scope.
+The check skips else-if chains, empty alternatives, and declarations or labels
+whose scope would change. Nested blocks must keep their scope when applying
+the suggested change. Additional restrictions follow each language's semantics:
+
+| Language | Cases left unchanged |
+|---|---|
+| Go | Initializer scopes, including variables introduced by `if value := read(); ...` |
+| JavaScript/TypeScript | Conditionals directly under unbraced control statements; branch-local declarations; statement boundaries that rely on automatic semicolon insertion |
+| C/C++ | Preprocessor regions, condition declarations and initializers, and `if constexpr` |
+| Java/C# | Pattern bindings, declaration expressions, and branches outside a containing block |
+| Rust | Value-producing or tail `if` expressions, pattern bindings, non-identifier conditions, outer attributes, and alternatives with direct declarations, macros, or implicit tail values |
+
+Rust coverage deliberately requires a discarded statement, a plain identifier
+condition, and an alternative made of explicitly terminated expression
+statements. This avoids changing result types, binding visibility, or drop
+scope. A syntactically terminating branch alone is insufficient in a language
+where an `if` can produce a value.
 
 ## Wait for completion in tests
 
 `agent/no-sleep-in-tests` follows the deterministic-synchronization principle
 from the [source testing analyzer](https://github.com/gosuda/JustGoodPractices/blob/7b80f75de6c626aa4f1466269468935a9b0ef444/internal/analyzer/rules_testing.go).
-It reports identified Go `time.Sleep` and Python `time.sleep` calls in effective
-test or test-support roles, including inline test regions.
+It reports identified standard-library sleep calls in effective test or
+test-support roles, including inline test regions.
+
+| Language | Recognized API and aliases |
+|---|---|
+| Go | `time.Sleep` through an explicit package import or alias |
+| Python | `time.sleep`, module aliases, and module-scope `from time import sleep` aliases |
+| Rust | `std::thread::sleep`, leading `::std` paths, and explicit source-file-level `use` aliases or grouped imports |
+| Java | `java.lang.Thread.sleep`, unambiguous `Thread.sleep`, and static imports from that exact type |
+| C# | `System.Threading.Thread.Sleep`, `global::` paths, file-scope namespace imports, direct type aliases, and static imports from that exact type |
 
 ```go
 go rebuildIndex()
@@ -81,24 +108,36 @@ signal or an observable condition. A bounded timeout can explain a failure;
 it should not be the evidence that the operation succeeded. Use virtual time
 when the behavior under test is a timer.
 
-The adapters recognize module-scope imports and their aliases. Python also
-recognizes `from time import sleep` and an explicit alias for that function.
-They omit ambiguous bindings instead of treating arbitrary methods named
+The adapters omit ambiguous bindings instead of treating arbitrary methods named
 `sleep` as standard-library calls. A shadowing declaration or rebinding anywhere
 in a file conservatively disables recognition of that imported name, including
 when the shadow is in a separate scope. This can miss real sleeps, but avoids
 accusing a fake clock or unrelated object of using wall-clock time.
 
 Go sleeps inside recognized inline `testing/synctest.Test` or `Run` callbacks
-are excluded, as are literal nonpositive delays. A dot-imported or shadowed
-synctest binding conservatively disables the check for the file. The adapter
+are excluded. A dot-imported or shadowed synctest binding conservatively disables
+the check for the file. The adapter
 does not follow calls into separate helper functions to discover their clock
 context. Python assignments to `time.sleep`, simple literal patch targets, and
 common `setattr` or `patch.object` shapes also disable recognition for the file.
 
+Delay exemptions follow the runtime. Go and Python omit literal nonpositive
+delays. Rust omits identity-proven standard `Duration::ZERO` and zero-valued
+standard duration constructors. Java and C# omit zero numeric delays; Java's
+two-argument overload is checked for both milliseconds and nanoseconds. A
+nonzero nanosecond argument still waits. Literal Java delays that immediately
+throw, such as negative milliseconds or nanoseconds outside `0..999999`, are
+omitted. C#'s `Sleep(-1)` is an infinite wait and is reported; numeric literals
+below `-1` are omitted because they throw. These are bounded literal checks,
+not general constant evaluation. Zero-delay exemptions are intentional even
+on runtimes where a zero sleep can yield the thread.
+
 Production code, benchmarks, examples, timeout APIs, and asynchronous sleep APIs
-are outside this rule. Local-only imports, wildcard imports, indirect aliases,
-and arbitrary runtime monkey-patching are not resolved. The rule does not prove
+are outside this rule. Local-only imports, ambiguous wildcard imports, indirect
+aliases, cross-file type resolution, and arbitrary runtime monkey-patching are
+not resolved. Rust root aliases are not assumed to be visible in nested
+modules. C# namespace aliases and nested using directives remain unclassified.
+The rule does not prove
 that a particular sleep is used for synchronization: tests of real clocks or
 scheduling may need a suppression with a reason.
 

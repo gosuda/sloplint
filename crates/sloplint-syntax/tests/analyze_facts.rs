@@ -20,6 +20,8 @@ mod declaration_scopes;
 mod directive_docs;
 #[path = "analyze_facts/else_if_chains.rs"]
 mod else_if_chains;
+#[path = "analyze_facts/general_redundant_else.rs"]
+mod general_redundant_else;
 #[path = "analyze_facts/global_write_scope_end.rs"]
 mod global_write_scope_end;
 #[path = "analyze_facts/global_write_shadow.rs"]
@@ -44,6 +46,8 @@ mod java_scopes;
 mod kotlin_scopes;
 #[path = "analyze_facts/macro_attr.rs"]
 mod macro_attr;
+#[path = "analyze_facts/managed_test_sleeps.rs"]
+mod managed_test_sleeps;
 #[path = "analyze_facts/member_pointer.rs"]
 mod member_pointer;
 #[path = "analyze_facts/objc_scopes.rs"]
@@ -68,6 +72,8 @@ mod redundant_else;
 mod ruby_scopes;
 #[path = "analyze_facts/rust_scopes.rs"]
 mod rust_scopes;
+#[path = "analyze_facts/rust_test_sleeps.rs"]
+mod rust_test_sleeps;
 #[path = "analyze_facts/scala_scopes.rs"]
 mod scala_scopes;
 #[path = "analyze_facts/sole_call_forwarding.rs"]

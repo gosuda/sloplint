@@ -58,3 +58,28 @@ function emptyAlternative(stop) {
     // This branch intentionally has no work.
   }
 }
+
+function automaticLeadingBoundary(stop, result) {
+  if (stop) return result
+  else {
+    [1].forEach(record);
+  }
+}
+
+function automaticTrailingCallBoundary(stop, result) {
+  if (stop) {
+    return;
+  } else {
+    record(result)
+  }
+  (record)(result);
+}
+
+function automaticTrailingIndexBoundary(stop, result) {
+  if (stop) {
+    return;
+  } else {
+    record(result)
+  }
+  [1].forEach(record);
+}

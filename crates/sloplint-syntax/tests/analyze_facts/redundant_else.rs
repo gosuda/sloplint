@@ -2,7 +2,7 @@ use sloplint_core::lang::Lang;
 
 use crate::support::run_clean;
 
-fn else_lines(lang: Lang, path: &str, source: &str) -> Vec<u32> {
+pub(super) fn else_lines(lang: Lang, path: &str, source: &str) -> Vec<u32> {
     let analysis = run_clean(lang, path, source);
     analysis
         .facts
@@ -203,6 +203,42 @@ fn web_preserves_nested_block_scopes() {
     let source = "function stop(ready) { if (ready) { return; } else { { let value = read(); consume(value); } } }\n";
     for (lang, path) in WEB_LANGUAGES {
         assert_eq!(else_lines(lang, path, source), [1], "{path}");
+    }
+}
+
+#[test]
+fn web_preserves_automatic_semicolon_boundaries() {
+    let cases = [
+        "if (ready) return value\nelse {\n[1].forEach(record);\n}",
+        "if (ready) throw value\nelse {\n(record)(value);\n}",
+        "if (ready) { return; } else {\nrecord(value)\n}\n[1].forEach(record);",
+        "if (ready) { return; } else {\nrecord(value)\n}\n(record)(value);",
+        "if (ready) { return; } else {\nreturn value\n}\n[1].forEach(record);",
+    ];
+    for (lang, path) in WEB_LANGUAGES {
+        for case in cases {
+            let source = format!("function stop(ready, value) {{ {case} }}\n");
+            assert!(
+                else_lines(lang, path, &source).is_empty(),
+                "{path} must preserve the automatic separator: {case}"
+            );
+        }
+    }
+}
+
+#[test]
+fn web_accepts_preserved_statement_separators() {
+    let cases = [
+        "if (ready) return value; else { [1].forEach(record); }",
+        "if (ready) { return value } else { [1].forEach(record); }",
+        "if (ready) { return; } else { record(value); }\n(record)(value);",
+        "if (ready) { return; } else { record(value); }\n[1].forEach(record);",
+    ];
+    for (lang, path) in WEB_LANGUAGES {
+        for case in cases {
+            let source = format!("function stop(ready, value) {{ {case} }}\n");
+            assert_eq!(else_lines(lang, path, &source), [1], "{path}: {case}");
+        }
     }
 }
 

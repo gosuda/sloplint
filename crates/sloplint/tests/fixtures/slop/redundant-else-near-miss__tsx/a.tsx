@@ -18,3 +18,28 @@ function renderValue(hidden: boolean) {
   }
   return <span>{value}</span>;
 }
+
+function automaticLeadingBoundary(stop: boolean, result: number): number | void {
+  if (stop) return result
+  else {
+    [1].forEach(record);
+  }
+}
+
+function automaticTrailingCallBoundary(stop: boolean, result: number): void {
+  if (stop) {
+    return;
+  } else {
+    record(result)
+  }
+  (record)(result);
+}
+
+function automaticTrailingIndexBoundary(stop: boolean, result: number): void {
+  if (stop) {
+    return;
+  } else {
+    record(result)
+  }
+  [1].forEach(record);
+}

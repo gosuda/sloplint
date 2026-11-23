@@ -218,11 +218,91 @@ fn python_sleep_patching_vetoes_from_import_aliases_too() {
         "monkeypatch.setattr(time, 'sleep', fake_sleep)",
         "patch('time.sleep')",
         "replace('time.sleep')",
+        "patch(target='time.sleep')",
+        "replace(target='time.sleep')",
+        "patch.object(target=time, attribute='sleep')",
+        "monkeypatch.setattr(target='time.sleep', value=fake_sleep)",
+        "monkeypatch.setattr(target=time, name='sleep', value=fake_sleep)",
     ] {
         let source = format!(
-            "import time\nfrom time import sleep as pause\n{patch}\ndef wait():\n    time.sleep(1)\n    pause(1)\n"
+            "import time\nfrom time import sleep as pause\nfrom unittest.mock import patch, patch as replace\n{patch}\ndef wait():\n    time.sleep(1)\n    pause(1)\n"
         );
         assert!(sleep_lines(Lang::Python, &source).is_empty(), "{source}");
+    }
+}
+
+#[test]
+fn python_known_patch_helpers_support_keyword_targets_and_decorators() {
+    for (import, patch) in [
+        (
+            "from unittest.mock import patch",
+            "patch(target='time.sleep')",
+        ),
+        (
+            "from unittest.mock import patch as replace",
+            "replace(target='time.sleep')",
+        ),
+        (
+            "from unittest import mock",
+            "mock.patch(target='time.sleep')",
+        ),
+        (
+            "from unittest import mock as mocks",
+            "mocks.patch('time.sleep')",
+        ),
+        (
+            "import unittest.mock",
+            "unittest.mock.patch(target='time.sleep')",
+        ),
+        (
+            "import unittest.mock as mocks",
+            "mocks.patch.object(target=time, attribute='sleep')",
+        ),
+    ] {
+        let source =
+            format!("import time\n{import}\n@{patch}\ndef test_clock(fake):\n    time.sleep(1)\n");
+        assert!(sleep_lines(Lang::Python, &source).is_empty(), "{source}");
+    }
+    for source in [
+        "import time\ndef test_clock(mocker):\n    mocker.patch(target='time.sleep')\n    time.sleep(1)\n",
+        "import time\ndef test_clock():\n    from unittest.mock import patch as replace\n    with replace(target='time.sleep'):\n        time.sleep(1)\n",
+    ] {
+        assert!(sleep_lines(Lang::Python, source).is_empty(), "{source}");
+    }
+}
+
+#[test]
+fn python_logged_or_asserted_sleep_names_do_not_hide_real_calls() {
+    for observation in [
+        "logger.debug('time.sleep')",
+        "assert_equal('time.sleep', observed)",
+        "replace('time.sleep')",
+        "api.patch(target='time.sleep')",
+        "setattr('time.sleep', 'attribute', value)",
+        "delattr('time.sleep', 'attribute')",
+        "from unittest.mock import patch\npatch(target='other.sleep')",
+    ] {
+        let source = format!(
+            "import time\nfrom time import sleep as pause\n{observation}\ntime.sleep(1)\npause(1)\n"
+        );
+        let lines = sleep_lines(Lang::Python, &source);
+        assert_eq!(lines.len(), 2, "{source}: {lines:?}");
+    }
+}
+
+#[test]
+fn python_assignment_target_reads_do_not_rebind_the_time_import() {
+    for target in [
+        "events[time.monotonic()] = 1",
+        "events[time.monotonic()] += 1",
+        "events[time.sleep] = 1",
+        "del events[time.monotonic()]",
+        "holder[time.monotonic()].value = 1",
+        "time.observed = True",
+        "(events[time.monotonic()], count) = (1, 2)",
+    ] {
+        let source = format!("import time\n{target}\ntime.sleep(1)\n");
+        assert_eq!(sleep_lines(Lang::Python, &source), [3], "{source}");
     }
 }
 
