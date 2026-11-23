@@ -1,0 +1,3 @@
+---- MODULE Prove ----
+ASSUME TRUE
+====
