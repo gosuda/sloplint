@@ -88,6 +88,12 @@ impl<'o> Parsers<'o> {
     /// which is a panic as before — so callers treat it as an unparseable
     /// file, not as an error.
     fn parse(&mut self, lang: Lang, source: &str, deadline: Instant) -> Option<Tree> {
+        // A spent budget starts no parse: the runtime first asks the
+        // callback after a hundred operations, so a short retry past the
+        // deadline would otherwise still finish and outlive the budget.
+        if Instant::now() >= deadline {
+            return None;
+        }
         let parser = match self.parsers.entry(lang) {
             Entry::Occupied(entry) => entry.into_mut(),
             Entry::Vacant(entry) => {
@@ -190,21 +196,36 @@ pub fn analyze<'s>(
     let Some(tree) = parsers.parse(input.lang, input.source, deadline) else {
         return timeout_analysis(input);
     };
-    let root = tree.root_node();
-    if !root.has_error() {
+    if !tree.root_node().has_error() {
         return clean_analysis(parsers, input, input.lang, &tree, custom);
     }
+    retry_analysis(parsers, input, &tree, custom, deadline)
+}
+
+/// The first parse failed: try each fallback grammar, then the rescue, and
+/// only then report the first tree's syntax error. A retry the deadline
+/// cancels ends the file as a timeout: an unfinished fallback leaves open
+/// whether the source has a syntax error at all, so the first grammar's
+/// error position must not be reported as one.
+fn retry_analysis<'s>(
+    parsers: &mut Parsers<'_>,
+    input: &FileInput<'s>,
+    tree: &Tree,
+    custom: &'s CustomRules,
+    deadline: Instant,
+) -> Analysis<'s> {
     for &fallback in input.lang.parse_fallbacks(input.path) {
         let Some(retried) = parsers.parse(fallback, input.source, deadline) else {
-            continue;
+            return timeout_analysis(input);
         };
         if !retried.root_node().has_error() {
             return clean_analysis(parsers, input, fallback, &retried, custom);
         }
     }
-    if let Some(rescued) = rescue_analysis(parsers, input, input.lang, &tree, custom, deadline) {
+    if let Some(rescued) = rescue_analysis(parsers, input, input.lang, tree, custom, deadline) {
         return rescued;
     }
+    let root = tree.root_node();
     let hooks = lang::hooks_for(input.lang, input.path, parsers.ocaml_interfaces);
     let comments = spec(input.lang).walk_comments(hooks, input, root).comments;
     Analysis {
@@ -230,7 +251,8 @@ const MAX_RESCUE_ROUNDS: usize = 3;
 /// a round produces a clean tree, the file is analyzed normally and the
 /// original error position is still reported via `parse_error` with
 /// `partial` set. Excised spans hold no nodes, so every slice the walk hands
-/// out still names real source bytes.
+/// out still names real source bytes. `None` leaves the file to its syntax
+/// error; a re-parse the deadline cancels returns the timeout analysis.
 fn rescue_analysis<'s>(
     parsers: &mut Parsers<'_>,
     input: &FileInput<'s>,
@@ -257,10 +279,14 @@ fn rescue_analysis<'s>(
             }
         }
         let source = std::str::from_utf8(&text).ok()?;
-        // A re-parse past the shared deadline abandons the rescue: without
-        // a fresh tree there is nothing to recover, and retrying would just
-        // burn another budget on a file already known to diverge.
-        tree = parsers.parse(lang, source, deadline)?;
+        // A re-parse past the shared deadline ends the file as a timeout:
+        // without a fresh tree there is nothing to recover, retrying would
+        // just burn another budget on a file already known to diverge, and
+        // the budget, not the source, decided that the rescue failed.
+        let Some(reparsed) = parsers.parse(lang, source, deadline) else {
+            return Some(timeout_analysis(input));
+        };
+        tree = reparsed;
         if !tree.root_node().has_error() {
             // A program excised to nothing keeps the old contract: the file
             // is judged by its syntax error alone.
@@ -392,5 +418,88 @@ fn root_end_pos(root: Node<'_>) -> Pos {
     Pos {
         line: hooks::narrow(root.end_position().row) + 1,
         byte: hooks::narrow(root.end_byte()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::LazyLock;
+    use std::time::Instant;
+
+    use sloplint_core::Pos;
+    use sloplint_core::lang::Lang;
+    use sloplint_core::role::CodeRole;
+
+    use super::{Analysis, CustomRules, FileInput, Parsers, retry_analysis, spec};
+
+    static NO_CUSTOM: LazyLock<CustomRules> =
+        LazyLock::new(|| CustomRules::compile(&[]).expect("empty custom rules compile"));
+
+    /// Runs the retries of `source` against a deadline that has already
+    /// passed, so every fallback and rescue parse meets a spent budget
+    /// without the test depending on how long anything takes. The first
+    /// parse has no deadline: it must finish, with errors, to reach them.
+    fn retry_past_deadline<'s>(path: &'s str, source: &'s str) -> Analysis<'s> {
+        let mut parser = tree_sitter::Parser::new();
+        parser
+            .set_language(&spec(Lang::C).language)
+            .expect("C language loads");
+        let tree = parser.parse(source, None).expect("tree");
+        assert!(
+            tree.root_node().has_error(),
+            "{path}: the first parse must fail to reach the retries"
+        );
+        let input = FileInput {
+            lang: Lang::C,
+            path,
+            source,
+            role: CodeRole::Library,
+        };
+        retry_analysis(
+            &mut Parsers::new(),
+            &input,
+            &tree,
+            &NO_CUSTOM,
+            Instant::now(),
+        )
+    }
+
+    fn assert_timed_out(analysis: &Analysis<'_>, path: &str) {
+        assert!(
+            analysis.timed_out,
+            "{path}: a parse the deadline cut must report a timeout, not a syntax error at {:?}",
+            analysis.parse_error
+        );
+        assert_eq!(
+            analysis.parse_error,
+            Some(Pos { line: 1, byte: 0 }),
+            "{path}: the timeout anchors at the file start"
+        );
+        assert!(!analysis.partial, "{path}: nothing was salvaged");
+        assert!(
+            analysis.facts.functions.is_empty(),
+            "{path}: a timeout yields no facts"
+        );
+    }
+
+    #[test]
+    fn a_fallback_parse_past_the_deadline_reports_a_timeout() {
+        let source: String = (0..40)
+            .map(|n| {
+                format!(
+                    "class Widget{n} {{\npublic:\n    int value() const {{ return value_; }}\nprivate:\n    int value_ = {n};\n}};\n"
+                )
+            })
+            .collect();
+        assert_timed_out(&retry_past_deadline("widget.h", &source), "widget.h");
+    }
+
+    #[test]
+    fn a_rescue_parse_past_the_deadline_reports_a_timeout() {
+        let mut source: String = (0..40)
+            .map(|n| format!("int value{n}(void) {{ return {n}; }}\n"))
+            .collect();
+        source.push_str("int broken = @@;\n");
+        assert_timed_out(&retry_past_deadline("broken.c", &source), "broken.c");
     }
 }
