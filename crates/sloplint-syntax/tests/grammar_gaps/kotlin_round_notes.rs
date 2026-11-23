@@ -110,7 +110,7 @@ fn strip_block_comments(text: &str) -> String {
             // strips `//` comments afterwards.
             out.push_str("//");
             chars.next();
-            while let Some(c) = chars.next() {
+            for c in chars.by_ref() {
                 out.push(c);
                 if c == '\n' {
                     break;
