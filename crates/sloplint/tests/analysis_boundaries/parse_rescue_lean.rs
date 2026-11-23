@@ -267,3 +267,60 @@ fn boundary_lean_gapless_error_root_keeps_prefix() {
         r.findings
     );
 }
+
+/// Indented commands inside a namespace are complete commands even though
+/// they never start at column 0: a failed indented theorem must blank only
+/// its own rows and leave the healthy indented neighbors analyzed.
+#[test]
+fn boundary_lean_indented_commands_recover_independently() {
+    let (_t, root) = tmp();
+    put(
+        &root,
+        "src/ns.lean",
+        "namespace Demo\n\
+         \n\
+         \x20\x20 open Lean Meta\n\
+         \n\
+         \x20\x20 theorem mid : MyNat.le = (.≤.) := rfl\n\
+         \n\
+         \x20\x20 open Foo.Bar\n\
+         \n\
+         end Demo\n",
+    );
+    let r = run_ok(&super::RunOptions {
+        strictness: Some(super::Strictness::Strict),
+        mode: Some(super::Mode::Threshold),
+        rule_filter: super::filt(&["grep/no-wildcard-import", "meta/*"]),
+        ..base(&root)
+    });
+    let pe = r
+        .findings
+        .iter()
+        .find(|f| &*f.rule == "meta/parse-error" && &*f.path == "src/ns.lean")
+        .unwrap_or_else(|| {
+            panic!(
+                "the indented theorem must still be reported: {:?}",
+                r.findings
+            )
+        });
+    assert_eq!(
+        pe.line, 5,
+        "the parse error must point at the bad command, not its neighbors"
+    );
+    let wildcards: Vec<_> = r
+        .findings
+        .iter()
+        .filter(|f| &*f.rule == "grep/no-wildcard-import" && &*f.path == "src/ns.lean")
+        .collect();
+    assert_eq!(
+        wildcards.len(),
+        3,
+        "both indented `open` commands must still report: {:?}",
+        r.findings
+    );
+    assert!(
+        wildcards.iter().all(|f| f.line == 3 || f.line == 7),
+        "no finding may move onto the blanked command: {:?}",
+        r.findings
+    );
+}

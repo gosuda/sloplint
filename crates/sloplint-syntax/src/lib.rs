@@ -447,10 +447,11 @@ fn lean_fragment_fallback<'s>(
 }
 
 /// Partition a Lean parse into top-level command row ranges (0-based,
-/// inclusive). A group starts at each column-0 child; indented lines belong
-/// to the preceding group, which keeps a `run_meta` do-block and its flat
-/// interior lines together. Works on a `module` root and on an `ERROR`
-/// root, whose children are the recovered command fragments.
+/// inclusive). A group starts at each column-0 child and at each recognized
+/// command node, so indented commands recover independently; other indented
+/// lines belong to the preceding group, which keeps a `run_meta` do-block
+/// and its flat interior lines together. Works on a `module` root and on an
+/// `ERROR` root, whose children are the recovered command fragments.
 fn lean_command_groups(root: Node<'_>) -> Vec<(usize, usize)> {
     let mut groups = Vec::new();
     let mut cursor = root.walk();
@@ -459,7 +460,7 @@ fn lean_command_groups(root: Node<'_>) -> Vec<(usize, usize)> {
     let mut first = true;
     for child in root.children(&mut cursor) {
         if !first
-            && child.start_position().column == 0
+            && (child.start_position().column == 0 || is_lean_command(child))
             && let Some(open) = start.take()
         {
             groups.push((open, end));
