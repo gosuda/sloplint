@@ -80,16 +80,16 @@ rule and no new concept was added for Quint.
 
 | Quint construct | Linter concept |
 |---|---|
-| `operator_definition` (`def`, `pure def`, `action`, `temporal`, `run`, `nondet` via the `qualifier` field) | Function-like unit (`Function`) |
-| `value_definition` (`val`, `pure val`) | Function-like unit (`Function`) |
+| `operator_definition` (`def`, `pure def`, `action`, `temporal`, `run`, `nondet` via the `qualifier` field) | Function-like unit (`Function`; module level, nested ones are `Private`) |
+| `value_definition` (`val`, `pure val`) | Function-like unit (`Function`; module level, nested ones are `Private`) |
 | `lambda_expression` | Closure (`Closure`) |
 | `parameter`, `annotated_parameter` | Parameter (`Param`, with `int`/`str`/`bool` primitive kinds) |
 | `if_expression` | Branch (`If`) |
 | `match_expression`, `match_arm` (wildcard `_` is the `hole` variant) | Branch (`Match`, `MatchArm`) |
 | `all_expression`, `any_expression` (n-ary choice/conjunction blocks) | Loop (`Loop`; the unbounded-branching construct where the linter counts nesting) |
-| `block_expression` nondet bindings | Flow-scoped names (quantified names bind like loop targets) |
+| `nondet_binding` | Declaration (`Decl`; an immutable local, never a write) |
 | `call_expression`, `ufcs_call_expression` | Call (`Call`) |
-| `module_import_declaration`, `named_import_declaration`, `wildcard_import_declaration`, `instance_declaration` (parameterized instantiation) | Import (`Import`; wildcard kind preserved) |
+| `module_import_declaration`, `named_import_declaration`, `wildcard_import_declaration`, `instance_declaration` (parameterized instantiation), `anonymous_instance_declaration` (parameterized wildcard instantiation) | Import (`Import`; wildcard kind preserved) |
 | `module_export_declaration`, `named_export_declaration`, `wildcard_export_declaration` | Export (`Export`, re-export facts) |
 | `type_alias_declaration`, `uninterpreted_type_declaration` | Type definition (`TypeDef`) |
 | `variable_declaration` | Mutable global declaration (`Decl` + `GlobalMutable` ambient) |
@@ -99,11 +99,12 @@ rule and no new concept was added for Quint.
 | `comment`, `documentation_comment` | Comment (`Comment`; `///` feeds `echo-comment` doc facts) |
 | `string_literal` | String (`String` arg shape) |
 
-Quint has no visibility syntax and every definition is importable by name,
-so every function-like unit and type alias is `Exported`. That lets
-`grep/generic-name`, `grep/homonym-definitions`, `agent/stringly-api`, and
-`complexity/boolean-params` fire on Quint the way they do on other
-languages.
+Quint has no visibility syntax. Module-level function-like units and type
+aliases are `Exported`, while a definition inside
+`nested_definition_expression` and every closure is `Private`, so local
+helpers stay out of `grep/generic-name`, `grep/homonym-definitions`,
+`agent/stringly-api`, and `complexity/boolean-params`, which fire on the
+module-level units the way they do on other languages.
 
 Quint has no logging primitives and no `print` builtin, so the `quint`
 log-callee row is `print`: it matches only a user-defined debug operator of
