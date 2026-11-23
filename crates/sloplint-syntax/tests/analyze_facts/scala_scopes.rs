@@ -364,3 +364,19 @@ fn symbolic_call_with_unlisted_name_records_the_write() {
         );
     });
 }
+
+#[test]
+fn symbolic_param_shadowing_method_is_not_a_write() {
+    // A parameter named `++` shadows the outer `def ++`: `++(count = 1)`
+    // calls the parameter value's `apply`, so the named argument is not
+    // an assignment and no write lands on the outer `count`.
+    let source = "class Sink {\n  def apply(count: Int): Int = count\n}\ndef ++(other: Int): Int = 0\ndef run(++ : Sink): Int = {\n  var count = 0\n  ++(count = 1)\n  count\n}\n";
+    with_scala_bindings(source, |found| {
+        let counts = named_all(found, "count");
+        assert_eq!(counts.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            counts[0].write_lines, 0,
+            "the shadowing parameter's named argument records no write: {found:?}"
+        );
+    });
+}

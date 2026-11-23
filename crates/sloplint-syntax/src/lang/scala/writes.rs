@@ -94,6 +94,21 @@ fn unquote(name: &str) -> &str {
 // reading is the modern default); Some(true) when an in-scope def has
 // that parameter; Some(false) when every in-scope `def f` lacks it —
 // in Scala 2.12 scripts that shape is a `Unit`-valued assignment.
+
+// Whether `def` (or its declaration twin) names `name` as a parameter: a
+// parameter shadows an outer method of the same name, so a call through it
+// targets the parameter value's `apply`, not the method's parameter list.
+fn def_param_named<'s>(cx: &Cx<'_, 's>, def: Node<'_>, name: &str) -> bool {
+    named_children(def).iter().any(|c| {
+        c.kind() == "parameters"
+            && named_children(*c).iter().any(|param| {
+                param.kind() == "parameter"
+                    && child_by_field(*param, "name")
+                        .is_some_and(|nm| unquote(text(cx, nm)) == name)
+            })
+    })
+}
+
 fn named_arg_verdict<'s>(cx: &Cx<'_, 's>, n: Node<'_>, arg_name: &str) -> Option<bool> {
     let args = n.parent().filter(|p| p.kind() == "arguments")?;
     let call = args.parent().filter(|p| p.kind() == "call_expression")?;
@@ -108,6 +123,15 @@ fn named_arg_verdict<'s>(cx: &Cx<'_, 's>, n: Node<'_>, arg_name: &str) -> Option
     let mut scope = n.parent();
     while let Some(s) = scope {
         scope = s.parent();
+        // A parameter of an enclosing function shadows an outer `def` of
+        // the same name, so the call targets the parameter value and no
+        // signature lookup applies. Stop the walk unresolved rather than
+        // consult the shadowed method.
+        if (s.kind() == "function_definition" || s.kind() == "function_declaration")
+            && def_param_named(cx, s, fname)
+        {
+            return None;
+        }
         // A local binding of the callee name — `val f`, a `for` binder or a
         // `case` pattern — shadows every outer `def f`, so the named
         // argument belongs to the value's `apply`, not to the method's
