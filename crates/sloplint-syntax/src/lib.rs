@@ -117,10 +117,10 @@ pub fn analyze<'s>(
     if let Some(rescued) = rescue_analysis(parsers, input, input.lang, &tree, custom) {
         return rescued;
     }
-    if input.lang == Lang::Lean {
-        if let Some(rescued) = lean_command_rescue(parsers, input, &tree, custom) {
-            return rescued;
-        }
+    if input.lang == Lang::Lean
+        && let Some(rescued) = lean_command_rescue(parsers, input, &tree, custom)
+    {
+        return rescued;
     }
     let hooks = lang::hooks_for(input.lang, input.path, parsers.ocaml_interfaces);
     let comments = spec(input.lang).walk_comments(hooks, input, root).comments;
@@ -341,10 +341,11 @@ fn lean_command_groups(root: Node<'_>) -> Vec<(usize, usize)> {
     let mut end = 0;
     let mut first = true;
     for child in root.children(&mut cursor) {
-        if !first && child.start_position().column == 0 {
-            if let Some(open) = start.take() {
-                groups.push((open, end));
-            }
+        if !first
+            && child.start_position().column == 0
+            && let Some(open) = start.take()
+        {
+            groups.push((open, end));
         }
         let child_start = child.start_position().row;
         let child_end = child.end_position().row;
@@ -463,7 +464,7 @@ fn lean_group_pos(text: &[u8], line_starts: &[usize], tainted: &[(u32, u32)]) ->
                 .saturating_sub(1),
         )
         .copied()
-        .unwrap_or_else(|| text.len());
+        .unwrap_or(text.len());
     Pos {
         line,
         byte: hooks::narrow(byte),
