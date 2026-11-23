@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::Strictness;
 use crate::facts::{Ambient, AmbientKind, FileFacts};
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
 use crate::rules::{parse_options, string_values};
@@ -149,6 +150,12 @@ fn joins<'a>(facts: &'a FileFacts<'_>) -> Joins<'a> {
 
 impl FileRule for AmbientGlobalState {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        // Quint state is module-level `var` declarations: the language's
+        // core construct, not shareable ambient state. The Quint adapter
+        // emits no EnvRead facts, so every firing is a `var` declaration.
+        if matches!(facts.lang, Lang::Quint) {
+            return;
+        }
         if self.allow_files.is_match(facts.path) {
             return;
         }

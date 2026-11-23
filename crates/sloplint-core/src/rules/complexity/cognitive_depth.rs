@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::Strictness;
 use crate::facts::FileFacts;
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Thresholds};
 use crate::rules::{parse_options, threshold_options};
@@ -63,6 +64,14 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for CognitiveDepth {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        // Quint branches are the modeled behavior: `step` actions enumerating
+        // protocol transitions, FSM-dispatch ladders, paper-faithful safety
+        // predicates, and `run` scripts. A Quint rung above the observed max
+        // would be arbitrary with zero true positives to anchor it, and the
+        // early-return fix is inapplicable inside `all {...}` conjunctions.
+        if matches!(facts.lang, Lang::Quint) {
+            return;
+        }
         for function in &facts.functions {
             if function.max_depth < 2 {
                 continue;

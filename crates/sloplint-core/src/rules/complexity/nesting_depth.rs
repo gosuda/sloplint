@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::Strictness;
 use crate::facts::FileFacts;
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Thresholds};
 use crate::rules::{parse_options, threshold_options};
@@ -63,6 +64,13 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for NestingDepth {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        // Same Quint rationale as cognitive-depth: the flagged nesting is the
+        // modeled transition logic (dispatches, FSM handlers, safety
+        // predicates). Gating cognitive-depth alone would only surface these
+        // shadowed findings at the same lines, so the rule stays off Quint.
+        if matches!(facts.lang, Lang::Quint) {
+            return;
+        }
         for function in &facts.functions {
             let Some(severity) = self.thresholds.grade(function.max_depth) else {
                 continue;
