@@ -140,11 +140,13 @@ for g in entries:
         errors.append(f"{g['name']}: missing Cargo.lock for crate check")
         continue
     want = g.get("crate_version", "")
-    text = open(lock, encoding="utf-8").read()
-    if f'name = "{g.get("crate", "")}"' not in text:
+    with open(lock, "rb") as f:
+        lockdata = tomllib.load(f)
+    pkgs = [p for p in lockdata.get("package", []) if p.get("name") == g.get("crate", "")]
+    if not pkgs:
         errors.append(f"{g['name']}: crate {g.get('crate')} not in Cargo.lock")
-    elif want and f'version = "{want}"' not in text:
-        errors.append(f"{g['name']}: crate version {want} not in Cargo.lock")
+    elif want and pkgs[0].get("version") != want:
+        errors.append(f"{g['name']}: Cargo.lock pins {g.get('crate')} {pkgs[0].get('version')}, manifest wants {want}")
 
 for e in errors:
     print(f"grammars.sh check: {e}")
