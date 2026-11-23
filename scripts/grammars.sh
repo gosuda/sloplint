@@ -175,7 +175,12 @@ cmd_verify() {
   command -v git >/dev/null || die "git not found"
   local tsbin="${GRAMMARS_TS_BIN:-tree-sitter}"
   command -v "$tsbin" >/dev/null || die "tree-sitter CLI not found: $tsbin (set GRAMMARS_TS_BIN)"
-  local tsver=""
+  # Generation runs in scratch subdirectories, where a caller-relative
+  # override no longer resolves. Pin a bare command on PATH as is and
+  # resolve any path override to absolute before changing directories.
+  case "$tsbin" in
+    */*) tsbin="$(cd "$(dirname "$tsbin")" && pwd)/$(basename "$tsbin")" ;;
+  esac
   if [ -n "$generator" ]; then
     tsver="$("$tsbin" --version 2>&1)"
     # Release builds may append a parenthesized build SHA; match the release
