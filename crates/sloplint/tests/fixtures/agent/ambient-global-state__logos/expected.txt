@@ -1,2 +1,0 @@
-a.lgo:3 info agent/ambient-global-state
-a.lgo:8 info agent/ambient-global-state

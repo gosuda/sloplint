@@ -119,7 +119,7 @@ fn add_definitions<'a>(
     flat: &mut Vec<(Lang, &'a str, SiteRef<'a>)>,
 ) {
     let facts = file.facts;
-    if facts.lang == Lang::Dafny {
+    if matches!(facts.lang, Lang::Dafny | Lang::Logos) {
         return;
     }
     let package = facts.package.as_str();
@@ -155,7 +155,7 @@ impl HomonymDefinitions {
                 let mut buckets: [Bucket<'a>; NAME_SHARDS] = std::array::from_fn(|_| Vec::new());
                 for (offset, file) in chunk_files.iter().enumerate() {
                     let facts = file.facts;
-                    if facts.lang == Lang::Dafny {
+                    if matches!(facts.lang, Lang::Dafny | Lang::Logos) {
                         continue;
                     }
                     let package = facts.package.as_str();
