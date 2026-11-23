@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::Strictness;
 use crate::facts::FileFacts;
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings, Thresholds};
 use crate::rules::{parse_options, threshold_options};
@@ -37,6 +38,11 @@ struct MutableSpan {
     thresholds: Thresholds,
 }
 
+const LOGOS_MINOR_AT: u32 = 30;
+const LOGOS_MAJOR_AT: u32 = 45;
+const LOGOS_CRITICAL_AT: u32 = 60;
+const LOGOS_BLOCKER_AT: u32 = 90;
+
 fn preset(strictness: Strictness) -> Preset {
     let (level, minor_at, major_at, critical_at, blocker_at) = match strictness {
         Strictness::Minimal => (Level::Off, 30, 60, 90, 120),
@@ -63,6 +69,7 @@ fn build(options: toml::Table, _settings: &Settings) -> Result<Box<dyn FileRule>
 
 impl FileRule for MutableSpan {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        let thresholds = self.effective_thresholds(facts.lang);
         for binding in &facts.bindings {
             if binding.write_lines < 2 {
                 continue;
@@ -70,16 +77,16 @@ impl FileRule for MutableSpan {
             let span = binding
                 .last_write_line
                 .saturating_sub(binding.first_write_line);
-            let Some(severity) = self.thresholds.grade(span) else {
+            let Some(severity) = thresholds.grade(span) else {
                 continue;
             };
             let name = binding.name;
             let first = binding.first_write_line;
             let last = binding.last_write_line;
-            let minor_at = self.thresholds.minor_at;
-            let major_at = self.thresholds.major_at;
-            let critical_at = self.thresholds.critical_at;
-            let blocker_at = self.thresholds.blocker_at;
+            let minor_at = thresholds.minor_at;
+            let major_at = thresholds.major_at;
+            let critical_at = thresholds.critical_at;
+            let blocker_at = thresholds.blocker_at;
             let message = format!(
                 "`{name}` stays mutable for {span} lines (writes at lines {first}-{last}) (minor at {minor_at}, major at {major_at}, critical at {critical_at}, blocker at {blocker_at})"
             );
@@ -98,6 +105,20 @@ impl FileRule for MutableSpan {
     }
 }
 
+impl MutableSpan {
+    fn effective_thresholds(&self, lang: Lang) -> Thresholds {
+        if lang != Lang::Logos {
+            return self.thresholds;
+        }
+        Thresholds {
+            minor_at: self.thresholds.minor_at.max(LOGOS_MINOR_AT),
+            major_at: self.thresholds.major_at.max(LOGOS_MAJOR_AT),
+            critical_at: self.thresholds.critical_at.max(LOGOS_CRITICAL_AT),
+            blocker_at: self.thresholds.blocker_at.max(LOGOS_BLOCKER_AT),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -106,10 +127,10 @@ mod tests {
     use crate::lang::Lang;
     use crate::role::CodeRole;
 
-    fn severities(rule: &dyn FileRule, bindings: Vec<MutBinding<'_>>) -> Vec<Severity> {
+    fn severities(rule: &dyn FileRule, lang: Lang, bindings: Vec<MutBinding<'_>>) -> Vec<Severity> {
         let source = "fn f() {}\n";
         let facts = FileFacts {
-            lang: Lang::Rust,
+            lang,
             path: "src/lib.rs",
             source,
             line_starts: line_starts(source),
@@ -139,12 +160,16 @@ mod tests {
     }
 
     fn spanning(name: &str) -> MutBinding<'_> {
+        spanning_lines(name, 1, 20)
+    }
+
+    fn spanning_lines(name: &str, first: u32, last: u32) -> MutBinding<'_> {
         MutBinding {
             name,
             pos: Pos { line: 1, byte: 0 },
             end_line: u32::MAX,
-            first_write_line: 1,
-            last_write_line: 20,
+            first_write_line: first,
+            last_write_line: last,
             write_lines: 2,
             loop_depth: 0,
         }
@@ -177,9 +202,41 @@ mod tests {
         let rule =
             build(strict_preset.options, &Settings::default()).expect("strict preset builds");
         assert_eq!(
-            severities(rule.as_ref(), vec![spanning("acc")]),
+            severities(rule.as_ref(), Lang::Rust, vec![spanning("acc")]),
             vec![Severity::Minor],
             "strict still fires; the ruleset ceiling caps the graded rung to info"
+        );
+    }
+    #[test]
+    fn logos_short_spans_stay_silent() {
+        let strict_preset = preset(Strictness::Strict);
+        let rule =
+            build(strict_preset.options, &Settings::default()).expect("strict preset builds");
+        assert_eq!(
+            severities(rule.as_ref(), Lang::Logos, vec![spanning("err")]),
+            Vec::<Severity>::new(),
+            "a 19-line Logos err-reuse span stays silent under the Logos floor"
+        );
+        assert_eq!(
+            severities(rule.as_ref(), Lang::Rust, vec![spanning("err")]),
+            vec![Severity::Minor],
+            "the same span still fires for Rust"
+        );
+    }
+
+    #[test]
+    fn logos_long_builder_still_fires() {
+        let strict_preset = preset(Strictness::Strict);
+        let rule =
+            build(strict_preset.options, &Settings::default()).expect("strict preset builds");
+        assert_eq!(
+            severities(
+                rule.as_ref(),
+                Lang::Logos,
+                vec![spanning_lines("out", 278, 318)]
+            ),
+            vec![Severity::Minor],
+            "a 40-line Logos builder still fires at the Logos minor rung"
         );
     }
 }

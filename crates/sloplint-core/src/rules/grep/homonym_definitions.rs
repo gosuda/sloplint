@@ -122,6 +122,9 @@ fn add_definitions<'a>(
     flat: &mut Vec<(Lang, &'a str, SiteRef<'a>)>,
 ) {
     let facts = file.facts;
+    if facts.lang == Lang::Logos {
+        return;
+    }
     let package = facts.package.as_str();
     for site in &facts.definitions {
         if INFO.roles.eligible(facts.role, &facts.regions, site.line)
@@ -160,6 +163,9 @@ impl HomonymDefinitions {
                     let facts = file.facts;
                     let package = facts.package.as_str();
                     for site in &facts.definitions {
+                        if facts.lang == Lang::Logos {
+                            continue;
+                        }
                         if self.allow.contains(site.name.as_ref())
                             || !INFO.roles.eligible(facts.role, &facts.regions, site.line)
                         {
