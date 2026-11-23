@@ -1,0 +1,73 @@
+//! Lean interpolated-string argument shapes, observed through `analyze` only.
+//!
+//! The grammar surfaces no literal-chunk children inside `interpolated_str`
+//! (only the opener, the `interpolation` holes, and the closer), so the
+//! adapter measures the longest static run from the node's own text. A
+//! string whose longest literal run clears the 8-char floor must report it,
+//! and calls nested in `{...}` holes must still appear as call facts.
+
+use sloplint_core::facts::ArgShape;
+use sloplint_core::lang::Lang;
+
+use crate::support::run_clean;
+
+const PARSED: &str = "def main : IO Unit := do\n  IO.println s!\"parsed {r.size} rows of data\"\n";
+
+const INVALID: &str = "def main : IO Unit := do\n  IO.println s!\"invalid csv data: {e}\"\n";
+
+const NESTED_CALL: &str = "def main : IO Unit := do\n  IO.println s!\"{f x} tail literal here\"\n";
+
+const HOLE_ONLY: &str = "def aux : IO Unit := do\n  logInfo m!\"{value}\"\n";
+
+/// The longest static run of the single argument of the `name` call.
+fn arg_run(source: &str, name: &str) -> u32 {
+    let analysis = run_clean(Lang::Lean, "main.lean", source);
+    let call = analysis
+        .facts
+        .calls
+        .iter()
+        .find(|call| call.callee == name)
+        .unwrap_or_else(|| panic!("{name} call is missing"));
+    assert!(
+        call.args.len() == 1,
+        "{name} takes one argument, found {}",
+        call.args.len()
+    );
+    match &call.args[0].shape {
+        ArgShape::Str { longest_static } => *longest_static,
+        shape => panic!("{name} argument is a string, found {shape:?}"),
+    }
+}
+
+#[test]
+fn interpolated_runs_count_text_between_holes() {
+    assert_eq!(
+        arg_run(PARSED, "IO.println"),
+        13,
+        "` rows of data` is 13 chars"
+    );
+    assert_eq!(
+        arg_run(INVALID, "IO.println"),
+        18,
+        "`invalid csv data: ` is 18 chars"
+    );
+}
+
+#[test]
+fn hole_only_message_measures_zero() {
+    assert_eq!(arg_run(HOLE_ONLY, "logInfo"), 0, "no literal run survives");
+}
+
+#[test]
+fn calls_inside_holes_stay_visible() {
+    let analysis = run_clean(Lang::Lean, "main.lean", NESTED_CALL);
+    assert!(
+        analysis.facts.calls.iter().any(|call| call.callee == "f"),
+        "the hole still records its call"
+    );
+    assert_eq!(
+        arg_run(NESTED_CALL, "IO.println"),
+        18,
+        "` tail literal here` is 18 chars"
+    );
+}

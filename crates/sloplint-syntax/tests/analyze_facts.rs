@@ -40,6 +40,8 @@ mod is_method;
 mod java_scopes;
 #[path = "analyze_facts/kotlin_scopes.rs"]
 mod kotlin_scopes;
+#[path = "analyze_facts/lean_interpolated_strings.rs"]
+mod lean_interpolated_strings;
 #[path = "analyze_facts/macro_attr.rs"]
 mod macro_attr;
 #[path = "analyze_facts/member_pointer.rs"]
