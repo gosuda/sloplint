@@ -39,6 +39,12 @@ hunk below names the gap test that pins it.
 - `[$._type_name, $.normal_parameter_type]` conflict entry. Supports the
   `normal_parameter_type` arm; `tree-sitter generate` names exactly this
   ambiguity without it. Carried over from the 0.2.0-based patch.
+- `[$._type_name, $.extension_type_representation]` conflict entry. Supports
+  the representation arm below; added during PR #89 review triage.
+- Removed `[redirecting_factory_constructor_signature, _built_in_identifier]`
+  conflict entry. The added `const` factory arm makes it unnecessary
+  (`tree-sitter generate` says so); the 0.2.0-based patch removed this same
+  line.
 - `normal_parameter_type` function-form arm (`seq(optional($.type), $.identifier,
   $._formal_parameter_part, optional("?"))`). Carried over; pins
   `a_function_typed_parameter_inside_a_function_type_parses`.
@@ -54,12 +60,19 @@ hunk below names the gap test that pins it.
   `method_declaration`. Narrowed carry-over of the 0.2.0 method-signature hunk
   (the factory declarator arms are upstream now); pins
   `a_const_new_declarator_with_a_body_parses`.
+- `method_signature` `const` factory arm, so `const factory` declarations keep
+  their bodies. Added during PR #89 review triage
+  (`a_const_factory_with_a_body_parses`); the 0.2.0-based patch had the same
+  arm inside `optional("const")`.
 - `field_formal_parameter` takes `optional($.type)` instead of
-  `optional($._final_const_var_or_type)`. New hunk: upstream 0.3.0 unified
+  `optional($._final_const_var_or_type)`. Upstream 0.3.0 unified
   primary and regular parameter lists, so bare `var`/`final` (rejected by
   dart) parse again. Pins
   `a_var_initializing_primary_parameter_still_reports_a_parse_error` and
   `a_final_initializing_primary_parameter_still_reports_a_parse_error`.
+- `extension_type_representation` required form takes an optional function
+  part, so `extension type E(int f(String s))` parses. Added during PR #89
+  review triage (`a_function_typed_extension_type_representation_parses`).
 
 ## Dropped hunks (fixed upstream in 0.3.0)
 
@@ -68,13 +81,14 @@ Primary-constructor headers (`primary_constructor`, `primary_parameter_list`,
 empty-name factory redirects, `this` primary bodies, extension-type
 representations with trailing comma, enum headers with trailing comma, `await`
 and `yield` as identifiers, `yield:` labels, NUL bytes in strings and block
-comments (scanner fix), the `_type_name` await hunk, the factory `method_signature`
-arms, and the removed redirecting-factory conflict entry. The 0.3.0 CHANGELOG
-documents the rewrite, the nine node renames, and the NUL fix.
+comments (scanner fix) and the `_type_name` await hunk. The `const` factory arm
+and the redirecting-factory conflict entry first dropped here returned during
+PR #89 review triage. The 0.3.0 CHANGELOG documents the rewrite, the nine
+node renames, and the NUL fix.
 
 ## Fixed shapes (each valid per `dart format --output=none`, Dart 3.13.5, no flags)
 
-Covered by upstream 0.3.0 directly (20 of the 24 gap-test fix shapes):
+Covered by upstream 0.3.0 directly (20 of the 26 gap-test fix shapes):
 
 - Primary-constructor headers on class, mixin class, enum, and extension type:
   `class C(final int x) {}`, `class const C(...)`, `class C<T>.named() {}`,
@@ -94,12 +108,14 @@ Covered by upstream 0.3.0 directly (20 of the 24 gap-test fix shapes):
 - `yield:` as a label.
 - NUL byte inside a string literal (fixed upstream in `src/scanner.c`).
 
-Kept by the patch (4 shapes, invalid nowhere, rejected by pristine 0.3.0):
+Kept by the patch (6 shapes, invalid nowhere, rejected by pristine 0.3.0):
 
 - Function-typed parameter inside a function type: `int Function(int f(String x))`.
 - `~` as an infix operator in expression position (parse-level only, see above).
 - `async*` / `sync*` on `=>` bodies (semantic error in dart, see above).
 - `const new() {}` with a body.
+- `const factory C() => C._();` with a body.
+- Function-typed extension type representation: `extension type E(int f(String s))`.
 
 ## Validation
 
@@ -121,14 +137,14 @@ Kept by the patch (4 shapes, invalid nowhere, rejected by pristine 0.3.0):
 - `class C(var f()) {}` (residue `declaring_parameter.dart:8`) parses clean on
   pristine upstream 0.3.0: fixed upstream, residue entry removed below.
 - Null-aware case heads (`case b?[c]:`) still error on the new tree: residue kept.
-- Tests: `crates/sloplint-syntax/tests/grammar_gaps/dart.rs`, 36 tests, all green
-  on the vendored grammar. 4 fix tests fail on pristine upstream 0.3.0 (the
+- Tests: `crates/sloplint-syntax/tests/grammar_gaps/dart.rs`, 38 tests, all green
+  on the vendored grammar. 6 fix tests fail on pristine upstream 0.3.0 (the
   patch-kept shapes); the other 20 fix shapes pass on both. The 12 that pass on
   both before and after are 11 error-controls and one non-regression guard.
 
 ## Acceptance status
 
-- Met: zero clean→error on dart-accepted files; 4/4 patch-kept fix tests red on
+- Met: zero clean→error on dart-accepted files; 6/6 patch-kept fix tests red on
   pristine upstream 0.3.0.
 - Not met as written: "the 477 intentional-error files MUST still report parse errors".
   15 of them now parse clean (listed below; measured on the 0.2.0-based tree).
