@@ -1,0 +1,113 @@
+================================================================================
+Star repeat and vararg still parse (control)
+================================================================================
+
+object Test:
+  def f(xs: Int*) = xs
+  def g(s: Any): Int =
+    s match
+      case Array(a: Int, _@_*) => a
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (function_definition
+        (identifier)
+        (parameters
+          (parameter
+            (identifier)
+            (repeated_parameter_type
+              (type_identifier))))
+        (identifier))
+      (function_definition
+        (identifier)
+        (parameters
+          (parameter
+            (identifier)
+            (type_identifier)))
+        (type_identifier)
+        (indented_block
+          (match_expression
+            (identifier)
+            (indented_cases
+              (case_clause
+                (case_class_pattern
+                  (type_identifier)
+                  (typed_pattern
+                    (identifier)
+                    (type_identifier))
+                  (repeat_pattern
+                    (capture_pattern
+                      (wildcard)
+                      (wildcard))))
+                (identifier)))))))))
+
+================================================================================
+Infix star extractor patterns (sloplint SC-INSTAR)
+================================================================================
+
+object Test:
+  case class *(a: Int, b: Int)
+  case class P(a: Int, b: Any)
+  def m(p: P, v: *): Unit =
+    val x * y = v
+    val P(a, b * c) = p
+    println(a)
+
+--------------------------------------------------------------------------------
+
+(compilation_unit
+  (object_definition
+    (identifier)
+    (template_body
+      (class_definition
+        (operator_identifier)
+        (class_parameters
+          (class_parameter
+            (identifier)
+            (type_identifier))
+          (class_parameter
+            (identifier)
+            (type_identifier))))
+      (class_definition
+        (identifier)
+        (class_parameters
+          (class_parameter
+            (identifier)
+            (type_identifier))
+          (class_parameter
+            (identifier)
+            (type_identifier))))
+      (function_definition
+        (identifier)
+        (parameters
+          (parameter
+            (identifier)
+            (type_identifier))
+          (parameter
+            (identifier)
+            (type_identifier)))
+        (type_identifier)
+        (indented_block
+          (val_definition
+            (infix_pattern
+              (identifier)
+              (operator_identifier)
+              (identifier))
+            (identifier))
+          (val_definition
+            (case_class_pattern
+              (type_identifier)
+              (identifier)
+              (infix_pattern
+                (identifier)
+                (operator_identifier)
+                (identifier)))
+            (identifier))
+          (call_expression
+            (identifier)
+            (arguments
+              (identifier))))))))

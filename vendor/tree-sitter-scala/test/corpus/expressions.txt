@@ -6426,24 +6426,25 @@ val f = _.next { x: M.N =>
 --------------------------------------------------------------------------------
 
 (compilation_unit
-  (val_definition
-    (identifier)
-    (call_expression
-      (field_expression
-        (wildcard)
-        (identifier))
-      (block
-        (lambda_expression
-          (identifier)
-          (stable_type_identifier
-            (identifier)
-            (type_identifier))
-          (val_definition
-            (identifier)
-            (integer_literal))
-          (val_definition
-            (identifier)
-            (integer_literal)))))))
+   (val_definition
+     (identifier)
+     (call_expression
+       (field_expression
+         (wildcard)
+         (identifier))
+       (block
+         (lambda_expression
+           (identifier)
+           (stable_type_identifier
+             (identifier)
+             (type_identifier))
+           (indented_block
+             (val_definition
+               (identifier)
+               (integer_literal))))
+         (val_definition
+           (identifier)
+           (integer_literal))))))
 
 ================================================================================
 Braced typed lambda with wildcard parameter
