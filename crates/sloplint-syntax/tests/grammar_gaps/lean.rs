@@ -263,6 +263,25 @@ fn modules_imports_and_comments_parse_clean() {
     }
 }
 
+/// `Init`, `Lean`, `Std`, and `Lake` ship with the toolchain; only a root
+/// outside them names an external package for import fan-out.
+#[test]
+fn toolchain_roots_carry_no_external_root() {
+    let source = "import Init.Data.Omega\nimport Lean.Data.Json\nimport Std.Data.HashMap\nimport Lake.DSL\nimport Mathlib.Data.List.Basic\n";
+    let analysis = run_clean("src/roots.lean", source);
+    let roots: Vec<Option<&str>> = analysis
+        .facts
+        .imports
+        .iter()
+        .map(|import| import.external_root)
+        .collect();
+    assert_eq!(
+        roots,
+        [None, None, None, None, Some("Mathlib")],
+        "the four toolchain roots are not external packages"
+    );
+}
+
 #[test]
 fn hash_commands_parse_clean() {
     let source = "#lint\n#find _ + _ = _ + _\n#whnf Nat.add 1 2\n#guard_msgs in\n#eval \"hi\"\n#guard 1 + 1 = 2\n#print Nat\n#check fun x => x\n";
