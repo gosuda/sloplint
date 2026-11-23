@@ -98,16 +98,17 @@ impl Found {
         let Ok(relative) = entry.path().strip_prefix(root) else {
             return;
         };
-        if kind.is_file()
-            && let Some((mkind, dir)) = manifest_dir(relative)
-        {
-            self.manifests.insert((mkind, dir));
-        }
         let decision = if kind.is_file() {
             decide_file_name(relative, config, data)
         } else {
             decide_non_file_name(relative, config, data)
         };
+        if kind.is_file()
+            && !matches!(decision, NameDecision::Skipped("data"))
+            && let Some((mkind, dir)) = manifest_dir(relative)
+        {
+            self.manifests.insert((mkind, dir));
+        }
         match decision {
             NameDecision::Analyze { rel, lang } => self.entries.push(Entry {
                 rel,
@@ -169,17 +170,16 @@ pub(crate) fn decide_non_file_name(
 // Decides from the name text alone, never the filesystem: callers hold names of entries that may not exist.
 fn decide_name(relative: &Path, is_file: bool, config: &Config, data: &GlobSet) -> NameDecision {
     match normalize_rel_path(relative) {
-        Some(rel) => match enabled_lang(&rel, config) {
-            Some(lang) if is_file => {
-                if data.is_match(&rel) {
-                    NameDecision::Skipped("data")
-                } else {
-                    NameDecision::Analyze { rel, lang }
-                }
+        Some(rel) => {
+            if is_data_path(&rel, data) {
+                return NameDecision::Skipped("data");
             }
-            Some(_) => NameDecision::Skipped("non-regular"),
-            None => NameDecision::Ignored,
-        },
+            match enabled_lang(&rel, config) {
+                Some(lang) if is_file => NameDecision::Analyze { rel, lang },
+                Some(_) => NameDecision::Skipped("non-regular"),
+                None => NameDecision::Ignored,
+            }
+        }
         None => {
             if enabled_lang(&lossy_rel(relative), config).is_some() {
                 NameDecision::Skipped("non-utf8-name")
@@ -188,6 +188,19 @@ fn decide_name(relative: &Path, is_file: bool, config: &Config, data: &GlobSet) 
             }
         }
     }
+}
+
+/// A directory-only pattern such as `fixtures` used to prune the whole
+/// subtree in the walker. Data paths are now visited so their skips are
+/// counted, so the pattern must also match descendants by path prefix.
+fn is_data_path(rel: &str, data: &GlobSet) -> bool {
+    if data.is_match(rel) {
+        return true;
+    }
+    rel.bytes()
+        .enumerate()
+        .filter(|(_, byte)| *byte == b'/')
+        .any(|(index, _)| data.is_match(&rel[..index]))
 }
 
 struct Collect<'a> {
@@ -458,6 +471,56 @@ mod tests {
                 NameDecision::Analyze { .. }
             ),
             "the sibling outside testdata analyzes"
+        );
+    }
+
+    #[test]
+    fn directory_data_glob_covers_descendants() {
+        let config = Config::default();
+        let data = glob_set(
+            &["fixtures".to_string()],
+            "project.data_globs",
+            Separators::Any,
+        )
+        .expect("directory data glob builds");
+        assert!(
+            matches!(
+                decide_file_name(Path::new("fixtures/bad.rs"), &config, &data),
+                NameDecision::Skipped("data")
+            ),
+            "a file under a directory-only data glob is a counted skip"
+        );
+        assert!(
+            matches!(
+                decide_file_name(Path::new("src/ok.rs"), &config, &data),
+                NameDecision::Analyze { .. }
+            ),
+            "the sibling outside the data directory analyzes"
+        );
+    }
+
+    #[test]
+    fn data_manifest_is_a_counted_skip() {
+        let config = Config::default();
+        let data = glob_set(
+            &["**/setup.py".to_string()],
+            "project.data_globs",
+            Separators::Any,
+        )
+        .expect("manifest data glob builds");
+        assert!(
+            matches!(
+                decide_file_name(Path::new("src/plugin/setup.py"), &config, &data),
+                NameDecision::Skipped("data")
+            ),
+            "a data manifest is a counted skip even though .py is supported"
+        );
+        assert!(
+            matches!(
+                decide_file_name(Path::new("src/plugin/other.py"), &config, &data),
+                NameDecision::Analyze { .. }
+            ),
+            "the sibling module still analyzes"
         );
     }
 }
