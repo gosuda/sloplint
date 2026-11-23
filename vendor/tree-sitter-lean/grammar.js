@@ -90,6 +90,9 @@ export default grammar({
   word: $ => $._plain_ident,
 
   conflicts: $ => [
+    [$._binder_ident, $._term_atom],
+    [$._binder_ident, $._term_atom, $.struct_field],
+    [$.struct_field],
     /* `public`/`meta` can start an `import`, a `public meta section`
        marker, or a Lean 4 visibility-prefixed declaration. */
     [$.import, $.declaration],
@@ -1305,7 +1308,7 @@ export default grammar({
        `{ src₁, src₂ with }` (multi-source, no new fields) is the
        Mathlib pattern for structure-extension. `{a, b, c}` is the
        finite-set / insert-chain notation. */
-    struct_lit: $ => seq(
+    struct_lit: $ => prec.right(1, seq(
       alias($._brace_open, '{'),
       optional(choice(
         seq(sep1(field('source', $._term), ','), 'with',
@@ -1315,7 +1318,7 @@ export default grammar({
       )),
       optional('..'), optional($._type_spec),
       alias($._brace_close, '}'),
-    ),
+    )),
 
     /* `{ x : T | predicate }` or `{ x | predicate }` — set-builder. */
     set_builder: $ => seq(
@@ -2027,3 +2030,4 @@ export default grammar({
     _plain_ident: _ => /[a-zA-Z_][a-zA-Z_0-9'!?]*/,
   },
 });
+
