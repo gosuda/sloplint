@@ -74,9 +74,9 @@ fn malformed_nested_tactic_keeps_progress_and_later_declarations() {
     let root = tree.root_node();
     assert!(root.has_error(), "a dangling named-hole marker is invalid");
     assert_eq!(root.end_byte(), source.len());
-    let last = root
-        .named_child(root.named_child_count() - 1)
-        .expect("following declaration");
+    let last_index =
+        u32::try_from(root.named_child_count() - 1).expect("test child count fits u32");
+    let last = root.named_child(last_index).expect("following declaration");
     assert_eq!(last.kind(), "declaration");
     let definition = last.named_child(0).expect("definition after the error");
     assert_eq!(definition.kind(), "def");
@@ -92,7 +92,11 @@ fn nested_tactic_siblings_preserve_function_and_call_facts() {
     let analysis = run_clean("src/nested.lean", source);
     assert_eq!(function_names(&analysis), ["nested", "after"]);
     assert!(
-        analysis.facts.calls.iter().any(|call| call.callee == "exact"),
+        analysis
+            .facts
+            .calls
+            .iter()
+            .any(|call| call.callee == "exact"),
         "nested tactic applications remain visible to the adapter"
     );
 }
@@ -476,5 +480,50 @@ fn attribute_erasure_and_option_dotnames_parse() {
         "open scoped Classical in\ndef f : Nat := 0\n",
     ] {
         run_clean("src/attrs.lean", source);
+    }
+}
+
+#[test]
+fn structured_sequences_and_record_layout_keep_facts() {
+    let source = include_str!("../testdata/lean-layout.lean");
+    let analysis = run_clean("src/layout.lean", source);
+    assert_eq!(analysis.facts.functions.len(), 22);
+    for want in [
+        "nested",
+        "identity",
+        "conjunction",
+        "pair",
+        "fromBlock",
+        "nestedFor",
+        "proofRecord",
+        "after",
+    ] {
+        assert!(function_names(&analysis).contains(&want), "missing {want}");
+    }
+    for want in ["simpa", "rcases", "exact"] {
+        assert!(
+            analysis.facts.calls.iter().any(|call| call.callee == want),
+            "structured tactic {want} retains its call fact"
+        );
+    }
+    let sexp = parse_raw(source).root_node().to_sexp();
+    for shape in [
+        "(struct_field ",
+        "(if_then_else ",
+        "(block_assign ",
+        "(for_loop ",
+        "(match_alt ",
+    ] {
+        assert!(sexp.contains(shape), "missing {shape} in {sexp}");
+    }
+}
+
+#[test]
+fn term_if_and_outdented_record_fields_remain_invalid() {
+    for source in [
+        "def bad (flag : Bool) : Nat := if flag then 1\n",
+        "structure R where\n  x : Nat\n  y : Nat\ndef bad : R :=\n  { x := 1,\n  y := 2 }\n",
+    ] {
+        assert!(parse_raw(source).root_node().has_error(), "{source}");
     }
 }

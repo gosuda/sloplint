@@ -33,6 +33,17 @@ const PREC = {
 const sep1 = (rule, sep) => seq(rule, repeat(seq(sep, rule)));
 const sep0 = (rule, sep) => optional(sep1(rule, sep));
 
+/* Both forms anchor layout at their first element. An inline body needs a
+   frame too: an explicit delimiter or the next outdented line closes it. */
+const body = ($, element) => choice(
+  seq($._body_inline,
+      sep1(field('inline', element), repeat1(choice(';', $._newline))),
+      optional(';'), $._dedent),
+  seq($._body_indent,
+      sep1(field('stmt', element), repeat1(choice(';', $._newline))),
+      optional(';'), $._dedent),
+);
+
 export default grammar({
   name: 'lean',
 
@@ -45,6 +56,19 @@ export default grammar({
     $._indent,
     $._dedent,
     $._newline,
+    $._body_inline,
+    $._body_indent,
+    $._brace_open,
+    $._brace_close,
+    $._record_anchor,
+    $._record_newline,
+    $._record_comma,
+    $._for_do,
+    $._else,
+    $._catch,
+    $._finally,
+    $._bar,
+    $._where,
     /* Norm bars `‖ … ‖`. The same `‖` glyph opens and closes, so a plain
        grammar rule (symmetric delimiter over an unbounded term) blows up
        LR table generation. The external scanner emits these as DISTINCT
@@ -185,14 +209,14 @@ export default grammar({
       repeat(field('arg', choice(
         $.identifier, $.str_lit, $.num_lit,
         'from', 'git', '@', 'with'))),
-      optional(seq('{',
+      optional(seq(alias($._brace_open, '{'),
         repeat(seq(
           field('key', choice($.identifier, $.str_lit)),
           choice(':=', '='),
           field('value', choice($.identifier, $.str_lit, $.num_lit,
                                 $.array_lit)),
           optional(choice(';', ',', $._newline)))),
-        '}')),
+        alias($._brace_close, '}'))),
       optional(seq(':', $._term)),
       optional(seq(':=', $._term)),
     )),
@@ -239,7 +263,7 @@ export default grammar({
       'unif_hint',
       optional(field('name', $.identifier)),
       repeat($._bracketed_binder),
-      'where',
+      alias($._where, 'where'),
       repeat($._term),
     )),
 
@@ -795,7 +819,7 @@ export default grammar({
       optional($._type_spec),
       optional($._extends_clause),
       optional(seq(
-        'where',
+        alias($._where, 'where'),
         /* Indented field block separates fields with NEWLINE so a
            greedy `_term`-typed type doesn't eat the next field.
            `deriving` may also live inside the indent block at the
@@ -823,7 +847,7 @@ export default grammar({
       optional($._type_spec),
       optional($._extends_clause),
       optional(choice(
-        seq(choice('where', ':='), repeat($.ctor_alt)),
+        seq(choice(alias($._where, 'where'), ':='), repeat($.ctor_alt)),
         repeat1($.ctor_alt),
       )),
       optional($._deriving_clause),
@@ -881,7 +905,7 @@ export default grammar({
     ),
 
     ctor_alt: $ => seq(
-      '|',
+      alias($._bar, '|'),
       field('name', $.identifier),
       optional($._binders),
       optional($._type_spec),
@@ -919,7 +943,7 @@ export default grammar({
        (`name [binders] := value`) or a function-style helper
        (`name | pat => … | pat => …`). */
     where_struct: $ => prec.right(seq(
-      'where',
+      alias($._where, 'where'),
       optional(choice(
         '...',
         $.struct_field,
@@ -935,7 +959,7 @@ export default grammar({
        are full sub-declarations (function-style match alts), not
        struct field assignments. */
     where_decls: $ => seq(
-      'where',
+      alias($._where, 'where'),
       choice(
         $.where_aux_def,
         seq(
@@ -1006,10 +1030,10 @@ export default grammar({
     ),
 
     implicit_binder: $ => seq(
-      '{',
+      alias($._brace_open, '{'),
       repeat1(field('name', $._binder_ident)),
       optional($._type_spec),
-      '}',
+      alias($._brace_close, '}'),
     ),
 
     strict_implicit_binder: $ => seq(
@@ -1049,38 +1073,14 @@ export default grammar({
     _term: $ => choice($._lead_term, $._op_term),
 
     _lead_term: $ => choice(
-      $.fun,
-      $.let,
-      $.have,
-      $.suffices,
-      $.by_cases,
-      $.show,
-      $.if_then_else,
-      $.forall,
-      $.exists,
-      $.sigma,
-      $.big_op_binder,
-      $.by,
-      $.do_block,
-      $.do_try,
-      $.for_loop,
-      $.match,
-      $.tactic_case,
-      $.conv,
-      $.calc,
-      $.open_term,
+      $.fun, $.let, $.have, $.suffices, $.show, $.if_then_else,
+      $.forall, $.exists, $.sigma, $.big_op_binder, $.by, $.do_block,
+      $.match, $.calc, $.open_term,
     ),
 
     _op_term: $ => choice(
-      $._term_atom,
-      $.app,
-      $.proj,
-      $.subscript,
-      $.postfix_op,
-      $.binary_op,
-      $.unary_op,
-      $.universe_app,
-      $.induction,
+      $._term_atom, $.app, $.proj, $.subscript, $.postfix_op,
+      $.binary_op, $.unary_op, $.universe_app,
     ),
 
     _term_atom: $ => choice(
@@ -1306,43 +1306,35 @@ export default grammar({
        Mathlib pattern for structure-extension. `{a, b, c}` is the
        finite-set / insert-chain notation. */
     struct_lit: $ => seq(
-      '{',
+      alias($._brace_open, '{'),
       optional(choice(
-        seq(
-          sep1(field('source', $._term), ','),
-          'with',
-          optional(choice(
-            sep1($.struct_field, ','),
-            seq($._indent, sep1($.struct_field,
-              choice(',', $._newline)), $._dedent),
-          )),
-        ),
-        sep1($.struct_field, ','),
-        seq($._indent, sep1($.struct_field,
-          choice(',', $._newline)), $._dedent),
+        seq(sep1(field('source', $._term), ','), 'with',
+            $._record_anchor, optional($._record_fields)),
+        $._record_fields,
         sep1(field('elem', $._term), ','),
       )),
-      '}',
+      optional('..'), optional($._type_spec),
+      alias($._brace_close, '}'),
     ),
 
     /* `{ x : T | predicate }` or `{ x | predicate }` — set-builder. */
     set_builder: $ => seq(
-      '{',
+      alias($._brace_open, '{'),
       field('binder', $._binder_ident),
       optional($._type_spec),
-      '|',
+      alias($._bar, '|'),
       field('pred', $._term),
-      '}',
+      alias($._brace_close, '}'),
     ),
 
     /* `{ x : T // predicate }` — subtype notation. */
     subtype_lit: $ => seq(
-      '{',
+      alias($._brace_open, '{'),
       field('binder', $._binder_ident),
       $._type_spec,
       '//',
       field('pred', $._term),
-      '}',
+      alias($._brace_close, '}'),
     ),
     /* `name := value`, `name binders := value`, or `name {a b} :=
        value` (function-style fields in `instance F where method args
@@ -1354,16 +1346,10 @@ export default grammar({
       seq(
         field('name', $.identifier),
         optional(alias(repeat1(choice(
-          $._binder_ident,
-          $.implicit_binder,
-          $.explicit_binder,
+          $._binder_ident, $.implicit_binder, $.explicit_binder,
         )), $.binders)),
-        ':=',
-        field('value', $._term),
+        optional($._type_spec), ':=', field('value', $._term),
       ),
-      /* Field-name punning: `{ x, y }` abbreviates `{ x := x, y := y
-         }`. No binders on this branch — a bare name is a complete
-         field, so `x y := e` stays unambiguous (binders of `x`). */
       field('name', $.identifier),
     ),
 
@@ -1373,30 +1359,7 @@ export default grammar({
        binary-op states from forking through every lead alternative. */
     app: $ => prec.left(PREC.app, seq(
       field('fn', $._op_term),
-      /* A bare `do`/`try` block may never be an application
-         argument: `f do …` reads as `f` applied to the block only in
-         contrived code, but allowing it lets `for x in xs do` parse
-         the range as `xs (do …)` and steal the loop's `do` — and the
-         resulting GLR ambiguity starves the external scanner's
-         layout tokens. Parenthesised `(do …)` args still work via
-         `paren`. */
-      field('arg', choice(
-        $._term_atom,
-        $.fun,
-        $.let,
-        $.have,
-        $.suffices,
-        $.by_cases,
-        $.show,
-        $.if_then_else,
-        $.forall,
-        $.exists,
-        $.sigma,
-        $.big_op_binder,
-        $.by,
-        $.match,
-        $.tactic_case,
-      )),
+      field('arg', choice($._term_atom, $._lead_term)),
     )),
 
     proj: $ => prec.left(PREC.proj, seq(
@@ -1510,6 +1473,7 @@ export default grammar({
           '⋖', '⋗',  /* covby (atomic-cover) and its dual */
           '⊨', '⇒',  /* entailment / relation-implication (Relator) */
           '≺', '≼',  /* strict and non-strict order relations */
+          '<+:', '<:+', '<+>',
           '⊣',       /* adjunction (`F ⊣ G`) */
         )),
         /* `a = fun x => …` and `a ≤ if p then x else y` are common
@@ -1521,17 +1485,10 @@ export default grammar({
         field('op', choice('::', '::ᵣ', '::ₘ')),
         field('rhs', $._op_term),
       )),
-      /* `<;>` — tactic-combinator (run-on-all-goals); appears in
-         tactic-block bodies. */
-      prec.left(PREC.pipe, seq(
-        field('lhs', $._op_term),
-        field('op', '<;>'),
-        field('rhs', $._op_term),
-      )),
       prec.right(PREC.append, seq(
         field('lhs', $._op_term),
         field('op', '++'),
-        field('rhs', $._op_term),
+        field('rhs', $._term),
       )),
       prec.left(PREC.add, seq(
         field('lhs', $._op_term),
@@ -1771,10 +1728,13 @@ export default grammar({
        `with`-clause holds match-style branches. */
     induction: $ => prec.right(seq(
       choice('induction', 'cases'),
-      sep1(field('target', $._term_atom), ','),
-      optional(seq('using', field('elim', $.identifier))),
+      sep1(seq(
+        optional(seq(field('discr_name', $._binder_ident), ':')),
+        field('target', $._term),
+      ), ','),
+      optional(seq('using', field('elim', $._term))),
       optional(seq('generalizing', repeat1(field('gen', $._binder_ident)))),
-      optional(seq('with', repeat1($.match_alt))),
+      optional(seq('with', repeat1(alias($._tactic_match_alt, $.match_alt)))),
     )),
 
     show: $ => prec.right(seq(
@@ -1788,72 +1748,31 @@ export default grammar({
       )),
     )),
 
-    /* `if h : cond then a else b` — named hypothesis form. An
-       optional `else` (for do-block `if cond then stmt`) was tried
-       and abandoned twice: it splits LR states through the whole
-       term grammar and generate runs for tens of minutes at
-       multi-GB memory. Same for allowing `block_assign` in the
-       branches. Do-block `if … then` without `else` therefore
-       still parses with an error node. */
+    /* Term conditionals require else. Do conditionals have their own rule. */
     if_then_else: $ => prec.right(seq(
-      'if',
-      optional(seq(field('hyp', $._binder_ident), ':')),
-      field('cond', $._term),
-      'then',
-      field('then', $._term),
-      'else',
-      field('else', $._term),
+      'if', $._if_condition, 'then', field('then', $._term),
+      alias($._else, 'else'), field('else', $._term),
     )),
 
-    /*
-     * `by` and `do` accept either a single inline term or an
-     * indent-delimited block of `;`/newline-separated terms.
-     *
-     * Tactics and do-elements are deliberately *not* given dedicated
-     * rules. Every extra rule pulling on `_term` multiplied the LR
-     * state count; an earlier draft with named tactic forms grew
-     * parser.c to 10MB. Tooling can still recognize specific tactic
-     * vocabulary by inspecting the head identifier of an `app` node.
-     *
-     * The grammar accepts `let mut`, `←`/`<-` (bind), and `for`/`while`
-     * /`return` etc. by virtue of those being valid Lean syntax that
-     * the term-tier rules already cover (via `let`, the `for` keyword
-     * inside ranges, etc.). Coverage is approximate but far cheaper.
-     */
-    by: $ => seq('by', $._block_body),
-    do_block: $ => seq('do', $._block_body),
+    /* Tactic and do sequences retain their own statement grammar. */
+    by: $ => seq('by', $._tactic_body),
+    do_block: $ => seq('do', $._do_body),
 
-    _block_body: $ => choice(
-      prec.right(sep1(field('inline', $._term), ';')),
-      seq(
-        $._indent,
-        sep1(field('stmt', choice($.block_assign, $._term)),
-             repeat1(choice(';', $._newline))),
-        $._dedent,
-      ),
-    ),
+    _block_body: $ => body($, $._term),
 
     /* `try stmts catch (pat (: T)?)? => term (| pat => term)*
        finally stmts` — do-block exception handling. Catch bodies are
        single terms (as in `match_alt`): an indented `do …` in that
        position is a `do_block` term with its own layout. */
     do_try: $ => prec.right(seq(
-      'try',
-      $._block_body,
-      optional(seq(
-        'catch',
-        choice(
-          seq(
-            field('name', $._binder_ident),
-            optional($._type_spec),
-            choice('=>', '↦'),
-            field('body', $._term),
-          ),
-          repeat1(seq('|', field('pattern', $._term),
-                      choice('=>', '↦'), field('body', $._term))),
-        ),
-      )),
-      optional(seq('finally', $._block_body)),
+      'try', $._do_body,
+      optional(seq(alias($._catch, 'catch'), choice(
+        seq(field('name', $._binder_ident), optional($._type_spec),
+            choice('=>', '↦'), field('body', $._do_body)),
+        repeat1(seq(alias($._bar, '|'), field('pattern', $._term),
+                    choice('=>', '↦'), field('body', $._do_body))),
+      ))),
+      optional(seq(alias($._finally, 'finally'), $._do_body)),
     )),
 
     /* `for x in xs do …` / `for h : x in xs, y in ys do …` — do-block
@@ -1867,15 +1786,11 @@ export default grammar({
       'for',
       sep1(seq(
         optional(seq(field('acc', $._binder_ident), ':')),
-        /* `for (a, b) in xs` / `for ⟨a, b⟩ in xs` — tuple and
-           anonymous-constructor destructuring binders. */
         field('name', choice(
           $._binder_ident, $.tuple_binder, $.anon_ctor_binder)),
-        'in',
-        field('range', $._term),
+        'in', field('range', $._term),
       ), ','),
-      'do',
-      $._block_body,
+      alias($._for_do, 'do'), $._do_body,
     )),
 
     /* `x := v` mutation, valid only inside a do-block. */
@@ -1895,10 +1810,10 @@ export default grammar({
       repeat1($.match_alt),
     )),
     match_alt: $ => seq(
-      '|',
+      alias($._bar, '|'),
       /* `| a | b | c => …` folds several alternatives into one arm;
          `,`-separated patterns are constructor args. */
-      sep1(field('pattern', $._term), choice(',', '|')),
+      sep1(field('pattern', $._term), choice(',', alias($._bar, '|'))),
       /* Mathlib prefers `↦` over `=>` in match arms. */
       choice('=>', '↦'),
       field('body', $._term),
@@ -1908,21 +1823,15 @@ export default grammar({
        location then a `=>` conversion block. `conv_lhs`/`conv_rhs`/
        `conv_fun`/`conv_arg`/`conv_apply` select inside. */
     conv: $ => prec.right(seq(
-      choice('conv', 'conv_lhs', 'conv_rhs', 'conv_fun', 'conv_arg',
-             'conv_apply'),
+      choice('conv', 'conv_lhs', 'conv_rhs', 'conv_fun', 'conv_arg', 'conv_apply'),
       optional(seq(optional(choice('at', 'in')), $._term)),
-      '=>',
-      optional($._block_body),
+      '=>', $._tactic_body,
     )),
 
     /* A calc step is a relation term followed by its proof. Keeping the
        step list inside calc avoids competing with every ordinary block
        expression at each statement boundary. */
-    calc: $ => seq('calc', choice(
-      $.calc_step,
-      seq($._indent, sep1($.calc_step, repeat1(choice(';', $._newline))),
-          $._dedent),
-    )),
+    calc: $ => seq('calc', body($, $.calc_step)),
     calc_step: $ => seq(
       field('relation', $._term),
       ':=',
@@ -1933,14 +1842,95 @@ export default grammar({
        (analogous to a `match_alt` but goal-keyed). Stand-alone tactic
        statement; commonly chained as sibling at the same indent. */
     tactic_case: $ => prec.right(seq(
-      'case',
+      choice('case', "case'"),
       field('name', $.identifier),
       repeat(field('arg', $._binder_ident)),
-      '=>',
-      field('body', $._term),
+      '=>', field('body', $._tactic_body),
     )),
 
 
+
+
+    _tactic_body: $ => body($, $._tactic),
+    _do_body: $ => body($, $._do_statement),
+    _tactic: $ => choice($._tactic_atom, alias($._tactic_chain, $.binary_op)),
+    _tactic_chain: $ => prec.left(PREC.pipe, seq(
+      field('lhs', $._tactic), field('op', '<;>'), field('rhs', $._tactic_atom),
+    )),
+    _tactic_atom: $ => choice(
+      $.induction, $.tactic_case, $.by_cases, $.conv, $.tactic_simpa,
+      $.tactic_rcases, $.tactic_bullet, $.tactic_block, $.tactic_first,
+      alias($._tactic_match, $.match), $._op_term,
+      $.fun, $.let, $.have, $.suffices, $.show, $.if_then_else,
+      $.forall, $.exists, $.sigma, $.big_op_binder, $.by, $.do_block,
+      $.calc, $.open_term,
+    ),
+    tactic_bullet: $ => seq('·', $._tactic_body),
+    tactic_block: $ => seq(
+      alias($._brace_open, '{'), $._tactic_body, alias($._brace_close, '}'),
+    ),
+    tactic_first: $ => seq('first', repeat1(seq(alias($._bar, '|'), $._tactic_body))),
+    tactic_simpa: $ => prec.right(seq(
+      field('fn', alias(choice('simpa', 'simpa!', 'simpa?'), $.identifier)),
+      repeat(field('arg', $.paren)), optional('only'),
+      optional(field('arg', $.list_lit)),
+      optional(seq('using', field('arg', $._term))),
+    )),
+    tactic_rcases: $ => prec.right(seq(
+      field('fn', alias('rcases', $.identifier)),
+      sep1(seq(
+        optional(seq(field('hyp', $._binder_ident), ':')),
+        field('arg', $._term),
+      ), ','),
+      optional(seq('with', $.rcases_pattern)),
+    )),
+    rcases_pattern: $ => choice(
+      $.identifier, $.hole, '-',
+      seq(optional('@'), '⟨', sep0($.rcases_pattern, ','), '⟩'),
+      seq('(', $.rcases_pattern, ')'),
+      prec.left(1, seq($.rcases_pattern, alias($._bar, '|'), $.rcases_pattern)),
+      prec.right(2, seq($.rcases_pattern, ':', $._term)),
+    ),
+    _tactic_match: $ => prec.right(seq(
+      'match',
+      sep1(seq(optional(seq(field('discr_name', $._binder_ident), ':')),
+               field('scrutinee', $._term)), ','),
+      'with', repeat1(alias($._tactic_match_alt, $.match_alt)),
+    )),
+    _tactic_match_alt: $ => seq(
+      alias($._bar, '|'), sep1(field('pattern', $._term), choice(',', alias($._bar, '|'))),
+      choice('=>', '↦'), field('body', $._tactic_body),
+    ),
+    _do_statement: $ => choice(
+      alias($._do_if, $.if_then_else), alias($._do_match, $.match),
+      $.do_try, $.for_loop, $.block_assign, $._op_term,
+      $.fun, $.let, $.have, $.suffices, $.show,
+      $.forall, $.exists, $.sigma, $.big_op_binder, $.by, $.do_block,
+      $.calc, $.open_term,
+    ),
+    _if_condition: $ => choice(
+      seq('let', field('pattern', $._term), ':=', field('cond', $._term)),
+      seq(optional(seq(field('hyp', $._binder_ident), ':')),
+          field('cond', $._term)),
+    ),
+    _do_if: $ => prec.right(seq(
+      'if', $._if_condition, 'then', field('then', $._do_body),
+      optional(seq(alias($._else, 'else'), field('else', $._do_body))),
+    )),
+    _do_match: $ => prec.right(seq(
+      'match',
+      sep1(seq(optional(seq(field('discr_name', $._binder_ident), ':')),
+               field('scrutinee', $._term)), ','),
+      'with', repeat1(alias($._do_match_alt, $.match_alt)),
+    )),
+    _do_match_alt: $ => seq(
+      alias($._bar, '|'), sep1(field('pattern', $._term), choice(',', alias($._bar, '|'))),
+      choice('=>', '↦'), field('body', $._do_body),
+    ),
+    _record_fields: $ => seq(
+      sep1($.struct_field, choice(alias($._record_comma, ','), $._record_newline)),
+      optional(alias($._record_comma, ',')),
+    ),
 
     /* ===== lexicals (carried from stage 1) =============================== */
 
@@ -2003,10 +1993,12 @@ export default grammar({
        category-bar is `prec.dynamic(1, ...)` so tree-sitter prefers
        it over treating `name |` as a stray pipe. */
     quotation: $ => seq(
-      '`',
-      token.immediate('('),
-      optional(prec.dynamic(1, seq(field('category', $.identifier), '|'))),
-      $._term,
+      '`', token.immediate('('),
+      choice(
+        seq(field('category', alias('tactic', $.identifier)), alias($._bar, '|'), $._tactic),
+        seq(optional(prec.dynamic(1, seq(field('category', $.identifier), alias($._bar, '|')))),
+            $._term),
+      ),
       ')',
     ),
 

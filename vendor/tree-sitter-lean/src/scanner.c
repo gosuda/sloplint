@@ -31,6 +31,19 @@ enum TokenType {
   INDENT,
   DEDENT,
   NEWLINE,
+  BODY_INLINE,
+  BODY_INDENT,
+  BRACE_OPEN,
+  BRACE_CLOSE,
+  RECORD_ANCHOR,
+  RECORD_NEWLINE,
+  RECORD_COMMA,
+  FOR_DO,
+  ELSE,
+  CATCH,
+  FINALLY,
+  BAR,
+  WHERE,
   NORM_OPEN,
   NORM_CLOSE,
   ERROR_SENTINEL,
@@ -97,14 +110,53 @@ static bool is_id_rest(int32_t c) {
       || c == 0x221e;
 }
 
-/*
- * Indent stack: each entry is the column (in columns, not bytes) of an
- * open tactic/do block. Always contains at least one entry — the base
- * (0). Tokens push and pop based on observed line indentation.
- */
+/* Every layout delimiter owns a serialized frame. Inline bodies need the
+   same boundary state as indented bodies; braces shield enclosing frames. */
+enum FrameKind { ROOT_FRAME, INDENT_FRAME, BODY_FRAME, BRACE_FRAME, RECORD_FRAME };
+struct Frame { uint32_t column; enum FrameKind kind; };
 struct Scanner {
-  Array(uint16_t) indents;
+  Array(struct Frame) frames;
+  unsigned state_size;
 };
+
+static unsigned column_size(uint32_t column) {
+  unsigned size = 1;
+  while (column >= 128) { column >>= 7; size++; }
+  return size;
+}
+
+static unsigned frame_size(struct Frame frame) {
+  return 1 + column_size(frame.column);
+}
+
+static bool push_frame(struct Scanner *scanner, enum FrameKind kind,
+                       uint32_t column) {
+  struct Frame frame = { .column = column, .kind = kind };
+  unsigned size = frame_size(frame);
+  if (scanner->state_size + size > TREE_SITTER_SERIALIZATION_BUFFER_SIZE)
+    return false;
+  array_push(&scanner->frames, frame);
+  scanner->state_size += size;
+  return true;
+}
+
+static struct Frame *top_frame(struct Scanner *scanner) {
+  return array_back(&scanner->frames);
+}
+
+static bool is_brace(struct Frame frame) {
+  return frame.kind == BRACE_FRAME || frame.kind == RECORD_FRAME;
+}
+
+static bool pop_layout(struct Scanner *scanner, TSLexer *lexer,
+                       const bool *valid_symbols) {
+  if (!valid_symbols[DEDENT] || scanner->frames.size <= 1
+      || is_brace(*top_frame(scanner))) return false;
+  struct Frame frame = array_pop(&scanner->frames);
+  scanner->state_size -= frame_size(frame);
+  lexer->result_symbol = DEDENT;
+  return true;
+}
 
 static inline void advance(TSLexer *lexer) { lexer->advance(lexer, false); }
 static inline void skip(TSLexer *lexer)    { lexer->advance(lexer, true); }
@@ -217,10 +269,11 @@ static bool scan_identifier(TSLexer *lexer) {
  * Consume the body of a `/- … -/` style comment, honoring nesting.
  * The opening `/-` (or `/--`, `/-!`) must already have been consumed.
  */
-static bool scan_block_comment_body(TSLexer *lexer) {
+static bool scan_block_comment_body(TSLexer *lexer, bool *saw_newline) {
   unsigned depth = 1;
   while (depth > 0) {
     if (lexer->eof(lexer)) return false;
+    if (saw_newline && lexer->lookahead == '\n') *saw_newline = true;
     if (lexer->lookahead == '/') {
       advance(lexer);
       if (lexer->lookahead == '-') {
@@ -266,7 +319,7 @@ static bool scan_block_or_doc_comment(TSLexer *lexer,
     return false;
   }
 
-  if (!scan_block_comment_body(lexer)) return false;
+  if (!scan_block_comment_body(lexer, NULL)) return false;
   lexer->result_symbol = kind;
   return true;
 }
@@ -305,129 +358,191 @@ static bool scan_raw_string_after_r(TSLexer *lexer) {
   }
 }
 
-/* ---------- layout (indent / dedent / newline) -------------------------- */
+/* ---------- layout ------------------------------------------------------ */
 
-/*
- * If we're sitting on a newline AND any layout token is valid, walk
- * forward to the next non-blank, non-comment line and report what
- * happened to the indent level.
- *
- *   indent > top  → push, emit INDENT
- *   indent < top  → pop one, emit DEDENT (caller will re-invoke us if
- *                   more pops are needed)
- *   indent == top → emit NEWLINE
- *
- * Lines that are entirely blank or contain only a comment don't
- * participate — they're skipped, and we use the indent of the next
- * real content line.
- */
+/* Look ahead without moving mark_end. Comment text remains an ordinary
+   comment node when the caller emits its zero-width boundary token. */
+static bool preview_content(TSLexer *lexer, bool *saw_newline,
+                            uint32_t *column, int32_t *first) {
+  for (;;) {
+    while (lexer->lookahead == ' ' || lexer->lookahead == '\t'
+        || lexer->lookahead == '\r' || lexer->lookahead == '\n') {
+      if (lexer->lookahead == '\n') *saw_newline = true;
+      advance(lexer);
+    }
+    if (lexer->eof(lexer)) return false;
+    *column = lexer->get_column(lexer);
+    *first = lexer->lookahead;
+    if (lexer->lookahead == '/') {
+      advance(lexer);
+      if (lexer->lookahead != '-') return true;
+      advance(lexer);
+      if (!scan_block_comment_body(lexer, saw_newline)) return false;
+      continue;
+    }
+    if (lexer->lookahead == '-') {
+      advance(lexer);
+      if (lexer->lookahead != '-') return true;
+      while (!lexer->eof(lexer) && lexer->lookahead != '\n') advance(lexer);
+      continue;
+    }
+    return true;
+  }
+}
+
+static bool begin_body(struct Scanner *scanner, TSLexer *lexer,
+                       const bool *valid_symbols) {
+  bool saw_newline = false;
+  uint32_t column = 0;
+  int32_t first = 0;
+  lexer->mark_end(lexer);
+  if (!preview_content(lexer, &saw_newline, &column, &first)) return false;
+  enum TokenType token = saw_newline ? BODY_INDENT : BODY_INLINE;
+  if (!valid_symbols[token] || !push_frame(scanner, BODY_FRAME, column))
+    return false;
+  lexer->result_symbol = token;
+  return true;
+}
+
+static bool record_anchor(struct Scanner *scanner, TSLexer *lexer) {
+  struct Frame *frame = top_frame(scanner);
+  if (frame->kind != BRACE_FRAME) return false;
+  bool saw_newline = false;
+  uint32_t column = 0;
+  int32_t first = 0;
+  lexer->mark_end(lexer);
+  if (!preview_content(lexer, &saw_newline, &column, &first)) return false;
+  struct Frame replacement = { .column = column, .kind = RECORD_FRAME };
+  unsigned size = scanner->state_size - frame_size(*frame) + frame_size(replacement);
+  if (size > TREE_SITTER_SERIALIZATION_BUFFER_SIZE) return false;
+  *frame = replacement;
+  scanner->state_size = size;
+  lexer->result_symbol = RECORD_ANCHOR;
+  return true;
+}
+
+static bool scan_brace_open(struct Scanner *scanner, TSLexer *lexer) {
+  advance(lexer);
+  if (lexer->lookahead == '{') return false;
+  lexer->mark_end(lexer);
+  bool saw_newline = false;
+  uint32_t column = lexer->get_column(lexer);
+  int32_t first = 0;
+  (void)preview_content(lexer, &saw_newline, &column, &first);
+  if (!push_frame(scanner, BRACE_FRAME, column)) return false;
+  lexer->result_symbol = BRACE_OPEN;
+  return true;
+}
+
+static bool scan_brace_close(struct Scanner *scanner, TSLexer *lexer,
+                             const bool *valid_symbols) {
+  if (pop_layout(scanner, lexer, valid_symbols)) return true;
+  if (!valid_symbols[BRACE_CLOSE] || !is_brace(*top_frame(scanner)))
+    return false;
+  struct Frame frame = array_pop(&scanner->frames);
+  scanner->state_size -= frame_size(frame);
+  advance(lexer);
+  lexer->mark_end(lexer);
+  lexer->result_symbol = BRACE_CLOSE;
+  return true;
+}
+
+static bool scan_record_comma(struct Scanner *scanner, TSLexer *lexer) {
+  struct Frame frame = *top_frame(scanner);
+  if (!is_brace(frame)) return false;
+  advance(lexer);
+  lexer->mark_end(lexer);
+  bool saw_newline = false;
+  uint32_t column = 0;
+  int32_t first = 0;
+  if (!preview_content(lexer, &saw_newline, &column, &first)) return false;
+  if (first != '}' && first != ':' && first != '.' && column < frame.column)
+    return false;
+  lexer->result_symbol = RECORD_COMMA;
+  return true;
+}
+
+static int clause_token(const char *word) {
+  if (strcmp(word, "else") == 0) return ELSE;
+  if (strcmp(word, "catch") == 0) return CATCH;
+  if (strcmp(word, "finally") == 0) return FINALLY;
+  if (strcmp(word, "where") == 0) return WHERE;
+  if (strcmp(word, "do") == 0) return FOR_DO;
+  return -1;
+}
+
+static int scan_clause_word(TSLexer *lexer) {
+  char word[8];
+  unsigned length = 0;
+  while (length + 1 < sizeof word && is_alpha_ascii(lexer->lookahead)) {
+    word[length++] = (char)lexer->lookahead;
+    advance(lexer);
+  }
+  word[length] = 0;
+  if (is_id_rest(lexer->lookahead) || lexer->lookahead == '.') return -1;
+  return clause_token(word);
+}
+
+static bool explicit_close(int32_t c) {
+  return c == ')' || c == ']' || c == '}' || c == ',' ||
+         c == 0x27e9 || c == 0x203a || c == 0x27eb;
+}
+
+/* A DEDENT retains the triggering newline and changes the complete serialized
+   stack. A normal separator consumes its newline once. Clause boundaries can
+   consume whitespace because the following clause itself joins the bodies. */
 static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
                         const bool *valid_symbols) {
-  if (!(valid_symbols[INDENT]
-     || valid_symbols[DEDENT]
-     || valid_symbols[NEWLINE])) {
-    return false;
-  }
-
-  /* A dedent changes the stack but leaves its triggering newline unread.
-     Further dedents and the enclosing separator re-measure that same input;
-     every zero-width token therefore changes serialized scanner state. */
   lexer->mark_end(lexer);
-
-  /* Skip trailing spaces/tabs on the current line; we only care about
-     layout once we reach a newline. */
   while (lexer->lookahead == ' ' || lexer->lookahead == '\t'
-      || lexer->lookahead == '\r') {
+      || lexer->lookahead == '\r') skip(lexer);
+  if (lexer->lookahead != '\n' && !lexer->eof(lexer)) return false;
+  bool saw_newline = false;
+  while (lexer->lookahead == ' ' || lexer->lookahead == '\t'
+      || lexer->lookahead == '\r' || lexer->lookahead == '\n') {
+    if (lexer->lookahead == '\n') saw_newline = true;
     skip(lexer);
   }
-
-  /* If we're not at a newline (or EOF), no layout token applies. */
-  if (lexer->lookahead != '\n' && !lexer->eof(lexer)) return false;
-
-  uint32_t indent = 0;
-  bool saw_newline = false;
-  for (;;) {
-    if (lexer->lookahead == '\n') {
-      indent = 0;
-      saw_newline = true;
-      skip(lexer);
-    } else if (lexer->lookahead == ' ') {
-      indent++;
-      skip(lexer);
-    } else if (lexer->lookahead == '\t') {
-      indent += 8;
-      skip(lexer);
-    } else if (lexer->lookahead == '\r') {
-      skip(lexer);
-    } else if (lexer->eof(lexer)) {
-      /* EOF closes every open block. */
-      if (valid_symbols[DEDENT] && scanner->indents.size > 1) {
-        array_pop(&scanner->indents);
-        lexer->result_symbol = DEDENT;
-        return true;
-      }
-      return false;
-    } else {
-      break;
-    }
-  }
+  if (lexer->eof(lexer)) return pop_layout(scanner, lexer, valid_symbols);
   if (!saw_newline) return false;
-
-  uint16_t top = scanner->indents.size > 0
-    ? *array_back(&scanner->indents)
-    : 0;
-
-  /* `|` always continues the surrounding rule (match alt, ctor alt,
-     pipe-operator) — never terminates a layout block. Suppress
-     NEWLINE/DEDENT at the start of a `|`-line so the parser stays
-     inside the match/inductive/etc. */
+  struct Frame top = *top_frame(scanner);
+  uint32_t indent = lexer->get_column(lexer);
+  if (explicit_close(lexer->lookahead)) {
+    return pop_layout(scanner, lexer, valid_symbols);
+  }
+  if (!is_brace(top) && indent < top.column)
+    return pop_layout(scanner, lexer, valid_symbols);
   if (lexer->lookahead == '|') return false;
-
-  if (indent > top) {
-    if (valid_symbols[INDENT]) {
-      array_push(&scanner->indents, (uint16_t)indent);
+  if (is_brace(top)) {
+    if (valid_symbols[RECORD_NEWLINE] && indent == top.column) {
       lexer->mark_end(lexer);
-      lexer->result_symbol = INDENT;
+      lexer->result_symbol = RECORD_NEWLINE;
       return true;
     }
-    /* Continuation of a multi-line expression: the new line is more
-       indented than the surrounding block, so neither INDENT, DEDENT,
-       nor NEWLINE applies. Returning nothing lets the parser keep
-       consuming tokens as part of the same enclosing rule. */
     return false;
   }
-  if (indent < top && valid_symbols[DEDENT]) {
-    array_pop(&scanner->indents);
-    lexer->result_symbol = DEDENT;
-    return true;
-  }
-  if (indent == top && valid_symbols[NEWLINE]) {
+  if (indent > top.column && valid_symbols[INDENT]) {
+    if (!push_frame(scanner, INDENT_FRAME, indent)) return false;
     lexer->mark_end(lexer);
-    /* A `catch`/`finally` line closes out a do_try's inner block and
-       attaches via extras — emitting NEWLINE here would feed the
-       enclosing statement separator instead, orphaning the clause.
-       mark_end before the peek: the word's characters must stay
-       outside the NEWLINE token or any other `c`/`f`-led line
-       (`for`, `fun`, `cases`, `calc`, …) would lose its first word. */
-    if (lexer->lookahead == 'c' || lexer->lookahead == 'f') {
-      lexer->mark_end(lexer);
-      char word[8];
-      int n = 0;
-      while (n < 7 && is_alpha_ascii(lexer->lookahead)) {
-        word[n++] = (char)lexer->lookahead;
-        advance(lexer);
-      }
-      word[n] = 0;
-      if (((n == 5 && memcmp(word, "catch", 5) == 0)
-           || (n == 7 && memcmp(word, "finally", 7) == 0))
-          && !is_id_rest(lexer->lookahead)) {
-        return false;
-      }
-    }
-    lexer->result_symbol = NEWLINE;
+    lexer->result_symbol = INDENT;
     return true;
   }
-  return false;
+  if (indent != top.column || !valid_symbols[NEWLINE]) return false;
+  lexer->mark_end(lexer);
+  if (lexer->lookahead == 'e' || lexer->lookahead == 'c'
+      || lexer->lookahead == 'f' || lexer->lookahead == 'w') {
+    int token = scan_clause_word(lexer);
+    if (token >= 0) {
+      if (valid_symbols[token]) {
+        lexer->mark_end(lexer);
+        lexer->result_symbol = token;
+        return true;
+      }
+      if (pop_layout(scanner, lexer, valid_symbols)) return true;
+    }
+  }
+  lexer->result_symbol = NEWLINE;
+  return true;
 }
 
 /* ---------- dispatch ----------------------------------------------------- */
@@ -435,20 +550,51 @@ static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
 static bool scan(struct Scanner *scanner, TSLexer *lexer,
                  const bool *valid_symbols) {
   if (valid_symbols[ERROR_SENTINEL]) return false;
-
-  /* Layout tokens have to be considered before the whitespace skip —
-     they're triggered by newlines and leading-line indentation. */
-  if (valid_symbols[INDENT] || valid_symbols[DEDENT] || valid_symbols[NEWLINE]) {
+  if (valid_symbols[BODY_INLINE] || valid_symbols[BODY_INDENT])
+    return begin_body(scanner, lexer, valid_symbols);
+  if (valid_symbols[RECORD_ANCHOR])
+    return record_anchor(scanner, lexer);
+  if (valid_symbols[INDENT] || valid_symbols[DEDENT] ||
+      valid_symbols[NEWLINE] || valid_symbols[RECORD_NEWLINE]) {
     if (scan_layout(scanner, lexer, valid_symbols)) return true;
   }
-
-  /* Skip plain whitespace so the rest of the scanner's view matches
-     the lexer's. */
-  while (lexer->lookahead == ' '
-      || lexer->lookahead == '\t'
-      || lexer->lookahead == '\r'
-      || lexer->lookahead == '\n') {
-    skip(lexer);
+  while (lexer->lookahead == ' ' || lexer->lookahead == '\t'
+      || lexer->lookahead == '\r' || lexer->lookahead == '\n') skip(lexer);
+  lexer->mark_end(lexer);
+  if (lexer->eof(lexer)) return pop_layout(scanner, lexer, valid_symbols);
+  if (lexer->lookahead == '}' &&
+      (valid_symbols[BRACE_CLOSE] || valid_symbols[DEDENT]))
+    return scan_brace_close(scanner, lexer, valid_symbols);
+  if (explicit_close(lexer->lookahead) &&
+      pop_layout(scanner, lexer, valid_symbols)) return true;
+  if (lexer->lookahead == '{' && valid_symbols[BRACE_OPEN])
+    return scan_brace_open(scanner, lexer);
+  if (lexer->lookahead == ',' && valid_symbols[RECORD_COMMA])
+    return scan_record_comma(scanner, lexer);
+  if (lexer->lookahead == '|') {
+    advance(lexer);
+    if (lexer->lookahead == '|' || lexer->lookahead == '>') return false;
+    if (valid_symbols[BAR]) {
+      lexer->mark_end(lexer);
+      lexer->result_symbol = BAR;
+      return true;
+    }
+    return pop_layout(scanner, lexer, valid_symbols);
+  }
+  if (lexer->lookahead == 'e' || lexer->lookahead == 'c'
+      || lexer->lookahead == 'f' || lexer->lookahead == 'w'
+      || (lexer->lookahead == 'd' && valid_symbols[FOR_DO])) {
+    int token = scan_clause_word(lexer);
+    if (token >= 0 && valid_symbols[token]) {
+      lexer->mark_end(lexer);
+      lexer->result_symbol = token;
+      return true;
+    }
+    if (token >= 0 && token != FOR_DO &&
+        pop_layout(scanner, lexer, valid_symbols)) return true;
+    if (valid_symbols[SCANNED_IDENT])
+      return scan_identifier_continue(lexer, false);
+    return false;
   }
 
   /* Norm bars `‖ … ‖`. The same glyph opens and closes, disambiguated
@@ -512,44 +658,60 @@ static bool scan(struct Scanner *scanner, TSLexer *lexer,
 /* ---------- tree-sitter ABI --------------------------------------------- */
 
 void *tree_sitter_lean_external_scanner_create(void) {
-  struct Scanner *s = ts_calloc(1, sizeof(struct Scanner));
-  array_init(&s->indents);
-  array_push(&s->indents, 0);
-  return s;
+  struct Scanner *scanner = ts_calloc(1, sizeof(struct Scanner));
+  array_init(&scanner->frames);
+  (void)push_frame(scanner, ROOT_FRAME, 0);
+  return scanner;
 }
 
 void tree_sitter_lean_external_scanner_destroy(void *payload) {
-  struct Scanner *s = payload;
-  array_delete(&s->indents);
-  ts_free(s);
+  struct Scanner *scanner = payload;
+  array_delete(&scanner->frames);
+  ts_free(scanner);
 }
 
 unsigned tree_sitter_lean_external_scanner_serialize(void *payload, char *buffer) {
-  struct Scanner *s = payload;
+  struct Scanner *scanner = payload;
   unsigned offset = 0;
-  for (uint32_t i = 0;
-       i < s->indents.size && offset + sizeof(uint16_t) <= TREE_SITTER_SERIALIZATION_BUFFER_SIZE;
-       i++) {
-    uint16_t v = *array_get(&s->indents, i);
-    memcpy(buffer + offset, &v, sizeof v);
-    offset += sizeof v;
+  for (uint32_t i = 0; i < scanner->frames.size; i++) {
+    struct Frame frame = *array_get(&scanner->frames, i);
+    buffer[offset++] = (char)frame.kind;
+    uint32_t column = frame.column;
+    do {
+      uint8_t byte = column & 127;
+      column >>= 7;
+      buffer[offset++] = (char)(byte | (column ? 128 : 0));
+    } while (column);
   }
   return offset;
 }
 
 void tree_sitter_lean_external_scanner_deserialize(void *payload,
-                                                   const char *buffer,
-                                                   unsigned length) {
-  struct Scanner *s = payload;
-  array_clear(&s->indents);
+                                                  const char *buffer,
+                                                  unsigned length) {
+  struct Scanner *scanner = payload;
+  array_clear(&scanner->frames);
+  scanner->state_size = 0;
   unsigned offset = 0;
-  while (offset + sizeof(uint16_t) <= length) {
-    uint16_t v;
-    memcpy(&v, buffer + offset, sizeof v);
-    array_push(&s->indents, v);
-    offset += sizeof v;
+  while (offset < length) {
+    enum FrameKind kind = (enum FrameKind)(uint8_t)buffer[offset++];
+    uint32_t column = 0;
+    unsigned shift = 0;
+    uint8_t byte;
+    do {
+      if (offset >= length || shift > 28) {
+        array_clear(&scanner->frames);
+        scanner->state_size = 0;
+        (void)push_frame(scanner, ROOT_FRAME, 0);
+        return;
+      }
+      byte = (uint8_t)buffer[offset++];
+      column |= (uint32_t)(byte & 127) << shift;
+      shift += 7;
+    } while (byte & 128);
+    (void)push_frame(scanner, kind, column);
   }
-  if (s->indents.size == 0) array_push(&s->indents, 0);
+  if (scanner->frames.size == 0) (void)push_frame(scanner, ROOT_FRAME, 0);
 }
 
 bool tree_sitter_lean_external_scanner_scan(void *payload, TSLexer *lexer,

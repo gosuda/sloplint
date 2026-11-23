@@ -91,6 +91,11 @@ jobs:
             vendor/tree-sitter-lean/src/parser.c \
             vendor/tree-sitter-lean/src/scanner.c \
             -o "$RUNNER_TEMP/lean-parse-probe"
+      - name: Concrete Lean layout fixtures
+        if: ${{ !cancelled() && steps.probe.outcome == 'success' }}
+        run: |
+          timeout 1m "$RUNNER_TEMP/lean-parse-probe" crates/sloplint-syntax/tests/testdata/lean-layout.lean \
+            | tee vendor/tree-sitter-lean/layout-syntax.jsonl
       - name: Pinned production proof syntax
         if: ${{ !cancelled() && steps.probe.outcome == 'success' }}
         run: |
@@ -115,7 +120,7 @@ jobs:
             vendor/tree-sitter-lean/src/node-types.json
             vendor/tree-sitter-lean/generated-sha256.txt
             vendor/tree-sitter-lean/*.log
-            vendor/tree-sitter-lean/proof-syntax.jsonl
+            vendor/tree-sitter-lean/*-syntax.jsonl
 
   preserve-blobs:
     needs: generate

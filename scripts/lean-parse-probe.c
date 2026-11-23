@@ -88,12 +88,18 @@ static TSNode first_problem(TSNode root) {
       ts_tree_cursor_delete(&cursor);
       return node;
     }
-    if (ts_tree_cursor_goto_first_child(&cursor)) continue;
-    while (!ts_tree_cursor_goto_next_sibling(&cursor)) {
-      if (!ts_tree_cursor_goto_parent(&cursor)) {
-        ts_tree_cursor_delete(&cursor);
-        return root;
-      }
+    bool found = false;
+    if (ts_tree_cursor_goto_first_child(&cursor)) {
+      do {
+        if (ts_node_has_error(ts_tree_cursor_current_node(&cursor))) {
+          found = true;
+          break;
+        }
+      } while (ts_tree_cursor_goto_next_sibling(&cursor));
+    }
+    if (!found) {
+      ts_tree_cursor_delete(&cursor);
+      return node;
     }
   }
 }

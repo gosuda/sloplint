@@ -1,4 +1,4 @@
-//! Lean call and argument-shape heads: generic application nodes.
+//! Lean call and argument-shape heads: applications and structured tactics.
 
 use crate::hooks::{CallHead, Cx, child_by_field, narrow, text, trimmed};
 use sloplint_core::facts::{Arg, ArgShape, CallKind};
@@ -96,10 +96,16 @@ fn lean_arg_shape<'s>(cx: &Cx<'_, 's>, arg: Node<'_>) -> ArgShape<'s> {
 }
 
 pub(crate) fn call_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>> {
-    if n.kind() != "app" {
-        return None;
-    }
-    let (head, args) = flatten_app(n);
+    let (head, args) = match n.kind() {
+        "app" => flatten_app(n),
+        "tactic_simpa" | "tactic_rcases" => {
+            let head = child_by_field(n, "fn")?;
+            let mut cursor = n.walk();
+            let args = n.children_by_field_name("arg", &mut cursor).collect();
+            (head, args)
+        }
+        _ => return None,
+    };
     let callee = if head.kind() == "identifier" {
         text(cx, head)
     } else {

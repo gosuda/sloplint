@@ -38,6 +38,8 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("induction", Role::Match),
     ("for_loop", Role::Loop),
     ("app", Role::Call),
+    ("tactic_simpa", Role::Call),
+    ("tactic_rcases", Role::Call),
     ("let", Role::Decl),
     ("have", Role::Decl),
     ("block_assign", Role::Write),
