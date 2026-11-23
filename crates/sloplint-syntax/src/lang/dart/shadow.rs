@@ -86,7 +86,7 @@ pub(crate) fn push_pattern_names<'s>(
             }
         } else if !matches!(
             cur.kind(),
-            "qualified"
+            "qualified_name"
                 | "static_member_shorthand"
                 | "symbol_literal"
                 | "label"

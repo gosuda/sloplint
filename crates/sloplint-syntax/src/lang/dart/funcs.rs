@@ -42,6 +42,7 @@ fn param_from<'s>(cx: &Cx<'_, 's>, cell: ParamCell<'_>, out: &mut Vec<Param<'s>>
                 | "comment"
                 | "block_comment"
                 | "documentation_block_comment"
+                | "documentation_comment"
         )
     });
     out.push(Param {
@@ -92,7 +93,7 @@ fn params_from_list<'s>(cx: &Cx<'_, 's>, list: Node<'_>, out: &mut Vec<Param<'s>
 
 fn sole_call_of(body: Node<'_>) -> Option<usize> {
     let only = only_named_child_matching(body, |c| {
-        c.kind() != "comment" && c.kind() != "block_comment"
+        c.kind() != "comment" && c.kind() != "block_comment" && c.kind() != "documentation_comment"
     })?;
     if only.kind() == "call_expression" {
         return Some(only.id());
@@ -101,7 +102,7 @@ fn sole_call_of(body: Node<'_>) -> Option<usize> {
         return None;
     }
     let stmt = only_named_child_matching(only, |c| {
-        c.kind() != "comment" && c.kind() != "block_comment"
+        c.kind() != "comment" && c.kind() != "block_comment" && c.kind() != "documentation_comment"
     })?;
     if stmt.kind() != "return_statement" && stmt.kind() != "expression_statement" {
         return None;
@@ -227,7 +228,7 @@ pub(crate) fn function_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<Function
     let (doc, doc_pos) = preceding_comments(
         cx,
         n,
-        &["comment", "block_comment", "documentation_block_comment"],
+        &["comment", "block_comment", "documentation_block_comment", "documentation_comment"],
         &[],
     );
     Some(FunctionHead {

@@ -68,7 +68,7 @@ fn concat_static(cx: &Cx<'_, '_>, e: Node<'_>) -> u32 {
 
 fn collection_shape(n: Node<'_>) -> ArgShape<'static> {
     for c in named_children(n) {
-        if c.kind() == "pair" {
+        if c.kind() == "map_element" {
             return ArgShape::Other;
         }
         if c.kind() == "function_expression" {
@@ -149,7 +149,7 @@ fn dart_initializes_binding(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     let Some(parent) = cx.parent() else {
         return false;
     };
-    if parent.kind() != "initialized_variable_definition"
+    if parent.kind() != "initialized_variable_declaration"
         && parent.kind() != "initialized_identifier"
         && parent.kind() != "static_final_declaration"
     {

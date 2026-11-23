@@ -42,6 +42,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("comment", Role::Comment),
     ("block_comment", Role::Comment),
     ("documentation_block_comment", Role::Comment),
+    ("documentation_comment", Role::Comment),
     ("switch_statement_case", Role::MatchArm),
     ("switch_statement_default", Role::MatchArm),
     ("switch_expression_case", Role::MatchArm),
