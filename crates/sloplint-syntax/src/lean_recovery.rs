@@ -1,5 +1,7 @@
 //! Recover Lean commands when hidden missing nodes or an error root defeat span recovery.
 
+mod boundaries;
+
 use std::time::Instant;
 
 use sloplint_core::Pos;
@@ -34,7 +36,7 @@ pub(super) fn rescue<'s>(
             return Some(timeout_analysis(input));
         };
         tree = reparsed;
-        if tree.root_node().has_error() {
+        if tree.root_node().has_error() || source.has_opaque_command(tree.root_node()) {
             continue;
         }
         if !has_substantive_command(tree.root_node()) {
@@ -56,6 +58,7 @@ pub(super) fn rescue<'s>(
 struct RecoveryText {
     bytes: Vec<u8>,
     line_starts: Vec<usize>,
+    boundaries: boundaries::Boundaries,
     tainted: Vec<(u32, u32)>,
 }
 
@@ -71,6 +74,7 @@ impl RecoveryText {
         Self {
             bytes: source.as_bytes().to_vec(),
             line_starts,
+            boundaries: boundaries::scan(source),
             tainted: Vec::new(),
         }
     }
@@ -80,42 +84,115 @@ impl RecoveryText {
     }
 
     fn blank_failed_commands(&mut self, root: Node<'_>) -> bool {
+        if root.is_error() {
+            return self.blank_error_root(root);
+        }
         let mut cursor = root.walk();
         let mut bad: Vec<_> = root
             .children(&mut cursor)
-            .filter(|child| child.has_error())
+            .filter(|child| {
+                child.has_error()
+                    || (is_command(*child) && !self.boundaries.is_top_level(child.start_byte()))
+            })
             .map(row_span)
             .collect();
         bad.extend(gap_spans(root, &self.bytes, &self.line_starts));
         if bad.is_empty() {
             return self.blank_fragments(root);
         }
-        let groups = command_groups(root);
+        let groups = command_groups(root, &self.boundaries);
         let mut changed = false;
         for (start, end) in bad {
             for &(group_start, group_end) in &groups {
                 if start <= group_end && end >= group_start {
-                    changed |= self.blank_rows(group_start, group_end);
+                    changed |=
+                        self.blank_rows(group_start, self.failed_end(group_start, group_end));
                 }
             }
             // A dropped-token gap may lie between all exposed nodes. Its
             // own rows still need removing even when no group overlaps it.
-            changed |= self.blank_rows(start, end);
+            changed |= self.blank_rows(start, self.failed_end(start, end));
         }
         changed
+    }
+
+    /// An error root can fold a later declaration into an expression fragment.
+    /// Remove the first failed command, then let a fresh parse recover the tail.
+    /// Original lexical boundaries keep literals and quotations out of that tail.
+    fn blank_error_root(&mut self, root: Node<'_>) -> bool {
+        let mut cursor = root.walk();
+        let first_fragment = root
+            .children(&mut cursor)
+            .filter(|node| {
+                !is_comment(*node)
+                    && (!is_command(*node)
+                        || node.has_error()
+                        || !self.boundaries.is_top_level(node.start_byte()))
+            })
+            .map(|node| node.start_position().row)
+            .min();
+        let first_gap = gap_spans(root, &self.bytes, &self.line_starts)
+            .into_iter()
+            .map(|(start, _)| start)
+            .min();
+        let Some(start) = first_fragment.into_iter().chain(first_gap).min() else {
+            return false;
+        };
+        let next_declaration = self.next_declaration_row(start);
+        let next_command = root
+            .children(&mut cursor)
+            .filter(|node| {
+                is_command(*node)
+                    && !node.has_error()
+                    && self.boundaries.is_top_level(node.start_byte())
+            })
+            .map(|node| node.start_position().row)
+            .filter(|&row| row > start)
+            .min();
+        let end = next_declaration
+            .into_iter()
+            .chain(next_command)
+            .min()
+            .map_or_else(|| row_span(root).1, |row| row - 1);
+        self.blank_rows(start, end)
     }
 
     fn blank_fragments(&mut self, root: Node<'_>) -> bool {
         let mut changed = false;
         let mut cursor = root.walk();
         for child in root.children(&mut cursor) {
-            if is_command(child) || is_comment(child) {
+            if is_comment(child)
+                || (is_command(child) && self.boundaries.is_top_level(child.start_byte()))
+            {
                 continue;
             }
             let (start, end) = row_span(child);
             changed |= self.blank_rows(start, end);
         }
         changed
+    }
+
+    fn has_opaque_command(&self, root: Node<'_>) -> bool {
+        let mut cursor = root.walk();
+        root.named_children(&mut cursor)
+            .any(|node| is_command(node) && !self.boundaries.is_top_level(node.start_byte()))
+    }
+
+    fn next_declaration_row(&self, row: usize) -> Option<usize> {
+        let next = self
+            .boundaries
+            .declarations
+            .partition_point(|&at| at <= self.line_starts[row]);
+        self.boundaries
+            .declarations
+            .get(next)
+            .map(|&at| row_of(&self.line_starts, at))
+    }
+
+    fn failed_end(&self, start: usize, end: usize) -> usize {
+        self.next_declaration_row(start)
+            .filter(|&next| next <= end)
+            .map_or(end, |next| next - 1)
     }
 
     fn blank_rows(&mut self, start: usize, end: usize) -> bool {
@@ -211,7 +288,7 @@ fn has_substantive_command(root: Node<'_>) -> bool {
 
 /// A complete command starts a group even when indented. Other fragments
 /// start groups at column zero, keeping flat `run_meta` bodies together.
-fn command_groups(root: Node<'_>) -> Vec<(usize, usize)> {
+fn command_groups(root: Node<'_>, boundaries: &boundaries::Boundaries) -> Vec<(usize, usize)> {
     let mut groups = Vec::new();
     let mut current: Option<(usize, usize)> = None;
     let mut cursor = root.walk();
@@ -220,6 +297,7 @@ fn command_groups(root: Node<'_>) -> Vec<(usize, usize)> {
         .filter(|child| !is_comment(*child))
     {
         if (child.start_position().column == 0 || is_command(child))
+            && boundaries.is_top_level(child.start_byte())
             && let Some(group) = current.take()
         {
             groups.push(group);

@@ -112,3 +112,92 @@ fn racket_module_extensions_keep_dotted_stems() {
         assert_eq!(uncovered(root.path()), ["pkg/api.rkt"]);
     }
 }
+
+#[test]
+fn direct_requires_keep_the_requested_file_extension() {
+    let extensions = ["rkt", "rktl", "rktd"];
+    for extension in extensions {
+        let root = tempfile::tempdir().unwrap();
+        for sibling in extensions {
+            write(root.path(), &format!("pkg/lib/api.{sibling}"), LIBRARY);
+        }
+        let dotted_sibling = format!("pkg/lib/api.{extension}.rkt");
+        write(root.path(), &dotted_sibling, LIBRARY);
+        write(
+            root.path(),
+            "pkg/test/check.rkt",
+            &format!("#lang racket\n(require \"../lib/api.{extension}\")\n"),
+        );
+        let mut expected: Vec<String> = extensions
+            .into_iter()
+            .filter(|sibling| *sibling != extension)
+            .map(|sibling| format!("pkg/lib/api.{sibling}"))
+            .collect();
+        expected.push(dotted_sibling);
+        expected.sort();
+        assert_eq!(uncovered(root.path()), expected, "require api.{extension}");
+    }
+}
+
+#[test]
+fn filename_test_matching_remains_independent_of_extension() {
+    for extension in ["rkt", "rktl", "rktd"] {
+        let root = tempfile::tempdir().unwrap();
+        write(
+            root.path(),
+            "sloplint.toml",
+            "[project]\ntest_globs = [\"**/api_test.*\"]\n",
+        );
+        for sibling in ["rkt", "rktl", "rktd"] {
+            write(root.path(), &format!("pkg/api.{sibling}"), LIBRARY);
+        }
+        write(root.path(), "pkg/uncovered.rkt", LIBRARY);
+        write(
+            root.path(),
+            &format!("pkg/api_test.{extension}"),
+            "#lang racket\n",
+        );
+        assert_eq!(uncovered(root.path()), ["pkg/uncovered.rkt"]);
+    }
+}
+
+#[test]
+fn relative_requires_cannot_escape_the_project_root() {
+    for (test, target, library) in [
+        ("test.rkt", "../shared.rkt", "shared.rkt"),
+        ("test.rkt", "../../shared.rkt", "shared.rkt"),
+        (
+            "pkg/test/check.rkt",
+            "../../../pkg/shared.rkt",
+            "pkg/shared.rkt",
+        ),
+    ] {
+        let root = tempfile::tempdir().unwrap();
+        write(root.path(), library, LIBRARY);
+        write(
+            root.path(),
+            test,
+            &format!("#lang racket\n(require \"{target}\")\n"),
+        );
+        assert_eq!(
+            uncovered(root.path()),
+            [library],
+            "{test} requires {target}"
+        );
+    }
+}
+
+#[test]
+fn parent_traversal_can_reach_the_project_root() {
+    for target in ["../shared.rkt", "../../pkg/shared.rkt"] {
+        let root = tempfile::tempdir().unwrap();
+        write(root.path(), "pkg/shared.rkt", LIBRARY);
+        write(root.path(), "pkg/uncovered.rkt", LIBRARY);
+        write(
+            root.path(),
+            "pkg/test/check.rkt",
+            &format!("#lang racket\n(require \"{target}\")\n"),
+        );
+        assert_eq!(uncovered(root.path()), ["pkg/uncovered.rkt"], "{target}");
+    }
+}

@@ -149,7 +149,12 @@ fn gapless_error_root_keeps_healthy_prefix() {
 
 #[test]
 fn trailing_comments_do_not_erase_healthy_commands() {
-    for comment in ["-- ordinary comment", "/- ordinary comment -/"] {
+    for comment in [
+        "-- ordinary comment",
+        "/- ordinary comment -/",
+        "-- sloplint-allow-file: retained trailing directive",
+        "/- sloplint-allow-file: retained trailing directive -/",
+    ] {
         let source = GAPLESS.replace(
             "open Lean Meta Std.HashSet",
             &format!("open Lean Meta Std.HashSet {comment}"),
@@ -159,12 +164,10 @@ fn trailing_comments_do_not_erase_healthy_commands() {
         assert_eq!(import_lines(&analysis), [1, 3, 3, 3], "{comment}");
         assert_eq!(functions(&analysis), [("good", 7)], "{comment}");
         assert!(!analysis.tainted.contains(3), "{comment}");
-        assert!(
-            analysis
-                .comments
-                .iter()
-                .any(|text| text.text.contains("ordinary comment")),
-            "the trailing comment remains available for suppression processing",
+        assert_eq!(
+            analysis.comments.iter().any(|text| text.text == comment),
+            comment.contains("sloplint-allow-file"),
+            "only directive comments remain available for suppression processing",
         );
     }
 }
@@ -192,9 +195,12 @@ fn comments_from_both_recovery_stages_remain_available() {
     let source = GAPLESS
         .replace(
             "def anyM",
-            "theorem le_mid : MyNat.le = (.≤.) := rfl -- removed theorem\n\ndef anyM",
+            "theorem le_mid : MyNat.le = (.≤.) := rfl -- sloplint-allow-file: removed theorem\n\ndef anyM",
         )
-        .replace(" return false", " -- removed loop\n return false");
+        .replace(
+            " return false",
+            " -- sloplint-allow-file: removed loop\n return false",
+        );
     let analysis = run(&source);
     assert_partial(&analysis, 9);
     assert_eq!(functions(&analysis), [("good", 7)]);
@@ -217,6 +223,93 @@ fn error_root_keeps_a_healthy_suffix() {
     assert_eq!(functions(&analysis), [("good", 7), ("after", 15)]);
     assert_eq!(import_lines(&analysis), [1, 3, 3, 3]);
     assert!(!analysis.tainted.contains(15));
+}
+
+#[test]
+fn recovered_suffix_keeps_its_attributes_and_modifiers() {
+    // The failed parse places a MISSING identifier in `@[simp]`; the other
+    // prefixes expose no concrete error node before fragment recovery.
+    for (prefix, error_line) in [
+        ("@[simp]\nprivate ", 15),
+        ("public meta ", 9),
+        ("noncomputable ", 9),
+    ] {
+        let source = format!("{GAPLESS}\n{prefix}def after (y : Nat) : Nat := y\n");
+        let analysis = run(&source);
+        assert_partial(&analysis, error_line);
+        let after = analysis
+            .facts
+            .functions
+            .iter()
+            .find(|function| function.name == "after")
+            .expect("the declaration after the failed command survives");
+        assert!(!analysis.tainted.contains(after.pos.line), "{prefix}");
+        assert!(!analysis.tainted.contains(15), "prefix row: {prefix}");
+    }
+}
+
+#[test]
+fn command_text_inside_literals_and_comments_is_not_recovered() {
+    for opaque in [
+        "\"before\ndef ghost (x : Nat) : Nat := x\nafter\"",
+        "r#\"before\ndef ghost (x : Nat) : Nat := x\nafter\"#",
+        "/- before\n/- nested -/\ndef ghost (x : Nat) : Nat := x\nafter -/",
+        "s!\"before {\"nested\"}\ndef ghost (x : Nat) : Nat := x\nafter\"",
+        "`(command|\ndef ghost (x : Nat) : Nat := x\n)",
+    ] {
+        let source = format!("{GAPLESS}\n {opaque}\n\ndef after (y : Nat) : Nat := y\n");
+        let analysis = run(&source);
+        assert!(analysis.partial, "healthy commands survive: {opaque}");
+        assert!(!analysis.timed_out, "small input must finish: {opaque}");
+        assert!(analysis.parse_error.is_some(), "original error: {opaque}");
+        let names: Vec<_> = functions(&analysis)
+            .into_iter()
+            .map(|(name, _)| name)
+            .collect();
+        assert_eq!(names, ["good", "after"], "{opaque}");
+    }
+}
+
+#[test]
+fn commands_exposed_from_unsupported_string_arguments_are_not_code() {
+    for contents in ["open Ghost\n", "def ghost (x : Nat) : Nat := x\nafter"] {
+        let broken = format!("deprecated_module\n \"before\n{contents}\"\n");
+        let failed = run(&broken);
+        assert!(
+            !failed.partial,
+            "no independent command survives: {contents}"
+        );
+        assert!(
+            failed.facts.functions.is_empty(),
+            "quoted declarations: {contents}"
+        );
+        assert!(
+            failed.facts.imports.is_empty(),
+            "quoted imports: {contents}"
+        );
+
+        let source = format!("{broken}\ndef after (y : Nat) : Nat := y\n");
+        let analysis = run(&source);
+        assert!(
+            analysis.partial,
+            "the real declaration survives: {contents}"
+        );
+        assert_eq!(
+            functions(&analysis)
+                .iter()
+                .map(|(name, _)| *name)
+                .collect::<Vec<_>>(),
+            ["after"]
+        );
+        assert!(
+            analysis.facts.imports.is_empty(),
+            "quoted imports: {contents}"
+        );
+        assert!(
+            analysis.tainted.contains(3),
+            "quoted code is removed: {contents}"
+        );
+    }
 }
 
 #[test]
@@ -243,7 +336,7 @@ fn a_file_without_surviving_commands_stays_failed() {
 
 #[test]
 fn comments_alone_do_not_count_as_recovered_code() {
-    let source = "-- ordinary comment\n\
+    let source = "-- sloplint-allow-file: comment without surviving commands\n\
                   theorem le_mid : MyNat.le = (.≤.) := rfl\n";
     let analysis = run(source);
     assert!(analysis.parse_error.is_some());

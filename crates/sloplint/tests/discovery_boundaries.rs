@@ -162,7 +162,7 @@ impl LockedDir {
             .expect("directory metadata")
             .permissions();
         let guard = Self { path, permissions };
-        std::fs::set_permissions(&guard.path, std::fs::Permissions::from_mode(0))
+        std::fs::set_permissions(&guard.path, std::fs::Permissions::from_mode(0o0))
             .expect("deny directory access");
         if std::fs::read_dir(&guard.path).is_ok() {
             let context = "directory access remains permitted after chmod(0)";
@@ -319,6 +319,16 @@ fn a_relative_implicit_root_uses_the_supplied_working_directory() {
     let scope = implicit_scope(&cwd, Some(Path::new("..")), None)
         .expect("resolve the root against the supplied cwd");
     assert_eq!(scope, vec![cwd]);
+}
+
+#[test]
+fn a_default_rules_request_renders_the_current_directory() {
+    let text = render(&RulesRequest::default()).expect("render rules from the current directory");
+    assert!(
+        text.lines()
+            .any(|line| line.starts_with("meta/parse-error level=")),
+        "the default request must render the rule catalog: {text}"
+    );
 }
 
 #[test]
