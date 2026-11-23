@@ -297,6 +297,20 @@ cmd_verify() {
       diffs=1
     fi
   done < <(cd "$work/upstream" && find . -path "*/src/grammar.json" -o -path "*/src/node-types.json" -o -path "*/src/parser.c" | sort)
+  # Compare external scanner sources too: scanner drift changes parsing
+  # behavior without changing any generated artifact (e.g. powershell).
+  while IFS= read -r sf; do
+    rel="${sf#./}"
+    if [ -f "$ROOT/vendor/$name/$rel" ]; then
+      if ! cmp -s "$work/upstream/$rel" "$ROOT/vendor/$name/$rel"; then
+        printf 'grammars.sh verify: %s: differs: %s\n' "$name" "$rel" >&2
+        diffs=1
+      fi
+    else
+      printf 'grammars.sh verify: %s: missing vendor artifact: %s\n' "$name" "$rel" >&2
+      diffs=1
+    fi
+  done < <(cd "$work/upstream" && find . -path "*/src/scanner.c" -o -path "*/src/scanner.cc" -o -path "*/common/scanner.h" | sort)
   if [ "$diffs" -ne 0 ]; then
     die "$name: regenerated tree differs from vendor/$name"
   fi
