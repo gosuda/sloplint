@@ -217,7 +217,10 @@ cmd_verify() {
       fi
     done
     if [ -z "$patch_level" ]; then
-      git -C "$work/upstream" apply --check -p1 < "$ROOT/$patch" 2>&1 | head -3 >&2
+      # Show the -p1 errors without a pipe: under pipefail a failing check
+      # would kill the shell before die names the pin.
+      git -C "$work/upstream" apply --check -p1 < "$ROOT/$patch" >"$work/apply-err" 2>&1 || true
+      head -3 "$work/apply-err" >&2
       die "$name: patch $patch does not apply to $commit"
     fi
     if [ "$patch_level" != "-p1" ]; then
