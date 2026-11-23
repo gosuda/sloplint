@@ -28,7 +28,9 @@ fn boundary_lean_hidden_missing_keeps_neighbor_findings() {
          \n\
          theorem le_mid : MyNat.le = (.≤.) := rfl\n\
          \n\
-         def after (y : Nat) : Nat := y * 2\n",
+         def after (y : Nat) : Nat := y * 2\n\
+         \n\
+         open Foo.Bar\n",
     );
     let r = run_ok(&super::RunOptions {
         strictness: Some(super::Strictness::Strict),
@@ -52,12 +54,12 @@ fn boundary_lean_hidden_missing_keeps_neighbor_findings() {
         .collect();
     assert_eq!(
         wildcards.len(),
-        2,
-        "both namespaces of the surviving `open` must still be reported: {:?}",
+        3,
+        "both `open` commands must still be reported: {:?}",
         r.findings
     );
     assert!(
-        wildcards.iter().all(|f| f.line == 3),
+        wildcards.iter().all(|f| f.line == 3 || f.line == 11),
         "no finding may move onto the blanked command: {:?}",
         wildcards
     );
