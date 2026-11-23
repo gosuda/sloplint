@@ -3,6 +3,7 @@ use std::collections::BTreeSet;
 use crate::config::Strictness;
 use crate::facts::FileFacts;
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift};
 use crate::rules::{
     Build, EmptyOptions, Family, FileRule, Preset, RuleInfo, Settings, parse_options,
@@ -52,6 +53,9 @@ struct EchoComment;
 
 impl FileRule for EchoComment {
     fn check(&self, facts: &FileFacts<'_>, out: &mut Vec<Finding>) {
+        if matches!(facts.lang, Lang::Racket) {
+            return;
+        }
         for function in &facts.functions {
             if function.doc.is_empty() || function.in_test {
                 continue;
