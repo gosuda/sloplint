@@ -175,15 +175,20 @@ cmd_verify() {
   command -v git >/dev/null || die "git not found"
   local tsbin="${GRAMMARS_TS_BIN:-tree-sitter}"
   command -v "$tsbin" >/dev/null || die "tree-sitter CLI not found: $tsbin (set GRAMMARS_TS_BIN)"
+  local tsver=""
   if [ -n "$generator" ]; then
-    if ! "$tsbin" --version 2>&1 | grep -q "$generator"; then
-      die "CLI version mismatch: entry wants $generator, got $("$tsbin" --version 2>&1)"
-    fi
+    tsver="$("$tsbin" --version 2>&1)"
+    case "$tsver" in
+      "tree-sitter $generator") ;;
+      *) die "CLI version mismatch: entry wants tree-sitter $generator, got $tsver" ;;
+    esac
   fi
   local scratch="${GRAMMARS_SCRATCH:-/dev/shm/grammars-verify}"
-  local work="$scratch/$name"
-  rm -rf "$work"
-  mkdir -p "$work"
+  mkdir -p "$scratch"
+  # Unique per-run directory (mktemp mode 0700): a predictable shared path
+  # lets another local user alter the checkout between fetch and generate.
+  local work
+  work="$(mktemp -d "$scratch/$name-XXXXXX")"
   git init -q "$work/upstream"
   git -C "$work/upstream" remote add origin "$upstream"
   git -C "$work/upstream" fetch --depth 1 origin "$commit" 2>"$work/fetch.err" || {
