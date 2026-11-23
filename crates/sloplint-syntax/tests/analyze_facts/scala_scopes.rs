@@ -380,3 +380,24 @@ fn symbolic_param_shadowing_method_is_not_a_write() {
         );
     });
 }
+
+#[test]
+fn default_arg_call_past_same_clause_param_records_the_write() {
+    // A parameter is not in scope in its own parameter clause (SLS 4.6), so
+    // a call inside a default value that names a same-clause parameter
+    // resolves to the outer method of that name. The assignment is a real
+    // write, not a named argument.
+    let source = "object T {\n  def sink(ignored: Unit): Int = 0\n  def run(sink: Unit => Int, value: Int = { var count = 0; sink(count = 1); count }): Int = value\n}\n";
+    with_scala_bindings(source, |found| {
+        let counts = named_all(found, "count");
+        assert_eq!(
+            counts.len(),
+            1,
+            "the default block holds one count binding: {found:?}"
+        );
+        assert_eq!(
+            counts[0].write_lines, 1,
+            "the call through the outer method records the write: {found:?}"
+        );
+    });
+}
