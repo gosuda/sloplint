@@ -1,0 +1,143 @@
+name: Lean grammar coverage
+
+on:
+  push:
+    branches: [experiment/lean-grammar-repair]
+  pull_request:
+    paths:
+      - vendor/tree-sitter-lean/**
+      - crates/sloplint-syntax/tests/grammar_gaps/lean.rs
+      - scripts/lean-parse-probe.c
+      - .github/workflows/lean-grammar.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lean-grammar-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  generate:
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 90
+    outputs:
+      generated: ${{ steps.pack.outputs.generated }}
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_BUILD_JOBS: "2"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: tree-sitter/tree-sitter
+          ref: 3fb7be49145acfb07e33b61ed5689e2b6771b2e9 # v0.27.2
+          path: _fixtures/tree-sitter
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: gosuda/elegant-mermaid
+          ref: 4f18d67db8d2e7434cfbf6eed0627d6bb182923d
+          path: _fixtures/elegant-mermaid
+          persist-credentials: false
+      - name: Install pinned generator
+        run: |
+          curl --fail --silent --show-error --location --retry 3 \
+            --output "$RUNNER_TEMP/tree-sitter.gz" \
+            https://github.com/tree-sitter/tree-sitter/releases/download/v0.27.1/tree-sitter-linux-x64.gz
+          printf '%s\n' "d01042f94ba3d6827ddc9788e235f75d8366431be42bdf90ade534d960c98b7d  $RUNNER_TEMP/tree-sitter.gz" \
+            | sha256sum --check --strict
+          gzip -dc "$RUNNER_TEMP/tree-sitter.gz" > "$RUNNER_TEMP/tree-sitter"
+          chmod +x "$RUNNER_TEMP/tree-sitter"
+          "$RUNNER_TEMP/tree-sitter" --version
+          printf '%s\n' "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - name: Generate ABI 15 parser
+        id: generate
+        working-directory: vendor/tree-sitter-lean
+        run: |
+          /usr/bin/time -v timeout 70m tree-sitter generate --abi 15 --js-runtime native 2>&1 | tee generate.log
+      - name: Preserve generated artifacts
+        id: pack
+        if: ${{ !cancelled() && steps.generate.outcome == 'success' }}
+        working-directory: vendor/tree-sitter-lean
+        run: |
+          gzip -n -9 -c src/parser.c > src/parser.c.gz
+          printf 'generated=true\n' >> "$GITHUB_OUTPUT"
+          sha256sum grammar.js src/scanner.c src/parser.c.gz src/grammar.json src/node-types.json > generated-sha256.txt
+      - name: Existing vendored corpus
+        if: ${{ !cancelled() && steps.generate.outcome == 'success' }}
+        working-directory: vendor/tree-sitter-lean
+        run: |
+          export XDG_CACHE_HOME="$RUNNER_TEMP/lean-grammar-cache"
+          timeout 10m tree-sitter test 2>&1 | tee corpus.log
+      - name: Build bounded parser probe
+        id: probe
+        if: ${{ !cancelled() && steps.generate.outcome == 'success' }}
+        run: |
+          cc -std=c11 -D_DEFAULT_SOURCE -O0 -g0 \
+            -I _fixtures/tree-sitter/lib/include \
+            -I _fixtures/tree-sitter/lib/src \
+            -I vendor/tree-sitter-lean/src \
+            scripts/lean-parse-probe.c \
+            _fixtures/tree-sitter/lib/src/lib.c \
+            vendor/tree-sitter-lean/src/parser.c \
+            vendor/tree-sitter-lean/src/scanner.c \
+            -o "$RUNNER_TEMP/lean-parse-probe"
+      - name: Pinned production proof syntax
+        if: ${{ !cancelled() && steps.probe.outcome == 'success' }}
+        run: |
+          mapfile -d '' sources < <(find _fixtures/elegant-mermaid/proofs -name '*.lean' -not -path '*/.lake/*' -print0 | sort -z)
+          timeout 5m "$RUNNER_TEMP/lean-parse-probe" "${sources[@]}" \
+            | tee vendor/tree-sitter-lean/proof-syntax.jsonl
+      - name: Focused Lean adapter regressions
+        if: ${{ !cancelled() && steps.generate.outcome == 'success' }}
+        run: |
+          cargo test -p sloplint-syntax --locked --test grammar_gaps lean:: -- --nocapture \
+            2>&1 | tee vendor/tree-sitter-lean/adapter.log
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ always() }}
+        with:
+          name: lean-grammar-${{ github.sha }}
+          if-no-files-found: error
+          path: |
+            vendor/tree-sitter-lean/grammar.js
+            vendor/tree-sitter-lean/src/scanner.c
+            vendor/tree-sitter-lean/src/parser.c.gz
+            vendor/tree-sitter-lean/src/grammar.json
+            vendor/tree-sitter-lean/src/node-types.json
+            vendor/tree-sitter-lean/generated-sha256.txt
+            vendor/tree-sitter-lean/*.log
+            vendor/tree-sitter-lean/proof-syntax.jsonl
+
+  preserve-blobs:
+    needs: generate
+    if: ${{ always() && needs.generate.outputs.generated == 'true' && github.event_name == 'push' }}
+    runs-on: depot-ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: lean-grammar-${{ github.sha }}
+          path: generated
+      - name: Store generated files as unreferenced Git blobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for path in src/parser.c.gz src/grammar.json src/node-types.json; do
+            payload="$RUNNER_TEMP/blob.json"
+            jq -n --rawfile content <(base64 -w0 "generated/$path") \
+              '{content: $content, encoding: "base64"}' > "$payload"
+            sha="$(gh api --method POST "repos/$GITHUB_REPOSITORY/git/blobs" --input "$payload" --jq .sha)"
+            printf '%s %s\n' "$sha" "vendor/tree-sitter-lean/$path"
+          done

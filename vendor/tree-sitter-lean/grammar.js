@@ -75,10 +75,6 @@ export default grammar({
     /* After `attributes`, `import` is no longer possible, but
        `public meta …` still chooses between section and declaration. */
     [$.section, $.declaration],
-    /* `calc 0 = 0 := rfl` — after a `;`/line-start a `x = y` prefix
-       can be a binary `=` term or the head of a `calc_step`; the `:=`
-       after the rhs decides, which LR(1) cannot see. */
-    [$._block_body, $.calc_step],
     /* `Foo a.b` — custom_command arg atom vs an `_op_term` that can
        continue into a projection after the atom. decl_doc_cmd's
        atom-repeat shares the generated repeat node with
@@ -1828,25 +1824,11 @@ export default grammar({
     do_block: $ => seq('do', $._block_body),
 
     _block_body: $ => choice(
-      /* Inline `by tac; tac` and `do x; y` — multiple tactics
-         separated by semicolons, all on one line. No `,`: inside
-         `{ f := by t, g := 1 }` the comma ends the field, not the
-         tactic. */
-      /* `calc_step` inline too — `calc 0 = 0 := rfl` outside `by`.
-         The `x = y` prefix also matches a binary `=` term, so GLR
-         must prefer the step when `:=` follows. */
-      prec.right(sep1(field('inline', choice(
-        prec.dynamic(1, $.calc_step), $._term)), ';')),
+      prec.right(sep1(field('inline', $._term), ';')),
       seq(
         $._indent,
-        /* `repeat1` on the separator lets a `;` begin the line
-           after a NEWLINE (`e1\n    ; e2`): sepByIndentSemicolon
-           writes separators at line-start. `calc_step` covers the
-           `_ = x := h` shape inside `calc` blocks. */
-        sep1(field('stmt', choice(
-            $.block_assign, prec.dynamic(1, $.calc_step), $._term)),
+        sep1(field('stmt', choice($.block_assign, $._term)),
              repeat1(choice(';', $._newline))),
-
         $._dedent,
       ),
     ),
@@ -1933,14 +1915,16 @@ export default grammar({
       optional($._block_body),
     )),
 
-    /* `calc lhs = rhs := proof\n  _ ≤ rhs2 := proof2` — equational
-       reasoning; steps are newline/`;`-separated via `_block_body`. */
-    calc: $ => prec.right(seq('calc', optional($._block_body))),
+    /* A calc step is a relation term followed by its proof. Keeping the
+       step list inside calc avoids competing with every ordinary block
+       expression at each statement boundary. */
+    calc: $ => seq('calc', choice(
+      $.calc_step,
+      seq($._indent, sep1($.calc_step, repeat1(choice(';', $._newline))),
+          $._dedent),
+    )),
     calc_step: $ => seq(
-      field('lhs', $._term),
-      choice('=', '<', '≤', '>', '≥', '≠', '≡', '~', '≈', '∈',
-             '⊆', '⊂', '⊑', '≺', '≼', '↔', '⇔'),
-      field('rhs', $._term),
+      field('relation', $._term),
       ':=',
       field('proof', $._term),
     ),
