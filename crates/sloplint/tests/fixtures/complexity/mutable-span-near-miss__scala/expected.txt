@@ -1,2 +1,5 @@
 # Near-miss: val is never rewritten after declaration.
 # shadowed-generator.scala: outer `total` is written once on line 4; the line-27 write targets the nested block's own `total` under the `for` generator, so misattribution would span 23 and fire.
+# shadowed-param.scala: the `++` parameter shadows the outer method, so
+# `++(count = 1)` is a named argument through the parameter's `apply` and
+# records no write; without the guard the write at line 38 would span 30 and fire.
