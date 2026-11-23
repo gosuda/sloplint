@@ -2,11 +2,11 @@
 
 ## Provenance
 
-- Upstream: https://github.com/tree-sitter/tree-sitter-php, tag `v0.25.1`
-  (commit `58d5643086ae60e93a3746cca648363ee97c8761`).
-- Published crate: `tree-sitter-php` 0.25.1 (name and version unchanged).
-- Regenerated with the pinned CLI `tree-sitter` 0.27.1
-  (`/home/alpha/lint/complexity-linter/.outline/tools/tree-sitter-cli/bin/tree-sitter`).
+- Upstream: https://github.com/tree-sitter/tree-sitter-php, tag `v0.25.2`
+  (commit `c1e13490bd656b8869cd47e6f74997ed46750a08`, also the default-branch
+  head; matches the published crate's `.cargo_vcs_info.json` sha1).
+- Published crate: `tree-sitter-php` 0.25.2 (name and version unchanged).
+- Regenerated with the pinned CLI `tree-sitter` 0.27.1.
 - Regen command, run in each dialect directory after editing `common/`:
 
   ```
@@ -34,9 +34,9 @@
   - `php_only/src/grammar.json`, `php_only/src/node-types.json`, `php_only/src/parser.c`
   - `node-types.json` lists the same 305 (type, named) entries as the published
     grammar, so no node kinds were added or removed.
-- Added: `test/corpus/` (upstream v0.25.1 corpus, verbatim) and
+- Added: `test/corpus/` (upstream v0.25.2 corpus, verbatim) and
   `test/corpus/sloplint_*.txt` (six files, seven cases), `sloplint-grammar.patch`
-  (unified diff of the two hand-edited files against the published crate), and
+  (unified diff of the two hand-edited files against the pinned upstream tree), and
   this file.
 
 ## Fixed shapes
@@ -45,14 +45,16 @@ Each fix was checked against `php -l` 8.5.8. Corpus cases are in
 `test/corpus/sloplint_*.txt`; Rust tests are in
 `crates/sloplint-syntax/tests/grammar_gaps/php.rs`.
 
-- P1 scope qualifiers that are cast words and valid class names: `Binary::`,
-  `Integer::`, `Double::` (the three named in the brief), plus `Boolean::` and
-  `Real::`, which `php -l` also accepts and which share the same rule. Implemented
-  as an alias of those keywords to `name` in `_scope_resolution_qualifier`.
-  The other cast words stay reserved.
-- P2 `clone $x ??= ...`: `clone_expression` accepts `augmented_assignment_expression`.
-- P3 chained assignment through `clone`: `clone_expression` accepts
-  `assignment_expression`.
+- P1-P3 are provided by upstream v0.25.2 and need no patch hunk here:
+  upstream `cabf8bf` aliases the `CAST_TYPE_CLASS_NAMES` keywords
+  (`binary`, `boolean`, `double`, `integer`, `real`) to `name` wherever a class
+  name is expected (a superset of the old P1: it also covers argument position
+  and typed const elements), and upstream `81ff3f1` lets `clone_expression`
+  take a general `$.expression` (a superset of the old P2/P3). The other cast
+  words stay reserved, in upstream as here. The old
+  `test/corpus/sloplint_cast_keyword_class.txt` and
+  `test/corpus/sloplint_clone_assignment.txt` cases are kept as regression
+  guards; their trees are byte-identical to the ones the old patch produced.
 - P4 trailing comma in group `use`: `namespace_use_group` accepts an optional
   trailing comma.
 - P5 raw NUL byte inside single-quoted strings. Byte inspection of the two
@@ -103,27 +105,25 @@ read facts are added. No other clean file changes tree shape.
 
 ## Verification
 
-- Upstream corpus, pinned CLI regen: 148/148 on the unmodified v0.25.1 grammar
-  (regenerated with the same CLI) and on the patched grammar. The five upstream
-  cases that the stale shipped `parser.c` in the clone failed are not a patch
-  effect and are not claimed as fixes.
-- Corpus with the six sloplint files: 155/155 (`tree-sitter test`, no update
-  flag). Every new expected tree was checked for `ERROR` and `MISSING` nodes.
-- Differential sweep over `.outline/corpora/laravel-framework` and
-  `.outline/corpora/symfony` (14316 `.php` files), tree has any ERROR or MISSING node:
-  - published grammar: 14 error files; vendored grammar: 3 error files.
-  - clean to error (regressions): **0**.
-  - error to clean (fixed): **11**, the files sloplint reports `meta/parse-error` on.
-  - sloplint built from this tree reports `meta/parse-error` on those 11 files:
-    **11 to 0**.
-- Tree shape over every file: the 14302 files clean on the published grammar were
-  compared by S-expression hash. Each has a matching hash except the four files
-  listed above. Those four are the complete set of tree-shape changes.
-- Rust tests (`grammar_gaps/php.rs`, 7 tests): green on the vendored grammar,
-  red on the published crate (fail-proof 7/7). The controls (invalid inputs that
-  must keep reporting `parse_error`) run after each fix assertion, so they are
-  only exercised on the vendored grammar.
+- Upstream corpus plus the six sloplint files, pinned CLI regen: 170/170
+  (`tree-sitter test`, no update flag). The upstream corpus grew by 15 cases
+  since v0.25.1 (cast, clone, and match coverage); all pass.
+- The 7 extracted sloplint inputs parse clean on both dialects (`php` and
+  `php_only`), and all 7 parse trees are byte-identical to the ones the
+  v0.25.1-based vendored tree produced, so no corpus rewrite was needed.
+- Rust tests (`grammar_gaps/php.rs`, 7 tests): green on the vendored grammar.
+  P1-P3 now pass through upstream rules (kept as regression guards); P4-P7
+  still fail on the unpatched v0.25.2 tree and pass with the reduced patch.
+  The controls (invalid inputs that must keep reporting `parse_error`) run
+  after each fix assertion, so they are only exercised on the vendored grammar.
 - Full `sloplint-syntax` test suite: all targets pass.
+- The v0.25.1-base differential sweep over `.outline/corpora/laravel-framework`
+  and `.outline/corpora/symfony` (14316 `.php` files: 14 error files published,
+  3 vendored, 0 regressions, 11 fixed, `meta/parse-error` 11 to 0) is not
+  re-run here — those corpora are not in this checkout. It is superseded by
+  the three checks above: the patch hunks kept here are byte-identical in
+  behavior to the v0.25.1 re-vendor (same 7 trees), and upstream's
+  v0.25.1-to-v0.25.2 grammar diff touches none of the P4-P7 rules.
 
 ## Still failing
 
@@ -139,8 +139,12 @@ Remaining errors in the two corpora (3 files):
   analyzer never reaches the grammar for this file and it is not one of the 11
   `meta/parse-error` findings. Still a grammar gap, with no analyzer effect.
 
-Outside the corpora, valid PHP that still errors (not in the brief's P1 list):
+Outside the corpora, valid PHP that still errors:
 
-- Reserved-word class names in argument position: `foo(Int::FOO)`,
-  `foo(String::class)`, `foo(Bool::FOO)`. `php -l` 8.5.8 accepts them. Statement
-  level (`$x = Int::FOO;`) already parses. Only the five cast words above were added to P1.
+- Reserved-word class names such as `foo(Int::FOO)`, `foo(String::class)`,
+  `foo(Bool::FOO)`. `php -l` 8.5.8 accepts them, but upstream keeps
+  `int`, `string`, `bool`, `float`, `object`, `array`, `void`, `mixed`,
+  `iterable`, `never` and `unset` reserved as class names, in statement and
+  argument position alike. No upstream issue covers them, and the analyzer
+  never sees them as `parse-error` shapes distinct from the P1 words, so the
+  patch does not extend the alias list.
