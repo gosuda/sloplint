@@ -202,9 +202,7 @@ pub(crate) fn call_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Option<CallHead<'s>
             start = start.min(k.start_byte());
             end = end.max(k.end_byte());
         }
-        let Some(name) = root else {
-            return None;
-        };
+        let name = root?;
         let callee = if start <= end {
             cut_generics(slice(cx.src, start, end))
         } else {
