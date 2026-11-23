@@ -289,10 +289,11 @@ cmd_bump() {
   [ "${3:-}" = "--write" ] && write=1
   [ -n "$name" ] && [ -n "$new_commit" ] || die "usage: grammars.sh bump <name> <commit> [--write]"
   need_file "$MANIFEST"
-  local upstream old_commit tag
+  local upstream old_commit tag generator
   upstream="$(entry_field "$name" "upstream")"
   old_commit="$(entry_field "$name" "commit")"
   tag="$(entry_field "$name" "tag")"
+  generator="$(entry_field "$name" "generator")"
   [ -n "$upstream" ] || die "$name has no upstream to bump"
   case "$new_commit" in
     *[!0-9a-f]*) die "new commit is not lowercase hex: $new_commit" ;;
@@ -304,11 +305,11 @@ cmd_bump() {
 To follow upstream for $name:
 1. Fetch the new commit: git ls-remote $upstream
 2. Show what changed since the pinned commit:
-   git clone --shared $upstream <scratch> && git diff $old_commit $new_commit -- grammar.js src/
+   git clone --shared $upstream <scratch> && git -C <scratch> diff $old_commit $new_commit -- grammar.js src/
    (restrict to grammar inputs; regenerated src/ always differs)
 3. Re-apply the patch series: vendor/$name/sloplint-grammar.patch
    (keep upstream authorship; record the upstream commit hash in the patch header)
-4. Regenerate with the pinned CLI from SLOPLINT.md, then run tree-sitter test
+4. Regenerate with the manifest generator CLI ${generator:-"(see SLOPLINT.md)"}, then run tree-sitter test
 5. Update vendor/grammars.toml (commit, tag, generator) and the SLOPLINT.md provenance
 Current pin: commit $old_commit tag ${tag:-"(none)"}
 Target:      commit $new_commit
