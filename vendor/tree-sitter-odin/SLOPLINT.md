@@ -16,7 +16,7 @@ The published grammar reports a parse error on valid Odin. sloplint skips a whol
 
 ## Regeneration
 
-`src/` is regenerated with tree-sitter-cli 0.24.7 (`tree-sitter generate`). `grammar.js` is the only patched input; `src/grammar.json`, `src/node-types.json`, and `src/parser.c` are regenerated artifacts and are not part of `sloplint-grammar.patch`.
+`src/` is regenerated with tree-sitter-cli 0.27.1 (`tree-sitter generate`, ABI 15). `grammar.js` is the only patched input; `src/grammar.json`, `src/node-types.json`, and `src/parser.c` are regenerated artifacts and are not part of `sloplint-grammar.patch`. The move from CLI 0.24.7 (ABI 14) to 0.27.1 changes no parse result: the sloplint corpus, the `grammar_gaps` repros, and 2,076 corpus `.odin` files give the same ERROR/MISSING counts on both builds.
 
 ## Changes (`grammar.js`, see `sloplint-grammar.patch`)
 

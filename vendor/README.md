@@ -48,9 +48,9 @@ layouts.
 | `SLOPLINT.md` | provenance, regeneration command, what is fixed, what still fails |
 
 ABI note: the vendored `src/parser.c` files carry `LANGUAGE_VERSION` 14
-for `tree-sitter-c`, `tree-sitter-odin`, and `tree-sitter-tlaplus`
-(generated with CLI 0.24.7), and 15 for everything else (generated with
-CLI 0.27.x, except logos with 0.27.2 and quint with upstream 0.27.0).
+for `tree-sitter-c` and `tree-sitter-tlaplus` (generated with CLI
+0.24.7), and 15 for everything else (generated with CLI 0.27.x, except
+logos with 0.27.2 and quint with upstream 0.27.0).
 `tree-sitter-cpp` and `tree-sitter-lean` commit `src/parser.c.gz` instead
 of `src/parser.c`. The runtime (tree-sitter 0.27.2) loads ABI 13 through
 15, so all vendored parsers load. The host CLI at
