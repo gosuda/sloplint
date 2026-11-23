@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd82a49e54 100644
+index a5d890729b48ed162e3c4ade77b9e5f07f570c93..6215f69b3825e4c5bea859453bc4eca2902bb436 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -144,6 +144,10 @@
@@ -69,17 +69,21 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
      // The `>` of `//>`. A regex would have to swallow the `using` after it to
      // see it, and highlighting needs that keyword as a token of its own, so
      // the scanner looks ahead instead and declines the `>` of a plain comment.
-@@ -402,6 +425,9 @@
+@@ -402,6 +425,13 @@
      // The `?` of a bounded wildcard. Only the bound tells it from the plain
      // one, and the parser cannot see that far.
      $._wildcard_bound_start,
 +    // A symbolic quote literal `'op` ending in `/` — the internal regex
 +    // cannot bound a trailing `/` against a following comment opener.
 +    $._op_symbol,
++    // A `:` that does not end its line. In a braced typed lambda the colon
++    // at end of line belongs to the fewer-braces colon argument, so the
++    // parameter's colon takes this token instead.
++    $._colon_mid,
      // An alphanumeric operator that ends its line, when the next line starts
      // its right operand. Only the infix production takes it, so the line
      // break cannot end the statement after `left op`.
-@@ -413,6 +439,11 @@
+@@ -413,6 +443,11 @@
      // An INDENT that opens the body of a case clause. Only the body takes
      // it, so the scanner knows the region is a case body.
      $._case_body_indent,
@@ -91,7 +95,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
    ],
  
    inline: $ => [
-@@ -482,6 +513,12 @@
+@@ -482,6 +517,12 @@
    ],
  
    conflicts: $ => [
@@ -104,7 +108,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
      // '['  'enum'  ':'  '{'  'enum'  •  … — under a context bound's brace,
      // `enum` opens a definition or reads as a type name until the next token.
      [$.enum_definition, $._type_identifier],
-@@ -504,12 +541,61 @@
+@@ -504,12 +545,43 @@
      // 'extension' • '{' is either an extension definition with a braced body
      // or the soft identifier `extension` (a Scala 2 id) called with a block.
      [$.extension_definition, $._soft_identifier],
@@ -119,18 +123,6 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
 +    // Same fork for a wildcard head: upstream's enum support needs back
 +    // the triple the pre-enum grammar dropped as unnecessary.
 +    [$.self_type, $._annotated_type, $._simple_expression],
-+    // `{ x: T => …`: braced-lambda head, plain ascription, or an
-+    // unparenthesized typed lambda in expression position. The `=>`
-+    // tail decides; keep all three alive.
-+    [$._simple_expression, $.lambda_expression, $._braced_typed_lambda],
-+    // `{ x:` with the colon at end of line: same fork as above, but the
-+    // ascription reading is complete already and needs no `=>`.
-+    [$._simple_expression, $._braced_typed_lambda],
-+    // Nested-brace variant: the self-type reading joins the same fork.
-+    [$.self_type, $._simple_expression, $.lambda_expression, $._braced_typed_lambda],
-+    // Fewer-braces variant: no unparenthesized lambda here (it takes only
-+    // a mid-line colon), so the fork is the three-way without it.
-+    [$.self_type, $._simple_expression, $._braced_typed_lambda],
 +    [$.given_pattern, $._simple_expression],
 +    [$._type_identifier, $.given_pattern, $._simple_expression],
 +    // `x: T => …` after a polymorphic result: the unparenthesized typed
@@ -139,12 +131,6 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
 +    // `_: T => …` in the same spot: wildcard adds the annotated-type
 +    // reading to the fork.
 +    [$.lambda_expression, $._annotated_type, $._simple_expression],
-+    // Self-type ascription against the braced lambda reading of the same
-+    // `name: Type =>` prefix.
-+    [$._self_type_ascription, $._braced_typed_lambda],
-+    // The unparenthesized typed lambda joins the same prefix fork with a
-+    // plain alpha head.
-+    [$._self_type_ascription, $._braced_typed_lambda, $.lambda_expression],
 +    [$._simple_expression, $.keyword_named_argument],
 +    // `given (using …`: `using` as a type name, or a parameter-list
 +    // using-clause head. The `:`/`,` tail decides; keep both alive.
@@ -166,7 +152,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
      [$.parameter_types, $._colon_bindings],
      [$.parameter_types, $.bindings],
      [$.while_expression, $._simple_expression],
-@@ -525,6 +611,8 @@
+@@ -525,6 +597,8 @@
      // Same separator-or-marker fork as above.
      [$.function_definition],
      [$.val_definition],
@@ -175,7 +161,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
      [$._dot_match_expression],
      [$.var_definition],
      [$.package_clause],
-@@ -566,8 +654,6 @@
+@@ -566,8 +640,6 @@
      [$._class_constructor],
      // 'enum'  _class_constructor  '{'  'case'  operator_identifier  _full_enum_def_repeat1  •  _automatic_semicolon  …
      [$._full_enum_def],
@@ -184,7 +170,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
      // 'enum'  operator_identifier  _automatic_semicolon  '('  ')'  •  ':'  …
      [$.class_parameters],
      // 'for'  operator_identifier  ':'  _annotated_type  •  ':'  …
-@@ -594,16 +680,30 @@
+@@ -594,16 +666,30 @@
      [$.lambda_expression],
      // '{'  identifier  •  ':' starts the braced typed lambda, the block
      // lambda param, and a statement alike.
@@ -220,7 +206,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
      // _simple_expression  ':'  '('  name_and_type  ')'  •  '=>'
      // The parenthesized list is either the lambda parameters of a colon
      // argument or a named tuple type on the ascription reading. What follows
-@@ -613,9 +713,6 @@
+@@ -613,9 +699,6 @@
      [$._annotated_type, $.binding],
      // '['  identifier  ':'  '{'  identifier  •  ':'  — a braced context
      // bound reuses the self-type head shapes.
@@ -230,7 +216,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
      // '['  identifier  ':'  '{'  '('  wildcard  •  ':'  …
      [$.binding, $._annotated_type, $._simple_expression],
      // '['  identifier  ':'  '{'  wildcard  •  '{'  …
-@@ -694,14 +791,29 @@
+@@ -694,14 +777,29 @@
      compilation_unit: $ =>
        seq(
          optional($._shebang),
@@ -262,7 +248,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
          $.extension_definition,
          $.class_definition,
          $.import_declaration,
-@@ -1058,9 +1170,11 @@
+@@ -1058,9 +1156,11 @@
              choice($._outdent, $._comma_outdent),
            ),
          ),
@@ -277,7 +263,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
        ),
  
      _braced_template_body: $ =>
-@@ -1141,10 +1255,14 @@
+@@ -1141,10 +1241,14 @@
  
      // Dynamic precedences added here to win over $.call_expression
      self_type: $ =>
@@ -295,7 +281,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
          prec(
            "self_type",
            seq(
-@@ -1200,7 +1318,16 @@
+@@ -1200,7 +1304,16 @@
      val_definition: $ =>
        seq(
          $._start_val,
@@ -313,7 +299,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
          optional(seq(":", field("type", $._type))),
          "=",
          field("value", $._indentable_expression),
-@@ -1228,7 +1355,16 @@
+@@ -1228,7 +1341,16 @@
      var_definition: $ =>
        seq(
          $._start_var,
@@ -331,7 +317,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
          optional(seq(":", field("type", $._type))),
          "=",
          field("value", $._indentable_expression),
-@@ -1592,12 +1728,16 @@
+@@ -1592,12 +1714,16 @@
          ")",
        ),
  
@@ -349,7 +335,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
          optional(seq(":", field("type", $._param_type))),
          optional(seq("=", field("default_value", $.expression))),
        ),
-@@ -1616,7 +1756,7 @@
+@@ -1616,7 +1742,7 @@
            // A given conditional clause takes `tracked val`.
            optional(trackedMod($)),
            optional(choice("val", "var")),
@@ -358,7 +344,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
            ":",
            field("type", $._param_type),
            optional(seq("=", field("default_value", $.expression))),
-@@ -1967,6 +2107,17 @@
+@@ -1967,6 +2093,17 @@
                field("parameter_types", $.parameter_types),
                $._arrow_then_type,
              ),
@@ -376,7 +362,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
            ),
          ),
        ),
-@@ -2001,6 +2152,20 @@
+@@ -2001,6 +2138,20 @@
          $.infix_type,
        ),
  
@@ -397,7 +383,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
      _param_type: $ => choice($.lazy_parameter_type, $._param_value_type),
  
      _param_value_type: $ =>
-@@ -2049,6 +2214,27 @@
+@@ -2049,6 +2200,27 @@
      // SLS 4.1: the pattern of a val/var definition is a Pattern2, so no
      // top-level alternatives or ascription. `val a: A | B` then reads `|`
      // as a union type instead of an alternative pattern.
@@ -425,7 +411,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
      _definition_pattern: $ =>
        choice(
          $._identifier,
-@@ -2239,10 +2425,21 @@
+@@ -2239,10 +2411,21 @@
                ),
                field(
                  "parameters",
@@ -451,11 +437,12 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
                ),
                anyArrow(),
                $._indentable_expression,
-@@ -2317,7 +2514,17 @@
+@@ -2317,8 +2500,21 @@
                prec.right(
                  seq(
                    optional("implicit"),
 -                  choice(operandName($), $.wildcard),
+-                  colonEol($),
 +                  // Plain alpha names, backquoted names and the wildcard:
 +                  // every pinned shape (`x`, `int`, `_`) uses these. The
 +                  // soft keywords already read as identifiers through
@@ -467,10 +454,14 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
 +                    alias($._backquoted_id, $.identifier),
 +                    $.wildcard,
 +                  ),
-                   colonEol($),
++                  // A mid-line colon only: at end of line the colon
++                  // belongs to the fewer-braces colon argument, so the
++                  // braced reading cannot start there.
++                  $._colon_mid,
                    $._type,
                  ),
-@@ -2386,19 +2593,37 @@
+               ),
+@@ -2386,19 +2582,37 @@
      _if_condition_paren: $ => prec.dynamic(4, $.parenthesized_expression),
  
      _if_condition_then: $ =>
@@ -518,7 +509,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
      /*
       *   MatchClause       ::=  'match' <<< CaseClauses >>>
       *
-@@ -2663,6 +2888,17 @@
+@@ -2663,6 +2877,17 @@
              optional($._end_marker_kw_tail),
            ),
          ),
@@ -536,7 +527,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
          prec(
            "new",
            seq("new", $.template_body, optional($._end_marker_kw_tail)),
-@@ -2864,10 +3100,33 @@
+@@ -2864,10 +3089,33 @@
      // binder is admitted in every argument list.
      _argument_list: $ =>
        seq(
@@ -571,7 +562,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
      // The spliced argument is a PostfixExpr in both dialects, so an infix or
      // prefix expression can precede the star: `f(a ++ b*)`, `f(a ++ b: _*)`.
      vararg: $ =>
-@@ -2891,7 +3150,10 @@
+@@ -2891,7 +3139,10 @@
        ),
  
      // ExprsInParens     ::=  ExprInParens {‘,’ ExprInParens}
@@ -583,7 +574,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
  
      // The opening is a single two-character token so that a bare `$` used as
      // an ordinary identifier (e.g. `$(selector)`) still lexes as an
-@@ -2911,11 +3173,17 @@
+@@ -2911,11 +3162,17 @@
      quote_expression: $ =>
        prec.left(
          PREC.macro,
@@ -606,7 +597,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
              // TypeBlock ::= {TypeBlockStat semi} Type. The bindings let a
              // quote name the type variables it matches on.
              seq(
-@@ -2925,8 +3193,29 @@
+@@ -2925,8 +3182,29 @@
                "]",
              ),
              $.identifier,
@@ -638,7 +629,7 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
            ),
          ),
        ),
-@@ -3032,6 +3321,13 @@
+@@ -3032,6 +3310,13 @@
        OP_LEFT.map(key => [`_op_left_${key}`, () => OP_TOKEN[`${key}Left`]]),
      ),
      _op_name: $ => OP_ID_UNION,
@@ -653,10 +644,10 @@ index a5d890729b48ed162e3c4ade77b9e5f07f570c93..9726e322e25e2744f95dd2551cb3c4cd
      // XML literals (SLS §10). The external token $._xml_tag_start decides
      // where markup starts. Comment, CDATA and processing instruction
 diff --git a/src/scanner.c b/src/scanner.c
-index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49358ac8b7 100644
+index fb13d797e7cbed0adb6c47a046213ee16176a242..90bef0ad80982c8068e9858f037b28f4eb95ff56 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
-@@ -69,13 +69,35 @@
+@@ -69,13 +69,39 @@
    OP_LEFT_MUL,
    OP_LEFT_OTHER,
    OP_NAME,
@@ -682,6 +673,10 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
 +  // cannot bound a trailing `/` (no lookahead for a comment opener), so it
 +  // goes out through this token.
 +  OP_SYMBOL,
++  // A `:` with same-line content after it, as in the `x: T` of a braced
++  // typed lambda. The colon that ends its line belongs to the fewer-braces
++  // colon argument instead.
++  COLON_MID,
    WORD_OPERATOR_EOL,
    NAME_GATE,
 -  CASE_BODY_INDENT
@@ -693,7 +688,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
  };
  
  // Mirrors enum TokenType above.
-@@ -131,13 +153,25 @@
+@@ -131,13 +157,26 @@
    "OP_LEFT_MUL",
    "OP_LEFT_OTHER",
    "OP_NAME",
@@ -712,6 +707,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
    "DEF_SEMICOLON",
    "WILDCARD_BOUND_START",
 +  "OP_SYMBOL",
++  "COLON_MID",
    "WORD_OPERATOR_EOL",
    "NAME_GATE",
 -  "CASE_BODY_INDENT"
@@ -720,7 +716,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
  };
  
  typedef struct {
-@@ -256,6 +290,42 @@
+@@ -256,6 +295,42 @@
    return is_alpha(c) || c == '_' || c == '$';
  }
  
@@ -763,7 +759,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
  static inline void advance(TSLexer *lexer) { lexer->advance(lexer, false); }
  
  static inline void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
-@@ -326,6 +396,46 @@
+@@ -326,6 +401,46 @@
    }
  }
  
@@ -810,7 +806,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
  // SLS 6.12.3 gives an operator its precedence by its first character. An
  // operator ending in `/` is never right-associative and never an assignment,
  // so the left-associative class is the whole answer. The partition matches
-@@ -340,11 +450,64 @@
+@@ -340,11 +455,64 @@
      case '<': case '>': return OP_LEFT_REL;
      case ':': return OP_LEFT_COLON;
      case '+': case '-': return OP_LEFT_ADD;
@@ -876,7 +872,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
  // Mirrors the start class of XML_NAME in grammar.js. Every non-ASCII
  // character is accepted, since the letter test is ASCII-only and the internal
  // lexer rejects the name if it is not a letter after all.
-@@ -434,13 +597,20 @@
+@@ -434,13 +602,20 @@
  
  // Consumes a block comment body, nesting per SLS 1.4. The caller has consumed
  // the leading "/*". With stop_at_newline it stops at the first newline.
@@ -899,7 +895,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
      if (lexer->lookahead == '/') {
        advance(lexer);
        if (lexer->lookahead == '*') {
-@@ -462,13 +632,13 @@
+@@ -462,13 +637,13 @@
  
  // Stops just past the matching "*/" (or at EOF).
  static void consume_block_comment_body(TSLexer *lexer) {
@@ -915,7 +911,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
  }
  
  static bool finish_block_comment(TSLexer *lexer) {
-@@ -508,7 +678,7 @@
+@@ -508,7 +683,7 @@
    bool not_keyword = false;
    int32_t last = 0;
    while (is_alnum(lexer->lookahead) || lexer->lookahead == '_' ||
@@ -924,7 +920,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
      if (lexer->lookahead > 127 || len >= cap - 1) {
        not_keyword = true;
      } else {
-@@ -570,9 +740,12 @@
+@@ -570,9 +745,12 @@
        "do",    "yield", "while",   "with", "extends"};
    char word[sizeof "finally"];
    int len = read_word(lexer, word, (int)sizeof word, NULL);
@@ -940,7 +936,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
  }
  
  // No modifier precedes such a word, so `update match` stays a plain name. A
-@@ -581,7 +754,6 @@
+@@ -581,7 +759,6 @@
  static bool modifier_word_allowed(TSLexer *lexer) {
    return !word_is_expression_tail(lexer);
  }
@@ -948,7 +944,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
  // The right operand of an operator has to start an expression, so `??? match`
  // on its own line is a statement rather than the tail of the line above.
  static bool operand_word_allowed(TSLexer *lexer) {
-@@ -771,6 +943,193 @@
+@@ -771,6 +948,193 @@
    return quoted;
  }
  
@@ -1142,7 +1138,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
  // Whether the rest of the line holds only blanks and comments. A comment
  // running past the line end still counts as blank because comments are
  // transparent to scalac, but code after a closed block comment does not.
-@@ -795,9 +1154,7 @@
+@@ -795,9 +1159,7 @@
        return false;  // a lone '/' is code
      }
      advance(lexer);
@@ -1153,7 +1149,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
    }
  }
  
-@@ -864,36 +1221,179 @@
+@@ -864,36 +1226,179 @@
    }
  }
  
@@ -1339,7 +1335,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
  // Reads the run of opchars at the lookahead into `op`. Only the first 3 are
  // kept, since a longer run is never a symbolic keyword. Returns the full
  // length and advances the lexer past the run.
-@@ -1212,7 +1712,10 @@
+@@ -1212,7 +1717,10 @@
    // Track whether the last returned token was a fewer-braces colon. Comments
    // in between keep the flag. A false return does not persist state anyway.
    if (res) {
@@ -1351,7 +1347,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
        scanner->after_colon_eol = 1;
      } else if (lexer->result_symbol != BLOCK_COMMENT) {
        scanner->after_colon_eol = 0;
-@@ -2071,6 +2574,53 @@
+@@ -2071,6 +2579,53 @@
      return scan_float_with_separator(lexer);
    }
  
@@ -1405,7 +1401,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
    // Right after `enum`, a symbolic word may be the definition's name. The
    // Scala 2 reading of `enum` as an identifier also admits an infix operator
    // there, which the internal lexer would pick. The name wins only when an
-@@ -2126,35 +2676,107 @@
+@@ -2126,35 +2681,111 @@
    // tokens: since the postfix reading only exists through this branch, the
    // internal tokens admit no statement split after `left op`.
    // COLON_EOL only ever lexes a lone `:`, so that leg needs a colon first.
@@ -1518,6 +1514,10 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
 +        lexer->result_symbol = EMPTY_BODY_COLON;
 +        return true;
 +      }
++      if (valid_symbols[COLON_MID] && !blank) {
++        lexer->result_symbol = COLON_MID;
++        return true;
++      }
        if (valid_symbols[COLON_EOL] &&
 -          (rest_of_line_is_blank_or_comments(lexer) ||
 -           colon_lambda_follows(lexer, prev_width))) {
@@ -1525,7 +1525,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
          lexer->result_symbol = COLON_EOL;
          return true;
        }
-@@ -2165,14 +2787,29 @@
+@@ -2165,14 +2796,29 @@
      // and the first character alone fixes the SLS 6.12.3 precedence class.
      // `#!` opens a script header, whose path is not part of an operator.
      bool shebang = op_len >= 2 && op[0] == '#' && op[1] == '!';
@@ -1560,7 +1560,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
        while (!at_comment) {
          int32_t c = lexer->lookahead;
          if (c == '/') {
-@@ -2183,22 +2820,169 @@
+@@ -2183,22 +2829,169 @@
          } else {
            break;
          }
@@ -1737,7 +1737,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
        return false;
      }
      // These sequences are not infix operators, so the line does not
-@@ -2237,6 +3021,20 @@
+@@ -2237,6 +3030,20 @@
            return true;
          }
        }
@@ -1758,7 +1758,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
        return false;
      }
      // The right operand must be able to start an expression. Comments and line
-@@ -2265,8 +3063,8 @@
+@@ -2265,8 +3072,8 @@
        // (`inline`, `open`, `opaque`, `transparent`, `infix`) stay out: they
        // are ordinary identifiers, so such a line can be the right operand.
        static const char *const definition_words[] = {
@@ -1769,7 +1769,7 @@ index fb13d797e7cbed0adb6c47a046213ee16176a242..6c4cd2724f0cea00643bd103c6603e49
            "package",  "private", "protected", "sealed", "trait", "type",
            "val",      "var",
        };
-@@ -2280,9 +3078,206 @@
+@@ -2280,9 +3087,206 @@
          lexer->result_symbol = postfix_sym;
          return true;
        }

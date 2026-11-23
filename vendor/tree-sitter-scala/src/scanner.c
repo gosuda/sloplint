@@ -91,6 +91,10 @@ enum TokenType {
   // cannot bound a trailing `/` (no lookahead for a comment opener), so it
   // goes out through this token.
   OP_SYMBOL,
+  // A `:` with same-line content after it, as in the `x: T` of a braced
+  // typed lambda. The colon that ends its line belongs to the fewer-braces
+  // colon argument instead.
+  COLON_MID,
   WORD_OPERATOR_EOL,
   NAME_GATE,
   CASE_BODY_INDENT,
@@ -168,6 +172,7 @@ const char* token_name[] = {
   "DEF_SEMICOLON",
   "WILDCARD_BOUND_START",
   "OP_SYMBOL",
+  "COLON_MID",
   "WORD_OPERATOR_EOL",
   "NAME_GATE",
   "CASE_BODY_INDENT",
@@ -2773,6 +2778,10 @@ static bool scan_impl(void *payload, TSLexer *lexer,
       if (blank && valid_symbols[EMPTY_BODY_COLON] &&
           empty_body_end_follows(lexer)) {
         lexer->result_symbol = EMPTY_BODY_COLON;
+        return true;
+      }
+      if (valid_symbols[COLON_MID] && !blank) {
+        lexer->result_symbol = COLON_MID;
         return true;
       }
       if (valid_symbols[COLON_EOL] &&

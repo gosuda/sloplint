@@ -428,6 +428,10 @@ module.exports = grammar({
     // A symbolic quote literal `'op` ending in `/` — the internal regex
     // cannot bound a trailing `/` against a following comment opener.
     $._op_symbol,
+    // A `:` that does not end its line. In a braced typed lambda the colon
+    // at end of line belongs to the fewer-braces colon argument, so the
+    // parameter's colon takes this token instead.
+    $._colon_mid,
     // An alphanumeric operator that ends its line, when the next line starts
     // its right operand. Only the infix production takes it, so the line
     // break cannot end the statement after `left op`.
@@ -552,18 +556,6 @@ module.exports = grammar({
     // Same fork for a wildcard head: upstream's enum support needs back
     // the triple the pre-enum grammar dropped as unnecessary.
     [$.self_type, $._annotated_type, $._simple_expression],
-    // `{ x: T => …`: braced-lambda head, plain ascription, or an
-    // unparenthesized typed lambda in expression position. The `=>`
-    // tail decides; keep all three alive.
-    [$._simple_expression, $.lambda_expression, $._braced_typed_lambda],
-    // `{ x:` with the colon at end of line: same fork as above, but the
-    // ascription reading is complete already and needs no `=>`.
-    [$._simple_expression, $._braced_typed_lambda],
-    // Nested-brace variant: the self-type reading joins the same fork.
-    [$.self_type, $._simple_expression, $.lambda_expression, $._braced_typed_lambda],
-    // Fewer-braces variant: no unparenthesized lambda here (it takes only
-    // a mid-line colon), so the fork is the three-way without it.
-    [$.self_type, $._simple_expression, $._braced_typed_lambda],
     [$.given_pattern, $._simple_expression],
     [$._type_identifier, $.given_pattern, $._simple_expression],
     // `x: T => …` after a polymorphic result: the unparenthesized typed
@@ -572,12 +564,6 @@ module.exports = grammar({
     // `_: T => …` in the same spot: wildcard adds the annotated-type
     // reading to the fork.
     [$.lambda_expression, $._annotated_type, $._simple_expression],
-    // Self-type ascription against the braced lambda reading of the same
-    // `name: Type =>` prefix.
-    [$._self_type_ascription, $._braced_typed_lambda],
-    // The unparenthesized typed lambda joins the same prefix fork with a
-    // plain alpha head.
-    [$._self_type_ascription, $._braced_typed_lambda, $.lambda_expression],
     [$._simple_expression, $.keyword_named_argument],
     // `given (using …`: `using` as a type name, or a parameter-list
     // using-clause head. The `:`/`,` tail decides; keep both alive.
@@ -2525,7 +2511,10 @@ module.exports = grammar({
                     alias($._backquoted_id, $.identifier),
                     $.wildcard,
                   ),
-                  colonEol($),
+                  // A mid-line colon only: at end of line the colon
+                  // belongs to the fewer-braces colon argument, so the
+                  // braced reading cannot start there.
+                  $._colon_mid,
                   $._type,
                 ),
               ),

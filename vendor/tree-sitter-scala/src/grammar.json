@@ -8727,22 +8727,8 @@
                       ]
                     },
                     {
-                      "type": "CHOICE",
-                      "members": [
-                        {
-                          "type": "STRING",
-                          "value": ":"
-                        },
-                        {
-                          "type": "ALIAS",
-                          "content": {
-                            "type": "SYMBOL",
-                            "name": "_colon_eol"
-                          },
-                          "named": false,
-                          "value": ":"
-                        }
-                      ]
+                      "type": "SYMBOL",
+                      "name": "_colon_mid"
                     },
                     {
                       "type": "SYMBOL",
@@ -15460,26 +15446,6 @@
       "_simple_expression"
     ],
     [
-      "_simple_expression",
-      "lambda_expression",
-      "_braced_typed_lambda"
-    ],
-    [
-      "_simple_expression",
-      "_braced_typed_lambda"
-    ],
-    [
-      "self_type",
-      "_simple_expression",
-      "lambda_expression",
-      "_braced_typed_lambda"
-    ],
-    [
-      "self_type",
-      "_simple_expression",
-      "_braced_typed_lambda"
-    ],
-    [
       "given_pattern",
       "_simple_expression"
     ],
@@ -15497,15 +15463,6 @@
       "lambda_expression",
       "_annotated_type",
       "_simple_expression"
-    ],
-    [
-      "_self_type_ascription",
-      "_braced_typed_lambda"
-    ],
-    [
-      "_self_type_ascription",
-      "_braced_typed_lambda",
-      "lambda_expression"
     ],
     [
       "_simple_expression",
@@ -16166,6 +16123,10 @@
     {
       "type": "SYMBOL",
       "name": "_op_symbol"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_colon_mid"
     },
     {
       "type": "SYMBOL",
