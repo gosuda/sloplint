@@ -90,15 +90,13 @@ module.exports = grammar({
     [$.qualified_type, $._expression],
     [$.generic_type, $._simple_type],
     [$.parameter_declaration, $._simple_type],
-    [$.type_parameter_declaration, $._simple_type, $._expression],
-    [$.type_parameter_declaration, $._expression],
-    [$.type_parameter_declaration, $._simple_type, $.generic_type, $._expression],
-    // `func (T) m[P any]()` is a generic method; `func (T) m[A, B]` is a func
-    // literal whose result is a generic type.
     [$.type_parameter_declaration, $._simple_type],
     // `(*struct{ J })(x)` is a conversion; `(*struct{ J }).M` is a method
     // expression.
     [$._simple_type, $._type_literal],
+    [$.type_parameter_declaration, $._simple_type, $._expression],
+    [$.type_parameter_declaration, $._expression],
+    [$.type_parameter_declaration, $._simple_type, $.generic_type, $._expression],
   ],
 
   reserved: {
@@ -183,8 +181,8 @@ module.exports = grammar({
       choice(
         $.const_spec,
         seq(
-          // The last spec may be followed directly by `)`: `const ( F = 1 )`.
           '(',
+          // The last spec may be followed directly by `)`: `const ( F = 1 )`.
           optionalTrailingSep($.const_spec, terminator),
           ')',
         ),
@@ -573,10 +571,10 @@ module.exports = grammar({
 
     defer_statement: $ => seq('defer', $._expression),
 
-    // The initializer may be empty: `if ; x {}`, `switch ; {}`.
     if_statement: $ => seq(
       'if',
       optional(seq(
+        // The initializer may be empty: `if ; x {}`, `switch ; {}`.
         field('initializer', optional($._simple_statement)),
         ';',
       )),
@@ -730,8 +728,8 @@ module.exports = grammar({
     special_argument_list: $ => seq(
       '(',
       optional(seq(
-        // Go 1.26 accepts a value: `new(42)`, `new(int64(-64))`. A type still
-        // wins when both readings fit (`new(int)`, `new(a.B)`).
+        // Go 1.26: `new` takes a value as well as a type. The type reading is
+        // preferred (dynamic precedence) so `new(int)` / `new(T)` are unchanged.
         choice(prec.dynamic(2, $._type), $._expression),
         repeat(seq(',', $._expression)),
         optional(','),
