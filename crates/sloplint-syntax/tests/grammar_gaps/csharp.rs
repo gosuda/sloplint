@@ -1,12 +1,12 @@
-//! Valid C# that tree-sitter-c-sharp 0.23.5 rejected, observed through
+//! Valid C# that tree-sitter-c-sharp 0.24.0 rejected, observed through
 //! `analyze` only.
 //!
 //! Each repro below is accepted by Roslyn CSC (dotnet SDK 10, syntax-only:
 //! no CS1xxx). The vendored grammar in `vendor/tree-sitter-c-sharp` must
 //! parse it. Controls pin validated-invalid inputs (preview `safe`,
 //! `closed`/`union` type proposals), which must keep reporting
-//! `parse_error`. (`#:` file-based-program directives parse — leancil's
-//! Tests/*.cs corpus uses them pervasively.)
+//! `parse_error`. (`#:` file-based-program directives parse through
+//! upstream's `ignored_directive` rule.)
 
 use std::sync::LazyLock;
 

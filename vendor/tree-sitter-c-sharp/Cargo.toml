@@ -12,7 +12,7 @@
 [package]
 edition = "2021"
 name = "tree-sitter-c-sharp"
-version = "0.23.5"
+version = "0.24.0"
 authors = [
     "Max Brunsfeld <maxbrunsfeld@gmail.com>",
     "Amaan Qureshi <amaanq12@gmail.com>",
@@ -54,7 +54,7 @@ path = "bindings/rust/lib.rs"
 version = "0.1"
 
 [dev-dependencies.tree-sitter]
-version = "0.25"
+version = "0.27"
 
 [build-dependencies.cc]
 version = "1.1"
