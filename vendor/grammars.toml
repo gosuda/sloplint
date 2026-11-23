@@ -102,8 +102,8 @@ generator = "0.27.1"
 abi = 15
 patch = "vendor/tree-sitter-cpp/sloplint-grammar.patch"
 patch_status = "upstream-pending"
-patch_upstream = "https://github.com/tree-sitter/tree-sitter-cpp/pull/375"
-notes = "SLOPLINT.md names CLI 0.24.7, but the vendored src/parser.c.gz unpacks to LANGUAGE_VERSION 15, so the tree was regenerated with 0.27.x; manifest records the real generator. Tag commit matches the crate vcs_info. Upstream head has 17 grammar.js commits past the tag (ABI 15 at head); PR #375 covers standard-syntax gaps only, not the Qt/macro/Win32 machinery. Proof pending per audit lane G2."
+patch_upstream = "https://github.com/tree-sitter/tree-sitter-cpp/commit/4910efca8d2767be9c27436c942aec126736cc6c"
+notes = "SLOPLINT.md names CLI 0.24.7, but the vendored src/parser.c.gz unpacks to LANGUAGE_VERSION 15, so the tree was regenerated with 0.27.x; manifest records the real generator. Tag commit matches the crate vcs_info. Upstream head has 17 grammar.js commits past the tag (ABI 15 at head). The operator_name field arm and field_expression/template_method conflict are textually identical to upstream commit 4910efc (closes #252); PR #375 covers standard-syntax gaps only, not the Qt/macro/Win32 machinery, which has no upstream source. tree-sitter test passes; 104-input corpus sweep: no clean shape regresses."
 
 [[grammar]]
 name = "tree-sitter-dafny"
