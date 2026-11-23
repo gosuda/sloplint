@@ -238,7 +238,18 @@ cmd_verify() {
       printf 'grammars.sh verify: %s: linked sibling %s from vendor/\n' "$name" "$sib" >&2
     fi
   done < <(cd "$work/upstream" && grep -rhoE '\.\./\.\./tree-sitter-[a-z0-9-]+/grammar\.js' --include='*.js' . 2>/dev/null | sed -E 's|^\.\./\.\./||; s|/grammar\.js$||' | sort -u)
-  # Isolated caches: one grammar's compiled parser must never shadow another.
+  # A grammar may resolve its base through node_modules (cpp and starlark
+  # commit theirs) or through a package-style require of a vendored base
+  # (objc uses the patched vendored C grammar per its SLOPLINT.md). Link a
+  # committed node_modules read-only; otherwise fall back to NODE_PATH so
+  # the documented base resolves exactly as the vendored tree did.
+  if [ -d "$ROOT/vendor/$name/node_modules" ] && [ ! -e "$work/upstream/node_modules" ]; then
+    ln -s "$ROOT/vendor/$name/node_modules" "$work/upstream/node_modules"
+    printf 'grammars.sh verify: %s: linked node_modules from vendor/\n' "$name" >&2
+  elif (cd "$work/upstream" && grep -rqE "require\(['\"]tree-sitter-|from ['\"]tree-sitter-" --include='*.js' . 2>/dev/null); then
+    export NODE_PATH="$ROOT/vendor${NODE_PATH:+:$NODE_PATH}"
+    printf 'grammars.sh verify: %s: resolving package imports from vendor/\n' "$name" >&2
+  fi
   export XDG_CACHE_HOME="$work/xdg"
   export TREE_SITTER_LIBDIR="$work/lib"
   mkdir -p "$XDG_CACHE_HOME" "$TREE_SITTER_LIBDIR"
