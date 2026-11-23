@@ -225,6 +225,31 @@ fn match_arm_reports_scrutinee_and_variant_count() {
 }
 
 #[test]
+fn empty_given_extractor_counts_as_variant() {
+    // `case given()` applies an empty extractor: it binds nothing, but the
+    // arm still is a variant constructor, so the wildcard arm stays
+    // enum-like with two named siblings.
+    const GIVEN_EMPTY: &str = r#"def handle(x: Any): Int = x match {
+  case given() => 1
+  case Other() => 2
+  case _ => 0
+}
+"#;
+    let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
+    let analysis = analyze_src(&mut Parsers::new(), &custom, GIVEN_EMPTY, "src/M.scala");
+    assert!(analysis.parse_error.is_none(), "parses");
+    let arm = analysis
+        .facts
+        .wildcard_arms
+        .iter()
+        .find(|a| a.variant_count == 2)
+        .expect("empty given extractor counts as a variant");
+    assert_eq!(arm.scrutinee, ScrutineeKind::Ident, "identifier scrutinee");
+    assert!(arm.enum_like, "two extractors make it enum-like");
+    assert!(!arm.has_nullable_ctor, "no Some/None/Ok/Err siblings");
+}
+
+#[test]
 fn call_binding_and_assertion_shapes() {
     let custom = CustomRules::compile(&[]).expect("empty custom rules compile");
     let analysis = analyze_src(&mut Parsers::new(), &custom, CALLS, "src/M.scala");

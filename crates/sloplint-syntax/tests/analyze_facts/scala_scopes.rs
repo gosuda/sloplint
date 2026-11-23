@@ -311,6 +311,27 @@ fn given_tuple_type_arm_binds_nothing() {
 }
 
 #[test]
+fn lowercase_type_alias_tuple_arm_binds_nothing() {
+    // With `type status = Int` in scope, `case given (status, String)`
+    // matches a tuple-typed given: `status` is a type, so the arm binds
+    // nothing and the write reaches the outer variable.
+    let source = "object T {\n  type status = Int\n  def f(v: Any): Int = {\n    var status = 0\n    v match {\n      case given (status, String) => status += 1\n      case _ => 0\n    }\n    status\n  }\n}\n";
+    with_scala_bindings(source, |found| {
+        let ss = named_all(found, "status");
+        assert_eq!(ss.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            (
+                ss[0].write_lines,
+                ss[0].first_write_line,
+                ss[0].last_write_line
+            ),
+            (1, 6, 6),
+            "the alias tuple arm binds nothing; the write reaches the outer var: {found:?}"
+        );
+    });
+}
+
+#[test]
 fn symbolic_named_argument_is_not_a_write() {
     // Scala allows symbolic names. `sink(++ = 2)` names the `++` parameter,
     // not the enclosing `var ++`. The left side parses as an

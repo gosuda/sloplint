@@ -129,11 +129,34 @@ pub(crate) fn shadow_decl_kind(kind: &str) -> bool {
     matches!(kind, "for_expression" | "case_clause")
 }
 
+// Whether `name` is a type alias visible where `node` sits: some enclosing
+// scope defines `type <name>` before the node. Term and type namespaces
+// coexist, so a `var status` beside `type status` does not hide the alias.
+fn names_visible_type_alias(node: Node<'_>, cx: &Cx<'_, '_>, name: &str) -> bool {
+    let mut scope = node.parent();
+    while let Some(s) = scope {
+        scope = s.parent();
+        for c in named_children(s) {
+            if c.kind() != "type_definition" {
+                continue;
+            }
+            let Some(alias) = child_by_field(c, "name") else {
+                continue;
+            };
+            if unquote(text(cx, alias)) == name && c.start_byte() < node.start_byte() {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 // `case given (Int, String)` is a given of tuple type, not a `given(...)`
 // extractor: every pattern child is a type name, so nothing binds and the
 // arm is not a variant constructor. `case given(x, y)` and
 // `case given[Int](box, _)` are extractor applications whose lowercase
-// arguments bind locals.
+// arguments bind locals — unless the name is a visible type alias, which
+// capitalization alone cannot tell from a fresh binder.
 fn is_given_tuple_type<'s>(cx: &Cx<'_, 's>, node: Node<'_>) -> bool {
     if node.kind() != "case_class_pattern"
         || !child_by_field(node, "type").is_some_and(|t| text(cx, t) == "given")
@@ -146,18 +169,24 @@ fn is_given_tuple_type<'s>(cx: &Cx<'_, 's>, node: Node<'_>) -> bool {
         .filter(|p| p.is_named())
         .collect();
     if patterns.is_empty() {
-        return true;
+        // `case given()` applies an empty extractor: it binds nothing, but
+        // the arm still is a variant constructor. A tuple type needs at
+        // least one member, so emptiness can never be a tuple.
+        return false;
     }
     if patterns.len() == 1 && patterns[0].kind() == "tuple_type" {
         return true;
     }
     patterns.iter().all(|p| {
-        p.kind() == "type_identifier"
-            || (p.kind() == "identifier"
-                && text(cx, *p)
-                    .chars()
-                    .next()
-                    .is_some_and(|f| f.is_uppercase()))
+        if p.kind() == "type_identifier" {
+            return true;
+        }
+        if p.kind() != "identifier" {
+            return false;
+        }
+        let name = unquote(text(cx, *p));
+        name.chars().next().is_some_and(|f| f.is_uppercase())
+            || names_visible_type_alias(*p, cx, name)
     })
 }
 
