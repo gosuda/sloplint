@@ -1694,25 +1694,29 @@ export default grammar({
     )),
 
     have: $ => prec.right(seq(
-      /* `haveI` is Mathlib's "have instance" variant. */
       choice('have', 'haveI'),
-      /* Destructuring `have ⟨a, b⟩ := …` is common in Mathlib;
-         anonymous `have : T` binds `this`. */
-      optional(choice(
-        seq(field('name', $._binder_ident),
-            optional(alias(prec.right(repeat1($._binder)), $.binders))),
-        field('name', $.anon_ctor_binder),
-      )),
-      optional($._type_spec),
-      /* Tactic `have h : T` (goal without a proof term) leaves the
-         `:=` off; `have h : T from e` is the older spelling. */
-      optional(choice(
-        seq(':=', field('value', $._term)),
-        seq('from', field('value', $._term)),
-        $.by,
-      )),
+      choice(
+        /* Function binders belong to a declaration with an explicit value.
+           Keeping that terminator avoids reducing a partial parameter list
+           as an arbitrary enclosing application argument. */
+        prec.right(1, seq(
+          field('name', $._binder_ident),
+          alias(prec.right(repeat1($._binder)), $.binders),
+          optional($._type_spec), $._have_value,
+        )),
+        seq(
+          optional(field('name', choice($._binder_ident, $.anon_ctor_binder))),
+          optional($._type_spec), optional($._have_value),
+        ),
+      ),
       optional(seq(';', field('body', $._term))),
     )),
+
+    _have_value: $ => choice(
+      seq(':=', field('value', $._term)),
+      seq('from', field('value', $._term)),
+      $.by,
+    ),
 
     /* `suffices g : T from proof` / `suffices g : T by tac` — a
        tactic-language reframing. The `from`/`by` proves the new
@@ -2084,4 +2088,5 @@ export default grammar({
     _plain_ident: _ => /[a-zA-Z_][a-zA-Z_0-9'!?]*/,
   },
 });
+
 
