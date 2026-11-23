@@ -32,6 +32,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("match_arm", Role::MatchArm),
     ("all_expression", Role::Loop),
     ("any_expression", Role::Loop),
+    ("nondet_binding", Role::Decl),
     ("call_expression", Role::Call),
     ("ufcs_call_expression", Role::Call),
     ("variable_declaration", Role::Decl),
@@ -41,6 +42,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("named_import_declaration", Role::Import),
     ("wildcard_import_declaration", Role::Import),
     ("instance_declaration", Role::Import),
+    ("anonymous_instance_declaration", Role::Import),
     ("module_export_declaration", Role::Export),
     ("named_export_declaration", Role::Export),
     ("wildcard_export_declaration", Role::Export),
@@ -135,7 +137,7 @@ fn lambda_params<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> Vec<Param<'s>> {
         .collect()
 }
 
-fn base_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> FunctionHead<'s> {
+fn base_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>, visibility: Visibility) -> FunctionHead<'s> {
     let (doc, doc_pos) = preceding_comments(cx, n, DOC_KINDS, SKIP_KINDS);
     FunctionHead {
         shadow_params: Vec::new(),
@@ -147,7 +149,7 @@ fn base_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> FunctionHead<'s> {
         is_overload: false,
         is_deprecated: false,
         is_decorated: false,
-        visibility: Visibility::Exported,
+        visibility,
         is_trait_item: false,
         region: None,
         params: Vec::new(),
@@ -157,6 +159,15 @@ fn base_head<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> FunctionHead<'s> {
         doc,
         doc_pos,
         sole_call: None,
+    }
+}
+
+/// A definition introduced by `nested_definition_expression` is a local of the
+/// enclosing body, so only a module-level definition can be imported.
+fn definition_visibility(cx: &Cx<'_, '_>, n: Node<'_>) -> Visibility {
+    match cx.parent_of(n).map(|parent| parent.kind()) {
+        Some("nested_definition_expression") => Visibility::Private,
+        _ => Visibility::Exported,
     }
 }
 
@@ -224,6 +235,45 @@ fn push_import<'s>(
     });
 }
 
+/// The object a record field copies one-to-one: the destination name must
+/// equal the member read, and the object must be a plain name reference, so a
+/// renamed, repeated or nested member reads as a transformation.
+fn copy_source<'s>(cx: &Cx<'_, 's>, field: Node<'_>) -> Option<&'s str> {
+    let name = child_by_field(field, "name").filter(|name| name.kind() == "identifier")?;
+    let value =
+        child_by_field(field, "value").filter(|value| value.kind() == "field_access_expression")?;
+    let object =
+        child_by_field(value, "object").filter(|object| object.kind() == "name_reference")?;
+    let member = child_by_field(value, "field").filter(|field| field.kind() == "identifier")?;
+    if text(cx, name) != text(cx, member) {
+        return None;
+    }
+    plain_name(cx, object)
+}
+
+/// True when the call is the whole initializer of a `val` definition or a
+/// `nondet` binding, the two named locals a call can initialize. A grouped
+/// call still initializes its local: parentheses around the whole value do
+/// not move the call out of the binding.
+fn initializes_named_local(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
+    let mut inner = n;
+    loop {
+        let Some(parent) = cx.parent_of(inner) else {
+            return false;
+        };
+        match parent.kind() {
+            "parenthesized_expression" => {
+                inner = parent;
+            }
+            "value_definition" | "nondet_binding" => {
+                return child_by_field(parent, "value")
+                    .is_some_and(|value| value.id() == inner.id());
+            }
+            _ => return false,
+        }
+    }
+}
+
 impl LangHooks for QuintHooks {
     fn function<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>) -> Option<FunctionHead<'s>> {
         let body_field = match n.kind() {
@@ -235,7 +285,7 @@ impl LangHooks for QuintHooks {
         if !matches!(name_node.kind(), "identifier" | "qualified_identifier") {
             return None;
         }
-        let mut head = base_head(cx, n);
+        let mut head = base_head(cx, n, definition_visibility(cx, n));
         head.name = plain_name(cx, name_node).unwrap_or_default();
         head.name_pos = pos_of(name_node);
         head.params = field_params(cx, n);
@@ -255,16 +305,12 @@ impl LangHooks for QuintHooks {
         if n.kind() != "lambda_expression" {
             return None;
         }
-        let mut head = base_head(cx, n);
+        let mut head = base_head(cx, n, Visibility::Private);
         head.params = lambda_params(cx, n);
         head.sole_call = child_by_field(n, "body")
             .filter(|body| body.kind() == "call_expression")
             .map(|body| body.id());
         Some(head)
-    }
-
-    fn binds_flow_targets(&self, kind: &str) -> bool {
-        kind == "block_expression"
     }
 
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
@@ -275,17 +321,10 @@ impl LangHooks for QuintHooks {
                     out.push((name, pos_of(n)));
                 }
             }
-            "block_expression" => {
-                let mut cursor = n.walk();
-                for binding in n.children_by_field_name("binding", &mut cursor) {
-                    if binding.kind() != "nondet_binding" {
-                        continue;
-                    }
-                    if let Some(name) =
-                        child_by_field(binding, "name").and_then(|name| plain_name(cx, name))
-                    {
-                        out.push((name, pos_of(binding)));
-                    }
+            "nondet_binding" => {
+                if let Some(name) = child_by_field(n, "name").and_then(|name| plain_name(cx, name))
+                {
+                    out.push((name, pos_of(n)));
                 }
             }
             _ => {}
@@ -328,7 +367,7 @@ impl LangHooks for QuintHooks {
                     kind: CallKind::Plain,
                     callee_root,
                     is_simple_path,
-                    initializes_binding: false,
+                    initializes_binding: initializes_named_local(cx, n),
                     args: field_args(cx, n),
                 })
             }
@@ -341,7 +380,7 @@ impl LangHooks for QuintHooks {
                     kind: CallKind::Plain,
                     callee_root: root,
                     is_simple_path: true,
-                    initializes_binding: false,
+                    initializes_binding: initializes_named_local(cx, n),
                     args: field_args(cx, n),
                 })
             }
@@ -385,6 +424,17 @@ impl LangHooks for QuintHooks {
                 let module = module_text(cx, n);
                 let alias = child_by_field(n, "alias").map(|alias| trimmed(cx, alias));
                 push_import(n, module, module, alias, ImportKind::Named, false, out);
+            }
+            "anonymous_instance_declaration" => {
+                push_import(
+                    n,
+                    module_text(cx, n),
+                    "*",
+                    None,
+                    ImportKind::Wildcard,
+                    false,
+                    out,
+                );
             }
             "module_export_declaration" => {
                 let module = module_text(cx, n);
@@ -487,16 +537,11 @@ impl LangHooks for QuintHooks {
                 continue;
             }
             fields += 1;
-            let value = child_by_field(child, "value")?;
-            if value.kind() != "field_access_expression" {
+            let copied = copy_source(cx, child)?;
+            if source.is_some_and(|known| known != copied) {
                 return None;
             }
-            let root = child_by_field(value, "object")
-                .and_then(|object| ident_root(cx, object, OBJECT_FIELDS).map(|(name, _)| name))?;
-            if source.is_some_and(|known| known != root) {
-                return None;
-            }
-            source = Some(root);
+            source = Some(copied);
         }
         Some(FieldCopy {
             pos: pos_of(n),

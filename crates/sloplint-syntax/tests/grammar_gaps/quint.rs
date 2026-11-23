@@ -11,7 +11,7 @@
 
 use std::sync::LazyLock;
 
-use sloplint_core::facts::ImportKind;
+use sloplint_core::facts::{ImportKind, MutBinding, Visibility};
 use sloplint_core::lang::Lang;
 use sloplint_core::role::CodeRole;
 use sloplint_syntax::{Analysis, CustomRules, FileInput, Parsers, analyze};
@@ -185,4 +185,134 @@ fn type_aliases_are_typedefs() {
     let analysis = run_clean(source);
     let names: Vec<&str> = analysis.facts.types.iter().map(|t| t.name).collect();
     assert_eq!(names, ["Pair", "Hidden"]);
+}
+
+#[test]
+fn record_copy_requires_matching_field_names_and_direct_source() {
+    let repeated = "module M {\n  pure def f(r: Rec): int = { a: r.a, b: r.a, c: r.a, d: r.a }.a\n  type Rec = { a: int, b: int, c: int, d: int }\n}\n";
+    assert!(
+        run_clean(repeated).facts.field_copies.is_empty(),
+        "one source field repeated under four names is a transformation"
+    );
+    let nested = "module M {\n  pure def f(r: Rec): int = { a: r.left.a, b: r.left.b, c: r.right.c, d: r.right.d }.a\n  type Rec = { left: Rec, right: Rec }\n}\n";
+    assert!(
+        run_clean(nested).facts.field_copies.is_empty(),
+        "record flattening reads nested members, not the record itself"
+    );
+    let renamed = "module M {\n  pure def f(r: Rec): int = { a: r.b, b: r.a, c: r.c }.a\n  type Rec = { a: int, b: int, c: int }\n}\n";
+    assert!(
+        run_clean(renamed).facts.field_copies.is_empty(),
+        "a renamed field is a transformation"
+    );
+}
+
+#[test]
+fn nondet_bindings_declare_without_writes() {
+    let source = "module M {\n  var total: int\n  action step = any {\n    { nondet v = 1\n      total' = v },\n    { nondet v = 2\n      total' = v },\n    { nondet v = 3\n      total' = v }\n  }\n}\n";
+    let analysis = run_clean(source);
+    let v: Vec<&MutBinding> = analysis
+        .facts
+        .bindings
+        .iter()
+        .filter(|binding| binding.name == "v")
+        .collect();
+    assert_eq!(v.len(), 3, "each sibling block binds its own `v`: {v:?}");
+    assert!(
+        v.iter().all(|binding| binding.write_lines == 0),
+        "Quint `nondet` names are immutable locals: {v:?}"
+    );
+}
+
+#[test]
+fn nested_definitions_and_closures_are_private() {
+    let source = "module M {\n  pure def api(x) = x + 1\n  pure def outer(x) = {\n    pure def helper(y) = y + 1\n    helper(x)\n  }\n  pure val lam = (y) => y + 1\n}\n";
+    let analysis = run_clean(source);
+    let visibility = |name: &str| {
+        analysis
+            .facts
+            .functions
+            .iter()
+            .find(|function| function.name == name)
+            .unwrap_or_else(|| panic!("function {name} recorded"))
+            .visibility
+    };
+    assert_eq!(visibility("api"), Visibility::Exported);
+    assert_eq!(visibility("outer"), Visibility::Exported);
+    assert_eq!(
+        visibility("helper"),
+        Visibility::Private,
+        "a nested definition is a local of the enclosing body"
+    );
+    assert_eq!(visibility("lam"), Visibility::Exported);
+    let closures: Vec<Visibility> = analysis
+        .facts
+        .functions
+        .iter()
+        .filter(|function| function.name.is_empty())
+        .map(|function| function.visibility)
+        .collect();
+    assert_eq!(
+        closures,
+        [Visibility::Private],
+        "an anonymous closure stays private"
+    );
+}
+
+#[test]
+fn anonymous_instance_imports_are_wildcards() {
+    let source = "module M {\n  import Bar(c = 0).*\n  import Baz(d = 1).*\n}\n";
+    let analysis = run_clean(source);
+    let wildcards: Vec<(&str, &str, Option<&str>)> = analysis
+        .facts
+        .imports
+        .iter()
+        .filter(|import| import.kind == ImportKind::Wildcard && !import.is_reexport)
+        .map(|import| (import.module.as_ref(), import.name, import.external_root))
+        .collect();
+    assert_eq!(
+        wildcards,
+        [("Bar", "*", Some("Bar")), ("Baz", "*", Some("Baz"))],
+        "a parameterized wildcard import keeps its module and external root"
+    );
+}
+
+#[test]
+fn call_initializes_only_named_local_values() {
+    let source = "module M {\n  pure def f = {\n    val count = length([1, 2, 3])\n    count\n  }\n  pure def g = length([1, 2, 3])\n  pure def h = {\n    val total = double(length([1, 2, 3]))\n    total\n  }\n  action choose = {\n    nondet picked = Set(1, 2).oneOf()\n    picked > 0\n  }\n}\n";
+    let analysis = run_clean(source);
+    let calls: Vec<(&str, bool)> = analysis
+        .facts
+        .calls
+        .iter()
+        .map(|call| (call.callee, call.initializes_binding))
+        .collect();
+    assert_eq!(
+        calls,
+        [
+            ("length", true),
+            ("length", false),
+            ("double", true),
+            ("length", false),
+            ("oneOf", true),
+            ("Set", false),
+        ],
+        "only a call that is the whole value of a named local initializes a binding"
+    );
+}
+
+#[test]
+fn parenthesized_call_still_initializes_its_local() {
+    let source = "module M {\n  pure def f = {\n    val count = (length([1, 2, 3]))\n    count\n  }\n  pure def g = {\n    val total = ((double([1, 2, 3])))\n    total\n  }\n}\n";
+    let analysis = run_clean(source);
+    let calls: Vec<(&str, bool)> = analysis
+        .facts
+        .calls
+        .iter()
+        .map(|call| (call.callee, call.initializes_binding))
+        .collect();
+    assert_eq!(
+        calls,
+        [("length", true), ("double", true)],
+        "parentheses around the whole value keep the call as the binding initializer"
+    );
 }
