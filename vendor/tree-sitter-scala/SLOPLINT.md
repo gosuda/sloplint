@@ -8,7 +8,7 @@
 - Copied verbatim from the published crate: `Cargo.toml`, `Cargo.toml.orig`, `Cargo.lock`,
   `LICENSE`, `README.md`, `bindings/`, `queries/`, `tree-sitter.json`.
 - Copied from upstream: `test/corpus/*.txt` (10 files, 305 cases, all passing before and after).
-- Changed: `grammar.js` (see `sloplint-grammar.patch`), and `src/` regenerated.
+- Changed: `grammar.js` and `src/scanner.c` (see `sloplint-grammar.patch`), and `src/` regenerated.
 - Added: `test/corpus/sloplint_endnew.txt`, `sloplint_parenif.txt`, `sloplint_instar.txt`,
   `sloplint_oplam.txt`, `sloplint_multipat.txt`, `sloplint_softkw.txt`, `sloplint_enum.txt`,
   `sloplint_opcmt.txt`.
@@ -21,9 +21,11 @@
   byte-for-byte. `grammar.json` is identical. `parser.c` and `node-types.json` differ:
   the published `node-types.json` lists the hidden supertypes `_definition` and `_pattern`,
   and the 0.27.1 output expands them to concrete kinds in child-type lists. The visible node
-  kinds are identical (266 = 268 − the two hidden supertypes). `src/scanner.c` carries one
-  sloplint edit (SC-SOFTENUM, below): `enum` removed from the postfix-operator heuristic's
-  `definition_words` list.
+  kinds are identical (266 = 268 − the two hidden supertypes). `src/scanner.c`
+  carries the sloplint edits below (SC-SOFTENUM plus the operand-probe rounds):
+  `enum` removed from the postfix-operator heuristic's `definition_words`
+  list, and the `/`-tail and postfix operand probes gained the soft-keyword
+  lookahead, line-comment transparency and blank-line termination rounds.
 - Test: `tree-sitter test` in this directory: 331/331 (305 upstream + 26 sloplint cases).
 
 ## Changes to grammar.js
@@ -427,3 +429,26 @@ Round: `given` operand lookaheads read complete tokens.
 - The `[]`/`()` balancing loops skip strings (including `"""`), char and
   symbol literals, backquoted identifiers, and comments, so `) =` inside
   `given("x) = y")` no longer reads as declaration syntax.
+
+Round: the operand probe treats a line comment as transparent. After a
+`/`-tailed or multi-char operator, `x +/ // note` + newline + `y` is still one
+infix expression: the probe skips the comment body and keeps looking, so `y`
+stays the right operand instead of becoming a stray statement (previously the
+operator read postfix and `y` a separate statement).
+
+Round: the operand probe stops at a blank line. `has_operand` and the
+slash-tail probe count line breaks (a CRLF pair once; a blank line is two),
+so `val a = x --?` + newline + `export()` keeps the call as the operand while
+the same text with a blank line ends the initializer and `export()` parses as
+its own statement. This matches scalac, where one newline continues an infix
+expression and two end it.
+
+Round: the `export` declaration lookahead is shared and comment/name aware.
+Both probes call one `soft_keyword_starts_declaration` helper that skips
+block and line comments the way the parser's export declaration does and
+accepts every path spelling — ASCII and non-ASCII identifier starts,
+back-quoted segments, and a standalone `=` after intervening comments
+(`export /* note */ = 1` stays an assignment). Before this,
+`x /` + `export /* facade */ delegate.value` misread the declaration as an
+operand and errored, and `export `weird`.value` / `export Émile.value` did
+the same.

@@ -208,3 +208,159 @@ fn given_extractor_binds_its_argument() {
         );
     });
 }
+
+#[test]
+fn named_argument_on_value_shadowing_method_is_not_a_write() {
+    // `val f` shadows the outer `def f(other: Int)`: `f(counter = 1)` calls
+    // the value's `apply`, so the named argument is not an assignment and
+    // no write lands on the outer `counter`.
+    let source = "def outer(): Unit = {\n  var counter = 0\n  {\n    val f = (x: Int) => x\n    f(counter = 1)\n  }\n}\n";
+    with_scala_bindings(source, |found| {
+        let counters = named_all(found, "counter");
+        assert_eq!(counters.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            counters[0].write_lines, 0,
+            "the shadowed callee's named argument records no write: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn sibling_for_binder_does_not_shadow_later_call() {
+    // A loop binder that already ended is out of scope: after
+    // `for (f <- xs) ...`, the call `f(counter = 1)` targets the outer
+    // `def f`, whose parameter list has no `counter`, so the assignment
+    // writes `counter` (a Scala 2.12 `Unit`-valued assignment).
+    let source = "def f(other: Unit) = ()\ndef m(xs: List[Int]): Unit = {\n  var counter = 0\n  for (f <- xs) println(f)\n  f(counter = 1)\n}\n";
+    with_scala_bindings(source, |found| {
+        let counters = named_all(found, "counter");
+        assert_eq!(counters.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            counters[0].write_lines, 1,
+            "the ended loop binder must not hide the write: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn sibling_case_binder_does_not_shadow_later_arm_call() {
+    // An earlier arm's binder is out of scope in a later arm: after
+    // `case f: String => ...`, the call `f(counter = 1)` targets the outer
+    // `def f`, so the assignment writes `counter`.
+    let source = "def f(other: Unit) = ()\ndef m(v: Any): Unit = {\n  var counter = 0\n  v match {\n    case f: String => println(f)\n    case _ => f(counter = 1)\n  }\n}\n";
+    with_scala_bindings(source, |found| {
+        let counters = named_all(found, "counter");
+        assert_eq!(counters.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            counters[0].write_lines, 1,
+            "the earlier arm binder must not hide the write: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn multi_argument_given_extractor_binds_its_arguments() {
+    // `case given(x, y)` is a two-argument extractor in Scala 2: both names
+    // bind locals that shadow outer variables inside the arm.
+    let source = "def f(v: Any): Int = {\n  var x = 0\n  var y = 0\n  v match {\n    case given(x, y) => x += 1\n    case _ => 0\n  }\n  x += 10\n  y += 10\n  x + y\n}\n";
+    with_scala_bindings(source, |found| {
+        let xs = named_all(found, "x");
+        assert_eq!(xs.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            (
+                xs[0].write_lines,
+                xs[0].first_write_line,
+                xs[0].last_write_line
+            ),
+            (1, 8, 8),
+            "the extractor arm's write is shadowed; only the post-match write lands: {found:?}"
+        );
+        let ys = named_all(found, "y");
+        assert_eq!(ys.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            (
+                ys[0].write_lines,
+                ys[0].first_write_line,
+                ys[0].last_write_line
+            ),
+            (1, 9, 9),
+            "the extractor arm binds y too; only the post-match write lands: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn given_tuple_type_arm_binds_nothing() {
+    // `case given (Int, String)` matches a tuple-typed given instance: the
+    // type names bind no locals, so a write inside the arm still reaches
+    // the outer variable.
+    let source = "def f(v: Any): Int = {\n  var status = 0\n  v match {\n    case given (Int, String) => status += 1\n    case _ => 0\n  }\n  status\n}\n";
+    with_scala_bindings(source, |found| {
+        let ss = named_all(found, "status");
+        assert_eq!(ss.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            (
+                ss[0].write_lines,
+                ss[0].first_write_line,
+                ss[0].last_write_line
+            ),
+            (1, 4, 4),
+            "the tuple-given arm binds nothing; the write reaches the outer var: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn lowercase_type_alias_tuple_arm_binds_nothing() {
+    // With `type status = Int` in scope, `case given (status, String)`
+    // matches a tuple-typed given: `status` is a type, so the arm binds
+    // nothing and the write reaches the outer variable.
+    let source = "object T {\n  type status = Int\n  def f(v: Any): Int = {\n    var status = 0\n    v match {\n      case given (status, String) => status += 1\n      case _ => 0\n    }\n    status\n  }\n}\n";
+    with_scala_bindings(source, |found| {
+        let ss = named_all(found, "status");
+        assert_eq!(ss.len(), 1, "outer var keeps its binding: {found:?}");
+        assert_eq!(
+            (
+                ss[0].write_lines,
+                ss[0].first_write_line,
+                ss[0].last_write_line
+            ),
+            (1, 6, 6),
+            "the alias tuple arm binds nothing; the write reaches the outer var: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn symbolic_named_argument_is_not_a_write() {
+    // Scala allows symbolic names. `sink(++ = 2)` names the `++` parameter,
+    // not the enclosing `var ++`. The left side parses as an
+    // `operator_identifier`, which the named-argument guard must screen the
+    // same way it screens a plain `identifier`.
+    let source = "object T {\n  def sink(++ : Int): Int = 0\n  def m(): Int = {\n    var ++ = 0\n    ++ = ++ + 1\n    sink(++ = 2)\n    ++\n  }\n}\n";
+    with_scala_bindings(source, |found| {
+        let names = named_all(found, "++");
+        assert_eq!(names.len(), 1, "one binding for the var: {found:?}");
+        assert_eq!(
+            (names[0].write_lines, names[0].first_write_line),
+            (1, 5),
+            "the symbolic named argument records no write, was 2 with the left side miscounted: {found:?}"
+        );
+    });
+}
+
+#[test]
+fn symbolic_call_with_unlisted_name_records_the_write() {
+    // A symbolic callee resolves like any other: `++(%% = 2)` consults the
+    // visible `def ++`, whose parameter list has no `%%`, so the assignment
+    // writes `%%` instead of vanishing as a named argument.
+    let source = "object T {\n  def ++(arg: Unit): Int = 0\n  def m(): Int = {\n    var %% = 0\n    ++(%% = 2)\n    %%\n  }\n}\n";
+    with_scala_bindings(source, |found| {
+        let names = named_all(found, "%%");
+        assert_eq!(names.len(), 1, "one binding for the var: {found:?}");
+        assert_eq!(
+            names[0].write_lines, 1,
+            "the assignment to the non-parameter name records the write: {found:?}"
+        );
+    });
+}

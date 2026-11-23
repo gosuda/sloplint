@@ -248,6 +248,26 @@ pub(crate) fn call_identity<'s>(
     if func.kind() == "call_expression" {
         return Some(("", None, false));
     }
+    // The context-argument marker must start the argument list, so only a
+    // first-position `using (...)` can be the phantom marker; anywhere else
+    // it is an ordinary call to a method named `using` (`twice(0, using(2))`
+    // publishes both callees).
+    // `f(using (ctx))` parses `using (ctx)` as a call to the soft keyword,
+    // but it is a context argument, not a call. Skip the phantom callee.
+    if func.kind() == "identifier"
+        && text(cx, func) == "using"
+        && n.parent().is_some_and(|p| {
+            p.kind() == "arguments"
+                && p.parent().is_some_and(|call| {
+                    child_by_field(call, "function").is_some_and(|f| f.id() != n.id())
+                        && arg_nodes(call)
+                            .first()
+                            .is_some_and(|first| first.id() == n.id())
+                })
+        })
+    {
+        return None;
+    }
     let node = func_node(func).unwrap_or(func);
     Some((callee_text(cx, node), func_root(cx, func), is_simple(node)))
 }

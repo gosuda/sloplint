@@ -68,6 +68,35 @@ fn sexp_of(source: &str) -> String {
         .to_sexp()
 }
 
+/// `sloplint-grammar.patch` must carry every file the vendor tree diverges on,
+/// not only `grammar.js`: the scanner edits (SC-SOFTENUM and the operand
+/// probes) live in `src/scanner.c`, and a patch that omits them cannot be
+/// replayed onto the published crate. This pins the file list so a scanner
+/// change without a patch hunk fails here.
+#[test]
+fn grammar_patch_covers_the_scanner() {
+    let dir =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../vendor/tree-sitter-scala");
+    let patch = std::fs::read_to_string(dir.join("sloplint-grammar.patch"))
+        .expect("sloplint-grammar.patch must be readable");
+    for file in ["a/grammar.js", "a/src/scanner.c"] {
+        assert!(
+            patch.contains(&format!("diff --git {file} b/")),
+            "sloplint-grammar.patch must carry a diff --git section for {file}"
+        );
+    }
+    // The scanner section must be a real unified diff against the published
+    // crate: it needs at least one hunk header.
+    let scanner = patch
+        .split("diff --git a/src/scanner.c")
+        .nth(1)
+        .expect("scanner.c section exists");
+    assert!(
+        scanner.contains("@@ -"),
+        "the scanner.c section must hold unified-diff hunks"
+    );
+}
+
 #[test]
 fn reserved_operator_symbol_literals_parse() {
     // `'=`, `':`, `'<-`, `'->` name operators; `'='` stays a char literal.
@@ -265,6 +294,33 @@ fn export_stays_an_operand_after_slash() {
         "}\n",
     );
     run_clean(source);
+    // Grouping is part of the contract, not just parse success: the division
+    // keeps `export` as its right operand, while an assignment or a
+    // declaration after the postfix `/` stays a separate statement.
+    let sexp = sexp_of(source);
+    assert_eq!(
+        sexp.matches("(infix_expression").count(),
+        2,
+        "`10 / export` and `x / export` stay one infix expression each, sexp: {sexp}"
+    );
+    assert_eq!(
+        sexp.matches("right: (identifier)").count(),
+        2,
+        "division keeps `export` as its right operand in both line shapes, sexp: {sexp}"
+    );
+    assert_eq!(
+        sexp.matches("(postfix_expression").count(),
+        2,
+        "the `export = 1` and `export a.b` lines keep the postfix reading, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("(assignment_expression left: (identifier)"),
+        "`export = 1` stays a separate assignment, not part of the initializer, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("(export_declaration"),
+        "`export a.b` stays a separate declaration, sexp: {sexp}"
+    );
 }
 
 #[test]
@@ -301,5 +357,107 @@ fn multi_slash_operator_keeps_assign_class() {
     assert!(
         sexp.contains("right: (infix_expression"),
         "the comment-cut `+?/!=` must keep assignment precedence so `y + z` stays its right operand, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn line_comment_does_not_end_an_infix_operand() {
+    // `x +/ // note` on one line and `y` on the next: the line comment is
+    // transparent to scalac, so `y` is still the right operand and the
+    // expression stays infix. Reading the comment as the line's end turned
+    // the operator postfix and left `y` a stray statement.
+    let source = concat!(
+        "object T {\n",
+        "  val a = x +/ // note\n",
+        "    y\n",
+        "  val b = x /+// note\n",
+        "    y\n",
+        "}\n",
+    );
+    run_clean(source);
+    let sexp = sexp_of(source);
+    assert!(
+        !sexp.contains("postfix_expression"),
+        "both operators keep an infix right operand across the line comment, sexp: {sexp}"
+    );
+    assert_eq!(
+        sexp.matches("(infix_expression").count(),
+        2,
+        "each val is one infix expression, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn blank_line_ends_the_expression_before_a_soft_keyword_operand() {
+    // `export` is a plain Scala 2 identifier, so `x --?` followed by one
+    // newline and `export()` is the postfix operator's right operand. A
+    // blank line is a statement separator: the initializer ends at `--?` and
+    // `export()` is its own statement. The scanner must not let the operand
+    // probe cross the blank line.
+    let operand = concat!("object T {\n", "  val a = x --?\n", "  export()\n", "}\n");
+    run_clean(operand);
+    let operand_sexp = sexp_of(operand);
+    assert!(
+        operand_sexp.contains("right: (call_expression"),
+        "a single newline keeps `export()` as the operand, sexp: {operand_sexp}"
+    );
+
+    let separated = concat!(
+        "object T {\n",
+        "  val b = x --?\n",
+        "\n",
+        "  export()\n",
+        "}\n"
+    );
+    run_clean(separated);
+    let separated_sexp = sexp_of(separated);
+    assert!(
+        separated_sexp.contains("(postfix_expression"),
+        "a blank line makes `x --?` postfix, sexp: {separated_sexp}"
+    );
+    assert!(
+        separated_sexp.contains("(call_expression"),
+        "`export()` stays its own statement, sexp: {separated_sexp}"
+    );
+    assert!(
+        !separated_sexp.contains("(infix_expression"),
+        "the call does not become the operator's operand, sexp: {separated_sexp}"
+    );
+}
+
+#[test]
+fn export_declaration_lookahead_is_comment_and_name_aware() {
+    // `export` is a plain Scala 2 identifier, so only its continuation makes
+    // the operator postfix. The continuation check skips comments and reads
+    // every path spelling the export declaration accepts, so a commented,
+    // back-quoted or non-ASCII path still opens a declaration and a
+    // commented assignment stays a separate statement.
+    let source = concat!(
+        "object T {\n",
+        "  val a = x /\n",
+        "  export /* facade */ delegate.value\n",
+        "  val b = x /\n",
+        "  export `weird`.value\n",
+        "  val c = x /\n",
+        "  export \u{c9}mile.value\n",
+        "  val d = x /\n",
+        "  export /* note */ = 1\n",
+        "}\n",
+    );
+    run_clean(source);
+    let sexp = sexp_of(source);
+    assert_eq!(
+        sexp.matches("(export_declaration").count(),
+        3,
+        "the commented, back-quoted and non-ASCII paths stay export declarations, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("(assignment_expression left: (identifier)"),
+        "the commented assignment stays an assignment statement, sexp: {sexp}"
+    );
+    assert_eq!(
+        sexp.matches("(postfix_expression").count(),
+        4,
+        "each `/` before a declaration reads as postfix, sexp: {sexp}"
     );
 }

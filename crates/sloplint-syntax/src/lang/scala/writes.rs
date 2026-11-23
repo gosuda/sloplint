@@ -38,15 +38,17 @@ pub(crate) fn write_roots<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<(&'s s
     if (n.kind() == "assignment_expression" || is_compound_write(cx, n))
         && let Some(l) = child_by_field(n, "left")
     {
+        // `f(name = v)` is a named argument, not a write — same rule as
+        // report_assign_write. Scala names may be symbolic, so the left side
+        // is an `identifier` or an `operator_identifier`; both must be
+        // screened. A field path stays a real write.
         if n.kind() == "assignment_expression"
-            && l.kind() == "identifier"
+            && matches!(l.kind(), "identifier" | "operator_identifier")
             && cx
                 .parent()
                 .is_some_and(|parent| parent.kind() == "arguments")
             && named_arg_verdict(cx, n, text(cx, l)) != Some(false)
         {
-            // `f(name = v)` is a named argument, not a write — same rule as
-            // report_assign_write. A field path stays a real write.
             return;
         }
         out.extend(write_root(cx, l));
@@ -96,7 +98,9 @@ fn named_arg_verdict<'s>(cx: &Cx<'_, 's>, n: Node<'_>, arg_name: &str) -> Option
     let args = n.parent().filter(|p| p.kind() == "arguments")?;
     let call = args.parent().filter(|p| p.kind() == "call_expression")?;
     let func = func_node(call)?;
-    if func.kind() != "identifier" {
+    // Symbolic callees resolve the same way: `++(%% = 2)` consults the
+    // visible `def ++` instead of defaulting to a named argument.
+    if !matches!(func.kind(), "identifier" | "operator_identifier") {
         return None;
     }
     let fname = unquote(text(cx, func));
@@ -104,6 +108,30 @@ fn named_arg_verdict<'s>(cx: &Cx<'_, 's>, n: Node<'_>, arg_name: &str) -> Option
     let mut scope = n.parent();
     while let Some(s) = scope {
         scope = s.parent();
+        // A local binding of the callee name — `val f`, a `for` binder or a
+        // `case` pattern — shadows every outer `def f`, so the named
+        // argument belongs to the value's `apply`, not to the method's
+        // parameter list. Stop the walk unresolved rather than consult an
+        // unrelated signature.
+        let mut bound = Vec::new();
+        let mut bound_names = Vec::new();
+        for d in named_children(s) {
+            if d.kind() == "val_definition" || d.kind() == "var_definition" {
+                super::items::decl_names(cx, d, &mut bound);
+            } else if d.kind() == "for_expression" || d.kind() == "case_clause" {
+                // Only a loop or arm that encloses the call binds here: a
+                // sibling comprehension or later arm already ended, so its
+                // binders are out of scope at the call.
+                if d.start_byte() <= n.start_byte() && n.end_byte() <= d.end_byte() {
+                    super::items::shadow_names(cx, d, &mut bound_names);
+                }
+            }
+        }
+        if bound.iter().any(|(name, _)| unquote(name) == fname)
+            || bound_names.iter().any(|name| unquote(name) == fname)
+        {
+            return None;
+        }
         let mut saw_def = false;
         for def in named_children(s) {
             if def.kind() != "function_definition" && def.kind() != "function_declaration" {
@@ -146,12 +174,13 @@ pub(crate) fn report_assign_write<'s>(
         return;
     };
     if n.kind() == "assignment_expression"
-        && left.kind() == "identifier"
+        && matches!(left.kind(), "identifier" | "operator_identifier")
         && n.parent().is_some_and(|p| p.kind() == "arguments")
         && named_arg_verdict(cx, n, text(cx, left)) != Some(false)
     {
         // `f(name = v)` is a named argument, not a write — unless a same-file
         // `def f` has no such parameter, which is a Scala 2.12 assignment.
+        // Scala names may be symbolic, so both identifier kinds are screened.
         // A field path (`f(obj.x = v)`) can't name a parameter, so it stays
         // a real write.
         return;
