@@ -8915,6 +8915,19 @@
           "type": "SEQ",
           "members": [
             {
+              "type": "STRING",
+              "value": "const"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "factory_constructor_signature"
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
               "type": "CHOICE",
               "members": [
                 {
@@ -11763,6 +11776,35 @@
                     "type": "SYMBOL",
                     "name": "identifier"
                   }
+                },
+                {
+                  "type": "CHOICE",
+                  "members": [
+                    {
+                      "type": "SEQ",
+                      "members": [
+                        {
+                          "type": "SYMBOL",
+                          "name": "_formal_parameter_part"
+                        },
+                        {
+                          "type": "CHOICE",
+                          "members": [
+                            {
+                              "type": "STRING",
+                              "value": "?"
+                            },
+                            {
+                              "type": "BLANK"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "BLANK"
+                    }
+                  ]
                 },
                 {
                   "type": "CHOICE",
@@ -14772,6 +14814,10 @@
       "normal_parameter_type"
     ],
     [
+      "_type_name",
+      "extension_type_representation"
+    ],
+    [
       "_normal_formal_parameters"
     ],
     [
@@ -15212,10 +15258,6 @@
     ],
     [
       "factory_constructor_signature",
-      "redirecting_factory_constructor_signature",
-      "_built_in_identifier"
-    ],
-    [
       "redirecting_factory_constructor_signature",
       "_built_in_identifier"
     ],

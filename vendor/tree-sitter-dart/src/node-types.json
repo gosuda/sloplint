@@ -3347,7 +3347,15 @@
           "named": true
         },
         {
+          "type": "formal_parameter_list",
+          "named": true
+        },
+        {
           "type": "optional_formal_parameters",
+          "named": true
+        },
+        {
+          "type": "type_parameters",
           "named": true
         }
       ]

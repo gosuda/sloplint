@@ -280,6 +280,7 @@ module.exports = grammar({
     // Type name ambiguities
     [$._type_name],
     [$._type_name, $.normal_parameter_type],
+    [$._type_name, $.extension_type_representation],
     // Parameter ambiguities
     [$._normal_formal_parameters],
     [$._normal_formal_parameter],
@@ -403,7 +404,6 @@ module.exports = grammar({
     [$.declaration, $.external, $._built_in_identifier],
     [$.declaration, $._external_and_static, $._built_in_identifier],
     [$.factory_constructor_signature, $.redirecting_factory_constructor_signature, $._built_in_identifier],
-    [$.redirecting_factory_constructor_signature, $._built_in_identifier],
     [$._function_name, $.constructor_signature],
     [$._type_name, $._primary, $.constant_pattern],
     [$._type_name, $._primary, $._function_formal_parameter],
@@ -1976,6 +1976,7 @@ module.exports = grammar({
         seq($.constructor_signature, optional($.initializers)),
         seq($.constant_constructor_signature, optional($.initializers)),
         $.factory_constructor_signature,
+        seq("const", $.factory_constructor_signature),
         seq(optional("static"), choice($.function_signature, $.getter_signature, $.setter_signature)),
         $.operator_signature,
         $.primary_constructor_body_signature,
@@ -2361,6 +2362,7 @@ module.exports = grammar({
             optional("final"),
             optional(field("type", $.type)),
             field("name", $.identifier),
+            optional(seq($._formal_parameter_part, optional("?"))),
             optional(","),
           ),
           $.optional_formal_parameters,
