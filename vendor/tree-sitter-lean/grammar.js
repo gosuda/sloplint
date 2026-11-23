@@ -1706,10 +1706,17 @@ export default grammar({
         )),
         seq(
           optional(field('name', choice($._binder_ident, $.anon_ctor_binder))),
-          optional($._type_spec), optional($._have_value),
+          optional($._type_spec), $._have_value,
         ),
       ),
       optional(seq(';', field('body', $._term))),
+    )),
+
+    /* A value-less have is a tactic goal, never an application operand. */
+    _tactic_have_goal: $ => prec.right(seq(
+      choice('have', 'haveI'),
+      optional(field('name', choice($._binder_ident, $.anon_ctor_binder))),
+      $._type_spec,
     )),
 
     _have_value: $ => choice(
@@ -1883,6 +1890,7 @@ export default grammar({
       $.tactic_rcases, $.tactic_rintro, $.tactic_injection,
       $.tactic_generalize, $.tactic_prefix,
       alias($._tactic_obtain, $.let), alias($._tactic_at_all, $.app),
+      alias($._tactic_have_goal, $.have),
       alias($._tactic_paren, $.paren),
       $.tactic_bullet, $.tactic_block, $.tactic_first,
       alias($._tactic_match, $.match), $._op_term,
