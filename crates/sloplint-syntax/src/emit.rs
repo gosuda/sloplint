@@ -3,11 +3,8 @@ use std::collections::{HashMap, HashSet};
 use sloplint_core::facts::{Ambient, AmbientKind, Call, DynamicSymbol, Function, Pos};
 use sloplint_core::lang::Lang;
 use sloplint_core::role::{CodeRole, RoleRegion};
-use sloplint_core::suppress::CommentText;
 
-use crate::hooks::{
-    Container, FunctionHead, ShadowKind, is_directive_comment, narrow, pos_of, slice,
-};
+use crate::hooks::{Container, FunctionHead, ShadowKind, is_directive_segment, narrow, pos_of};
 use crate::shadow::{FnFrame, Mark, ScopedShadow};
 use crate::spec::Role;
 use crate::walk::WalkState;
@@ -330,15 +327,15 @@ impl<'s, 'a> WalkState<'s, 'a, '_> {
     }
 
     pub(crate) fn on_comment(&mut self, node: tree_sitter::Node<'_>) {
-        let text = slice(self.src, node.start_byte(), node.end_byte());
-        if !is_directive_comment(text) {
-            return;
+        let comments = {
+            let cx = self.make_cx();
+            self.hooks.comment_texts(node, &cx)
+        };
+        for comment in comments {
+            if is_directive_segment(comment.text, comment.enclosing) {
+                self.comments.push(comment);
+            }
         }
-        self.comments.push(CommentText {
-            start_line: pos_of(node).line,
-            end_line: narrow(node.end_position().row) + 1,
-            text,
-        });
     }
 
     /// Emits directive comments inside a skipped subtree: `skip_subtree`

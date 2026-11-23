@@ -440,3 +440,28 @@ fn pcal_recursive_declaration_in_define_parses_clean() {
         "---- MODULE RC ----\n(*\n--algorithm A {\n  define {\n    RECURSIVE Fact(_)\n    Fact(n) == IF n = 0 THEN 1 ELSE n * Fact(n-1)\n  }\n  { skip }\n} *)\n====\n",
     );
 }
+
+#[test]
+fn proof_bodies_do_not_inflate_theorem_depth() {
+    // A named theorem's proof is a proof annotation, not code: quantifiers
+    // inside proof steps must not count toward the theorem's nesting depth.
+    let source = "---- MODULE Pd ----\nLEMMA foo == TRUE\nPROOF\n  <1>1. HAVE \\A x \\in Nat : \\A y \\in Nat : \\A z \\in Nat : TRUE\n  <1>2. QED\n    BY <1>1\n====\n";
+    let analysis = run_clean("src/pd.tla", source);
+    let tree = parse_raw(source);
+    assert!(
+        first_problem(&tree).is_none(),
+        "theorem proof must parse clean, got {:?}",
+        first_problem(&tree)
+    );
+    let foo = analysis
+        .facts
+        .functions
+        .iter()
+        .find(|f| f.name == "foo")
+        .expect("lemma foo must surface as a function fact");
+    assert_eq!(
+        foo.max_depth, 0,
+        "proof-body quantifiers must not reach depth, got {}",
+        foo.max_depth
+    );
+}

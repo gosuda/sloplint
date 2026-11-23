@@ -11,6 +11,11 @@ pub struct CommentText<'s> {
     pub end_line: u32,
     /// Raw comment text including delimiters.
     pub text: &'s str,
+    /// Opening delimiter of the enclosing block comment when `text` is a
+    /// split segment that no longer starts with it (TLA+ cuts a block
+    /// comment around each embedded PlusCal algorithm). `None` derives
+    /// the delimiter from `text`, as before.
+    pub enclosing: Option<&'static str>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -189,6 +194,16 @@ fn reason_pair(head: &str) -> Option<(&'static str, &'static str)> {
         .copied()
 }
 
+/// Closer for a split segment's enclosing block delimiter, so a trailing
+/// segment validates its reason against `*)` instead of reading `*)` as
+/// the reason the way a line comment would.
+fn enclosing_closer(opener: &str) -> Option<&'static str> {
+    REASON_CLOSERS
+        .iter()
+        .find(|(open, _)| *open == opener)
+        .map(|(_, closer)| *closer)
+}
+
 fn payload_base(text: &str) -> usize {
     let trimmed = text.trim_start();
     let leading = text.len() - trimmed.len();
@@ -206,7 +221,10 @@ fn scan_comment(
     findings: &mut Vec<Finding>,
 ) {
     let payload = comment.text;
-    let closer = reason_closer(payload);
+    let closer = comment
+        .enclosing
+        .and_then(enclosing_closer)
+        .unwrap_or_else(|| reason_closer(payload));
     let base = payload_base(payload);
     let gap_end = payload.as_bytes()[base..]
         .iter()
@@ -320,6 +338,7 @@ mod tests {
             start_line: 1,
             end_line: 1,
             text,
+            enclosing: None,
         };
         let source = SourceText {
             path: "src/lib.rs",
@@ -352,6 +371,50 @@ mod tests {
                 "a reason in `{text}` must yield one suppression and no finding"
             );
         }
+    }
+
+    #[test]
+    fn split_segment_keeps_its_enclosing_closer() {
+        let segment = "\n\\* sloplint-allow(x):   *)";
+        let comment = CommentText {
+            start_line: 7,
+            end_line: 8,
+            text: segment,
+            enclosing: Some("(*"),
+        };
+        let source = SourceText {
+            path: "src/lib.rs",
+            source: segment,
+            line_starts: &line_starts(segment),
+        };
+        let (suppressions, findings) = parse_suppressions(&source, &[comment], &|_| true);
+        assert_eq!(
+            (suppressions.len(), findings.len()),
+            (0, 1),
+            "a blank reason before `*)` stays invalid on a split segment"
+        );
+    }
+
+    #[test]
+    fn split_segment_honors_a_real_reason() {
+        let segment = "\n\\* sloplint-allow(x): narrow tail";
+        let comment = CommentText {
+            start_line: 7,
+            end_line: 8,
+            text: segment,
+            enclosing: Some("(*"),
+        };
+        let source = SourceText {
+            path: "src/lib.rs",
+            source: segment,
+            line_starts: &line_starts(segment),
+        };
+        let (suppressions, findings) = parse_suppressions(&source, &[comment], &|_| true);
+        assert_eq!(
+            (suppressions.len(), findings.len()),
+            (1, 0),
+            "a reason on a split segment still suppresses"
+        );
     }
 
     #[test]
@@ -504,6 +567,7 @@ mod tests {
                     start_line: line,
                     end_line: line,
                     text: DIRECTIVE,
+                    enclosing: None,
                 }
             })
             .collect();
@@ -535,6 +599,7 @@ mod tests {
             start_line: 1,
             end_line: 1,
             text: &text,
+            enclosing: None,
         };
         let source = SourceText {
             path: "src/lib.rs",
