@@ -1,1 +1,5 @@
 a.qnt:2 info grep/multiline-argument
+# h: the second call starts on the initializer's line but is a neighbor,
+# not a nested argument, so its own fifteen-line span still warns. k: the
+# grouped initializer stays exempt, so only f and h warn.
+a.qnt:20 info grep/multiline-argument

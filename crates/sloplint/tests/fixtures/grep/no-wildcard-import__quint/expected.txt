@@ -1,1 +1,3 @@
 a.qnt:5 info grep/no-wildcard-import
+# a parameterized wildcard instantiation is a wildcard import too.
+a.qnt:6 info grep/no-wildcard-import
