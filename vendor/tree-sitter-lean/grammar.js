@@ -1695,20 +1695,11 @@ export default grammar({
 
     have: $ => prec.right(seq(
       choice('have', 'haveI'),
-      choice(
-        /* Function binders belong to a declaration with an explicit value.
-           Keeping that terminator avoids reducing a partial parameter list
-           as an arbitrary enclosing application argument. */
-        prec.right(1, seq(
-          field('name', $._binder_ident),
-          alias(prec.right(repeat1($._binder)), $.binders),
-          optional($._type_spec), $._have_value,
-        )),
-        seq(
-          optional(field('name', choice($._binder_ident, $.anon_ctor_binder))),
-          optional($._type_spec), $._have_value,
-        ),
-      ),
+      optional(choice(
+        seq(field('name', $._binder_ident), optional($._binders)),
+        field('name', $.anon_ctor_binder),
+      )),
+      optional($._type_spec), $._have_value,
       optional(seq(';', field('body', $._term))),
     )),
 
