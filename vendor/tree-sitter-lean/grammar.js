@@ -70,7 +70,7 @@ export default grammar({
     $._record_comma,
     $._comma,
     $._colon,
-    $._assign,
+    ':=',
     $._record_assign,
     $._generalize_eq,
     $._for_do,
@@ -226,13 +226,13 @@ export default grammar({
       optional(seq(alias($._brace_open, '{'),
         repeat(seq(
           field('key', choice($.identifier, $.str_lit)),
-          choice(alias($._assign, ':='), '='),
+          choice(':=', '='),
           field('value', choice($.identifier, $.str_lit, $.num_lit,
                                 $.array_lit)),
           optional(choice(';', alias($._comma, ','), $._newline)))),
         alias($._brace_close, '}'))),
       optional(seq(alias($._colon, ':'), $._term)),
-      optional(seq(alias($._assign, ':='), $._term)),
+      optional(seq(':=', $._term)),
     )),
 
     /* `mutual … end` groups mutually-recursive declarations. Like
@@ -249,7 +249,7 @@ export default grammar({
       'declare_syntax_cat',
       field('name', $.identifier),
       optional(seq(
-        '(', 'behavior', alias($._assign, ':='), field('behavior', $.identifier), ')',
+        '(', 'behavior', ':=', field('behavior', $.identifier), ')',
       )),
     ),
 
@@ -266,7 +266,7 @@ export default grammar({
       field('name', $.identifier),
       optional($._type_spec),
       optional(choice(
-        seq(alias($._assign, ':='), field('value', $._term)),
+        seq(':=', field('value', $._term)),
         $.struct_lit,
       )),
     )),
@@ -310,7 +310,7 @@ export default grammar({
       field('name', choice($.identifier, $.str_lit)),
       repeat(field('arg', $._term_atom)),
       repeat(seq(
-        field('clause', choice('=>', 'for', 'in', alias($._assign, ':='))),
+        field('clause', choice('=>', 'for', 'in', ':=')),
         field('rhs', $._term),
       )),
     )),
@@ -327,7 +327,7 @@ export default grammar({
     alias_cmd: $ => seq(
       'alias',
       field('name', choice($.identifier, $.anon_ctor)),
-      alias($._assign, ':='),
+      ':=',
       field('value', $._term),
     ),
 
@@ -442,7 +442,7 @@ export default grammar({
       choice(
         seq(
           field('name', $.identifier),
-          alias($._assign, ':='),
+          ':=',
           repeat1($._syntax_atom),
         ),
         seq(
@@ -513,7 +513,7 @@ export default grammar({
       optional(seq(
         field('name', $._binder_ident),
         optional($._type_spec),
-        choice(alias($._assign, ':='), '←', '<-'),
+        choice(':=', '←', '<-'),
       )),
       choice(
         $._term,
@@ -561,7 +561,7 @@ export default grammar({
          tail only manufactured MISSING-arg errors when the head token
          stole a Capitalized word inside a completable command. */
       optional(seq(alias($._colon, ':'), $._term)),
-      optional(choice(alias($._assign, ':='), '=')),
+      optional(choice(':=', '=')),
       optional($._term),
     )),
     /* A capitalized head keeps `custom_command` out of the way of
@@ -770,7 +770,7 @@ export default grammar({
     _named_attr: $ => seq(
       '(',
       field('attr', choice('priority', 'name')),
-      alias($._assign, ':='),
+      ':=',
       field('value', $._term),
       ')',
     ),
@@ -861,7 +861,7 @@ export default grammar({
       optional($._type_spec),
       optional($._extends_clause),
       optional(choice(
-        seq(choice(alias($._where, 'where'), alias($._assign, ':=')), repeat($.ctor_alt)),
+        seq(choice(alias($._where, 'where'), ':='), repeat($.ctor_alt)),
         repeat1($.ctor_alt),
       )),
       optional($._deriving_clause),
@@ -899,14 +899,14 @@ export default grammar({
         field('name', $._binder_ident),
         optional($._binders),
         $._type_spec,
-        optional(field('default', seq(alias($._assign, ':='), $._term))),
+        optional(field('default', seq(':=', $._term))),
       ),
       seq(
         '(',
         field('name', $._binder_ident),
         optional($._binders),
         $._type_spec,
-        optional(field('default', seq(alias($._assign, ':='), $._term))),
+        optional(field('default', seq(':=', $._term))),
         ')',
       ),
       seq(
@@ -932,7 +932,7 @@ export default grammar({
        body of `field := value` lines (instance/anonymous-structure
        def form). */
     _decl_val: $ => choice(
-      seq(field('body', seq(alias($._assign, ':='), $._term)), optional($.where_decls)),
+      seq(field('body', seq(':=', $._term)), optional($.where_decls)),
       seq(repeat1($.match_alt), optional($.where_decls)),
       seq($.where_struct, optional($.where_decls)),
     ),
@@ -992,7 +992,7 @@ export default grammar({
       )), $.binders)),
       optional($._type_spec),
       choice(
-        seq(alias($._assign, ':='), field('body', $._term)),
+        seq(':=', field('body', $._term)),
         repeat1($.match_alt),
       ),
     )),
@@ -1039,7 +1039,7 @@ export default grammar({
         field('name', $.anon_ctor_binder),
       ),
       optional($._type_spec),
-      optional(field('default', seq(alias($._assign, ':='), $._term))),
+      optional(field('default', seq(':=', $._term))),
       ')',
     ),
 
@@ -1254,7 +1254,7 @@ export default grammar({
            trailing arg list (`(attr := simps, implicit_reducible)`). */
         seq(
           field('arg_name', $.identifier),
-          alias($._assign, ':='),
+          ':=',
           field('arg_value', $._term),
           repeat(seq(alias($._comma, ','), $._term)),
         ),
@@ -1689,7 +1689,7 @@ export default grammar({
       /* `let rec foo (x : T) : U := …` — function-style binders. */
       optional($._binders),
       optional($._type_spec),
-      choice(alias($._assign, ':='), '←', '<-'),
+      choice(':=', '←', '<-'),
       field('value', $._term),
       optional(seq(';', field('body', $._term))),
     )),
@@ -1711,7 +1711,7 @@ export default grammar({
       $._type_spec,
     )),
 
-    _have_value: $ => seq(alias($._assign, ':='), field('value', $._term)),
+    _have_value: $ => seq(':=', field('value', $._term)),
 
     /* `suffices g : T from proof` / `suffices g : T by tac` — a
        tactic-language reframing. The `from`/`by` proves the new
@@ -1807,7 +1807,7 @@ export default grammar({
     /* `x := v` mutation, valid only inside a do-block. */
     block_assign: $ => seq(
       field('name', $.identifier),
-      alias($._assign, ':='),
+      ':=',
       field('value', $._term),
     ),
 
@@ -1845,7 +1845,7 @@ export default grammar({
     calc: $ => seq('calc', body($, $.calc_step)),
     calc_step: $ => seq(
       field('relation', $._term),
-      alias($._assign, ':='),
+      ':=',
       field('proof', $._term),
     ),
 
@@ -1915,7 +1915,7 @@ export default grammar({
     _tactic_obtain: $ => prec.right(seq(
       'obtain', optional(field('name', $.rcases_pattern)),
       optional($._type_spec),
-      optional(seq(alias($._assign, ':='), field('value', $._term))),
+      optional(seq(':=', field('value', $._term))),
     )),
     _tactic_at_all: $ => prec.left(PREC.app, seq(
       field('fn', $._op_term), 'at', field('arg', $.star),
@@ -1964,7 +1964,7 @@ export default grammar({
       $.calc, $.open_term,
     ),
     _if_condition: $ => choice(
-      seq('let', field('pattern', $._term), alias($._assign, ':='), field('cond', $._term)),
+      seq('let', field('pattern', $._term), ':=', field('cond', $._term)),
       seq(optional(seq(field('hyp', $._binder_ident), alias($._colon, ':'))),
           field('cond', $._term)),
     ),
