@@ -474,20 +474,23 @@ static bool scan_comma(struct Scanner *scanner, TSLexer *lexer,
   return true;
 }
 
-/* ASSIGN is shared by declarations, statements and record fields. The
-   RECORD_ASSIGN marker identifies a field without selecting a lexical
-   branch before the enclosing syntax has resolved the brace's meaning. */
+/* A grammar-owned assignment stays in its current declaration or statement.
+   Only an assignment belonging to an enclosing construct closes an inner
+   layout body first. Record fields retain their distinct brace context. */
 static bool scan_colon(struct Scanner *scanner, TSLexer *lexer,
                        const bool *valid_symbols) {
   advance(lexer);
   if (lexer->lookahead == '=') {
-    if (!valid_symbols[ASSIGN])
+    if (!valid_symbols[RECORD_ASSIGN] && !valid_symbols[ASSIGN])
       return pop_layout(scanner, lexer, valid_symbols);
     advance(lexer);
-    if (valid_symbols[RECORD_ASSIGN]
-        && top_frame(scanner)->kind == BRACE_FRAME)
-      top_frame(scanner)->kind = RECORD_FRAME;
-    lexer->result_symbol = ASSIGN;
+    if (valid_symbols[RECORD_ASSIGN]) {
+      if (top_frame(scanner)->kind == BRACE_FRAME)
+        top_frame(scanner)->kind = RECORD_FRAME;
+      lexer->result_symbol = RECORD_ASSIGN;
+    } else {
+      lexer->result_symbol = ASSIGN;
+    }
   } else {
     if (lexer->lookahead == ':') return false;
     if (!valid_symbols[COLON])
@@ -591,7 +594,7 @@ static bool scan(struct Scanner *scanner, TSLexer *lexer,
   if (lexer->lookahead == ',' && valid_symbols[COMMA])
     return scan_comma(scanner, lexer, valid_symbols);
   if (lexer->lookahead == ':' &&
-      (valid_symbols[COLON] || valid_symbols[ASSIGN]))
+      (valid_symbols[COLON] || valid_symbols[ASSIGN] || valid_symbols[RECORD_ASSIGN]))
     return scan_colon(scanner, lexer, valid_symbols);
   if (lexer->lookahead == '=' && valid_symbols[GENERALIZE_EQ]) {
     advance(lexer);

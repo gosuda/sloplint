@@ -1361,7 +1361,7 @@ export default grammar({
         optional(alias(repeat1(choice(
           $._binder_ident, $.implicit_binder, $.explicit_binder,
         )), $.binders)),
-        optional($._type_spec), choice(alias($._record_assign, ':='), alias($._assign, ':=')), field('value', $._term),
+        optional($._type_spec), alias($._record_assign, ':='), field('value', $._term),
       ),
       field('name', $.identifier),
     ),
