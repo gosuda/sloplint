@@ -611,3 +611,25 @@ fn scanner_layout_state_survives_incremental_edits() {
         fresh.root_node().to_sexp()
     );
 }
+
+#[test]
+fn show_requires_a_proof_only_in_term_contexts() {
+    let source = "def fromValue : Nat := show Nat from 1\ndef byValue : Nat := show Nat by exact 2\ntheorem goal : True := by\n  show True\n  exact True.intro\ndef after : Nat := 3\n";
+    let analysis = run_clean("src/show.lean", source);
+    assert_eq!(
+        function_names(&analysis),
+        ["fromValue", "byValue", "goal", "after"]
+    );
+    let sexp = parse_raw(source).root_node().to_sexp();
+    assert_eq!(sexp.matches("(show ").count(), 3);
+    assert!(
+        analysis.facts.calls.iter().any(|call| call.callee == "exact"),
+        "proof tactics retain their call facts"
+    );
+    assert!(
+        parse_raw("def bad : Nat := show Nat\n")
+            .root_node()
+            .has_error(),
+        "a term show must supply a proof"
+    );
+}

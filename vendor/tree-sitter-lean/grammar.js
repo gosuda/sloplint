@@ -1750,14 +1750,13 @@ export default grammar({
     )),
 
     show: $ => prec.right(seq(
-      'show',
-      field('type', $._term),
-      /* Bare `show T` is the tactic form (re-states the goal);
-         `show T from e` / `show T by tac` are the term forms. */
-      optional(choice(
-        seq('from', field('value', $._term)),
-        $.by,
-      )),
+      'show', field('type', $._term),
+      choice(seq('from', field('value', $._term)), $.by),
+    )),
+
+    /* A bare show changes the tactic goal; a term requires its proof. */
+    _tactic_show_goal: $ => prec.right(seq(
+      'show', field('type', $._term),
     )),
 
     /* Term conditionals require else. Do conditionals have their own rule. */
@@ -1878,6 +1877,7 @@ export default grammar({
       $.tactic_generalize, $.tactic_prefix,
       alias($._tactic_obtain, $.let), alias($._tactic_at_all, $.app),
       alias($._tactic_have_goal, $.have),
+      alias($._tactic_show_goal, $.show),
       alias($._tactic_paren, $.paren),
       $.tactic_bullet, $.tactic_block, $.tactic_first,
       alias($._tactic_match, $.match), $._op_term,
