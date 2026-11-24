@@ -241,6 +241,11 @@ fn macro_braced_member_read_locals_bind() {
                 (2, *first, *last),
                 "both writes land on the local: {found:?}\n{source}"
             );
+            let bits = named_all(found, "bits");
+            assert!(
+                bits.is_empty(),
+                "bit-fields are not locals: {found:?}\n{source}"
+            );
         });
     }
 }
@@ -250,5 +255,17 @@ fn braced_member_macros_in_local_classes_do_not_bind_fields() {
     let source = "void g() {\n    struct Local {\n#ifdef DEBUG\n        MEMBERS(int tag) { private: int field = 1; };\n#endif\n    };\n}\n";
     with_cpp_bindings(source, |found| {
         assert!(found.is_empty(), "class fields are not locals: {found:?}");
+    });
+}
+
+#[test]
+fn macro_braced_class_body_with_access_sections_does_not_bind() {
+    let source = "void g() {\n    LOCAL_STATE(State) { private: int retries = 0; public: void retry() { ++retries; ++retries; } };\n}\n";
+    with_cpp_bindings(source, |found| {
+        assert!(
+            named_all(found, "retries").is_empty(),
+            "class members are not macro locals: {found:?}"
+        );
+        assert!(found.is_empty(), "class members are not locals: {found:?}");
     });
 }

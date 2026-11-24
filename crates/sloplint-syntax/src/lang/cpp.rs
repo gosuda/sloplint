@@ -472,6 +472,20 @@ fn is_macro_local_field(node: Node<'_>, cx: &Cx<'_, '_>) -> bool {
     {
         return false;
     }
+    // A braced macro can expand to a class definition when invoked inside a
+    // function (`LOCAL_STATE(State) { private: int retries = 0; ... };`).
+    // Tree-sitter still reads the body as a macro member list, so the
+    // ancestor check below sees only the function block. Bodies with an
+    // explicit access section are class-like: their fields are members,
+    // never function locals.
+    if named_children(body).into_iter().any(|child| {
+        matches!(
+            child.kind(),
+            "access_specifier" | "qt_section_label" | "macro_access_label"
+        )
+    }) {
+        return false;
+    }
     !cx.ancestors()
         .skip(2)
         .take_while(|n| n.kind() != "compound_statement")
