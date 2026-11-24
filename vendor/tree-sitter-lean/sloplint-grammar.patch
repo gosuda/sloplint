@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index b093699..66cd893 100644
+index 31f12ce..ae99f83 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -68,10 +68,29 @@ export default grammar({
@@ -551,7 +551,7 @@ index b093699..66cd893 100644
      /* `case name args => body` — Lean tactic-language case selection
         (analogous to a `match_alt` but goal-keyed). Stand-alone tactic
         statement; commonly chained as sibling at the same indent. */
-@@ -1755,6 +2038,16 @@ export default grammar({
+@@ -1758,6 +2041,16 @@ export default grammar({
       * The scanner returns false (rewind to start) for the plain case,
       * letting internal lexing handle word/keyword arbitration. */
      identifier: $ => choice($._plain_ident, $._scanned_ident),
@@ -706,6 +706,18 @@ index cbc9120..0e671e1 100644
  
      let scanner_path = src_dir.join("scanner.c");
      c_config.file(&scanner_path);
+diff --git a/queries/highlights.scm b/queries/highlights.scm
+index 09aa103..852c8bd 100644
+--- a/queries/highlights.scm
++++ b/queries/highlights.scm
+@@ -106,7 +106,6 @@
+ (meta)      @keyword.import
+ (all)       @keyword.import
+ "import"    @keyword.import
+-(public_section) @keyword.import
+ 
+ [
+   "namespace"
 diff --git a/test/corpus/comments.txt b/test/corpus/comments.txt
 index a99d365..82bc2ab 100644
 --- a/test/corpus/comments.txt
@@ -830,7 +842,7 @@ index d49ea36..1435fed 100644
 +    renaming: (renaming_pair
 +      (identifier)
 +      (identifier))))
-diff --git a/tmp/lean-df/vendor/tree-sitter-lean/test/corpus/sloplint-commands.txt b/test/corpus/sloplint-commands.txt
+diff --git a/test/corpus/sloplint-commands.txt b/test/corpus/sloplint-commands.txt
 new file mode 100644
 index 0000000..13b415d
 --- /dev/null
