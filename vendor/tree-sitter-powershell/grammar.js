@@ -30,6 +30,7 @@ export default grammar({
 
   externals: ($) => [
     $._statement_terminator,
+    $._bare_dashes,
     $._method_block_head,
   ],
 
@@ -423,12 +424,19 @@ export default grammar({
       ),
 
     // Parameters
-    // sloplint: a parameter name may hold digits after its first letter:
-    // -Count2, -m64, -O2, -p2.
-    command_parameter: ($) => token(/-+[a-zA-Z_?\-`][a-zA-Z0-9_?\-`]*/),
-
-    // A lone `--` ends the options of a native command: dotnet run -- x.
-    // It is a command_parameter after a separator, see _command_argument.
+    command_parameter: ($) =>
+      choice(
+        token(
+          choice(
+            // `-Name`, `-Name1`, `--long-flag`, `-A5`
+            /-+[a-zA-Z_?\-`][a-zA-Z0-9_?\-`]*/,
+            // `--format=%H`, `--pretty=format:"%B"`: a native option with an attached value
+            /--?[a-zA-Z_][a-zA-Z0-9_\-]*=([^\s"'`;|&(){}]|"[^"\r\n]*"|'[^'\r\n]*')*/,
+          ),
+        ),
+        // A bare `--` or `-` argument (see scanner.c).
+        $._bare_dashes,
+      ),
 
     _verbatim_command_argument_chars: ($) =>
       repeat1(choice(/"[^"]*"/, /&[^&]*/, /[^\|\r\n]+/)),
@@ -512,11 +520,15 @@ export default grammar({
             $._statement_terminator,
           ),
           seq($.pipeline, $._statement_terminator),
+          // `npm run dev &` (PowerShell 7): runs the pipeline as a background job
+          seq($.pipeline, $.background_operator),
           $.empty_statement,
         ),
       ),
 
     empty_statement: ($) => prec(PREC.EMPTY, ';'),
+
+    background_operator: ($) => '&',
 
     if_statement: ($) =>
       prec.left(
@@ -949,8 +961,6 @@ export default grammar({
         PREC.PARAM,
         choice(
           seq($.command_argument_sep, optional($.generic_token)),
-          // sloplint: `--` ends the options of a native command: dotnet run -- x.
-          seq($.command_argument_sep, alias('--', $.command_parameter)),
           seq($.command_argument_sep, $._command_argument_list),
           $.parenthesized_expression,
           $.script_block_expression,

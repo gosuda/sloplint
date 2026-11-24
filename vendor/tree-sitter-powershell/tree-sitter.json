@@ -8,11 +8,12 @@
       "path": ".",
       "file-types": ["ps1", "psm1"],
       "highlights": ["queries/highlights.scm"],
+      "folds": ["queries/folds.scm"],
       "injection-regex": "^(ps1|psm1)$"
     }
   ],
   "metadata": {
-    "version": "0.26.4",
+    "version": "0.26.6",
     "license": "MIT",
     "description": "A Powershell grammar for tree-sitter",
     "authors": [

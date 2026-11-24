@@ -33,6 +33,7 @@ class MyClass
               (type_identifier))))
         (variable)))))
 
+
 ===
 Class : string property with attributes
 ===
@@ -141,6 +142,7 @@ class MyClass
                             (expandable_string_literal
                               (variable)
                               (variable))))))))))))))))
+
 
 ===
 Class : mix method and properties declaration

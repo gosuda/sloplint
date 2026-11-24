@@ -1375,7 +1375,7 @@ dependencies = [
 
 [[package]]
 name = "tree-sitter-powershell"
-version = "0.26.4"
+version = "0.26.6"
 dependencies = [
  "cc",
  "tree-sitter-language",

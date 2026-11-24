@@ -12,7 +12,7 @@
 [package]
 edition = "2021"
 name = "tree-sitter-powershell"
-version = "0.26.4"
+version = "0.26.6"
 authors = ["Airbus CERT <cert@airbus.com>"]
 build = "bindings/rust/build.rs"
 include = [

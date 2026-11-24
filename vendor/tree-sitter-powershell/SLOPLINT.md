@@ -1,16 +1,18 @@
 # tree-sitter-powershell, patched for sloplint
 
-Date: 2026-10-20. Two rounds of fixes, both in this crate.
+The local changes below were made in four rounds on the 0.26.4 crate.
+The v0.26.6 update keeps the local fixes that sloplint still needs.
 
 ## Origin
 
 - Upstream repo: https://github.com/airbus-cert/tree-sitter-powershell
-- Upstream tag: v0.26.4.
-- Published crate: tree-sitter-powershell 0.26.4. Name and version are unchanged.
-- The published grammar.js and scanner.c are byte-identical to the tag.
-- The tag keeps grammar.js at the repo root, so the crate layout is the same.
-- test/corpus is not in the published crate. It was copied from the tag.
-- scanner.c is changed in round 2 (see below). grammar.js is changed in both rounds.
+- Upstream tag: `v0.26.6`, commit `65ea6919e816a7ac142acec7ee72757f89db8439`.
+- The published `tree-sitter-powershell` 0.26.6 crate records that commit in
+  `.cargo_vcs_info.json`. Its `grammar.js` and `src/scanner.c` match the tag.
+- The preceding 0.26.4 crate was published from
+  `d398441825243b00e317e87e1829b9d6a3e54ce0` (tag `v0.26.5`). The grammar and
+  scanner were the same as at `v0.26.4` (`4ffe56d66aa926c28442befbb5b89d1437d7199c`).
+- The tag supplies `test/corpus`, which the crate does not ship.
 
 ## Why
 
@@ -25,11 +27,44 @@ and loses every other finding for that file.
 - Regenerating the unpatched grammar.js with this CLI gives grammar.json and
   node-types.json identical to the published crate. parser.c differs in one line,
   the pragma `#pragma GCC optimize ("O0", "jump-tables")`.
-- To redo the patch: apply sloplint-grammar.patch to the upstream tree with
-  `patch -p1` (it holds the grammar.js and src/scanner.c diffs), then run
-  `tree-sitter generate` and `tree-sitter test`. Regenerating from the committed
-  grammar.js and scanner.c gives a byte-identical parser.c.
-- Sizes: parser.c 6,102,326 bytes (published: 4,697,445), 2683 states (published: 2142).
+- Apply `sloplint-grammar.patch` to the pinned upstream tree with
+  `git apply -p1`. Run `tree-sitter generate` there. From the sloplint root,
+  `bash scripts/grammars.sh verify tree-sitter-powershell` checks the result
+  against the vendored files. Run `tree-sitter test` in the vendor directory
+  to include the sloplint corpus.
+- The regenerated parser uses ABI 15 and has 2,697 states.
+
+## What v0.26.6 replaces
+
+Upstream [PR #65](https://github.com/airbus-cert/tree-sitter-powershell/pull/65)
+(`b03e6b0e39692037a98e37a26f0a969b2c46fbc1`) replaces the local digit-in-parameter
+regex and the bare `--` alias. Its scanner accepts both `--` and `-`. It skips
+the space before a bare `--` rather than emitting a `command_argument_sep`.
+The adapter already ignores that separator. The release also adds trailing
+`&` as a `background_operator`.
+
+Keep the local `generic_token` for attached option words. The adapter reads
+it as a string argument, and the token keeps commas and quoted segments in
+the value. Keep the local comma-list rules: they produce one
+`array_literal_expression` instead of separate arguments for the items.
+Both groups overlap PR #65. Open upstream issues
+[#46](https://github.com/airbus-cert/tree-sitter-powershell/issues/46) and
+[#59](https://github.com/airbus-cert/tree-sitter-powershell/issues/59) concern
+related argument parsing.
+
+The remaining local groups do not have an upstream fix in this release:
+
+| Local grammar or scanner group | Upstream tracking |
+| --- | --- |
+| Ternary | [#7](https://github.com/airbus-cert/tree-sitter-powershell/issues/7), open |
+| Argument words, variable paths and dots, quoted and escaped words, member-call tails, redirects | #46 and #59 overlap option arguments; [#57](https://github.com/airbus-cert/tree-sitter-powershell/issues/57) concerns leading backticks; no exact issue identified for the other forms |
+| Named and empty blocks, switch clauses, constructors, attributes and declarations, labels, parameter bodies | No issue or PR identified for these changes |
+| Case-insensitive numbers, cast operands, type names and generic ranks, bitwise and membership operators | No issue or PR identified for these changes |
+| String text and here-string escapes, statement terminators, method-block scanner | No issue or PR identified for these changes |
+
+The patch has 748 lines and 31 diff hunks, compared with 751 lines and
+31 hunks before. The two replacements were edits inside larger hunks, which
+still contain local changes.
 
 ## Round 1 grammar changes
 
@@ -71,15 +106,14 @@ One bullet per cluster of the wave-2 sweep. The validator was `pwsh 7.6.7`
 - PS-NATIVE, `git -C $p log --format="%h %B" -n 1`, `& git -C $s apply -p2 ...`,
   `dotnet run -- ../x $y`:
   - A parameter name may hold digits after its first letter (`-p2`, `-m64`, `-O2`,
-    `-Count2`). Before round 2 these were `generic_token` words. They are
-    `command_parameter` now, as for `-Name`.
+    `-Count2`). The upstream rule now provides this behavior.
   - A command-line word may hold quoted segments that contain spaces, pipes or
     parentheses: `--format="%h %B"`, `--format='%H||%P'`. The segments are matched
     inside the word token. A double-quoted segment holds no nested quote.
     `-p:V="$($m.x)"` is a `-p` parameter, a `:` separator and then one word
     `V="$($m.x)"`, so the adapter sees two arguments, not one. pwsh passes one string
     to a native command; that shape is not modelled.
-  - A lone `--` is a `command_parameter` after a separator, so `dotnet run -- x` parses.
+  - A bare `--` or `-` is a `command_parameter` from the upstream scanner.
   - A call in an argument may be followed by more member access and calls:
     `-Value $sbf.ToString().TrimEnd()`. The extra pieces are siblings of the argument,
     like the first `argument_list`.
@@ -183,7 +217,9 @@ More valid code that the same sweep files turned up, fixed because it blocked fi
 
 ## node-types.json changes
 
-No kind or field was renamed or removed. Every change loosens a constraint or adds a child.
+No node kind or field was renamed or removed in the v0.26.6 update. The
+adapter does not need to change. Relative to plain v0.26.6, the local changes
+add the kinds and children below.
 
 - New named node: `ternary_expression`. It is a child wherever an expression is.
 - New anonymous nodes: `base`, `this`, `?`, `-cin`, `-cnotin`, `-iin`, `-inotin`.
@@ -194,12 +230,11 @@ No kind or field was renamed or removed. Every change loosens a constraint or ad
 - `command_elements` may hold a `member_name` sibling after an argument list.
 - `script_block_expression` children are no longer required: `{}` is valid.
 - `label_expression` may hold a `simple_name`.
-- `redirected_file_name` may hold a `command_parameter`.
 
 ## Shape changes in code that already parsed
 
-The shape check below found trees that change for files the stock parser accepted.
-Each one is a bug fix. They change facts, so they are listed.
+The historical shape check below compares the patch with the stock 0.26.4
+crate. These changes can affect adapter facts.
 
 - `else` or `elseif` on the line after `}` of an `if` that is the value of an
   assignment (`$count = if (...) { } NEWLINE else { }`, also inside `@{ }`). The stock
@@ -257,7 +292,8 @@ Spec rows that read differently from how the spec words them (round 1):
 
 ## Known still failing
 
-Round 1 and round 2 together. Each is valid PowerShell unless noted.
+These limits were recorded during the original sweeps. Each example is valid
+PowerShell unless noted. The v0.26.6 update does not address these limits.
 
 - `$env:TEMP\x.ps1` as a statement. Invalid PowerShell.
 - A smart double quote closes a string in PowerShell: `"globalVar“`
@@ -292,18 +328,18 @@ Round 1 and round 2 together. Each is valid PowerShell unless noted.
   PSScriptAnalyzer `Tests/Engine/CSharp.ps1` (pwsh `ExpectedExpression`).
 - Two residue files of the wave-2 sweep were not isolated, as agreed.
 
-## Upstream corpus (`tree-sitter test`)
+## Corpus (`tree-sitter test`)
 
-- Stock grammar.js regenerated with 0.27.1: 139 of 139 pass.
-- Patched: 139 of 139 upstream cases pass, plus 54 `sloplint:` cases. 193 of 193.
-- The new cases are in `test/corpus/sloplint_*.txt`. Each one is named `sloplint: ...`.
-- Round 2 trees were produced with `tree-sitter test -u -i sloplint` and then read: no
-  `ERROR` or `MISSING` node in any file, and the `sloplint_*` snapshots of round 1 did
-  not change.
+- With CLI 0.27.1: 165 upstream cases and 54 sloplint cases pass (219 total).
+- In `native_arguments.txt`, six expected trees use the retained local
+  shapes: three attached-option cases and three comma-list cases. All six
+  inputs are unchanged.
+- The sloplint double-dash case in `sloplint_round2.txt` expects one fewer
+  separator node. The other 53 sloplint expected trees are unchanged.
 - The nvidia-smi corpus case leaves out `2>$null` on purpose. A tree that pins the
   redirect as a word would record the defect above as correct.
 
-## Differential against the published crate
+## Historical differential against the 0.26.4 crate
 
 `grammar-diff` (staged published 0.26.4 with renamed C globals against this crate),
 660 files: the four wave-2 corpora (PowerShell, Pester, PSReadLine, PSScriptAnalyzer)
@@ -348,9 +384,9 @@ paths, so scripts under `~/compiler/bamTiScript/.references` and
 | `~/go/pkg/mod` | 2 | 0 |
 | `~/compiler` | 0 (no PowerShell file walked) | 0 |
 
-## Rust regression test
+## Rust regression tests
 
-`crates/sloplint-syntax/tests/grammar_gaps/powershell.rs`. 30 tests. Against the stock
-crate 29 of them fail; the one that passes is the test that invalid snippets still
-report a parse error. Round 3 removed `[Flags()] function f { }` from the invalid
-list, since attributes before a statement are real PowerShell.
+The tests in `crates/sloplint-syntax/tests/grammar_gaps/powershell.rs` and
+`powershell_syntax.rs` check both parse health and the adapter's facts. The
+original 0.26.4 comparison had 29 failures out of 30 tests. The one test that
+passed checked that invalid snippets still report a parse error.
