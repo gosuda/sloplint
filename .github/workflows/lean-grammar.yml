@@ -69,6 +69,7 @@ jobs:
         if: ${{ !cancelled() && steps.generate.outcome == 'success' }}
         working-directory: vendor/tree-sitter-lean
         run: |
+          head -n 30 src/parser.c
           gzip -n -9 -c src/parser.c > src/parser.c.gz
           printf 'generated=true\n' >> "$GITHUB_OUTPUT"
           sha256sum grammar.js src/scanner.c src/parser.c.gz src/grammar.json src/node-types.json > generated-sha256.txt

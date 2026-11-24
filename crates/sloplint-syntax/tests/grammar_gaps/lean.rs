@@ -33,8 +33,9 @@ fn run_clean<'s>(path: &'s str, source: &'s str) -> Analysis<'s> {
     let tree = parse_raw(source);
     assert!(
         first_problem(&tree).is_none(),
-        "{path} has a recovery node: {:?}",
-        first_problem(&tree)
+        "{path} has a recovery node: {:?}\n{}",
+        first_problem(&tree),
+        tree.root_node().to_sexp()
     );
     let analysis = run(path, source);
     assert!(
@@ -632,4 +633,18 @@ fn show_requires_a_proof_only_in_term_contexts() {
             .has_error(),
         "a term show must supply a proof"
     );
+}
+
+#[test]
+fn assignment_tokens_do_not_close_layout_scopes() {
+    let source = "def assigned : Id Nat := do\n  let mut n := 0\n  n := 1\n  pure n\ntheorem named (h : True) : True := by\n  have copy : True := by\n    exact h\n  exact copy\ntheorem related (n : Nat) : n = n := by\n  calc\n    n = n := rfl\ndef typed : by exact Nat := 1\ntheorem typedLocal : True := by\n  have x : by exact Nat := 1\n  trivial\n";
+    let analysis = run_clean("src/assignments.lean", source);
+    assert_eq!(
+        function_names(&analysis),
+        ["assigned", "named", "related", "typed", "typedLocal"]
+    );
+    let sexp = parse_raw(source).root_node().to_sexp();
+    for shape in ["(block_assign ", "(have ", "(calc_step "] {
+        assert!(sexp.contains(shape), "missing {shape} in {sexp}");
+    }
 }

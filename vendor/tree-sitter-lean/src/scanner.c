@@ -40,6 +40,7 @@ enum TokenType {
   RECORD_COMMA,
   COMMA,
   COLON,
+  ASSIGN,
   RECORD_ASSIGN,
   GENERALIZE_EQ,
   FOR_DO,
@@ -473,17 +474,24 @@ static bool scan_comma(struct Scanner *scanner, TSLexer *lexer,
   return true;
 }
 
+/* ASSIGN is shared by declarations, statements and record fields. The
+   RECORD_ASSIGN marker identifies a field without selecting a lexical
+   branch before the enclosing syntax has resolved the brace's meaning. */
 static bool scan_colon(struct Scanner *scanner, TSLexer *lexer,
                        const bool *valid_symbols) {
   advance(lexer);
   if (lexer->lookahead == '=') {
-    if (!valid_symbols[RECORD_ASSIGN]) return false;
+    if (!valid_symbols[ASSIGN])
+      return pop_layout(scanner, lexer, valid_symbols);
     advance(lexer);
-    if (top_frame(scanner)->kind == BRACE_FRAME)
+    if (valid_symbols[RECORD_ASSIGN]
+        && top_frame(scanner)->kind == BRACE_FRAME)
       top_frame(scanner)->kind = RECORD_FRAME;
-    lexer->result_symbol = RECORD_ASSIGN;
+    lexer->result_symbol = ASSIGN;
   } else {
-    if (!valid_symbols[COLON] || lexer->lookahead == ':') return false;
+    if (lexer->lookahead == ':') return false;
+    if (!valid_symbols[COLON])
+      return pop_layout(scanner, lexer, valid_symbols);
     lexer->result_symbol = COLON;
   }
   lexer->mark_end(lexer);
@@ -583,7 +591,7 @@ static bool scan(struct Scanner *scanner, TSLexer *lexer,
   if (lexer->lookahead == ',' && valid_symbols[COMMA])
     return scan_comma(scanner, lexer, valid_symbols);
   if (lexer->lookahead == ':' &&
-      (valid_symbols[COLON] || valid_symbols[RECORD_ASSIGN]))
+      (valid_symbols[COLON] || valid_symbols[ASSIGN]))
     return scan_colon(scanner, lexer, valid_symbols);
   if (lexer->lookahead == '=' && valid_symbols[GENERALIZE_EQ]) {
     advance(lexer);
