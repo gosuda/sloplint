@@ -3469,6 +3469,10 @@
     }
   },
   {
+    "type": "\t",
+    "named": false
+  },
+  {
     "type": " ",
     "named": false
   },

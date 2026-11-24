@@ -372,6 +372,14 @@ export default grammar({
               /[^a-zA-Z0-9_?\-`\s:<>&(){}|;,"'$@\[]/.source +
               wordTail(/[^&\s()}|;"'`]/.source),
           ),
+          // sloplint: dash-colon word, as in --:warning: the colon does not
+          // delimit a standalone `--` token, so the whole word is one
+          // generic token (see scanner.c: `:` is not a bare-dash delimiter).
+          new RegExp(
+            /-+:/.source +
+              /[^&\s()}|;,"'`]/.source +
+              wordTail(/[^&\s()}|;"'`]/.source),
+          ),
           // sloplint: word that starts with a variable and continues as a
           // path, as in $env:TEMP\x.ps1 or ${root}/bin.
           /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)[\\\/][^\&\s\(\)\}\|;,]*/,
@@ -952,7 +960,9 @@ export default grammar({
 
     // Generic token is hard to manage
     // So a definition is that a generic token must have to begin by one or more space char
-    command_argument_sep: ($) => prec.right(choice(repeat1(' '), ':')),
+    // sloplint: tabs separate arguments like spaces, so an attached option
+    // lexes as generic_token after either (see calls.rs: parameter is opaque).
+    command_argument_sep: ($) => prec.right(choice(repeat1(choice(' ', '\t')), ':')),
 
     // Adapt the grammar to have same behavior
 
