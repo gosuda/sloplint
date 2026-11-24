@@ -314,53 +314,6 @@ fn cache_follows_config_and_custom_rule_file_edits() {
     );
 }
 
-/// One `.h` path whose bytes move between plain C, C++, and invalid input. Every cached run
-/// must equal an uncached run of the same bytes, so an entry stored for one outcome is never
-/// served for another.
-#[test]
-fn cache_follows_a_header_across_the_cpp_fallback() {
-    let (_tmp, root) = tempdir();
-    write(&root, "sloplint.toml", "");
-    let home = CacheHome::new();
-    let mut stored = Vec::new();
-    for (label, text) in [
-        ("plain C", C_HEADER),
-        ("C++", CPP_HEADER),
-        ("invalid", BROKEN_HEADER),
-        ("C++ again", CPP_HEADER),
-        ("plain C again", C_HEADER),
-    ] {
-        write(&root, "include/a.h", text);
-        let cold = home.check(&root, &["--no-cache"]);
-        let cached = home.check(&root, &[]);
-        let warm = home.check(&root, &[]);
-        assert_eq!(cached, cold, "{label}: the run that stores the entry");
-        assert_eq!(warm, cold, "{label}: the run that reads the entry");
-        stored.push(cold);
-    }
-    assert!(
-        stored[0].contains("process_data")
-            && stored[0].contains("a.h:3:")
-            && !stored[0].contains("[meta/parse-error]"),
-        "plain C parses as C: {}",
-        stored[0]
-    );
-    assert!(
-        stored[1].contains("process_data")
-            && stored[1].contains("a.h:6:")
-            && !stored[1].contains("[meta/parse-error]"),
-        "the header parses as C++ and reports the C++ method: {}",
-        stored[1]
-    );
-    assert!(
-        stored[2].contains("include/a.h:1:1") && stored[2].contains("[meta/parse-error]"),
-        "invalid input reports the C parse position: {}",
-        stored[2]
-    );
-    assert_eq!(stored[3], stored[1], "the C++ outcome returns unchanged");
-    assert_eq!(stored[4], stored[0], "the C outcome returns unchanged");
-}
-
 /// One `.h` path whose bytes move between plain C, C++, Objective-C, and invalid input. Every
 /// cached run must equal an uncached run of the same bytes, so an entry stored for one outcome
 /// is never served for another.
