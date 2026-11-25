@@ -1,3 +1,12 @@
+# Upstream status of the hunks below (base: upstream tag v1.3.0
+# e8adc739b78409a99f8c31313f0bb54cc538cf73). The unary `**` operator line
+# is byte-identical to open upstream PR #37 (head 54535cad). The for-init
+# `in` alternative overlaps open PR #34 (head 704d6067), and the tag
+# expression hunks sit next to open PR #38 (head 8c8bec92); neither PR
+# matches these lines. No upstream PR or issue covers the other hunks.
+# Upstream master d2ca8ef (PR #24, multi-identifier named_type) is not
+# applied: it breaks bare-identifier tuple and return types such as
+# `proc() -> (int, bool)`. See vendor/tree-sitter-odin/SLOPLINT.md.
 --- a/grammar.js
 +++ b/grammar.js
 @@ -41,6 +41,47 @@

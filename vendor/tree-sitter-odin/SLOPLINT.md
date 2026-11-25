@@ -5,7 +5,7 @@
 - Published crate: `tree-sitter-odin` 1.3.0 (crates.io). Name and version are unchanged.
 - Upstream: https://github.com/amaanq/tree-sitter-odin, tag `v1.3.0` (commit `e8adc739`).
 - License: MIT (`LICENSE` is the upstream v1.3.0 file, fetched verbatim).
-- Not shipped in the crate: the upstream `test/corpus`. The only corpus that runs here is `test/corpus/sloplint_*.txt`.
+- Not shipped in the crate: the upstream `test/corpus`. `test/corpus/declarations.txt` is copied verbatim from the tag, so `tree-sitter test` runs its two upstream cases next to `test/corpus/sloplint_*.txt`.
 - Files kept from the crate: `Cargo.toml` (normalized by cargo), `README.md`, `bindings/`, `grammar.js` (patched), `queries/`, `src/` (regenerated), `tree-sitter.json`, `LICENSE`.
 - `Cargo.toml` has one addition: an empty `[workspace]` table after `[lib]`. Without it `cargo fmt --all` reports the vendored package as belonging to the parent workspace and fails. No other manifest change.
 - Files dropped: `Cargo.toml.orig`, `.cargo_vcs_info.json`, `.cargo-ok`.
@@ -16,7 +16,7 @@ The published grammar reports a parse error on valid Odin. sloplint skips a whol
 
 ## Regeneration
 
-`src/` is regenerated with tree-sitter-cli 0.24.7 (`tree-sitter generate`). `grammar.js` is the only patched input; `src/grammar.json`, `src/node-types.json`, and `src/parser.c` are regenerated artifacts and are not part of `sloplint-grammar.patch`.
+`src/` is regenerated with tree-sitter-cli 0.27.1 (`tree-sitter generate`, ABI 15). `grammar.js` is the only patched input; `src/grammar.json`, `src/node-types.json`, and `src/parser.c` are regenerated artifacts and are not part of `sloplint-grammar.patch`. The move from CLI 0.24.7 (ABI 14) to 0.27.1 changes no parse result: the sloplint corpus, the `grammar_gaps` repros, and 2,076 corpus `.odin` files give the same ERROR/MISSING counts on both builds.
 
 ## Changes (`grammar.js`, see `sloplint-grammar.patch`)
 
@@ -40,6 +40,12 @@ Each change is an Odin construct the published grammar rejects.
 16. **Directive tag as expression operand.** `x := #procedure + " expr"` — `tag` is an `_expression_no_tag` alternative so directive constants compose with operators. Declared conflicts cover the statement-tag prefix cases this creates.
 17. **`union` tag operand.** `U :: union #align(16) {..}` — `union_declaration` repeats `seq($.tag, optional($._tag_operand))` so a tag may carry a parenthesized operand.
 
+## Upstream status
+
+- Upstream master is one commit past v1.3.0: `d2ca8efb4487e156a60d5bd6db2598b872629403` (PR #24, merged, unreleased) lets `named_type` start with a list of identifiers. It is not taken because it is a regression. `type` and `named_type` are both `prec.right` at precedence 0, so after an identifier with `,` as lookahead the generator silently shifts into the `named_type` name list. Unnamed result tuples (`f :: proc() -> (int, bool)`) and procedure-typed struct fields with a bare return type (`cb: proc(x: int) -> int,`) then fail. With a following field, the field is read into the return type instead. Over 2,076 corpus `.odin` files, 159 files that are clean on plain v1.3.0 fail on plain master. With this patch on top of master, 244 files that are clean on the vendored grammar fail. In both cases no file is fixed. With this patch, the `union` member hunk (change 15) shares its state with `union_declaration` through the declared `[union_declaration, union_type]` conflict, so `U :: union #align(16) { u64, f64, }` fails too.
+- Open PR #37 (head `54535cad`) is byte-identical to the unary `**` operator line. Open PR #34 (head `704d6067`) adds an optional initializer to `_for_in_expression`, a more general form of change 2. Open PR #38 (head `8c8bec92`) allows a tag after `do`, next to the tag-statement hunks. None is merged, so the patch keeps these lines.
+- No upstream issue or PR covers the other hunks (open issues and PRs checked 2026-11-24).
+
 ## Known remaining gaps
 
-About 55 corpus files still error. Known shapes: `"""` multiline strings (one repo), nested call-style polymorphic types like `Maybe(MessageHandler(Box))`, map literals `map[K]V{...}` with keyed elements, `tag` continuing into operators or member callees inside call arguments (`f(#procedure + s)`, `f(#force_inline gl.g())` — statement level works), `#soa^T`, `proc(...) -> T where ... ---`, and assorted single-file constructs. Fixing these is follow-up work.
+About 55 corpus files still error. Known shapes: `"""` multiline strings (one repo; open upstream PR #39), nested call-style polymorphic types like `Maybe(MessageHandler(Box))` (open upstream issue #30), map literals `map[K]V{...}` with keyed elements, `tag` continuing into operators or member callees inside call arguments (`f(#procedure + s)`, `f(#force_inline gl.g())`; statement level works), `#soa^T`, `proc(...) -> T where ... ---`, and assorted single-file constructs. Fixing these is follow-up work.

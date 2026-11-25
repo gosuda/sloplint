@@ -234,6 +234,20 @@ fn union_declaration_tag_operand_parses() {
     run_clean("U :: union #align(16) {\n    u64,\n    f64,\n}\n");
 }
 
+// --- Bare-identifier result types (upstream d2ca8ef regresses them) ----------
+
+#[test]
+fn bare_identifier_result_types_still_parse() {
+    run_clean(concat!(
+        "f :: proc() -> (int, bool) {\n",
+        "    return 1, true\n",
+        "}\n",
+        "S :: struct {\n",
+        "    cb: proc(x: int) -> int,\n",
+        "}\n",
+    ));
+}
+
 // --- Controls: still invalid ---------------------------------------------------
 
 #[test]
