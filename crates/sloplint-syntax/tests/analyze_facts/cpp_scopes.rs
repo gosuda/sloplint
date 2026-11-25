@@ -251,6 +251,35 @@ fn macro_braced_member_read_locals_bind() {
 }
 
 #[test]
+fn macro_braced_goto_label_does_not_hide_locals() {
+    let source = "void g() {\n#ifdef DEBUG\n    ON_SCOPE_EXIT() {\n        int retries = 0;\n        if (failed) goto done;\n        ++retries;\n        done: int result = retries;\n        ++retries;\n    };\n#endif\n}\n";
+    with_cpp_bindings(source, |found| {
+        let retries = named_all(found, "retries");
+        assert_eq!(
+            retries.len(),
+            1,
+            "the macro-braced local binds once: {found:?}\n{source}"
+        );
+        assert_eq!(
+            (
+                retries[0].write_lines,
+                retries[0].first_write_line,
+                retries[0].last_write_line
+            ),
+            (3, 4, 8),
+            "init and both increments land on the local: {found:?}\n{source}"
+        );
+        let result = named_all(found, "result");
+        assert_eq!(
+            result.len(),
+            1,
+            "the label-adjacent declaration binds: {found:?}\n{source}"
+        );
+    });
+}
+
+
+#[test]
 fn braced_member_macros_in_local_classes_do_not_bind_fields() {
     let source = "void g() {\n    struct Local {\n#ifdef DEBUG\n        MEMBERS(int tag) { private: int field = 1; };\n#endif\n    };\n}\n";
     with_cpp_bindings(source, |found| {
