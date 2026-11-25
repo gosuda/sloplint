@@ -506,3 +506,91 @@ git log	--format=zip
             (generic_token)
             (command_argument_sep)
             (generic_token)))))))
+
+===
+Native: NBSP after -- still ends option parsing
+===
+
+git log -- foo.txt
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)
+            (command_parameter)
+            (command_argument_sep)
+            (generic_token)))))))
+
+===
+Native: parenthesized list starting at once after --
+===
+
+Write-Output --(Get-Date), (Get-Date)
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_parameter)
+            (array_literal_expression
+              (pipeline
+                (pipeline_chain
+                  (command
+                    (command_name)))))
+            (array_literal_expression
+              (unary_expression
+                (parenthesized_expression
+                  (pipeline
+                    (pipeline_chain
+                      (command
+                        (command_name)))))))))))))
+
+===
+Native: dash-colon word ends before an unquoted comma
+===
+
+Write-Output --:first,second
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (array_literal_expression
+              (generic_token)
+              (generic_token))))))))
+
+===
+Native: quoted segment may follow the dash-colon at once
+===
+
+Write-Output --:"warning text"
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)))))))

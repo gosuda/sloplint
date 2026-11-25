@@ -112,6 +112,10 @@
           "named": true
         },
         {
+          "type": "pipeline",
+          "named": true
+        },
+        {
           "type": "unary_expression",
           "named": true
         }
@@ -4231,6 +4235,10 @@
   },
   {
     "type": "}",
+    "named": false
+  },
+  {
+    "type": " ",
     "named": false
   }
 ]

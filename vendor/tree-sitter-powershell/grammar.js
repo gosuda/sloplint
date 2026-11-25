@@ -375,10 +375,13 @@ export default grammar({
           // sloplint: dash-colon word, as in --:warning: the colon does not
           // delimit a standalone `--` token, so the whole word is one
           // generic token (see scanner.c: `:` is not a bare-dash delimiter).
+          // Unquoted, unescaped commas end the word so `--:first,second` is a
+          // list; quoted or escaped commas stay inside. A quoted or escaped
+          // segment may follow the colon at once, as in `--:"warning text"`.
           new RegExp(
             /-+:/.source +
-              /[^&\s()}|;,"'`]/.source +
-              wordTail(/[^&\s()}|;"'`]/.source),
+              '(' + /[^&\s()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + WORD_ESC + ')' +
+              wordTail(/[^&,\s()}|;"'`]/.source),
           ),
           // sloplint: word that starts with a variable and continues as a
           // path, as in $env:TEMP\x.ps1 or ${root}/bin.
@@ -960,18 +963,30 @@ export default grammar({
 
     // Generic token is hard to manage
     // So a definition is that a generic token must have to begin by one or more space char
-    // sloplint: tabs separate arguments like spaces, so an attached option
-    // lexes as generic_token after either (see calls.rs: parameter is opaque).
-    command_argument_sep: ($) => prec.right(choice(repeat1(choice(' ', '\t')), ':')),
+    // sloplint: tabs and NBSP separate arguments like spaces, so an attached
+    // option lexes as generic_token after any of them (see calls.rs:
+    // parameter is opaque). Format characters (U+200B, U+FEFF, U+2060) stay
+    // out: they are extras, not separators.
+    command_argument_sep: ($) => prec.right(choice(repeat1(choice(' ', '\t', '\u00A0')), ':')),
 
     // Adapt the grammar to have same behavior
 
+    // sloplint: a parenthesized list may start at once after `--`, as in
+    // `--(Get-Date), (Get-Date)`: the commas continue the array without an
+    // intervening separator.
     _command_argument: ($) =>
       prec.right(
         PREC.PARAM,
         choice(
           seq($.command_argument_sep, optional($.generic_token)),
           seq($.command_argument_sep, $._command_argument_list),
+          alias(
+            seq(
+              $.parenthesized_expression,
+              repeat1(seq(',', $._command_list_element)),
+            ),
+            $.array_literal_expression,
+          ),
           $.parenthesized_expression,
           $.script_block_expression,
         ),

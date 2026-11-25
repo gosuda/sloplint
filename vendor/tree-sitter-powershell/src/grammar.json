@@ -1848,7 +1848,7 @@
           },
           {
             "type": "PATTERN",
-            "value": "-+:[^&\\s()}|;,\"'`]([^&\\s()}|;\"'`]|'[^']*'|\"([^\"`]|`.)*\"|`.)*"
+            "value": "-+:([^&\\s()}|;,\"'`]|'[^']*'|\"([^\"`]|`.)*\"|`.)([^&,\\s()}|;\"'`]|'[^']*'|\"([^\"`]|`.)*\"|`.)*"
           },
           {
             "type": "PATTERN",
@@ -4532,6 +4532,10 @@
                 {
                   "type": "STRING",
                   "value": "\t"
+                },
+                {
+                  "type": "STRING",
+                  "value": " "
                 }
               ]
             }
@@ -4582,6 +4586,36 @@
                 "name": "_command_argument_list"
               }
             ]
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "parenthesized_expression"
+                },
+                {
+                  "type": "REPEAT1",
+                  "content": {
+                    "type": "SEQ",
+                    "members": [
+                      {
+                        "type": "STRING",
+                        "value": ","
+                      },
+                      {
+                        "type": "SYMBOL",
+                        "name": "_command_list_element"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "named": true,
+            "value": "array_literal_expression"
           },
           {
             "type": "SYMBOL",

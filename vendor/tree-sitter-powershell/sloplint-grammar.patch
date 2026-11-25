@@ -1,7 +1,14 @@
 diff --git a/grammar.js b/grammar.js
+index 1f8b448..1f96a6f 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -7,10 +7,32 @@
+@@ -1,137 +1,180 @@
+ const PREC = {
+   KEYWORD: 1,
+   UNARY: 2,
+   CAST: 3,
+   ELEMENT_ACCESS: 4,
+   EMPTY: 5,
    PARAM: 6,
  };
  
@@ -35,7 +42,10 @@ diff --git a/grammar.js b/grammar.js
  
    extras: ($) => [
      $.comment,
-@@ -21,15 +43,27 @@
+     /\s/,
+     /`\n/,
+     /`\r\n/,
+     /[\uFEFF\u2060\u200B\u00A0]/,
    ],
  
    conflicts: ($) => [
@@ -64,7 +74,18 @@ diff --git a/grammar.js b/grammar.js
  
      // Comments
      comment: ($) =>
-@@ -48,22 +82,24 @@
+       token(
+         choice(
+           /#[^\r\n]*/,
+           seq('<#', repeat(choice(/[^#`]+/, /#+[^>#]/, /`.{1}|`\r?\n/)), /#+>/),
+         ),
+       ),
+ 
+     // Literal
+     _literal: ($) =>
+       choice($.integer_literal, $.string_literal, $.real_literal),
+ 
+     // Integer Literals
      integer_literal: ($) =>
        choice($.decimal_integer_literal, $.hexadecimal_integer_literal),
  
@@ -94,7 +115,9 @@ diff --git a/grammar.js b/grammar.js
          ),
        ),
  
-@@ -73,18 +109,18 @@
+     // Real Literals
+     real_literal: ($) =>
+       token(
          choice(
            seq(
              /[0-9]+\.[0-9]+/,
@@ -119,7 +142,18 @@ diff --git a/grammar.js b/grammar.js
            ),
          ),
        ),
-@@ -103,7 +139,10 @@
+ 
+     // String literal
+     string_literal: ($) =>
+       choice(
+         $.expandable_string_literal,
+         $.verbatim_string_characters,
+         $.expandable_here_string_literal,
+         $.verbatim_here_string_characters,
+       ),
+ 
+     expandable_string_literal: ($) =>
+       seq(
          /\"(\s*\#*)*/, // this is a trick to avoid tree-sitter allowing comment between tokens, as string should be tokenize but powershell allow subexpression inside it...
          repeat(
            choice(
@@ -131,7 +165,20 @@ diff --git a/grammar.js b/grammar.js
              $.variable,
              $.sub_expression,
              token.immediate(/\$(`.{1}|`\r?\n|[\s\\])/),
-@@ -124,7 +163,11 @@
+             token.immediate(/`.{1}|`\r?\n/),
+             token.immediate('""'),
+             token.immediate('$'),
+           ),
+         ),
+         repeat(token.immediate('$')),
+         token.immediate(/(\s*\#*)*\"/),
+       ),
+ 
+     expandable_here_string_literal: ($) =>
+       seq(
+         /@\" *\r?\n/,
+         repeat(
+           choice(
              token.immediate(/[^\$\r\n`]+/),
              $.variable,
              $.sub_expression,
@@ -144,7 +191,21 @@ diff --git a/grammar.js b/grammar.js
              token.immediate(/(\r?\n)+\"[^@]/),
              token.immediate('$'),
              token.immediate(/`.{1}|`\r?\n/),
-@@ -149,7 +192,10 @@
+           ),
+         ),
+         token.immediate(/(\r?\n)+\"@/),
+       ),
+ 
+     verbatim_string_characters: ($) =>
+       token(seq('\'', repeat(choice(/[^']+/, '\'\'')), '\'')),
+@@ -142,21 +185,24 @@ export default grammar({
+           /@\'\s*\r?\n/,
+           repeat(choice(/[^\r\n]/, /(\r?\n)+[^\'\r\n]/, /\r?\n\'[^@]/)),
+           /(\r?\n)+\'@/,
+         ),
+       ),
+ 
+     // Simple names
      simple_name: ($) => /[a-zA-Z_][a-zA-Z0-9_]*/,
  
      // Type names
@@ -156,7 +217,21 @@ diff --git a/grammar.js b/grammar.js
  
      type_name: ($) =>
        choice($.type_identifier, seq($.type_name, '.', $.type_identifier)),
-@@ -225,6 +271,11 @@
+ 
+     array_type_name: ($) => seq($.type_name, '['),
+     generic_type_name: ($) => seq($.type_name, '['),
+ 
+     // Operators and punctuators
+     assignement_operator: ($) =>
+       choice('=', '!=', '+=', '*=', '/=', '%=', '-='),
+@@ -218,20 +264,25 @@ export default grammar({
+         reservedWord('-ge'),
+         reservedWord('-gt'),
+         reservedWord('-icontains'),
+         reservedWord('-ieq'),
+         reservedWord('-ige'),
+         reservedWord('-igt'),
+         reservedWord('-ile'),
          reservedWord('-ilike'),
          reservedWord('-ilt'),
          reservedWord('-imatch'),
@@ -168,7 +243,21 @@ diff --git a/grammar.js b/grammar.js
          reservedWord('-in'),
          reservedWord('-ine'),
          reservedWord('-inotcontains'),
-@@ -306,10 +357,72 @@
+         reservedWord('-inotlike'),
+         reservedWord('-inotmatch'),
+         reservedWord('-ireplace'),
+         reservedWord('-is'),
+         reservedWord('-isnot'),
+         reservedWord('-isplit'),
+         reservedWord('-join'),
+@@ -299,24 +350,97 @@ export default grammar({
+             /[a-zA-Z0-9_]+|\?/,
+           ),
+         ),
+         $.braced_variable,
+       ),
+ 
+     braced_variable: ($) => /\$\{[^}]+\}/,
  
      // Commands
      generic_token: ($) =>
@@ -187,6 +276,17 @@ diff --git a/grammar.js b/grammar.js
 +            /-+[a-zA-Z_?\-`][a-zA-Z0-9_?\-`]*/.source +
 +              /[^a-zA-Z0-9_?\-`\s:<>&(){}|;,"'$@\[]/.source +
 +              wordTail(/[^&\s()}|;"'`]/.source),
++          ),
++          // sloplint: dash-colon word, as in --:warning: the colon does not
++          // delimit a standalone `--` token, so the whole word is one
++          // generic token (see scanner.c: `:` is not a bare-dash delimiter).
++          // Unquoted, unescaped commas end the word so `--:first,second` is a
++          // list; quoted or escaped commas stay inside. A quoted or escaped
++          // segment may follow the colon at once, as in `--:"warning text"`.
++          new RegExp(
++            /-+:/.source +
++              '(' + /[^&\s()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + WORD_ESC + ')' +
++              wordTail(/[^&,\s()}|;"'`]/.source),
 +          ),
 +          // sloplint: word that starts with a variable and continues as a
 +          // path, as in $env:TEMP\x.ps1 or ${root}/bin.
@@ -242,7 +342,21 @@ diff --git a/grammar.js b/grammar.js
      // Parameters
      command_parameter: ($) =>
        choice(
-@@ -399,6 +512,13 @@
+         token(
+           choice(
+             // `-Name`, `-Name1`, `--long-flag`, `-A5`
+             /-+[a-zA-Z_?\-`][a-zA-Z0-9_?\-`]*/,
+             // `--format=%H`, `--pretty=format:"%B"`: a native option with an attached value
+             /--?[a-zA-Z_][a-zA-Z0-9_\-]*=([^\s"'`;|&(){}]|"[^"\r\n]*"|'[^'\r\n]*')*/,
+           ),
+@@ -392,20 +516,27 @@ export default grammar({
+           $.function_statement,
+           $.class_statement,
+           $.enum_statement,
+           seq($.flow_control_statement, $._statement_terminator),
+           $.trap_statement,
+           $.try_statement,
+           $.data_statement,
            $.inlinescript_statement,
            $.parallel_statement,
            $.sequence_statement,
@@ -256,7 +370,21 @@ diff --git a/grammar.js b/grammar.js
            seq($.pipeline, $._statement_terminator),
            // `npm run dev &` (PowerShell 7): runs the pipeline as a background job
            seq($.pipeline, $.background_operator),
-@@ -476,16 +596,18 @@
+           $.empty_statement,
+         ),
+       ),
+ 
+     empty_statement: ($) => prec(PREC.EMPTY, ';'),
+ 
+     background_operator: ($) => '&',
+@@ -469,30 +600,32 @@ export default grammar({
+         seq('(', $.pipeline, ')'),
+         seq(reservedWord('-file'), $.switch_filename),
+       ),
+ 
+     switch_filename: ($) => choice($._command_token, $._primary_expression),
+ 
+     switch_body: ($) => seq('{', optional($.switch_clauses), '}'),
  
      switch_clauses: ($) => repeat1($.switch_clause),
  
@@ -277,7 +405,21 @@ diff --git a/grammar.js b/grammar.js
  
      foreach_statement: ($) =>
        seq(
-@@ -568,8 +690,11 @@
+         reservedWord('foreach'),
+         optional($.foreach_parameter),
+         '(',
+         $.variable,
+         reservedWord('in'),
+         $.pipeline,
+         ')',
+@@ -561,51 +694,65 @@ export default grammar({
+     do_statement: ($) =>
+       seq(
+         reservedWord('do'),
+         $.statement_block,
+         choice(reservedWord('while'), reservedWord('until')),
+         '(',
+         field('condition', $.while_condition),
          ')',
        ),
  
@@ -289,7 +431,8 @@ diff --git a/grammar.js b/grammar.js
          choice(
            reservedWord('function'),
            reservedWord('filter'),
-@@ -578,10 +703,19 @@
+           reservedWord('workflow'),
+         ),
          $.function_name,
          optional($.function_parameter_declaration),
          '{',
@@ -310,7 +453,16 @@ diff --git a/grammar.js b/grammar.js
      function_name: ($) => $._command_token,
  
      function_parameter_declaration: ($) =>
-@@ -598,7 +732,9 @@
+       seq('(', optional($.parameter_list), ')'),
+ 
+     flow_control_statement: ($) =>
+       choice(
+         seq(reservedWord('break'), optional($.label_expression)),
+         seq(reservedWord('continue'), optional($.label_expression)),
+         seq(reservedWord('throw'), optional($.pipeline)),
+         seq(reservedWord('return'), optional($.pipeline)),
+         seq(reservedWord('exit'), optional($.pipeline)),
+       ),
  
      label: ($) => token(seq(':', /[a-zA-Z_][a-zA-Z0-9_]*/)),
  
@@ -321,7 +473,21 @@ diff --git a/grammar.js b/grammar.js
  
      trap_statement: ($) =>
        seq(reservedWord('trap'), optional($.type_literal), $.statement_block),
-@@ -754,6 +890,18 @@
+ 
+     try_statement: ($) =>
+       seq(
+         reservedWord('try'),
+         $.statement_block,
+         choice(
+           seq($.catch_clauses, optional($.finally_clause)),
+@@ -747,95 +894,147 @@ export default grammar({
+           new RegExp(caseInsensitive('if-')),
+           new RegExp(caseInsensitive('function-')),
+           new RegExp(caseInsensitive('filter-')),
+           new RegExp(caseInsensitive('workflow-')),
+           new RegExp(caseInsensitive('class-')),
+           new RegExp(caseInsensitive('enum-')),
+           new RegExp(caseInsensitive('switch-')),
            new RegExp(caseInsensitive('for-')),
            new RegExp(caseInsensitive('while-')),
            new RegExp(caseInsensitive('parallel-')),
@@ -340,7 +506,12 @@ diff --git a/grammar.js b/grammar.js
          ),
          repeat(
            choice(
-@@ -766,7 +914,8 @@
+             token.immediate(/[^\{\}\(\);,\|\&"'\s\r\n]+/),
+             seq(token.immediate('"'), $._expandable_string_literal_immediate),
+             seq(token.immediate('\''), $._string_literal_immediate),
+             token.immediate('""'),
+             token.immediate('\'\''),
+           ),
          ),
        ),
  
@@ -350,7 +521,14 @@ diff --git a/grammar.js b/grammar.js
  
      // Use to parse command path
      path_command_name: ($) =>
-@@ -781,12 +930,23 @@
+       repeat1(choice($.path_command_name_token, $.variable)),
+ 
+     command_name_expr: ($) =>
+       choice($.command_name, $.path_command_name, $._primary_expression),
+ 
+     command_elements: ($) => prec.right(repeat1($._command_element)),
+ 
+     _command_element: ($) =>
        prec.right(
          choice(
            $.command_parameter,
@@ -375,7 +553,21 @@ diff --git a/grammar.js b/grammar.js
      // Stop parsing is a token that end the parsing of command line
      stop_parsing: ($) => /--%[^\r\n]*/,
  
-@@ -800,22 +960,34 @@
+     // Generic token is hard to manage
+     // So a definition is that a generic token must have to begin by one or more space char
+-    command_argument_sep: ($) => prec.right(choice(repeat1(' '), ':')),
++    // sloplint: tabs and NBSP separate arguments like spaces, so an attached
++    // option lexes as generic_token after any of them (see calls.rs:
++    // parameter is opaque). Format characters (U+200B, U+FEFF, U+2060) stay
++    // out: they are extras, not separators.
++    command_argument_sep: ($) => prec.right(choice(repeat1(choice(' ', '\t', '\u00A0')), ':')),
+ 
+     // Adapt the grammar to have same behavior
+ 
++    // sloplint: a parenthesized list may start at once after `--`, as in
++    // `--(Get-Date), (Get-Date)`: the commas continue the array without an
++    // intervening separator.
+     _command_argument: ($) =>
        prec.right(
          PREC.PARAM,
          choice(
@@ -387,11 +579,16 @@ diff --git a/grammar.js b/grammar.js
 -                // `Select-Object Id, Name`: an unquoted comma list is one array argument
 -                repeat(seq(',', choice($.generic_token, $.unary_expression))),
 -              ),
--            ),
--          ),
--          seq($.command_argument_sep, $.array_literal_expression),
 +          seq($.command_argument_sep, optional($.generic_token)),
 +          seq($.command_argument_sep, $._command_argument_list),
++          alias(
++            seq(
++              $.parenthesized_expression,
++              repeat1(seq(',', $._command_list_element)),
+             ),
++            $.array_literal_expression,
+           ),
+-          seq($.command_argument_sep, $.array_literal_expression),
            $.parenthesized_expression,
            $.script_block_expression,
          ),
@@ -421,7 +618,11 @@ diff --git a/grammar.js b/grammar.js
      verbatim_command_argument: ($) =>
        seq('--%', $._verbatim_command_argument_chars),
  
-@@ -827,8 +999,10 @@
+     redirections: ($) => repeat1($.redirection),
+ 
+     redirection: ($) =>
+       choice(
+         $.merging_redirection_operator,
          seq($.file_redirection_operator, $.redirected_file_name),
        ),
  
@@ -433,7 +634,21 @@ diff --git a/grammar.js b/grammar.js
  
      // Class
      class_attribute: ($) =>
-@@ -857,13 +1031,26 @@
+       choice(token(reservedWord('hidden')), token(reservedWord('static'))),
+ 
+     class_property_definition: ($) =>
+       seq(
+         optional($.attribute),
+         repeat($.class_attribute),
+         optional($.type_literal),
+@@ -850,59 +1049,86 @@ export default grammar({
+ 
+     class_method_definition: ($) =>
+       seq(
+         optional($.attribute),
+         repeat($.class_attribute),
+         optional($.type_literal),
+         $.simple_name,
          '(',
          optional($.class_method_parameter_list),
          ')',
@@ -460,7 +675,20 @@ diff --git a/grammar.js b/grammar.js
          token(reservedWord('class')),
          $.simple_name,
          optional(seq(':', $.simple_name, repeat(seq(',', $.simple_name)))),
-@@ -884,6 +1071,7 @@
+         '{',
+         repeat(
+           choice(
+             seq(
+               $.class_property_definition,
+               $._statement_terminator,
+               repeat(';'),
+             ),
+             $.class_method_definition,
+           ),
+         ),
+         '}',
+       ),
+ 
      // Enums
      enum_statement: ($) =>
        seq(
@@ -468,7 +696,11 @@ diff --git a/grammar.js b/grammar.js
          token(reservedWord('enum')),
          $.simple_name,
          '{',
-@@ -895,7 +1083,20 @@
+         repeat(seq($.enum_member, $._statement_terminator, repeat(';'))),
+         '}',
+       ),
+ 
+     enum_member: ($) =>
        seq($.simple_name, optional(seq('=', $.integer_literal))),
  
      // Expressions
@@ -490,7 +722,21 @@ diff --git a/grammar.js b/grammar.js
  
      logical_expression: ($) =>
        prec.left(
-@@ -1008,7 +1209,35 @@
+         choice(
+           $.bitwise_expression,
+           seq(
+             $.logical_expression,
+             choice(
+               reservedWord('-and'),
+               reservedWord('-or'),
+@@ -1001,21 +1227,49 @@ export default grammar({
+         $.pre_decrement_expression,
+         $.cast_expression,
+         seq(reservedWord('-split'), $.unary_expression),
+         seq(reservedWord('-join'), $.unary_expression),
+       ),
+ 
+     pre_increment_expression: ($) => seq('++', $.unary_expression),
      pre_decrement_expression: ($) => seq('--', $.unary_expression),
  
      cast_expression: ($) =>
@@ -527,7 +773,21 @@ diff --git a/grammar.js b/grammar.js
  
      attributed_variable: ($) => seq($.type_literal, $.variable),
  
-@@ -1042,8 +1271,12 @@
+     _primary_expression: ($) =>
+       choice(
+         $._value,
+         $.member_access,
+         $.element_access,
+         $.invokation_expression,
+         $.post_increment_expression,
+@@ -1035,22 +1289,26 @@ export default grammar({
+       ),
+ 
+     parenthesized_expression: ($) => seq('(', $.pipeline, ')'),
+ 
+     sub_expression: ($) =>
+       seq('$(', field('statements', optional($.statement_list)), ')'),
+ 
      array_expression: ($) =>
        seq('@(', field('statements', optional($.statement_list)), ')'),
  
@@ -541,7 +801,21 @@ diff --git a/grammar.js b/grammar.js
  
      hash_literal_expression: ($) =>
        seq('@{', optional($.hash_literal_body), '}'),
-@@ -1101,11 +1334,17 @@
+ 
+     hash_literal_body: ($) => repeat1($.hash_entry),
+ 
+     hash_entry: ($) =>
+       seq(
+         $.key_expression,
+         '=',
+@@ -1094,25 +1352,31 @@ export default grammar({
+         seq(
+           $._primary_expression,
+           token.immediate('.'),
+           $.member_name,
+           $.argument_list,
+         ),
+         seq($._primary_expression, '::', $.member_name, $.argument_list),
          $.invokation_foreach_expression,
        ),
  
@@ -561,7 +835,21 @@ diff --git a/grammar.js b/grammar.js
          $.script_block_expression,
        ),
  
-@@ -1145,10 +1384,13 @@
+     argument_list: ($) =>
+       seq(
+         '(',
+         field('argument_expression_list', optional($.argument_expression_list)),
+         ')',
+       ),
+ 
+@@ -1138,24 +1402,27 @@ export default grammar({
+           ),
+         ),
+       ),
+ 
+     bitwise_argument_expression: ($) =>
+       prec.left(
+         choice(
            $.comparison_argument_expression,
            seq(
              $.bitwise_argument_expression,
@@ -578,7 +866,21 @@ diff --git a/grammar.js b/grammar.js
              ),
              $.comparison_argument_expression,
            ),
-@@ -1213,32 +1455,49 @@
+         ),
+       ),
+ 
+     comparison_argument_expression: ($) =>
+       prec.left(
+         choice(
+           $.additive_argument_expression,
+@@ -1206,46 +1473,63 @@ export default grammar({
+     range_argument_expression: ($) =>
+       prec.left(
+         choice(
+           $.unary_expression,
+           seq($.range_argument_expression, '..', $.unary_expression),
+         ),
+       ),
  
      type_literal: ($) => seq('[', $.type_spec, ']'),
  
@@ -641,10 +943,23 @@ diff --git a/grammar.js b/grammar.js
        ),
  
      attribute_name: ($) => $.type_spec,
+ 
+     attribute_arguments: ($) =>
+       seq($.attribute_argument, repeat(seq(',', $.attribute_argument))),
+ 
+     attribute_argument: ($) =>
+       choice(
+         $._expression,
 diff --git a/src/scanner.c b/src/scanner.c
+index b46de2b..a94753f 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
-@@ -6,7 +6,8 @@
+@@ -1,96 +1,172 @@
+ // Copyright (c) Microsoft Corporation. All rights reserved.
+ // Licensed under the MIT License. See the LICENSE file in the project root for full license information.
+ 
+ #include "tree_sitter/parser.h"
+ #include <wctype.h>
  
  enum TOKEN_TYPE {
      STATEMENT_TERMINATOR,
@@ -654,7 +969,18 @@ diff --git a/src/scanner.c b/src/scanner.c
  };
  
  /* --- API --- */
-@@ -25,6 +26,25 @@
+ 
+ void *tree_sitter_powershell_external_scanner_create();
+ 
+ void tree_sitter_powershell_external_scanner_destroy(void *p);
+ 
+ unsigned tree_sitter_powershell_external_scanner_serialize(void *payload, char *buffer);
+ 
+ void tree_sitter_powershell_external_scanner_deserialize(void *payload, const char *buffer, unsigned length);
+ 
+ bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols);
+ 
+ /* --- Internal Functions --- */
  
  static void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
  
@@ -680,7 +1006,7 @@ diff --git a/src/scanner.c b/src/scanner.c
  static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool *valid_symbols)
  {
      if (valid_symbols[STATEMENT_TERMINATOR]) {
-@@ -32,13 +52,26 @@
+         lexer->result_symbol = STATEMENT_TERMINATOR;
          // This token has no characters -- everything is lookahead to determine its existence
          lexer->mark_end(lexer);
  
@@ -707,108 +1033,6 @@ diff --git a/src/scanner.c b/src/scanner.c
 +                return false;
 +            }
              skip(lexer);
-         }
-     }
-@@ -82,8 +115,36 @@
- 
- /* --- API Implementation --- */
- 
-+// sloplint: `.Name` or `::Name` when `{` follows the name at once, as in
-+// $a.Where{ $_ }. The token ends before the brace. Anything else is left to
-+// the internal lexer, which re-reads the input from the start.
-+static bool scan_method_block_head(TSLexer *lexer)
-+{
-+    if (lexer->lookahead == ':') {
-+        lexer->advance(lexer, false);
-+        if (lexer->lookahead != ':') return false;
-+        lexer->advance(lexer, false);
-+    } else if (lexer->lookahead == '.') {
-+        lexer->advance(lexer, false);
-+    } else {
-+        return false;
-+    }
-+    if (!(iswalpha(lexer->lookahead) || lexer->lookahead == '_')) return false;
-+    while (iswalnum(lexer->lookahead) || lexer->lookahead == '_') {
-+        lexer->advance(lexer, false);
-+    }
-+    if (lexer->lookahead != '{') return false;
-+    lexer->mark_end(lexer);
-+    lexer->result_symbol = METHOD_BLOCK_HEAD;
-+    return true;
-+}
-+
- bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols)
- {
-+    if (valid_symbols[METHOD_BLOCK_HEAD] &&
-+        (lexer->lookahead == '.' || lexer->lookahead == ':')) {
-+        return scan_method_block_head(lexer);
-+    }
-     // The statement terminator consumes nothing, so it must be tried last: when
-     // both are valid, a `--` has to win over the empty terminator.
-     if (scan_bare_dashes(payload, lexer, valid_symbols)) return true;
-diff --git a/grammar.js b/grammar.js
-index 2e6b4454..97bbe149 100644
---- a/grammar.js
-+++ b/grammar.js
-@@ -365,20 +365,28 @@ export default grammar({
-           // sloplint: option with an attached value, as in -I=dir,
-           // --go_out=$dir or -buildmode=c-shared. A bare -Name or -Name:
-           // stays a command_parameter. Commas belong to the value, as in
-           // --format=csv,noheader: native commands receive one string
-           // (about_Parsing, argument mode).
-           new RegExp(
-             /-+[a-zA-Z_?\-`][a-zA-Z0-9_?\-`]*/.source +
-               /[^a-zA-Z0-9_?\-`\s:<>&(){}|;,"'$@\[]/.source +
-               wordTail(/[^&\s()}|;"'`]/.source),
-           ),
-+          // sloplint: dash-colon word, as in --:warning: the colon does not
-+          // delimit a standalone `--` token, so the whole word is one
-+          // generic token (see scanner.c: `:` is not a bare-dash delimiter).
-+          new RegExp(
-+            /-+:/.source +
-+              /[^&\s()}|;,"'`]/.source +
-+              wordTail(/[^&\s()}|;"'`]/.source),
-+          ),
-           // sloplint: word that starts with a variable and continues as a
-           // path, as in $env:TEMP\x.ps1 or ${root}/bin.
-           /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)[\\\/][^\&\s\(\)\}\|;,]*/,
-           // sloplint: bare escape sequence used as a word, as in
-           // Write-Host `r`n — expandable-string content without quotes.
-           new RegExp(WORD_ESC + wordTail(/[^&\s()}|;,"'`]/.source)),
-           // sloplint: word that interleaves a variable head with quoted or
-           // plain segments, as in $x"cat"$y — a single expandable word.
-           new RegExp(
-             /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)/.source +
-@@ -945,21 +953,23 @@ export default grammar({
-     _argument_member_tail: ($) =>
-       prec.right(
-         seq(token.immediate('.'), $.member_name, optional($.argument_list)),
-       ),
- 
-     // Stop parsing is a token that end the parsing of command line
-     stop_parsing: ($) => /--%[^\r\n]*/,
- 
-     // Generic token is hard to manage
-     // So a definition is that a generic token must have to begin by one or more space char
--    command_argument_sep: ($) => prec.right(choice(repeat1(' '), ':')),
-+    // sloplint: tabs separate arguments like spaces, so an attached option
-+    // lexes as generic_token after either (see calls.rs: parameter is opaque).
-+    command_argument_sep: ($) => prec.right(choice(repeat1(choice(' ', '\t')), ':')),
- 
-     // Adapt the grammar to have same behavior
- 
-     _command_argument: ($) =>
-       prec.right(
-         PREC.PARAM,
-         choice(
-           seq($.command_argument_sep, optional($.generic_token)),
-           seq($.command_argument_sep, $._command_argument_list),
-           $.parenthesized_expression,
-diff --git a/src/scanner.c b/src/scanner.c
-index 49c1faf6..a94753f0 100644
---- a/src/scanner.c
-+++ b/src/scanner.c
-@@ -76,42 +76,57 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool
          }
      }
  
@@ -869,3 +1093,374 @@ index 49c1faf6..a94753f0 100644
  
  /* --- API Implementation --- */
  
++// sloplint: `.Name` or `::Name` when `{` follows the name at once, as in
++// $a.Where{ $_ }. The token ends before the brace. Anything else is left to
++// the internal lexer, which re-reads the input from the start.
++static bool scan_method_block_head(TSLexer *lexer)
++{
++    if (lexer->lookahead == ':') {
++        lexer->advance(lexer, false);
++        if (lexer->lookahead != ':') return false;
++        lexer->advance(lexer, false);
++    } else if (lexer->lookahead == '.') {
++        lexer->advance(lexer, false);
++    } else {
++        return false;
++    }
++    if (!(iswalpha(lexer->lookahead) || lexer->lookahead == '_')) return false;
++    while (iswalnum(lexer->lookahead) || lexer->lookahead == '_') {
++        lexer->advance(lexer, false);
++    }
++    if (lexer->lookahead != '{') return false;
++    lexer->mark_end(lexer);
++    lexer->result_symbol = METHOD_BLOCK_HEAD;
++    return true;
++}
++
+ bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols)
+ {
++    if (valid_symbols[METHOD_BLOCK_HEAD] &&
++        (lexer->lookahead == '.' || lexer->lookahead == ':')) {
++        return scan_method_block_head(lexer);
++    }
+     // The statement terminator consumes nothing, so it must be tried last: when
+     // both are valid, a `--` has to win over the empty terminator.
+     if (scan_bare_dashes(payload, lexer, valid_symbols)) return true;
+     return scan_statement_terminator(payload, lexer, valid_symbols);
+ }
+ 
+ void *tree_sitter_powershell_external_scanner_create()
+ {
+     return NULL;
+ }
+diff --git a/test/corpus/native_arguments.txt b/test/corpus/native_arguments.txt
+index e91d0a4..53f8458 100644
+--- a/test/corpus/native_arguments.txt
++++ b/test/corpus/native_arguments.txt
+@@ -37,21 +37,21 @@ cargo test -p core -- --nocapture --test-threads=1
+             (command_argument_sep)
+             (generic_token)
+             (command_argument_sep)
+             (command_parameter)
+             (command_argument_sep)
+             (generic_token)
+             (command_parameter)
+             (command_argument_sep)
+             (command_parameter)
+             (command_argument_sep)
+-            (command_parameter)))))))
++            (generic_token)))))))
+ 
+ ===
+ Native: -- at the end of the command
+ ===
+ 
+ git log --
+ 
+ ---
+ 
+ (program
+@@ -148,43 +148,43 @@ git log --format=%H
+ (program
+   (statement_list
+     (pipeline
+       (pipeline_chain
+         (command
+           (command_name)
+           (command_elements
+             (command_argument_sep)
+             (generic_token)
+             (command_argument_sep)
+-            (command_parameter)))))))
++            (generic_token)))))))
+ 
+ ===
+ Native: --option=value with a quoted value
+ ===
+ 
+ git log --pretty=format:"%h %s" --since='2 weeks ago'
+ 
+ ---
+ 
+ (program
+   (statement_list
+     (pipeline
+       (pipeline_chain
+         (command
+           (command_name)
+           (command_elements
+             (command_argument_sep)
+             (generic_token)
+             (command_argument_sep)
+-            (command_parameter)
++            (generic_token)
+             (command_argument_sep)
+-            (command_parameter)))))))
++            (generic_token)))))))
+ 
+ ===
+ Native: short flag with an attached number
+ ===
+ 
+ grep -n -A5 needle file.txt
+ 
+ ---
+ 
+ (program
+@@ -265,63 +265,66 @@ Select-Object Id, State, Command
+ ---
+ 
+ (program
+   (statement_list
+     (pipeline
+       (pipeline_chain
+         (command
+           (command_name)
+           (command_elements
+             (command_argument_sep)
+-            (generic_token)
+-            (generic_token)
+-            (generic_token)))))))
++            (array_literal_expression
++              (generic_token)
++              (generic_token)
++              (generic_token))))))))
+ 
+ ===
+ Native: comma list without spaces
+ ===
+ 
+ Get-Process a,b
+ 
+ ---
+ 
+ (program
+   (statement_list
+     (pipeline
+       (pipeline_chain
+         (command
+           (command_name)
+           (command_elements
+             (command_argument_sep)
+-            (generic_token)
+-            (generic_token)))))))
++            (array_literal_expression
++              (generic_token)
++              (generic_token))))))))
+ 
+ ===
+ Native: comma list as a parameter value
+ ===
+ 
+ Add-Type -AssemblyName System.Windows.Forms,System.Drawing
+ 
+ ---
+ 
+ (program
+   (statement_list
+     (pipeline
+       (pipeline_chain
+         (command
+           (command_name)
+           (command_elements
+             (command_argument_sep)
+             (command_parameter)
+             (command_argument_sep)
+-            (generic_token)
+-            (generic_token)))))))
++            (array_literal_expression
++              (generic_token)
++              (generic_token))))))))
+ 
+ ===
+ Native: quoted comma list still an array
+ ===
+ 
+ Start-Process python -ArgumentList '-m','app.gui' -PassThru
+ 
+ ---
+ 
+ (program
+@@ -412,10 +415,182 @@ Write-Output a & Write-Output b
+             (generic_token)
+             (command_argument_sep)))))
+     (background_operator)
+     (pipeline
+       (pipeline_chain
+         (command
+           (command_name)
+           (command_elements
+             (command_argument_sep)
+             (generic_token)))))))
++
++===
++Native: NBSP before -- still ends option parsing
++===
++
++git log  -- foo.txt
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name)
++          (command_elements
++            (command_argument_sep)
++            (generic_token)
++            (command_parameter)
++            (command_argument_sep)
++            (generic_token)))))))
++
++===
++Native: dash-colon word is one argument
++===
++
++Write-Output --:warning
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name)
++          (command_elements
++            (command_argument_sep)
++            (generic_token)))))))
++
++===
++Native: -- before a script block
++===
++
++ForEach-Object --{ Get-Date }
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name)
++          (command_elements
++            (command_parameter)
++            (script_block_expression
++              (script_block
++                (script_block_body
++                  (statement_list
++                    (pipeline
++                      (pipeline_chain
++                        (command
++                          (command_name))))))))))))))
++
++===
++Native: tab-separated attached option stays one word
++===
++
++git log	--format=zip
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name)
++          (command_elements
++            (command_argument_sep)
++            (generic_token)
++            (command_argument_sep)
++            (generic_token)))))))
++
++===
++Native: NBSP after -- still ends option parsing
++===
++
++git log -- foo.txt
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name)
++          (command_elements
++            (command_argument_sep)
++            (generic_token)
++            (command_parameter)
++            (command_argument_sep)
++            (generic_token)))))))
++
++===
++Native: parenthesized list starting at once after --
++===
++
++Write-Output --(Get-Date), (Get-Date)
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name)
++          (command_elements
++            (command_parameter)
++            (array_literal_expression
++              (pipeline
++                (pipeline_chain
++                  (command
++                    (command_name)))))
++            (array_literal_expression
++              (unary_expression
++                (parenthesized_expression
++                  (pipeline
++                    (pipeline_chain
++                      (command
++                        (command_name)))))))))))))
++
++===
++Native: dash-colon word ends before an unquoted comma
++===
++
++Write-Output --:first,second
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name)
++          (command_elements
++            (command_argument_sep)
++            (array_literal_expression
++              (generic_token)
++              (generic_token))))))))
++
++===
++Native: quoted segment may follow the dash-colon at once
++===
++
++Write-Output --:"warning text"
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name)
++          (command_elements
++            (command_argument_sep)
++            (generic_token)))))))
