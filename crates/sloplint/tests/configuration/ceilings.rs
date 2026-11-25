@@ -249,7 +249,7 @@ fn unreadable_ancestor_metadata_fails_closed() {
     let RunError::Io { path, source } = error else {
         panic!("expected RunError::Io, got: {error:?}");
     };
-    assert_eq!(path, sub);
+    assert_eq!(path, sub.canonicalize().expect("canonical sub directory"));
     assert_eq!(source.kind(), std::io::ErrorKind::PermissionDenied);
 }
 
@@ -365,7 +365,7 @@ fn absent_shallow_pattern_yields_empty_matches() {
 #[test]
 fn dangling_implicit_config_symlink_rejected() {
     let tmp = tempfile::tempdir().expect("tempdir");
-    let root = tmp.path().to_path_buf();
+    let root = tmp.path().canonicalize().expect("canonical tempdir");
     let src = root.join("src");
     fs::create_dir_all(&src).expect("create src");
     fs::write(src.join("lib.rs"), "pub fn handle() {}\n").expect("write lib.rs");
@@ -393,7 +393,7 @@ fn implicit_config_symlink_to_outside_target_rejected() {
         .expect("write outside target");
 
     let tmp = tempfile::tempdir().expect("tempdir");
-    let root = tmp.path().to_path_buf();
+    let root = tmp.path().canonicalize().expect("canonical tempdir");
     let src = root.join("src");
     fs::create_dir_all(&src).expect("create src");
     fs::write(src.join("lib.rs"), "pub fn handle() {}\n").expect("write lib.rs");
@@ -416,7 +416,7 @@ fn implicit_config_symlink_to_outside_target_rejected() {
 #[test]
 fn implicit_config_symlink_to_inside_target_rejected() {
     let tmp = tempfile::tempdir().expect("tempdir");
-    let root = tmp.path().to_path_buf();
+    let root = tmp.path().canonicalize().expect("canonical tempdir");
     let src = root.join("src");
     fs::create_dir_all(&src).expect("create src");
     fs::write(src.join("lib.rs"), "pub fn handle() {}\n").expect("write lib.rs");
