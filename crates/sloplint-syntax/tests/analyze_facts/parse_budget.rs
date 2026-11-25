@@ -88,3 +88,46 @@ fn formerly_divergent_lean_retains_facts_and_parser_reuse() {
     );
     assert_eq!(summary.healthy_first, "answer");
 }
+
+#[test]
+fn late_fixture_declarations_survive_recovery() {
+    let mut parsers = Parsers::new();
+    let input = FileInput {
+        lang: Lang::Lean,
+        path: "finprod.lean",
+        source: FORMERLY_DIVERGENT,
+        role: CodeRole::Library,
+    };
+    let analysis = analyze(&mut parsers, &input, &NO_CUSTOM);
+    assert!(
+        !analysis.timed_out,
+        "the full fixture completes instead of exhausting the parse budget"
+    );
+    let names: Vec<_> = analysis.facts.functions.iter().map(|f| f.name).collect();
+    for late in [
+        "mulSupport_fun_pow_count_subset",
+        "hasFiniteMulSupport_fun_pow_count",
+    ] {
+        assert!(
+            names.contains(&late),
+            "late fixture declaration {late} survives recovery, retained {} functions",
+            names.len()
+        );
+    }
+    let mut late_lines: Vec<u32> = analysis
+        .facts
+        .functions
+        .iter()
+        .filter(|f| {
+            f.name == "mulSupport_fun_pow_count_subset"
+                || f.name == "hasFiniteMulSupport_fun_pow_count"
+        })
+        .map(|f| f.pos.line)
+        .collect();
+    late_lines.sort_unstable();
+    assert_eq!(
+        late_lines,
+        [1397, 1402],
+        "the retained late declarations keep their tail positions"
+    );
+}

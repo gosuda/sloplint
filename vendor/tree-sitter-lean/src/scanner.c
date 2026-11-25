@@ -267,6 +267,7 @@ static bool scan_block_or_doc_comment(TSLexer *lexer,
   }
 
   if (!scan_block_comment_body(lexer)) return false;
+  lexer->mark_end(lexer);
   lexer->result_symbol = kind;
   return true;
 }
@@ -296,6 +297,7 @@ static bool scan_raw_string_after_r(TSLexer *lexer) {
         seen++;
       }
       if (seen == hashes) {
+        lexer->mark_end(lexer);
         lexer->result_symbol = RAW_STRING_LITERAL;
         return true;
       }
