@@ -269,3 +269,30 @@ fn macro_braced_class_body_with_access_sections_does_not_bind() {
         assert!(found.is_empty(), "class members are not locals: {found:?}");
     });
 }
+
+#[test]
+fn macro_braced_later_declarator_does_not_shadow_early_initializer() {
+    let source = "void g() {\n    int retries = 0;\n#ifdef X\n    WIDGET() {\n        int snapshot = ++retries, retries = 0;\n        ++retries;\n    };\n#endif\n}\n";
+    with_cpp_bindings(source, |found| {
+        let outer: Vec<_> = named_all(found, "retries")
+            .into_iter()
+            .filter(|b| b.pos.line == 2)
+            .collect();
+        let inner: Vec<_> = named_all(found, "retries")
+            .into_iter()
+            .filter(|b| b.pos.line == 5)
+            .collect();
+        assert_eq!(outer.len(), 1, "outer retries binds: {found:?}\n{source}");
+        assert_eq!(inner.len(), 1, "inner retries binds: {found:?}\n{source}");
+        assert_eq!(
+            (outer[0].write_lines, outer[0].first_write_line),
+            (1, 5),
+            "initializer counts to outer: {found:?}\n{source}"
+        );
+        assert_eq!(
+            (inner[0].write_lines, inner[0].first_write_line),
+            (1, 6),
+            "later increment counts to inner: {found:?}\n{source}"
+        );
+    });
+}

@@ -342,7 +342,11 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
                     if self.hooks.decl_visible_in_initializer() {
                         self.push_decls(node);
                     } else {
-                        self.deferred.push((node.id(), role, self.depth));
+                        let scope = {
+                            let cx = self.make_cx();
+                            self.hooks.decl_scope_parent(self.depth, node, &cx)
+                        };
+                        self.deferred.push((node.id(), role, scope));
                     }
                     self.collect_ambient(node);
                 }
@@ -357,7 +361,11 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
                     if self.hooks.decl_visible_in_initializer() {
                         self.apply_bind(node);
                     } else {
-                        self.deferred.push((node.id(), role, self.depth));
+                        let scope = {
+                            let cx = self.make_cx();
+                            self.hooks.decl_scope_parent(self.depth, node, &cx)
+                        };
+                        self.deferred.push((node.id(), role, scope));
                     }
                 }
             }
@@ -413,9 +421,7 @@ impl<'s, 'a, 't> WalkState<'s, 'a, 't> {
         let scope = self
             .deferred
             .last()
-            .map_or(self.depth.saturating_sub(1), |&(_, _, depth)| {
-                depth.saturating_sub(1)
-            });
+            .map_or(self.depth.saturating_sub(1), |&(_, _, scope)| scope);
         let mut names = Vec::new();
         {
             let cx = self.make_cx();
