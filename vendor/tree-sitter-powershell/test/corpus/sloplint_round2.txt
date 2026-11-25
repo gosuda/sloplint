@@ -158,7 +158,6 @@ dotnet run -- ../System.Management.Automation/CorePsTypeCatalog.cs $IncFileName
           (command_elements
             (command_argument_sep)
             (generic_token)
-            (command_argument_sep)
             (command_parameter)
             (command_argument_sep)
             (generic_token)

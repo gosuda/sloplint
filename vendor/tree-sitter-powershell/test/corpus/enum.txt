@@ -16,6 +16,8 @@ enum MyEnum
       (enum_member
         (simple_name)))))
 
+
+
 ===
 More complex enum
 ===

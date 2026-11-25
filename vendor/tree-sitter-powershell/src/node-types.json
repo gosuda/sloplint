@@ -151,6 +151,10 @@
             "named": true
           },
           {
+            "type": "background_operator",
+            "named": true
+          },
+          {
             "type": "class_statement",
             "named": true
           },
@@ -334,6 +338,11 @@
         }
       ]
     }
+  },
+  {
+    "type": "background_operator",
+    "named": true,
+    "fields": {}
   },
   {
     "type": "bitwise_argument_expression",
@@ -784,6 +793,11 @@
         }
       ]
     }
+  },
+  {
+    "type": "command_parameter",
+    "named": true,
+    "fields": {}
   },
   {
     "type": "comparison_argument_expression",
@@ -1497,6 +1511,10 @@
       "types": [
         {
           "type": "attribute",
+          "named": true
+        },
+        {
+          "type": "background_operator",
           "named": true
         },
         {
@@ -2553,10 +2571,6 @@
           "named": true
         },
         {
-          "type": "command_parameter",
-          "named": true
-        },
-        {
           "type": "element_access",
           "named": true
         },
@@ -2811,6 +2825,10 @@
       "types": [
         {
           "type": "attribute",
+          "named": true
+        },
+        {
+          "type": "background_operator",
           "named": true
         },
         {
@@ -4029,10 +4047,6 @@
   {
     "type": "catch",
     "named": false
-  },
-  {
-    "type": "command_parameter",
-    "named": true
   },
   {
     "type": "comment",
