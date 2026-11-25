@@ -1,8 +1,71 @@
+diff --git a/bindings/rust/build.rs b/bindings/rust/build.rs
+index cbc9120..0e671e1 100644
+--- a/bindings/rust/build.rs
++++ b/bindings/rust/build.rs
+@@ -1,19 +1,50 @@
+ fn main() {
+     let src_dir = std::path::Path::new("src");
++    let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
+ 
+     let mut c_config = cc::Build::new();
+     c_config.std("c11").include(src_dir);
+ 
+     #[cfg(target_env = "msvc")]
+     c_config.flag("-utf-8");
+ 
++    // The generated parser exceeds GitHub's 100MB blob limit, so the
++    // committed artifact is parser.c.gz. A fresh regen produces src/parser.c
++    // (gitignored); builds decompress the packed copy into OUT_DIR when the
++    // plain file is absent.
+     let parser_path = src_dir.join("parser.c");
++    let parser_gz = src_dir.join("parser.c.gz");
++    let parser_path = if parser_path.exists() {
++        parser_path
++    } else {
++        // Re-inflate on every run: parser.c.gz is a watched input, so
++        // reaching this branch means it changed (or the OUT_DIR copy is
++        // missing). Caching the inflated copy across a .gz change would
++        // keep compiling the old parser.
++        let out = out_dir.join("parser.c");
++        let packed = std::fs::File::open(&parser_gz)
++            .expect("src/parser.c.gz missing: regenerate the vendored grammar");
++        let mut dec = flate2::read::GzDecoder::new(packed);
++        let tmp = out_dir.join("parser.c.tmp");
++        {
++            let mut f = std::fs::File::create(&tmp).unwrap();
++            std::io::copy(&mut dec, &mut f).unwrap();
++        }
++        std::fs::rename(&tmp, &out).unwrap();
++        out
++    };
+     c_config.file(&parser_path);
+-    println!("cargo:rerun-if-changed={}", parser_path.to_str().unwrap());
++    // Watch the src directory, not src/parser.c: the file is absent in
++    // normal checkouts, and a watched missing path reruns this script on
++    // every build — each rerun recompiles the ~80MB parser. The existing
++    // directory still notices a `tree-sitter generate` creating it.
++    println!("cargo:rerun-if-changed=src");
++    println!("cargo:rerun-if-changed={}", parser_gz.to_str().unwrap());
++    println!("cargo:rerun-if-changed=grammar.js");
+ 
+     let scanner_path = src_dir.join("scanner.c");
+     c_config.file(&scanner_path);
+     println!("cargo:rerun-if-changed={}", scanner_path.to_str().unwrap());
+ 
+     c_config.compile("tree-sitter-lean");
+ }
 diff --git a/grammar.js b/grammar.js
 index b093699..66cd893 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -68,10 +68,29 @@ export default grammar({
+@@ -61,24 +61,43 @@ export default grammar({
+     $.line_comment,
+     $.block_comment,
+     $.doc_comment,
+   ],
+ 
+   word: $ => $._plain_ident,
+ 
    conflicts: $ => [
      /* `public`/`meta` can start an `import`, a `public meta section`
         marker, or a Lean 4 visibility-prefixed declaration. */
@@ -34,7 +97,21 @@ index b093699..66cd893 100644
      /* `{ ident <ident> … }` could be a function-style struct_field
         (`method args := body`) or the singleton-set `{ app args }`. We
         always prefer the struct_field when followed by `:=`. */
-@@ -99,7 +118,7 @@ export default grammar({
+     [$.struct_field, $._term_atom],
+     /* `{ a, b ... }` could be a set literal (`elem` list) or the
+        multi-source struct update `{ src₁, src₂ with … }`. `with`
+        one token after disambiguates. */
+     [$.struct_lit],
+   ],
+ 
+@@ -92,62 +111,103 @@ export default grammar({
+     ),
+ 
+     moduleTk: _ => 'module',
+     prelude:  _ => 'prelude',
+ 
+     import: $ => seq(
+       optional($.public),
        optional($.meta),
        'import',
        optional($.all),
@@ -43,7 +120,15 @@ index b093699..66cd893 100644
      ),
  
      public: _ => 'public',
-@@ -115,7 +134,6 @@ export default grammar({
+     meta:   _ => 'meta',
+     all:    _ => 'all',
+ 
+     /* ===== commands ====================================================== */
+ 
+     _command: $ => choice(
+       $.check,
+       $.eval,
+       $.print,
        $.reduce,
        $.namespace,
        $.section,
@@ -51,7 +136,18 @@ index b093699..66cd893 100644
        $.end,
        $.variable,
        $.universe,
-@@ -134,13 +152,55 @@ export default grammar({
+       $.open,
+       $.export,
+       $.attribute_cmd,
+       $.initialize,
+       $.set_option,
+       $.deriving_cmd,
+       $.assert_cmd,
+       $.decl_doc_cmd,
+       $.grind_pattern_cmd,
+       $.alias_cmd,
+       $.notation_decl_cmd,
+       $.syntax_cmd,
        $.macro_cmd,
        $.macro_rules_cmd,
        $.elab_rules_cmd,
@@ -107,7 +203,21 @@ index b093699..66cd893 100644
      /* `mutual … end` groups mutually-recursive declarations. Like
         `namespace`/`section`/`end`, it is modeled as a flat marker
         rather than a nesting block: the inner declarations parse as
-@@ -189,13 +249,16 @@ export default grammar({
+        siblings and the closing `end` is the ordinary `end` command.
+        Pairing is left to tooling, consistent with the rest of the
+        grammar (and avoids an `end`-disambiguation conflict). */
+     mutual: _ => 'mutual',
+ 
+     /* `declare_syntax_cat name (behavior := both)?` — introduces a new
+        syntax category for the parser DSL. */
+@@ -182,27 +242,30 @@ export default grammar({
+     unif_hint_cmd: $ => prec.right(seq(
+       'unif_hint',
+       optional(field('name', $.identifier)),
+       repeat($._bracketed_binder),
+       'where',
+       repeat($._term),
+     )),
  
      /* `assert_not_exists Name`, `assert_not_imported Name`, etc. —
         Lean's lightweight assertion commands taking a single ident. */
@@ -126,7 +236,21 @@ index b093699..66cd893 100644
      ),
  
      /* Lean/Mathlib commands that attach a doc/spelling/grind note or
-@@ -282,6 +345,33 @@ export default grammar({
+        a `:=`-bodied cast/coercion to an existing declaration. Takes
+        an identifier or string literal, optional atomic args
+        (`initialize_simps_projections Foo (a, b)`), and any number of
+        `=> e` / `for e` / `in e` / `:= e` clauses
+        (`recommended_spelling "iff" for "↔" in [Iff, …]`). */
+     decl_doc_cmd: $ => prec.right(seq(
+       choice(
+@@ -275,20 +338,47 @@ export default grammar({
+        Body terms are usually `do …` blocks or quotations. */
+     elab_rules_cmd: $ => seq(
+       optional(choice('scoped', 'local')),
+       'elab_rules',
+       optional($._named_attr),
+       ':',
+       field('category', $.identifier),
        repeat1($.match_alt),
      ),
  
@@ -160,7 +284,21 @@ index b093699..66cd893 100644
      /* `macro [prec]? [(name := X)]? "kw" arg* : category => body` —
         coarse parse of Lean's macro-declaration command. The macro's
         body after `=>` is a single term (typically a `(…)` quotation).
-@@ -405,61 +495,129 @@ export default grammar({
+        Argument list before `:` accepts any term-shaped tokens. */
+     macro_cmd: $ => prec.right(seq(
+       optional($.attributes),
+       optional(choice('scoped', 'local')),
+       'macro',
+       optional(seq(
+         token.immediate(':'),
+@@ -398,75 +488,143 @@ export default grammar({
+           sep1($._term, choice(';', $._newline)),
+           $._dedent,
+         ),
+       ),
+     )),
+ 
+     /* `public section` / `public meta section` — Lean 4 module-system
         marker; everything below is exported. It has no body and no
         matching `end`. Optionally preceded by attributes
         (e.g. `@[expose] public section`). */
@@ -310,7 +448,21 @@ index b093699..66cd893 100644
      ),
  
      export: $ => seq(
-@@ -510,6 +668,8 @@ export default grammar({
+       'export',
+       field('namespace', $.identifier),
+       '(',
+       repeat1(field('only', $.identifier)),
+       ')',
+     ),
+ 
+@@ -503,20 +661,22 @@ export default grammar({
+       'private',
+       'protected',
+       'unsafe',
+       'scoped',
+       'local',
+     )),
+ 
      attributes: $ => seq('@[', sep1($._attr_instance, ','), ']'),
      _attr_instance: $ => seq(
        optional(choice('scoped', 'local')),
@@ -319,7 +471,21 @@ index b093699..66cd893 100644
        $._attribute,
      ),
      /* Attributes can carry arguments (`@[simp 1000]`,
-@@ -823,7 +983,9 @@ export default grammar({
+        `@[combinator_parenthesizer foo, expose]`, `@[simps -isSimp]`,
+        `@[grind =]`, `@[grind →]`). Args restricted to atoms,
+        unary-prefixed atoms, or bare directive tokens to keep state
+        count bounded. */
+     _attribute: $ => seq(
+       field('name', $.identifier),
+       repeat(field('arg', choice(
+@@ -816,21 +976,23 @@ export default grammar({
+     /* `fun (x, y) => …` — destructured tuple as a single binder.
+        Distinct from `explicit_binder` (which has `:`). */
+     tuple_binder: $ => seq('(',
+       $._binder_ident, ',', sep1($._binder_ident, ','),
+       ')'),
+ 
+     /* `fun ⟨x, y⟩ => …` — anonymous-constructor destructuring binder.
         Supports nested forms like `⟨x, ⟨y, z⟩⟩`. */
      anon_ctor_binder: $ => seq(
        '⟨',
@@ -330,7 +496,21 @@ index b093699..66cd893 100644
        '⟩',
      ),
  
-@@ -904,8 +1066,13 @@ export default grammar({
+     _binder_ident: $ => choice($.identifier, $.hole),
+ 
+     _bracketed_binder: $ => choice(
+       $.explicit_binder,
+       $.implicit_binder,
+       $.strict_implicit_binder,
+       $.instance_binder,
+@@ -897,22 +1059,27 @@ export default grammar({
+       $.suffices,
+       $.by_cases,
+       $.show,
+       $.if_then_else,
+       $.forall,
+       $.exists,
+       $.sigma,
        $.big_op_binder,
        $.by,
        $.do_block,
@@ -344,7 +524,21 @@ index b093699..66cd893 100644
      ),
  
      _op_term: $ => choice(
-@@ -1205,12 +1372,35 @@ export default grammar({
+       $._term_atom,
+       $.app,
+       $.proj,
+       $.subscript,
+       $.postfix_op,
+       $.binary_op,
+       $.unary_op,
+@@ -1198,26 +1365,49 @@ export default grammar({
+         ':=',
+         field('value', $._term),
+       ),
+       /* Field-name punning: `{ x, y }` abbreviates `{ x := x, y := y
+          }`. No binders on this branch — a bare name is a complete
+          field, so `x y := e` stays unambiguous (binders of `x`). */
+       field('name', $.identifier),
      ),
  
      /* `f x` — left-associative application. The argument can be an
@@ -382,7 +576,21 @@ index b093699..66cd893 100644
      )),
  
      proj: $ => prec.left(PREC.proj, seq(
-@@ -1458,7 +1648,8 @@ export default grammar({
+       field('term', $._op_term),
+       token.immediate('.'),
+       field('field', choice($.identifier, $.num_lit)),
+     )),
+ 
+     /* `Foo.{u₁, u₂}` or `NonemptyType.{0}` — explicit universe-level
+        application. The `.{` is one immediate token so it wins the
+@@ -1451,35 +1641,37 @@ export default grammar({
+     /* `∀ x, body`, `∀ x : T, body`, `∀ x ∈ s, body` (sugar) — and
+        Mathlib's `∀ b ≠ ⊥, body` / `∀ c ⊆ S, body` predicate-tail
+        sugar. */
+     forall: $ => prec.right(seq(
+       /* `Π` is a deprecated Mathlib synonym for `∀` for product types. */
+       choice('∀', 'forall', 'Π'),
+       $._binders,
        optional(choice(
          $._type_spec,
          seq(
@@ -392,7 +600,13 @@ index b093699..66cd893 100644
            field('bound', $._op_term),
          ),
        )),
-@@ -1472,7 +1663,8 @@ export default grammar({
+       ',',
+       field('body', $._term),
+     )),
+ 
+     exists: $ => prec.right(seq(
+       choice('∃', 'exists'),
+       $._binders,
        optional(choice(
          $._type_spec,
          seq(
@@ -402,7 +616,21 @@ index b093699..66cd893 100644
            field('bound', $._op_term),
          ),
        )),
-@@ -1541,11 +1733,17 @@ export default grammar({
+       ',',
+       field('body', $._term),
+     )),
+ 
+     /* `Σ x, T x` / `Σ' x, T x` — sigma / non-dependent-pair type binder. */
+     sigma: $ => prec.right(seq(
+       choice('Σ', "Σ'"),
+@@ -1534,25 +1726,31 @@ export default grammar({
+       optional($._binders),
+       optional($._type_spec),
+       choice(':=', '←', '<-'),
+       field('value', $._term),
+       optional(seq(';', field('body', $._term))),
+     )),
+ 
      have: $ => prec.right(seq(
        /* `haveI` is Mathlib's "have instance" variant. */
        choice('have', 'haveI'),
@@ -424,7 +652,21 @@ index b093699..66cd893 100644
        optional(seq(';', field('body', $._term))),
      )),
  
-@@ -1631,16 +1829,73 @@ export default grammar({
+     /* `suffices g : T from proof` / `suffices g : T by tac` — a
+        tactic-language reframing. The `from`/`by` proves the new
+        suffices-goal, then the original goal is discharged via `g`. */
+     suffices: $ => prec.right(seq(
+       'suffices',
+       field('name', $._binder_ident),
+       $._type_spec,
+@@ -1624,51 +1822,136 @@ export default grammar({
+      * The grammar accepts `let mut`, `←`/`<-` (bind), and `for`/`while`
+      * /`return` etc. by virtue of those being valid Lean syntax that
+      * the term-tier rules already cover (via `let`, the `for` keyword
+      * inside ranges, etc.). Coverage is approximate but far cheaper.
+      */
+     by: $ => seq('by', $._block_body),
+     do_block: $ => seq('do', $._block_body),
  
      _block_body: $ => choice(
        /* Inline `by tac; tac` and `do x; y` — multiple tactics
@@ -502,7 +744,9 @@ index b093699..66cd893 100644
      /* `x := v` mutation, valid only inside a do-block. */
      block_assign: $ => seq(
        field('name', $.identifier),
-@@ -1650,18 +1905,46 @@ export default grammar({
+       ':=',
+       field('value', $._term),
+     ),
  
      match: $ => prec.right(seq(
        'match',
@@ -551,7 +795,21 @@ index b093699..66cd893 100644
      /* `case name args => body` — Lean tactic-language case selection
         (analogous to a `match_alt` but goal-keyed). Stand-alone tactic
         statement; commonly chained as sibling at the same indent. */
-@@ -1755,6 +2038,16 @@ export default grammar({
+     tactic_case: $ => prec.right(seq(
+       'case',
+       field('name', $.identifier),
+       repeat(field('arg', $._binder_ident)),
+       '=>',
+       field('body', $._term),
+     )),
+@@ -1748,13 +2031,23 @@ export default grammar({
+     /* Identifier is split into two paths:
+      *   `_plain_ident` — internal regex for the ASCII single-component
+      *     case. This is the `word` token, so tree-sitter performs
+      *     keyword extraction against grammar literals automatically.
+      *   `_scanned_ident` — external token emitted by the scanner only
+      *     when the identifier needs richer handling: dotted parts,
+      *     `«quoted»` escapes, or non-ASCII characters.
       * The scanner returns false (rewind to start) for the plain case,
       * letting internal lexing handle word/keyword arbitration. */
      identifier: $ => choice($._plain_ident, $._scanned_ident),
@@ -569,9 +827,17 @@ index b093699..66cd893 100644
    },
  });
 diff --git a/src/scanner.c b/src/scanner.c
+index 1eb7f4a..b4f7a3b 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
-@@ -68,6 +68,17 @@
+@@ -61,29 +61,47 @@ static bool is_letter_like(int32_t c) {
+       || (0x0100  <= c && c <= 0x017f);
+ }
+ 
+ static bool is_subscript_alnum(int32_t c) {
+   return (0x2080 <= c && c <= 0x2089)
+       || (0x2090 <= c && c <= 0x209c)
+       || (0x1d62 <= c && c <= 0x1d6a)
        || c == 0x2c7c;
  }
  
@@ -589,7 +855,8 @@ diff --git a/src/scanner.c b/src/scanner.c
  static bool is_id_first(int32_t c) {
    return is_alpha_ascii(c) || c == '_' || is_letter_like(c);
  }
-@@ -76,7 +87,14 @@
+ 
+ static bool is_id_rest(int32_t c) {
    return is_alpha_ascii(c)
        || is_digit_ascii(c)
        || c == '_' || c == '\'' || c == '!' || c == '?'
@@ -605,8 +872,83 @@ diff --git a/src/scanner.c b/src/scanner.c
  }
  
  /*
-@@ -311,6 +329,11 @@
+  * Indent stack: each entry is the column (in columns, not bytes) of an
+  * open tactic/do block. Always contains at least one entry — the base
+  * (0). Tokens push and pop based on observed line indentation.
+  */
+ struct Scanner {
+   Array(uint16_t) indents;
+ };
+@@ -242,20 +260,21 @@ static bool scan_block_or_doc_comment(TSLexer *lexer,
+   } else if (lexer->lookahead == '!' && valid_symbols[MODULE_DOC_COMMENT]) {
+     advance(lexer);
+     kind = MODULE_DOC_COMMENT;
+   } else if (valid_symbols[BLOCK_COMMENT]) {
+     kind = BLOCK_COMMENT;
+   } else {
      return false;
+   }
+ 
+   if (!scan_block_comment_body(lexer)) return false;
++  lexer->mark_end(lexer);
+   lexer->result_symbol = kind;
+   return true;
+ }
+ 
+ /* ---------- raw strings -------------------------------------------------- */
+ 
+ /*
+  * Recognize r"…", r#"…"#, r##"…"##, … with matching `#` counts. The
+  * leading `r` is assumed already consumed by the dispatcher.
+  */
+@@ -271,20 +290,21 @@ static bool scan_raw_string_after_r(TSLexer *lexer) {
+   for (;;) {
+     if (lexer->eof(lexer)) return false;
+     if (lexer->lookahead == '"') {
+       advance(lexer);
+       unsigned seen = 0;
+       while (seen < hashes && lexer->lookahead == '#') {
+         advance(lexer);
+         seen++;
+       }
+       if (seen == hashes) {
++        lexer->mark_end(lexer);
+         lexer->result_symbol = RAW_STRING_LITERAL;
+         return true;
+       }
+     } else {
+       advance(lexer);
+     }
+   }
+ }
+ 
+ /* ---------- layout (indent / dedent / newline) -------------------------- */
+@@ -296,37 +316,48 @@ static bool scan_raw_string_after_r(TSLexer *lexer) {
+  *
+  *   indent > top  → push, emit INDENT
+  *   indent < top  → pop one, emit DEDENT (caller will re-invoke us if
+  *                   more pops are needed)
+  *   indent == top → emit NEWLINE
+  *
+  * Lines that are entirely blank or contain only a comment don't
+  * participate — they're skipped, and we use the indent of the next
+  * real content line.
+  */
+-static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
+-                        const bool *valid_symbols) {
++/* scan_layout returns 1 when it emits a layout token, -1 when it
++ * suppresses a NEWLINE for an aligned catch/finally line (the peek has
++ * already consumed the keyword characters, so the caller must return false
++ * at once so tree-sitter rewinds and lexes the keyword first instead of
++ * falling through to a block comment), and 0 when no layout token
++ * applies. */
++static int scan_layout(struct Scanner *scanner, TSLexer *lexer,
++                       const bool *valid_symbols) {
+   if (!(valid_symbols[INDENT]
+      || valid_symbols[DEDENT]
+      || valid_symbols[NEWLINE])) {
+-    return false;
++    return 0;
    }
  
 +  /* A dedent changes the stack but leaves its triggering newline unread.
@@ -617,16 +959,77 @@ diff --git a/src/scanner.c b/src/scanner.c
    /* Skip trailing spaces/tabs on the current line; we only care about
       layout once we reach a newline. */
    while (lexer->lookahead == ' ' || lexer->lookahead == '\t'
-@@ -363,6 +386,7 @@
+       || lexer->lookahead == '\r') {
+     skip(lexer);
+   }
+ 
+   /* If we're not at a newline (or EOF), no layout token applies. */
+-  if (lexer->lookahead != '\n' && !lexer->eof(lexer)) return false;
++  if (lexer->lookahead != '\n' && !lexer->eof(lexer)) return 0;
+ 
+   uint32_t indent = 0;
+   bool saw_newline = false;
+   for (;;) {
+     if (lexer->lookahead == '\n') {
+       indent = 0;
+       saw_newline = true;
+       skip(lexer);
+     } else if (lexer->lookahead == ' ') {
+       indent++;
+@@ -334,73 +365,98 @@ static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
+     } else if (lexer->lookahead == '\t') {
+       indent += 8;
+       skip(lexer);
+     } else if (lexer->lookahead == '\r') {
+       skip(lexer);
+     } else if (lexer->eof(lexer)) {
+       /* EOF closes every open block. */
+       if (valid_symbols[DEDENT] && scanner->indents.size > 1) {
+         array_pop(&scanner->indents);
+         lexer->result_symbol = DEDENT;
+-        return true;
++        return 1;
+       }
+-      return false;
++      return 0;
+     } else {
+       break;
+     }
+   }
+-  if (!saw_newline) return false;
++  if (!saw_newline) return 0;
+ 
+   uint16_t top = scanner->indents.size > 0
+     ? *array_back(&scanner->indents)
+     : 0;
+ 
+   /* `|` always continues the surrounding rule (match alt, ctor alt,
+      pipe-operator) — never terminates a layout block. Suppress
+      NEWLINE/DEDENT at the start of a `|`-line so the parser stays
+      inside the match/inductive/etc. */
+-  if (lexer->lookahead == '|') return false;
++  if (lexer->lookahead == '|') return 0;
+ 
    if (indent > top) {
      if (valid_symbols[INDENT]) {
        array_push(&scanner->indents, (uint16_t)indent);
 +      lexer->mark_end(lexer);
        lexer->result_symbol = INDENT;
-       return true;
+-      return true;
++      return 1;
      }
-@@ -378,6 +402,28 @@
-     return true;
+     /* Continuation of a multi-line expression: the new line is more
+        indented than the surrounding block, so neither INDENT, DEDENT,
+        nor NEWLINE applies. Returning nothing lets the parser keep
+        consuming tokens as part of the same enclosing rule. */
+-    return false;
++    return 0;
+   }
+   if (indent < top && valid_symbols[DEDENT]) {
+     array_pop(&scanner->indents);
+     lexer->result_symbol = DEDENT;
+-    return true;
++    return 1;
    }
    if (indent == top && valid_symbols[NEWLINE]) {
 +    lexer->mark_end(lexer);
@@ -648,69 +1051,52 @@ diff --git a/src/scanner.c b/src/scanner.c
 +      if (((n == 5 && memcmp(word, "catch", 5) == 0)
 +           || (n == 7 && memcmp(word, "finally", 7) == 0))
 +          && !is_id_rest(lexer->lookahead)) {
-+        return false;
++        return -1;
 +      }
 +    }
      lexer->result_symbol = NEWLINE;
-     return true;
+-    return true;
++    return 1;
    }
-diff --git a/bindings/rust/build.rs b/bindings/rust/build.rs
-index cbc9120..0e671e1 100644
---- a/bindings/rust/build.rs
-+++ b/bindings/rust/build.rs
-@@ -1,5 +1,6 @@
- fn main() {
-     let src_dir = std::path::Path::new("src");
-+    let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
+-  return false;
++  return 0;
+ }
  
-     let mut c_config = cc::Build::new();
-     c_config.std("c11").include(src_dir);
-@@ -7,9 +8,39 @@ fn main() {
-     #[cfg(target_env = "msvc")]
-     c_config.flag("-utf-8");
+ /* ---------- dispatch ----------------------------------------------------- */
  
-+    // The generated parser exceeds GitHub's 100MB blob limit, so the
-+    // committed artifact is parser.c.gz. A fresh regen produces src/parser.c
-+    // (gitignored); builds decompress the packed copy into OUT_DIR when the
-+    // plain file is absent.
-     let parser_path = src_dir.join("parser.c");
-+    let parser_gz = src_dir.join("parser.c.gz");
-+    let parser_path = if parser_path.exists() {
-+        parser_path
-+    } else {
-+        // Re-inflate on every run: parser.c.gz is a watched input, so
-+        // reaching this branch means it changed (or the OUT_DIR copy is
-+        // missing). Caching the inflated copy across a .gz change would
-+        // keep compiling the old parser.
-+        let out = out_dir.join("parser.c");
-+        let packed = std::fs::File::open(&parser_gz)
-+            .expect("src/parser.c.gz missing: regenerate the vendored grammar");
-+        let mut dec = flate2::read::GzDecoder::new(packed);
-+        let tmp = out_dir.join("parser.c.tmp");
-+        {
-+            let mut f = std::fs::File::create(&tmp).unwrap();
-+            std::io::copy(&mut dec, &mut f).unwrap();
-+        }
-+        std::fs::rename(&tmp, &out).unwrap();
-+        out
-+    };
-     c_config.file(&parser_path);
--    println!("cargo:rerun-if-changed={}", parser_path.to_str().unwrap());
-+    // Watch the src directory, not src/parser.c: the file is absent in
-+    // normal checkouts, and a watched missing path reruns this script on
-+    // every build — each rerun recompiles the ~80MB parser. The existing
-+    // directory still notices a `tree-sitter generate` creating it.
-+    println!("cargo:rerun-if-changed=src");
-+    println!("cargo:rerun-if-changed={}", parser_gz.to_str().unwrap());
-+    println!("cargo:rerun-if-changed=grammar.js");
+ static bool scan(struct Scanner *scanner, TSLexer *lexer,
+                  const bool *valid_symbols) {
+   if (valid_symbols[ERROR_SENTINEL]) return false;
  
-     let scanner_path = src_dir.join("scanner.c");
-     c_config.file(&scanner_path);
+   /* Layout tokens have to be considered before the whitespace skip —
+      they're triggered by newlines and leading-line indentation. */
+   if (valid_symbols[INDENT] || valid_symbols[DEDENT] || valid_symbols[NEWLINE]) {
+-    if (scan_layout(scanner, lexer, valid_symbols)) return true;
++    int layout = scan_layout(scanner, lexer, valid_symbols);
++    if (layout > 0) return true;
++    if (layout < 0) return false;
+   }
+ 
+   /* Skip plain whitespace so the rest of the scanner's view matches
+      the lexer's. */
+   while (lexer->lookahead == ' '
+       || lexer->lookahead == '\t'
+       || lexer->lookahead == '\r'
+       || lexer->lookahead == '\n') {
+     skip(lexer);
+   }
 diff --git a/test/corpus/comments.txt b/test/corpus/comments.txt
 index a99d365..82bc2ab 100644
 --- a/test/corpus/comments.txt
 +++ b/test/corpus/comments.txt
-@@ -9,7 +9,8 @@ import Foo
+@@ -2,21 +2,22 @@
+ Line comment
+ ==============
+ 
+ -- this is a comment
+ import Foo
+ 
+ ---
  
  (module
    (line_comment)
@@ -720,7 +1106,21 @@ index a99d365..82bc2ab 100644
  
  ==============
  Multiple line comments
-@@ -37,7 +38,8 @@ import Foo
+ ==============
+ 
+ -- first
+ -- second
+ -- third
+ 
+ ---
+@@ -30,21 +31,22 @@ Multiple line comments
+ Block comment
+ ==============
+ 
+ /- foo bar baz -/
+ import Foo
+ 
+ ---
  
  (module
    (block_comment)
@@ -730,7 +1130,21 @@ index a99d365..82bc2ab 100644
  
  ==============
  Multiline block comment
-@@ -87,7 +89,8 @@ import Foo
+ ==============
+ 
+ /-
+ foo
+ bar
+ baz
+ -/
+@@ -80,54 +82,58 @@ Deeply nested block comment
+ Doc comment
+ ==============
+ 
+ /-- This is a doc comment. -/
+ import Foo
+ 
+ ---
  
  (module
    (doc_comment)
@@ -740,7 +1154,13 @@ index a99d365..82bc2ab 100644
  
  ==============
  Module doc comment
-@@ -101,7 +104,8 @@ import Foo
+ ==============
+ 
+ /-! Top of file documentation. -/
+ 
+ import Foo
+ 
+ ---
  
  (module
    (module_doc_comment)
@@ -750,7 +1170,15 @@ index a99d365..82bc2ab 100644
  
  ==============
  Doc comment with block content
-@@ -117,7 +121,8 @@ import Foo
+ ==============
+ 
+ /--
+   This doc comment has
+   many lines.
+ -/
+ import Foo
+ 
+ ---
  
  (module
    (doc_comment)
@@ -760,7 +1188,11 @@ index a99d365..82bc2ab 100644
  
  ==============
  Module doc only valid at top
-@@ -129,5 +134,6 @@ import Foo
+ ==============
+ 
+ import Foo
+ /-! Not a module doc -/
+ 
  ---
  
  (module
@@ -772,7 +1204,14 @@ diff --git a/test/corpus/declarations.txt b/test/corpus/declarations.txt
 index 74ca71b..7de8b8d 100644
 --- a/test/corpus/declarations.txt
 +++ b/test/corpus/declarations.txt
-@@ -404,7 +404,11 @@ Interactive commands
+@@ -397,14 +397,18 @@ Interactive commands
+ ==============
+ 
+ #check x
+ #eval foo
+ #print bar
+ #reduce baz
+ 
  ---
  
  (module
@@ -792,7 +1231,14 @@ diff --git a/test/corpus/module.txt b/test/corpus/module.txt
 index d49ea36..1435fed 100644
 --- a/test/corpus/module.txt
 +++ b/test/corpus/module.txt
-@@ -65,9 +65,12 @@ import Quux
+@@ -58,23 +58,26 @@ import Foo.Bar.Baz
+ Multiple imports
+ ==============
+ 
+ import Foo
+ import Bar.Baz
+ import Quux
+ 
  ---
  
  (module
@@ -808,7 +1254,21 @@ index d49ea36..1435fed 100644
  
  ==============
  Public import
-@@ -109,3 +112,21 @@ public meta import all Foo
+ ==============
+ 
+ public import Foo
+ 
+ ---
+ 
+ (module
+@@ -102,10 +105,28 @@ Public meta import all
+ public meta import all Foo
+ 
+ ---
+ 
+ (module
+   (import
+     (public)
      (meta)
      (all)
      name: (identifier)))
@@ -830,12 +1290,12 @@ index d49ea36..1435fed 100644
 +    renaming: (renaming_pair
 +      (identifier)
 +      (identifier))))
-diff --git a/tmp/lean-df/vendor/tree-sitter-lean/test/corpus/sloplint-commands.txt b/test/corpus/sloplint-commands.txt
+diff --git a/test/corpus/sloplint-commands.txt b/test/corpus/sloplint-commands.txt
 new file mode 100644
-index 0000000..13b415d
+index 0000000..a8534d9
 --- /dev/null
 +++ b/test/corpus/sloplint-commands.txt
-@@ -0,0 +1,326 @@
+@@ -0,0 +1,355 @@
 +==============
 +Sloplint: hash command
 +==============
@@ -940,11 +1400,10 @@ index 0000000..13b415d
 +            arg: (identifier))
 +          name: (identifier)
 +          body: (app
-+            fn: (app
-+              fn: (app
-+                fn: (identifier)
-+                arg: (identifier))
-+              arg: (identifier))
++            fn: (identifier)
++            arg: (identifier))
++          stmt: (app
++            fn: (identifier)
 +            arg: (str_lit))))))
 +  (declaration
 +    (def
@@ -963,6 +1422,36 @@ index 0000000..13b415d
 +          body: (app
 +            fn: (identifier)
 +            arg: (paren)))))))
++
++==============
++Sloplint: catch with block comment after keyword
++==============
++
++def t1 : IO Unit := do
++  try
++    IO.println "a"
++  catch /- comment -/ e =>
++    IO.println e
++
++---
++
++(module
++  (declaration
++    (def
++      name: (identifier)
++      type: (app
++        fn: (identifier)
++        arg: (identifier))
++      body: (do_block
++        stmt: (do_try
++          stmt: (app
++            fn: (identifier)
++            arg: (str_lit))
++          (block_comment)
++          name: (identifier)
++          body: (app
++            fn: (identifier)
++            arg: (identifier)))))))
 +
 +==============
 +Sloplint: nested block then sibling statement
@@ -1166,7 +1655,14 @@ diff --git a/test/corpus/syntax-extras.txt b/test/corpus/syntax-extras.txt
 index 0f49d67..c8a9a54 100644
 --- a/test/corpus/syntax-extras.txt
 +++ b/test/corpus/syntax-extras.txt
-@@ -60,7 +60,8 @@ Rest pattern
+@@ -53,21 +53,22 @@ Rest pattern
+ #check match x with | .foo .. => 0
+ 
+ ---
+ 
+ (module
+   (check
+     term: (match
        scrutinee: (identifier)
        (match_alt
          pattern: (app
@@ -1176,7 +1672,21 @@ index 0f49d67..c8a9a54 100644
            arg: (rest_pat))
          body: (num_lit)))))
  
-@@ -156,7 +157,8 @@ App with fun arg
+ ==============
+ If with named hypothesis
+ ==============
+ 
+ #check if h : a = b then x else y
+ 
+ ---
+@@ -149,60 +150,63 @@ App with fun arg
+ 
+ ---
+ 
+ (module
+   (check
+     term: (app
+       fn: (app
          fn: (identifier)
          arg: (paren
            (fun
@@ -1186,7 +1696,18 @@ index 0f49d67..c8a9a54 100644
              body: (binary_op
                lhs: (identifier)
                rhs: (num_lit)))))
-@@ -175,7 +177,8 @@ App with bare fun arg
+       arg: (identifier))))
+ 
+ ==============
+ App with bare fun arg
+ ==============
+ 
+ #check List.map fun x => x + 1
+ 
+ ---
+ 
+ (module
+   (check
      term: (app
        fn: (identifier)
        arg: (fun
@@ -1196,7 +1717,15 @@ index 0f49d67..c8a9a54 100644
          body: (binary_op
            lhs: (identifier)
            rhs: (num_lit))))))
-@@ -191,11 +194,12 @@ App with do arg
+ 
+ ==============
+ App with do arg
+ ==============
+ 
+ #check runIO do return 0
+ 
+ ---
+ 
  (module
    (check
      term: (app
@@ -1213,7 +1742,21 @@ index 0f49d67..c8a9a54 100644
  
  ==============
  Anonymous structure literal
-@@ -355,7 +359,7 @@ def x := 1
+ ==============
+ 
+ #check { x := 1, y := 2 }
+ 
+ ---
+ 
+ (module
+@@ -348,21 +352,21 @@ def andthen : Parser where
+ Public section
+ ==============
+ 
+ public section
+ 
+ def x := 1
+ 
  ---
  
  (module
@@ -1222,7 +1765,21 @@ index 0f49d67..c8a9a54 100644
      (public))
    (declaration
      (def
-@@ -584,8 +588,10 @@ Lowercase true/false
+       name: (identifier)
+       body: (num_lit))))
+ 
+ ==============
+ Set option
+ ==============
+ 
+@@ -577,22 +581,24 @@ Destructured tuple binder
+ ==============
+ Lowercase true/false
+ ==============
+ 
+ #check true
+ #check false
+ 
  ---
  
  (module
@@ -1235,7 +1792,21 @@ index 0f49d67..c8a9a54 100644
  
  ==============
  Syntax quotation
-@@ -647,7 +653,7 @@ Public section with attribute
+ ==============
+ 
+ #check `(x + 1)
+ 
+ ---
+ 
+ (module
+@@ -640,21 +646,21 @@ Match-style fun
+ 
+ ==============
+ Public section with attribute
+ ==============
+ 
+ @[expose] public section
+ 
  ---
  
  (module
@@ -1244,7 +1815,21 @@ index 0f49d67..c8a9a54 100644
      (attributes
        name: (identifier))
      (public)))
-@@ -988,7 +994,8 @@ assert_not_imported Mathlib.Data.Foo
+ 
+ ==============
+ Vsub operator
+ ==============
+ 
+ #check p -ᵥ q
+ 
+@@ -981,21 +987,22 @@ assert_not_exists Finset
+ assert_not_imported Mathlib.Data.Foo
+ #exit
+ 
+ ---
+ 
+ (module
+   (assert_cmd
      target: (identifier))
    (assert_cmd
      target: (identifier))
@@ -1254,7 +1839,21 @@ index 0f49d67..c8a9a54 100644
  
  ==============
  Instance-implicit field
-@@ -1110,8 +1117,7 @@ Postfix operator opposite
+ ==============
+ 
+ class Foo where
+   [bar : Bar]
+   baz : Nat
+ 
+ ---
+@@ -1103,35 +1110,33 @@ example : Nat := by exact 0; rfl
+ ==============
+ Postfix operator opposite
+ ==============
+ 
+ #check Aᵒᵖ
+ 
+ ---
  
  (module
    (check
@@ -1264,7 +1863,11 @@ index 0f49d67..c8a9a54 100644
  
  ==============
  Postfix operator inverse
-@@ -1123,8 +1129,7 @@ Postfix operator inverse
+ ==============
+ 
+ #check x⁻¹
+ 
+ ---
  
  (module
    (check
@@ -1274,7 +1877,21 @@ index 0f49d67..c8a9a54 100644
  
  ==============
  Cardinality prefix
-@@ -1726,9 +1731,9 @@ Mathematical double-struck identifier
+ ==============
+ 
+ #check #X
+ 
+ ---
+ 
+ (module
+@@ -1719,23 +1724,23 @@ Set cross product
+ ==============
+ Mathematical double-struck identifier
+ ==============
+ 
+ #check 𝟙 X
+ 
+ ---
  
  (module
    (check
@@ -1287,7 +1904,21 @@ index 0f49d67..c8a9a54 100644
  
  ==============
  Add decl doc command
-@@ -2041,7 +2046,8 @@ Explicit args mode on fun
+ ==============
+ 
+ add_decl_doc extrinsicFix
+ 
+ ---
+ 
+ (module
+@@ -2034,21 +2039,22 @@ Explicit args mode on fun
+ ==============
+ 
+ #check @fun x => x
+ 
+ ---
+ 
+ (module
    (check
      term: (explicit_mode
        term: (fun
@@ -1297,7 +1928,21 @@ index 0f49d67..c8a9a54 100644
          body: (identifier)))))
  
  ==============
-@@ -2534,7 +2540,6 @@ structure Task (α : Type u) where
+ Field in parens
+ ==============
+ 
+ structure Foo where
+   of ::
+   (carrier : Type*)
+ 
+@@ -2527,21 +2533,20 @@ structure Task (α : Type u) where
+           type: (type_const
+             (identifier))))
+       (ctor
+         name: (identifier))
+       (field
+         name: (identifier)
+         type: (identifier))
        (identifier)
        (identifier))))
  
@@ -1305,7 +1950,21 @@ index 0f49d67..c8a9a54 100644
  ==============
  Let rec with binders
  ==============
-@@ -2571,7 +2576,7 @@ public meta section
+ 
+ #check let rec go (j : Nat) (h : Bool) : Nat := j; go 0 true
+ 
+ ---
+ 
+ (module
+   (check
+@@ -2564,21 +2569,21 @@ Let rec with binders
+ 
+ ==============
+ Public meta section
+ ==============
+ 
+ public meta section
+ 
  ---
  
  (module
@@ -1314,11 +1973,25 @@ index 0f49d67..c8a9a54 100644
      (public)
      (meta)))
  
+ ==============
+ m! string macro
+ ==============
+ 
+ #check m!"hello {name}"
+ 
+ ---
 diff --git a/test/corpus/terms.txt b/test/corpus/terms.txt
 index 67f3811..913ae80 100644
 --- a/test/corpus/terms.txt
 +++ b/test/corpus/terms.txt
-@@ -666,8 +666,7 @@ Positive-part postfix operator
+@@ -659,22 +659,21 @@ Double angle bracket constructor
+ ==============
+ Positive-part postfix operator
+ ==============
+ 
+ #check a⁺
+ 
+ ---
  
  (module
    (check
@@ -1328,3 +2001,10 @@ index 67f3811..913ae80 100644
  
  ==============
  Symmetric difference operator
+ ==============
+ 
+ #check s ∆ t
+ 
+ ---
+ 
+ (module
