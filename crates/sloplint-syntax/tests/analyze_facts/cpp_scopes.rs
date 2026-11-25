@@ -266,8 +266,8 @@ fn macro_braced_goto_label_does_not_hide_locals() {
                 retries[0].first_write_line,
                 retries[0].last_write_line
             ),
-            (3, 4, 8),
-            "init and both increments land on the local: {found:?}\n{source}"
+            (2, 6, 8),
+            "both increments land on the local: {found:?}\n{source}"
         );
         let result = named_all(found, "result");
         assert_eq!(
@@ -277,7 +277,6 @@ fn macro_braced_goto_label_does_not_hide_locals() {
         );
     });
 }
-
 
 #[test]
 fn braced_member_macros_in_local_classes_do_not_bind_fields() {

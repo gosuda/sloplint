@@ -106,11 +106,7 @@ fn goto_target_names<'s>(root: Node<'_>, cx: &Cx<'_, 's>) -> Vec<&'s str> {
     out
 }
 
-pub(crate) fn push_cpp_piece_name<'s>(
-    n: Node<'_>,
-    cx: &Cx<'_, 's>,
-    out: &mut Vec<(&'s str, Pos)>,
-) {
+pub(crate) fn push_cpp_piece_name<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
     let Some(decl) = find_decl_from_cx(cx) else {
         return;
     };
