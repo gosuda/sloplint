@@ -82,7 +82,7 @@ pub(crate) fn is_macro_local_from_cx(decl: Node<'_>, cx: &Cx<'_, '_>) -> bool {
                 // reads a statement-style macro body as a member list.
                 let name = child_by_field(child, "name").map(|n| text(cx, n));
                 match name {
-                    Some(name) => !jumped.iter().any(|target| *target == name),
+                    Some(name) => !jumped.contains(&name),
                     None => true,
                 }
             }
