@@ -21,7 +21,7 @@
  }
  
  type turn_state = {
-@@ -164,10 +169,21 @@
+@@ -164,10 +169,22 @@
        Lwt.fail (Interrupted (External_cancel error))
    | Some { interrupt = Idle; _ } | None -> Lwt.return_unit
  
@@ -31,7 +31,8 @@
 +  | None ->
 +      let promise, resolve = Lwt.wait () in
 +      turn.shutdown <- Some promise;
-+      Lwt.on_any (Lwt_switch.turn_off turn.switch)
++      Lwt.on_any
++        (Lwt_switch.turn_off turn.switch)
 +        (fun () -> Lwt.wakeup_later resolve ())
 +        (fun exn -> Lwt.wakeup_later_exn resolve exn);
 +      Lwt.protected promise
@@ -44,13 +45,14 @@
  
  let link_child_cancel parent child =
    match !(parent.turn) with
-@@ -517,11 +533,23 @@
+@@ -517,11 +534,24 @@
  
  let result_output error = Tool.fail (Fmt.str "%a" Tool.pp_error error)
  
 -let run_tool ?(note_body : execution -> unit = fun _ -> ()) t (call : call) input
-+let run_tool ?(note_body : execution -> unit = fun _ -> ()) ~hooks_open ~note_hook t (call : call) input
-     (tool : Tool.t) : execution Lwt.t =
+-    (tool : Tool.t) : execution Lwt.t =
++let run_tool ?(note_body : execution -> unit = fun _ -> ()) ~hooks_open ~note_hook t
++    (call : call) input (tool : Tool.t) : execution Lwt.t =
    let started = Charamel_os.Time.now t.deps.clock in
    let ctx = tool_context t ~call_id:call.id in
 -  ( Hooks.pre_tool t.deps.hooks ~session:(Session.id t.session) ~tool:tool.Tool.name ~input
@@ -66,11 +68,12 @@
 +          Lwt.return_unit)
 +  in
 +  ( hook (fun () ->
-+        Hooks.pre_tool t.deps.hooks ~session:(Session.id t.session) ~tool:tool.Tool.name ~input)
++        Hooks.pre_tool t.deps.hooks ~session:(Session.id t.session) ~tool:tool.Tool.name
++          ~input)
    >>= function
      | Hooks.Deny reason -> Lwt.return (result_output (`Denied reason), true, input)
      | Hooks.Allow input' -> (
-@@ -540,23 +568,25 @@
+@@ -540,23 +570,25 @@
      { id = call.id; name = call.name; input = hook_input; output; elapsed_ms; stop_turn }
    in
    note_body result;
@@ -95,12 +98,13 @@
        (Lwt.catch
           (fun () ->
             Lwt_pool.use pool (fun () ->
-                run_tool
-+                 ~hooks_open ~note_hook:(fun hook -> job.hook <- hook)
+-               run_tool
++               run_tool ~hooks_open
++                 ~note_hook:(fun hook -> job.hook <- hook)
                   ~note_body:(fun execution -> job.body <- Some execution)
                   t job.call job.input tool))
           Lwt.fail)
-@@ -573,22 +603,23 @@
+@@ -573,22 +605,27 @@
        calls
    in
    let pool = Lwt_pool.create 8 (fun () -> Lwt.return_unit) in
@@ -112,7 +116,12 @@
 +        let hooks = List.filter_map (fun job -> job.hook) jobs in
          List.iter
            (fun job ->
-             match job.promise with Some promise -> Lwt.cancel promise | None -> ())
+-            match job.promise with Some promise -> Lwt.cancel promise | None -> ())
++            (* A hook owns its cleanup. Cancelling its worker as well would cancel
++               the new cleanup wait after the hook's first cancellation. *)
++            match (job.hook, job.promise) with
++            | None, Some promise -> Lwt.cancel promise
++            | Some _, _ | None, None -> ())
            jobs;
 +        List.iter Lwt.cancel hooks;
          Lwt_list.iter_p
@@ -132,27 +141,30 @@
    Lwt_list.iter_s
      (fun job ->
        emit t (Tool_started { id = job.call.id; name = job.call.name; input = job.input }))
-@@ -597,7 +628,7 @@
+@@ -597,7 +634,9 @@
    List.iter
      (fun job ->
        if (not job.invalid) && read_only job then
 -        match job.tool with Some tool -> start_job t pool job tool | None -> ()
-+        match job.tool with Some tool -> start_job t pool hooks_open job tool | None -> ()
++        match job.tool with
++        | Some tool -> start_job t pool hooks_open job tool
++        | None -> ()
        else ())
      jobs;
    let window_add name input output =
-@@ -691,7 +722,9 @@
+@@ -691,7 +730,10 @@
             | Some promise -> promise
             | None -> (
                 match job.tool with
 -               | Some tool -> run_tool t job.call job.input tool
 +               | Some tool ->
-+                   run_tool ~hooks_open ~note_hook:(fun hook -> job.hook <- hook)
++                   run_tool ~hooks_open
++                     ~note_hook:(fun hook -> job.hook <- hook)
 +                     t job.call job.input tool
                 | None -> Lwt.return (unknown_execution job)))
          >>= fun (execution : execution) ->
          emit_finished execution >>= fun () ->
-@@ -702,14 +735,15 @@
+@@ -702,14 +744,15 @@
            loop_detected || window_add execution.name execution.input output_text
          in
          let stop_turn = stop_turn || execution.stop_turn in
@@ -170,7 +182,7 @@
          else fold rest (execution :: results) stop_turn false
    in
    fold jobs [] false false
-@@ -983,7 +1017,7 @@
+@@ -983,7 +1026,7 @@
      t.busy_state := true;
      let state = { assistant_appended = false; parts = []; last_turn = [] } in
      let switch = Lwt_switch.create () in
@@ -179,7 +191,7 @@
      let external_cancel = ref None in
      t.turn := Some turn;
      let run () =
-@@ -997,13 +1031,15 @@
+@@ -997,13 +1040,15 @@
                    external_cancel := Some error;
                    Lwt.return (Ok `Interrupted)
                | Lwt.Canceled ->
@@ -240,23 +252,25 @@
 -    timeout stop the process group before the invocation settles; a hook that exits on its
 -    own leaves behind the processes it detached. On Windows, process-group termination has
 -    the child-only scope of {!Charamel_os.Process.kill_tree}. *)
-+    timeout stop the process group before the invocation settles. After successful exit and
-+    drained streams, detached descendants may continue. On Windows, process-group
++    timeout stop the process group before the invocation settles. After successful exit
++    and drained streams, detached descendants may continue. On Windows, process-group
 +    termination has the child-only scope of {!Charamel_os.Process.kill_tree}. *)
  
  type t
  (** The configured hook runner. *)
 --- a/test/crush/test_agent.ml
 +++ b/test/crush/test_agent.ml
-@@ -90,7 +90,7 @@
+@@ -90,8 +90,8 @@
      models = { large = Some selected; small = Some selected };
    }
  
 -let with_agent ?(hooks_config : Config.hook list = []) ?(clock = Charamel_os.Time.lwt)
-+let with_agent ?asker ?(hooks_config : Config.hook list = []) ?(clock = Charamel_os.Time.lwt)
-     ~queue ~fallback f =
+-    ~queue ~fallback f =
++let with_agent ?asker ?(hooks_config : Config.hook list = [])
++    ?(clock = Charamel_os.Time.lwt) ~queue ~fallback f =
    Test_tools_test_support.with_scratch (fun root ->
        let old_data = Sys.getenv_opt "XDG_DATA_HOME" in
+       Unix.putenv "XDG_DATA_HOME" root;
 @@ -139,7 +139,8 @@
                      Alcotest.failf "session setup failed: %a" Session.pp_error error
                in
@@ -295,7 +309,7 @@
          let finished =
            List.filter_map
              (function
-@@ -428,6 +418,115 @@
+@@ -428,6 +418,111 @@
              in
              Alcotest.(check (list int)) "post-hook time excluded" [ 0 ] timings))
  
@@ -345,14 +359,12 @@
 +            await (Lwt_unix.with_timeout 5. (fun () -> Lwt.protected asked));
 +            await (Lwt_io.write_line ready "deny");
 +            await (Lwt_io.flush ready);
-+            (match
-+               await (Lwt_unix.with_timeout 5. (fun () -> Lwt.protected pending))
-+             with
++            (match await (Lwt_unix.with_timeout 5. (fun () -> Lwt.protected pending)) with
 +            | Ok `Stop -> ()
 +            | Ok _ -> Alcotest.fail "denied call did not stop the turn"
 +            | Error error -> Alcotest.failf "agent prompt failed: %a" Agent.pp_error error);
-+            Alcotest.(check bool) "approval remains unanswered" true
-+              (Lwt.is_sleeping approval);
++            Alcotest.(check bool)
++              "approval remains unanswered" true (Lwt.is_sleeping approval);
 +            Alcotest.(check bool) "stopped agent is idle" false (Agent.busy agent)))
 +
 +let explicit_cancel_joins_hook_cleanup () =
@@ -395,9 +407,7 @@
 +              |> String.trim |> int_of_string
 +            in
 +            Agent.cancel agent;
-+            (match
-+               await (Lwt_unix.with_timeout 5. (fun () -> Lwt.protected pending))
-+             with
++            (match await (Lwt_unix.with_timeout 5. (fun () -> Lwt.protected pending)) with
 +            | Ok `Interrupted -> ()
 +            | Ok _ -> Alcotest.fail "cancel did not interrupt the turn"
 +            | Error error -> Alcotest.failf "agent prompt failed: %a" Agent.pp_error error);
@@ -411,7 +421,7 @@
  let cases =
    [
      Test_tools_test_support.case "tool call and stop use HTTP fixture" `Quick
-@@ -437,4 +536,8 @@
+@@ -437,4 +532,8 @@
        body_outcome_survives_stop_turn;
      Test_tools_test_support.case "post-hook time is not tool time" `Quick
        post_hook_time_is_not_tool_time;

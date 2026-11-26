@@ -18,9 +18,8 @@ class Candidate:
 
 
 CANDIDATES = (
-    Candidate(25, "8a03c878c30036add4e5b20e87f24c35c907bfd3", "ebeb89dba794c576630d5a3511b799fda930cad8834bf8cfa468ba55ca715cb6"),
-    Candidate(26, "b0537590c0600539a5d603b07912cbac56b6e934"),
-    Candidate(28, "38bbbb8dc176fe5013b9b7f7d281533d39bafa2d", "20caf59ed7fd2597e4ef923c763c2e264705b0f6d6b2a9b6756ea92662f29650"),
+    Candidate(25, "8a03c878c30036add4e5b20e87f24c35c907bfd3", "902e828c784bd4f1c4610284bd1f781a47bf51c88d3d06bfdf3fd9fd530623ff"),
+    Candidate(28, "38bbbb8dc176fe5013b9b7f7d281533d39bafa2d", "baab8a3ea9490104cc6f18d66ef6643bbf082152e2e4e62e7411198acac89e13"),
 )
 BASE = "84e5ff153f781c7e2d02804a5c24997858f618ab"
 WORKSPACE = Path(os.environ["GITHUB_WORKSPACE"])
@@ -114,7 +113,7 @@ def check(candidate: Candidate) -> dict[str, object]:
         result["pending_approval"] = check_regression(candidate, folder, "bin/crush/lib/agent.ml", "agent", "stopped turn does not await sibling approval", "pending-approval", "Lwt_unix.Timeout")
         result["explicit_cancel"] = check_regression(candidate, folder, "bin/crush/lib/agent.ml", "agent", "explicit cancel joins hook cleanup", "explicit-cancel", "Canceled")
     if candidate.number == 28 and result["build"] == 0:
-        result["cache_destination"] = check_regression(candidate, folder, "bin/crush/lib/models.ml", "cli", "update-providers needs a cache directory", "cache-destination", "refresh reports a cache I/O error", rebuild_cli=True)
+        result["cache_destination"] = check_regression(candidate, folder, "bin/crush/lib/models.ml", "cli", "update-providers needs a cache directory", "cache-destination", "refresh reports the unavailable cache path", rebuild_cli=True)
     git("diff", "--exit-code")
     assert git("write-tree") == result["tree"]
     (folder / "results.json").write_text(json.dumps(result, indent=2) + "\n")

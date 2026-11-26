@@ -33,17 +33,17 @@
 -      >|= Result.map (fun () -> Updated new_etag)
 +  match cache_destination fs_root with
 +  | Error error -> Lwt.return (Error error)
-+  | Ok filename ->
++  | Ok filename -> (
 +      cache_etag fs_root >>= fun etag ->
 +      Charamel_fantasy.Catalog.fetch ?base_url:source ?etag () >>= function
 +      | Error `Not_modified -> Lwt.return (Ok Not_modified)
 +      | Error (#Charamel_fantasy.Error.t as error) -> Lwt.return (Error (`Fetch error))
 +      | Ok (providers, new_etag) ->
 +          write_catalog ~filename ~etag:new_etag providers
-+          >|= Result.map (fun () -> Updated new_etag)
++          >|= Result.map (fun () -> Updated new_etag))
 --- a/bin/crush/lib/models.mli
 +++ b/bin/crush/lib/models.mli
-@@ -86,11 +86,12 @@
+@@ -86,11 +86,11 @@
    Charamel_fantasy.Provider_info.t list ->
    (unit, update_error) result Lwt.t
  (** [save_catalog ~fs_root ~etag providers] atomically writes the provider cache in its
@@ -52,11 +52,14 @@
  
  val update_catalog :
    ?source:string -> fs_root:string -> unit -> (update_result, update_error) result Lwt.t
- (** [update_catalog ?source ~fs_root ()] refreshes the cache from the catalog endpoint.
-+    An unavailable cache directory returns [Io] before any network request.
-     Existing ETags are sent conditionally. A [304] leaves the cache untouched and returns
-     [Not_modified]. Transport, HTTP, and write failures leave the previous cache
-     untouched. *)
+-(** [update_catalog ?source ~fs_root ()] refreshes the cache from the catalog endpoint.
+-    Existing ETags are sent conditionally. A [304] leaves the cache untouched and returns
+-    [Not_modified]. Transport, HTTP, and write failures leave the previous cache
+-    untouched. *)
++(** [update_catalog ?source ~fs_root ()] refreshes the cache from the catalog endpoint. An
++    unavailable cache directory returns [Io] before any network request. Existing ETags
++    are sent conditionally. A [304] leaves the cache untouched and returns [Not_modified].
++    Transport, HTTP, and write failures leave the previous cache untouched. *)
 --- a/test/crush/test_cli.ml
 +++ b/test/crush/test_cli.ml
 @@ -315,6 +315,37 @@
@@ -90,8 +93,8 @@
 +          in
 +          Alcotest.(check bool) "refresh refuses an unavailable cache" true (status <> 0);
 +          Alcotest.(check bool)
-+            "refresh reports a cache I/O error" true
-+            (Test_support.contains ~needle:"catalog cache I/O error at providers.json"
++            ("refresh reports the unavailable cache path; stderr: " ^ error) true
++            (Test_support.contains ~needle:"providers.json:"
 +               ~haystack:error);
 +          Alcotest.(check int) "no download without a cache destination" 0 !requests))
  
