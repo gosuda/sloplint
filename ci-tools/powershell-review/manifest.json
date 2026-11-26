@@ -1,7 +1,7 @@
 {
   "repo": "gosuda/sloplint",
-  "head": "ad217680267bc46a4669d2d772096bc545ac38bc",
-  "tree": "f9863356edb0a35bebbcd90163eb9a190726c0a8",
+  "head": "2d9a4248f3a50e0620de9c70e651e134ccd1c2cc",
+  "tree": "0fbaf57cb797e986026c3d7e02208b2026ab9340",
   "previous": "948fa8b3ec6a76a02dcc2d9cb95410404c672de9",
   "base": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
   "files": {
@@ -14,7 +14,8 @@
     "Cargo.toml": "ece184f6675d6a07454478aede7342feb561270563187c13853f13069472a6f8",
     "Cargo.lock": "4463c663d56debf196af19c5b04080718d0830d04102bc6e45e6de061fb9cc70",
     "crates/sloplint-syntax/Cargo.toml": "fc6adbcbd2d799e1bf08459c58faf309bf88ae3bbc16f7698c022ee7af61d27a",
-    "vendor/tree-sitter-powershell/SLOPLINT.md": "bb6517a2365282e29153663f465ee98b2ea98c31bbc7ca275efb3596ee2a18c6"
+    "vendor/tree-sitter-powershell/SLOPLINT.md": "bb6517a2365282e29153663f465ee98b2ea98c31bbc7ca275efb3596ee2a18c6",
+    "crates/sloplint-syntax/tests/grammar_gaps/powershell_syntax.rs": "9c68d7df93d61e63eea4c2ad4747792f54b270f2a3a6cca04c8f44693a682f41"
   },
   "grammar_blobs": {
     "crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs": "507fec1aeceb1b02cf8ad95ca14868c72918a420",
