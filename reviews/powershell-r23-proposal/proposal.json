@@ -1,0 +1,41 @@
+{
+  "base": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
+  "base_tree": "f518b3943c6b86af53c334175309303c3d79f38b",
+  "baseline": {
+    "producer": "0f58011fc01ed4fb380ebab8eda08fc6779b05d3",
+    "run": 45897555856,
+    "job": 140175103765,
+    "artifact": 15153798568,
+    "zip_sha256": "20ab226cfc6b420c0818050292d2b23b9e7e6ea047b2a7fef73810190d87d8ea",
+    "payload_sha256": "3538168ddbeaeeff89f5acba0e7e059bd300f5fbf481bbde4839d55fffb1460e"
+  },
+  "status": "Unverified bounded grammar experiments; no maintained source publication.",
+  "stages": [
+    {
+      "id": "nonempty-redirection",
+      "path": "nonempty-redirection.js",
+      "sha256": "e9203a517c973a00a85ae5806dc2ce9f93f017846e8c966cbbfc783226e46f5e"
+    },
+    {
+      "id": "separator-only-context",
+      "path": "separator-only-context.js",
+      "sha256": "d094836d1213afc0fac9efd89a36c9ccb70345c6625361fbb946b1d2e2c65c92"
+    }
+  ],
+  "invariants": [
+    "Keep scanner and global extras unchanged.",
+    "Stage1 mirrors all existing redirection argument alternatives, aliases and precedence, requiring a word in the formerly optional-word branch.",
+    "Stage2 changes only the separator-only command argument path; the separator followed by a word keeps its original grammar, including its existing comment-containing capture.",
+    "All legacy anonymous whitespace names and public node wrappers remain unchanged in the authored source. Generated metadata and runtime captures decide actual compatibility.",
+    "Require exact generic filename text and byte positions, converting native UTF-16 offsets when comparing.",
+    "Keep six introduced redirect acceptance failures distinct from the older delimiter-in-target defect in the stronger exact capture test.",
+    "Check old named-parameter direct comment and separator captures, and the unchanged old/current plain-word comment tree.",
+    "Check all 96 indented continuations, actual public escaped-line captures, 62x5 old redirection queries, 24 old plain queries and mixed whitespace.",
+    "The 483-case native matrix contains 453 accepted and 30 rejected observations, not 483 acceptance requirements."
+  ],
+  "expected_source_changes": [
+    "vendor/tree-sitter-powershell/grammar.js",
+    "generated grammar/parser/upstream patch after successful generation",
+    "new frozen regressions and precise vendor notes after source evidence"
+  ]
+}
