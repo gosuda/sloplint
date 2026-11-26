@@ -1,0 +1,26 @@
+[
+  {
+    "name": "incompatible-shallow-first",
+    "source": "type A<T> = { next: A<T[]>; value: T };\ntype B<T> = { next: B<T[]>; value: string };\ndeclare const value: { root: A<string> };\nconst result: { root: { next: B<string[]> } } | { root: B<string> } = value;\n",
+    "typescript_exit": 1,
+    "source_sha256": "6fba048a0eabc3b428aff1904d99d496d6f9bb944a538e645494ee94f4976986"
+  },
+  {
+    "name": "incompatible-root-first",
+    "source": "type A<T> = { next: A<T[]>; value: T };\ntype B<T> = { next: B<T[]>; value: string };\ndeclare const value: { root: A<string> };\nconst result: { root: B<string> } | { root: { next: B<string[]> } } = value;\n",
+    "typescript_exit": 1,
+    "source_sha256": "60521bf4863c80831b59b7997edba3d0d89adb08535fb267cd834b2e9e6853f7"
+  },
+  {
+    "name": "compatible-shallow-first",
+    "source": "type A<T> = { next: A<T[]>; value: T };\ntype B<T> = { next: B<T[]>; value: T };\ndeclare const value: { root: A<string> };\nconst result: { root: { next: B<string[]> } } | { root: B<string> } = value;\n",
+    "typescript_exit": 0,
+    "source_sha256": "0b456c8baf9173bf7d43eafc1b1310c872dccc77be8065231c87841dd70f175b"
+  },
+  {
+    "name": "compatible-root-first",
+    "source": "type A<T> = { next: A<T[]>; value: T };\ntype B<T> = { next: B<T[]>; value: T };\ndeclare const value: { root: A<string> };\nconst result: { root: B<string> } | { root: { next: B<string[]> } } = value;\n",
+    "typescript_exit": 0,
+    "source_sha256": "14838aefaa7c2471a27be7f72bd8edd5722d32dc586b6830c46e149b9fadd38e"
+  }
+]

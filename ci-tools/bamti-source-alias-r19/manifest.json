@@ -1,0 +1,17 @@
+{
+  "repository": "gosuda/bamTiScript",
+  "head": "8daf27bdec1fa9cf6520c13b7b35d7fd58879d82",
+  "base_tree": "2c790eef17c957cbe40753437917e82fb6896b22",
+  "parent": "11e99ee0788613ff6a9fd7d5b0afddf819953850",
+  "test_path": "crates/bamts-compiler/src/checker/tests.rs",
+  "original_test_git_blob": "fafc0d226e44cb7c314812f39565e828676f385d",
+  "original_test_sha256": "f80a622b54421ec58b3d6e4246c6ed468de075053d4de0d0cf901988682f0276",
+  "frozen_test_sha256": "cd18d92d5162a68ae46b403c8856af560302da0864c134cb5e45be4369478b94",
+  "input_candidate_sha256": "96aad721eca3d8d98de874d1aa49e333a3f7c4c7f42b1e315f404f61225a7fae",
+  "anchor": "#[test]\nfn relations_through_transformed_recursive_aliases_terminate()",
+  "rust": "1.97.1",
+  "node": "24.18.0",
+  "typescript": "7.0.2",
+  "case_count": 4,
+  "purpose": "Freeze the real scanner/parser/binder/checker assignment baseline and compare both union orders plus compatible controls with TypeScript 7.0.2. No production source change."
+}
