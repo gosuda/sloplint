@@ -355,7 +355,7 @@
     "This measures net process Go heap, not attribution to a particular allocation; unrelated heap movement can affect it.",
     "The selected minimum-sample response is reloaded only after the final sample and exercises the existing continuation assertions."
   ],
-  "next": "Fresh raw maintained PR head and actual main checks, additive publication, and evidence-backed resolution of the two findings.",
+  "next": "Ordinary PR-event CI and any new review feedback remain separate from the completed native proof and current source acceptance.",
   "testing_review": {
     "session": "/root/bitcoin_round7/flats_retention_testing_review",
     "requested_fixed_model": "gpt-6.2-sol",
@@ -364,5 +364,37 @@
     "verdict": "ACCEPT",
     "receipt_path": "ci-tools/flats-review/notebook-retention-testing-review.md",
     "receipt_sha256": "2d3deb605492824a0dce843f5a5c405f7fa386d0f4754d8b35fd690bb9e7f392"
+  },
+  "publication": {
+    "head": "066c32dcf2e0d2a9d9ea0d41e7aacf68524c1518",
+    "tree": "86fb795695e992b5835bdffe5f1fbaade7427b36",
+    "parent": "86c7849c2f608fd751e9a478c2574c49e817f44d",
+    "actual_main": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
+    "branch": "ci-fix/flats-notebook-heap-confirm",
+    "published_at": "2026-11-26T17:34:12.750Z",
+    "review_records": "90b0d9f58abc193643e82e1ba6a098e5c6a47ddc"
+  },
+  "resolved_threads": [
+    "PRRT_kwDOU5_u3s68YJ66",
+    "PRRT_kwDOU5_u3s68YJ8h"
+  ],
+  "review_thread_observation": {
+    "total": 8,
+    "unresolved": 0,
+    "observed_at": "2026-11-26T17:35:49.413Z"
+  },
+  "probe_retirement": {
+    "producer": "082a7e89a55ea8feffc615b11eb0abeab05894bc",
+    "branch": "ci/flats-retention-proof-20261126-r15",
+    "completed_run": 45861924362,
+    "completed_job": 140054864954,
+    "removed": [
+      ".github/workflows/flats-retention-proof.yml",
+      "ci-tools/flats-retention/candidate-elements.json",
+      "ci-tools/flats-retention/manifest.json",
+      "ci-tools/flats-retention/retention_proof_test.go.txt",
+      "ci-tools/flats-retention/verify.py"
+    ],
+    "remaining_proof": "Immutable producer, native logs, artifact and independent review receipts remain accessible in history."
   }
 }
