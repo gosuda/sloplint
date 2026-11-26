@@ -1,0 +1,156 @@
+{
+  "status": "All requested remaining gates passed; this commit retires only the owned proof workflow.",
+  "observed_at": "2026-11-26 16:59:27 UTC",
+  "source": {
+    "source_repository": "gosuda/sloplint",
+    "source_commit": "31bbd8486f485f20c93ab1511d039744339ec670",
+    "source_tree": "589aff2ec97f6e6f8179453ff6882fe19b3b65b2",
+    "source_parent": "95f8d650552bd31fd5f5737bd9e457fec8ef8a55",
+    "prior_native_tree": "1b8c7820f29387ed08b2932bbf25faaa0ce5fe5b",
+    "prior_producer": "68278709f5020fd77dbb172e0823a04d82099f36",
+    "prior_run": 45858799234,
+    "prior_job": 140044075798,
+    "tree_comparison": {
+      "complete": true,
+      "entries": 7371,
+      "changed_non_tree_paths": [
+        "vendor/tree-sitter-powershell/sloplint-grammar.patch"
+      ]
+    },
+    "patch_old_sha256": "c36dc9cf2c4da3bee0328335a4195433b5c153be50e4fa3c397aede55e6b820d",
+    "patch_sha256": "f7eb65fb4164e6e0ef75adbd89dde3560c781a3ec1b3c666e13812f923f70630",
+    "normalized_blank_context_lines": 75,
+    "tree_sitter": {
+      "version": "0.27.1",
+      "gzip_sha256": "d01042f94ba3d6827ddc9788e235f75d8366431be42bdf90ade534d960c98b7d"
+    },
+    "cargo_deny": {
+      "version": "0.20.2",
+      "archive_sha256": "9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f"
+    },
+    "scope": "Only the remaining native ARM64 and x64 lint/grammar gates. No product source edits. Existing x64 compile/test/release/self-lint evidence is reused because every compiled source blob is unchanged.",
+    "arm64_self_lint": "ci.yml runs release self-lint only on x86_64-unknown-linux-gnu; that gate already passed in the prior producer."
+  },
+  "proof": {
+    "branch": "ci/sloplint-native-remaining-20261126-r15",
+    "producer": "46305bd1437b1e8c6251612b0968756e4f9b99a7",
+    "tree": "7f15b5d28e3ad73b556e199c12e13cf9cbd4577b",
+    "run": 45862209359,
+    "url": "https://github.com/gosuda/sloplint/actions/runs/45862209359"
+  },
+  "jobs": {
+    "arm64": {
+      "identity": {
+        "head": "31bbd8486f485f20c93ab1511d039744339ec670",
+        "machine": "aarch64",
+        "mode": "arm64",
+        "parent": "95f8d650552bd31fd5f5737bd9e457fec8ef8a55",
+        "patch_sha256": "f7eb65fb4164e6e0ef75adbd89dde3560c781a3ec1b3c666e13812f923f70630",
+        "tracked_files_verified": 4897,
+        "tracked_index_sha256": "1059c0d72b59e04c73c0d1031e2511e6f9163c52c4eefea0a0e247da3c7b4b7f",
+        "tree": "589aff2ec97f6e6f8179453ff6882fe19b3b65b2"
+      },
+      "gates": {
+        "exits": {
+          "clippy-arm64": 0,
+          "release-arm64": 0,
+          "rust-version": 0,
+          "whitespace": 0,
+          "workspace-arm64": 0
+        },
+        "mode": "arm64",
+        "source": "31bbd8486f485f20c93ab1511d039744339ec670"
+      },
+      "job": 140055845349
+    },
+    "lint-grammar": {
+      "identity": {
+        "head": "31bbd8486f485f20c93ab1511d039744339ec670",
+        "machine": "x86_64",
+        "mode": "lint-grammar",
+        "parent": "95f8d650552bd31fd5f5737bd9e457fec8ef8a55",
+        "patch_sha256": "f7eb65fb4164e6e0ef75adbd89dde3560c781a3ec1b3c666e13812f923f70630",
+        "tracked_files_verified": 4897,
+        "tracked_index_sha256": "1059c0d72b59e04c73c0d1031e2511e6f9163c52c4eefea0a0e247da3c7b4b7f",
+        "tree": "589aff2ec97f6e6f8179453ff6882fe19b3b65b2"
+      },
+      "gates": {
+        "exits": {
+          "cargo-deny": 0,
+          "cargo-deny-extract": 0,
+          "cargo-deny-version": 0,
+          "download-cargo-deny.tar.gz": 0,
+          "download-tree-sitter.gz": 0,
+          "fmt": 0,
+          "grammar-authoritative": 0,
+          "grammar-corpus": 0,
+          "grammar-generate": 0,
+          "grammar-manifest": 0,
+          "node-version": 0,
+          "release-script-selftests": 0,
+          "rust-version": 0,
+          "tree-sitter-version": 0,
+          "whitespace": 0
+        },
+        "mode": "lint-grammar",
+        "source": "31bbd8486f485f20c93ab1511d039744339ec670"
+      },
+      "job": 140055844833
+    }
+  },
+  "x64_counts": {
+    "release_script_selftests": 66,
+    "grammar_corpus_parses": 269,
+    "grammar_corpus_failed": 0,
+    "fresh_generation_unchanged_files": 42,
+    "normalized_blank_context_lines": 75
+  },
+  "artifacts": [
+    {
+      "id": 15139420138,
+      "node_id": "MDg6QXJ0aWZhY3QxNTEzOTQyMDEzOA==",
+      "name": "sloplint-native-r15-lint-grammar-46305bd1437b1e8c6251612b0968756e4f9b99a7",
+      "size_in_bytes": 9766,
+      "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15139420138",
+      "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15139420138/zip",
+      "expired": false,
+      "digest": "sha256:2927bb4e74e5f1c6b1c9232ab673f0e2b986ae1a637454fb9cba9b8023ec0436",
+      "created_at": "2026-11-26T16:50:23Z",
+      "updated_at": "2026-11-26T16:50:23Z",
+      "expires_at": "2026-12-03T16:50:23Z",
+      "workflow_run": {
+        "id": 45862209359,
+        "repository_id": 1424164147,
+        "head_repository_id": 1424164147,
+        "head_branch": "ci/sloplint-native-remaining-20261126-r15",
+        "head_sha": "46305bd1437b1e8c6251612b0968756e4f9b99a7"
+      }
+    },
+    {
+      "id": 15139386059,
+      "node_id": "MDg6QXJ0aWZhY3QxNTEzOTM4NjA1OQ==",
+      "name": "sloplint-native-r15-arm64-46305bd1437b1e8c6251612b0968756e4f9b99a7",
+      "size_in_bytes": 60529,
+      "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15139386059",
+      "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15139386059/zip",
+      "expired": false,
+      "digest": "sha256:753f72eeb21fb2694d098df2dccf4199307b286984530d1b42e0d54e9e74d246",
+      "created_at": "2026-11-26T16:56:10Z",
+      "updated_at": "2026-11-26T16:56:10Z",
+      "expires_at": "2026-12-03T16:56:09Z",
+      "workflow_run": {
+        "id": 45862209359,
+        "repository_id": 1424164147,
+        "head_repository_id": 1424164147,
+        "head_branch": "ci/sloplint-native-remaining-20261126-r15",
+        "head_sha": "46305bd1437b1e8c6251612b0968756e4f9b99a7"
+      }
+    }
+  ],
+  "artifact_digest_check": "Both artifact REST digests match their job upload logs. No independent local ZIP byte hash was available.",
+  "source_integrity": "Both jobs recomputed all 4,897 tracked Git blob identities before and after execution, checked HEAD/tree/parent/index, required a clean checkout, and verified the exact patch SHA-256.",
+  "candidate_ref_at_observation": "31bbd8486f485f20c93ab1511d039744339ec670",
+  "main_ref_at_observation": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+  "retired_workflow": ".github/workflows/sloplint-native-remaining.yml",
+  "scope": "Verification only. No maintained PR, default branch, or candidate source writes were performed. The coordinator owns publication of the verified candidate and retirement of the earlier round14 producer."
+}
