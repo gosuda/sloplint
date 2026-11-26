@@ -44,29 +44,35 @@ def identity() -> None:
     subprocess.run(["git", "diff", "--exit-code"], check=True)
     print("CORPUS_SOURCE_IDENTITY " + json.dumps(MANIFEST, sort_keys=True), flush=True)
 
-assert git("rev-parse", "HEAD") == MANIFEST["head"]
-candidate_patch = PROOF / "candidate.patch"
-assert hashlib.sha256(candidate_patch.read_bytes()).hexdigest() == MANIFEST["patch_sha256"]
-run("apply-candidate", ["git", "apply", "--index", str(candidate_patch)], 30)
 identity()
 instrument = PROOF / "instrument.patch"
 assert hashlib.sha256(instrument.read_bytes()).hexdigest() == MANIFEST["instrument_sha256"]
+frozen = (PROOF / "frozen-tests.rs").read_bytes()
+assert hashlib.sha256(frozen).hexdigest() == MANIFEST["frozen_tests_sha256"]
 tests = SOURCE / "crates/bamts-compiler/src/program/tests.rs"
 saved_tests = tests.read_bytes()
 assert hashlib.sha256(saved_tests).hexdigest() == MANIFEST["original_tests_sha256"]
 relation = SOURCE / "crates/bamts-compiler/src/checker/relations.rs"
 saved_relation = relation.read_bytes()
-baseline = subprocess.check_output(["git", "show", "HEAD:crates/bamts-compiler/src/checker/relations.rs"])
-run("apply-instrumentation", ["git", "apply", str(instrument)], 30)
-assert hashlib.sha256(tests.read_bytes()).hexdigest() == MANIFEST["instrumented_tests_sha256"]
-test_args = ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib", "program::tests::lowers_and_verifies_every_manifest_pinned_corpus_program"]
+marker = "    /// Regression for nested contextual hits:"
+assert saved_relation.decode().count(marker) == 1
 try:
-    for name, content in [("baseline", baseline), ("candidate", saved_relation)]:
-        relation.write_bytes(content)
-        run(f"{name}-compile", [*test_args, "--no-run"], 600)
-        run(f"{name}-corpus", [*test_args, "--", "--exact", "--nocapture", "--test-threads=1"], 180, required=False)
+    relation.write_text(saved_relation.decode().replace(marker, frozen.decode() + marker))
+    run("apply-instrumentation", ["git", "apply", str(instrument)], 30)
+    assert hashlib.sha256(tests.read_bytes()).hexdigest() == MANIFEST["instrumented_tests_sha256"]
+    print("INSTRUMENTED_RELATIONS_SHA256 " + hashlib.sha256(relation.read_bytes()).hexdigest(), flush=True)
+    test_args = ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib"]
+    run("current-compile", [*test_args, "--no-run"], 600)
+    for test in [
+        "shared_recursive_graph_reuses_completed_exact_cycles",
+        "transformed_recursive_aliases_do_not_reuse_provisional_success",
+        "shared_transformed_recursive_graph_reuses_completed_cycles",
+    ]:
+        run(test, [*test_args, f"checker::relations::tests::{test}", "--", "--exact", "--nocapture"], 180, required=False)
+    run("current-corpus", [*test_args, "program::tests::lowers_and_verifies_every_manifest_pinned_corpus_program", "--", "--exact", "--nocapture", "--test-threads=1"], 180, required=False)
 finally:
     relation.write_bytes(saved_relation)
     tests.write_bytes(saved_tests)
 identity()
-print("CORPUS_DIAGNOSTIC_COMPLETE " + json.dumps(RESULTS, sort_keys=True), flush=True)
+print("CURRENT_HEAD_DIAGNOSTIC_COMPLETE " + json.dumps(RESULTS, sort_keys=True), flush=True)
+assert all(result["exit"] == 0 and not result["timed_out"] for result in RESULTS.values()), "Current head failed a frozen control; see actual exits above."
