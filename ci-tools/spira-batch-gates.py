@@ -194,6 +194,12 @@ def check(candidate: Candidate) -> dict[str, object]:
             proofs["immutable-forwarder"] = "func MethodOK(arg string) bool" in source and "var MethodOK" not in source
         if candidate.label == "dashboard":
             proofs.update(dashboard_proofs(folder))
+        if candidate.label == "43":
+            repeated = run(["logos", "test", "-race", "-count=100", "-v", "-run", "^TestH3RefusesEarlyData$", "./http3"], folder / "early-data-repeat.log", 240)
+            repeated_output = (folder / "early-data-repeat.log").read_text(errors="replace")
+            passes = len(re.findall(r"^--- PASS: TestH3RefusesEarlyData ", repeated_output, re.MULTILINE))
+            proofs["early-data-repeat"] = repeated == 0 and passes == 100
+            print(f"EARLY_DATA_REPEAT exit={repeated} explicit_passes={passes}", flush=True)
         result["proofs"] = proofs
     git("diff", "--exit-code")
     assert git("write-tree") == candidate.tree
