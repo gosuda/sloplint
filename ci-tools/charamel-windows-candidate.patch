@@ -1,0 +1,12 @@
+diff --git a/test/melt/dune b/test/melt/dune
+--- a/test/melt/dune
++++ b/test/melt/dune
+@@ -27,6 +27,8 @@
+   (run
+    powershell.exe
+    -NoProfile
++   -ExecutionPolicy
++   Bypass
+    -File
+    %{dep:windows_console.ps1}
+    -Melt
