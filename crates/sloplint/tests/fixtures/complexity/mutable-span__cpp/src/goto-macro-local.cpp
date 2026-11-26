@@ -30,6 +30,23 @@ void class_body() {
         private:
         int retries = 0;
         public:
-        void retry() { ++retries; ++retries; }
+        void retry() {
+            ++retries;
+            cleanup(1);
+            cleanup(2);
+            cleanup(3);
+            cleanup(4);
+            cleanup(5);
+            cleanup(6);
+            cleanup(7);
+            cleanup(8);
+            cleanup(9);
+            cleanup(10);
+            cleanup(11);
+            cleanup(12);
+            cleanup(13);
+            cleanup(14);
+            ++retries;
+        }
     };
 }
