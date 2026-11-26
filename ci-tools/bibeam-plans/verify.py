@@ -53,8 +53,15 @@ for record in records:
             assert runner == expected[target][0], job
             seen.add(target)
     assert seen == set(expected), seen
+    changed = run(["git", "diff", "--name-only"]).splitlines()
+    assert set(changed) <= {"Cargo.lock"}, changed
+    lock_drift = run(["git", "diff", "--", "Cargo.lock"])
+    if lock_drift:
+        (evidence / f"pr-{record['number']}-lock-drift.patch").write_text(lock_drift + "\n")
+    lock_sha256 = hashlib.sha256((source / "Cargo.lock").read_bytes()).hexdigest()
+    subprocess.run(["git", "restore", "--", "Cargo.lock"], cwd=source, check=True)
     subprocess.run(["git", "diff", "--exit-code"], cwd=source, check=True)
-    result = {**record, "tree": run(["git", "rev-parse", "HEAD^{tree}"]), "plan_sha256": hashlib.sha256(destination.read_bytes()).hexdigest(), "jobs": jobs, "exit": process.returncode}
+    result = {**record, "tree": run(["git", "rev-parse", "HEAD^{tree}"]), "plan_sha256": hashlib.sha256(destination.read_bytes()).hexdigest(), "jobs": jobs, "exit": process.returncode, "planning_changed_lockfile": bool(lock_drift), "resolved_lock_sha256": lock_sha256}
     results.append(result)
     print("BIBEAM_PLAN " + json.dumps(result, sort_keys=True), flush=True)
 (evidence / "results.json").write_text(json.dumps(results, sort_keys=True, indent=2) + "\n")
