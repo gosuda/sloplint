@@ -1,0 +1,22 @@
+# Flats D2 main-drift design review receipt
+
+**Verdict: ACCEPTED.** D2 design acceptance carries to D2 plus the reviewed impact record against Flats main 427f1afc69ff671bd9d159f4de463ee2e00d677a. The bounded design-impact review is complete. Implementation and final testing remain unassessed.
+
+## Exact record
+
+- D2 SHA-256 9c6b81ac08581ceff96254731ad158ca7d362d6d0ecbf6a8d525eecdf84d4162. Its accepted receipt still matches SHA-256 54425521213a66fb4b54fe80aea8711dd8919648f8ee4a66a224b078392de657. D1 and its receipt and dispositions also match their recorded digests. [D2](https://github.com/gosuda/sloplint/blob/c4f239e1bdeccf77338188ea83206dca42c8cc03/ci-tools/flats-review/D2.md)
+- Impact record D2-main-drift.md at gosuda/sloplint commit c4f239e1bdeccf77338188ea83206dca42c8cc03, Git blob 58aa79035c4320f60a9c45d2c08985f1f9e616c0. The 4,218 UTF-8 bytes include one final LF and match SHA-256 5660201ed19b380c9dc0ecb11902598af24de2c280e956b230b587ef8f2f36fb. [Impact record](https://github.com/gosuda/sloplint/blob/c4f239e1bdeccf77338188ea83206dca42c8cc03/ci-tools/flats-review/D2-main-drift.md)
+- Live main resolved to 427f1afc69ff671bd9d159f4de463ee2e00d677a. It is one commit ahead of 81235c28ba7d51ea12aad4740da198d54b8a59b5. The compare contains only .github/workflows/ci.yml, internal/app/backupcmd_test.go and scripts/test_ci_shards.py. The root AGENTS, workflow skill, design skill, protocol and specification blobs match the D1 and D2 review identities. [Exact main delta](https://github.com/gosuda/flats/compare/81235c28ba7d51ea12aad4740da198d54b8a59b5...427f1afc69ff671bd9d159f4de463ee2e00d677a)
+- Live branch refs match the frozen heads for #272 bc4b4cdb4d78fb2b70aaf7fbdb6ae66a8d143815, #265 f8badac07f5745bcd71b55de30778c0585408336, #248 863801718fce4cb188b072cd29e0e170a3096af2, #236 bc89bb1912422cb7d73b6864fdf4570978fd4438, #242 fc50dec92555539a029b3c6040c221b28cec319a and #243 2a51d466e3d4dc848d82ed99954d4f1ab2dd81de. The #248 merge base remains 58815a85c5fd34f290e45528e7597f62dec3975a. The #242 and #243 targets remain the #236 and #242 branches respectively.
+
+## Impact disposition
+
+1. **Windows fixture placement.** Main's native site step still uses the system-drive default for short names. The four other targeted regression steps set TMP and TEMP to runner.temp individually. The record retains that distinction, preserves step independence and applies the temporary directory treatment to #248's extra native Sheet step. Candidate tests must cover both placement and independence, including the extra step on #248. [Main workflow](https://github.com/gosuda/flats/blob/427f1afc69ff671bd9d159f4de463ee2e00d677a/.github/workflows/ci.yml#L286) · [Placement test](https://github.com/gosuda/flats/blob/427f1afc69ff671bd9d159f4de463ee2e00d677a/scripts/test_ci_shards.py#L79)
+2. **Canonical backup path.** I found the old output assertion on all six heads. #272, #265 and the three document heads share blob 97ed3100a8e1695af703d24fa2e444c8bfa217c3. #248 has blob 88df8f7bf6b27a9031a37801c2c26b917474fb46 with Sheet additions. Carrying the assertion hunk and verifying its local context preserves those additions and the backup command's existing behavior. Actual native execution must establish the canonical-path result. [Main backup test](https://github.com/gosuda/flats/blob/427f1afc69ff671bd9d159f4de463ee2e00d677a/internal/app/backupcmd_test.go#L224) · [Frozen #248 backup test](https://github.com/gosuda/flats/blob/863801718fce4cb188b072cd29e0e170a3096af2/internal/app/backupcmd_test.go#L388)
+3. **Prior decisions and gates.** The impact preserves the runner, event, shard, lifecycle, browser, stack and publication requirements of D2. Candidate checks and approvals must bind the new main target or the applicable final stacked parent. Cold Windows checks and actual workflow tests remain required. No blocking design finding remains in this delta.
+
+## Independence and budget
+
+Material author gpt-6.2-astra. Requested and effective reviewer gpt-6.2-sol under the fixed canonical binding for review session /root/bitcoin_round7/flats_design_review. This was invocation 4 overall and completed review 3. The thread-limit failure on invocation 1 consumed one of two invocation retries. D2 and this impact used two of three design correction rounds. No reviewer design or source edits were adopted.
+
+Review used read-only GitHub inspection and UTF-8 digest verification. No Flats candidate, check result or publication was produced. The canonical bytes of this receipt end with exactly one LF.
