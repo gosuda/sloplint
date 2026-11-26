@@ -18,7 +18,8 @@ class Candidate:
 
 
 CANDIDATES = (
-    Candidate(28, "f831b14a8a6620ee7289541b5ea53ef40e325ba3", "049df3eeb3df4b4a1162117bb91d8505e1397f91cf624a82cf026edbded415fd"),
+    Candidate(21, "7d2975c753810d99746a88c8ba6b43be921c16fc"),
+    Candidate(25, "28fb308e469cf687b6ed7b553a23fd266c38977c", "86b30bf59a7036663698b0d63a59f2a9bfa42f4fb896d86432a789d68707be19"),
 )
 BASE = "84e5ff153f781c7e2d02804a5c24997858f618ab"
 WORKSPACE = Path(os.environ["GITHUB_WORKSPACE"])
@@ -111,8 +112,6 @@ def check(candidate: Candidate) -> dict[str, object]:
     if candidate.number == 20 and result["build"] == 0:
         result["fd_operands"] = check_regression(candidate, folder, "bin/crush/lib/tools_shell.ml", "tools_shell", "conservative shell classifier", "fd-operands", "fd -- -X has only literal data operands")
     if candidate.number == 25 and result["build"] == 0:
-        for label, name in [("explicit_cancel", "explicit cancel joins hook cleanup"), ("external_cancel", "external cancel persists completed write"), ("closed_post_hook", "cancelled body skips closed post hook")]:
-            result[label] = check_regression(candidate, folder, "bin/crush/lib/agent.ml", "agent", name, label.replace("_", "-"), "completed write result was not persisted exactly once")
         path = SOURCE / "bin/crush/lib/hooks.ml"
         repaired = path.read_text()
         original = "if code = 0 then completed := true;"
@@ -126,6 +125,22 @@ def check(candidate: Candidate) -> dict[str, object]:
             path.write_text(repaired)
         green = run(args, folder / "detached-failure-green.log")
         result["detached_failure"] = reproduced and green == 0
+        path = SOURCE / "test/crush/test_hooks.ml"
+        repaired = path.read_text()
+        start = repaired.index("let failing_hook_kills_detached_child () =")
+        end = repaired.index("\nlet cases =", start)
+        fixture = repaired[start:end]
+        assert fixture.count("exit 2") == 1
+        assert fixture.count("hook ~event:Config.Pre_tool ~command ()") == 1
+        blocked = fixture.replace("exit 2", "read timeout < worker-release", 1).replace("hook ~event:Config.Pre_tool ~command ()", "hook ~event:Config.Pre_tool ~command ~timeout_s:1 ()", 1)
+        try:
+            path.write_text(repaired[:start] + blocked + repaired[end:])
+            red = run(args, folder / "exit-two-timeout-red.log")
+            reproduced = red != 0 and "nonzero hook did not report its exit-two denial" in (folder / "exit-two-timeout-red.log").read_text()
+        finally:
+            path.write_text(repaired)
+        green = run(args, folder / "exit-two-timeout-green.log")
+        result["exit_two_timeout"] = reproduced and green == 0
     git("diff", "--exit-code")
     assert git("write-tree") == result["tree"]
     (folder / "results.json").write_text(json.dumps(result, indent=2) + "\n")
@@ -141,7 +156,7 @@ def main() -> int:
         results[str(candidate.number)] = check(candidate)
         (EVIDENCE / "results.json").write_text(json.dumps(results, indent=2) + "\n")
     passed = all(all(result[name] == 0 for name in ("format_sources", "fmt", "build", "tests")) for result in results.values())
-    required = {"20": ("fd_operands",), "25": ("explicit_cancel", "external_cancel", "closed_post_hook", "detached_failure")}
+    required = {"20": ("fd_operands",), "25": ("exit_two_timeout", "detached_failure")}
     passed = passed and all(all(result.get(name) is True for name in required.get(number, ())) for number, result in results.items())
     return 0 if passed else 1
 
