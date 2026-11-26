@@ -1023,7 +1023,7 @@ index 0a5170f..d5279f0 100644
  		t.Fatal("handler context not canceled after return")
  	}
 diff --git a/websocket/stream_test.lgo b/websocket/stream_test.lgo
-index 149fd0b..da340e6 100644
+index 149fd0b..828cdb7 100644
 --- a/websocket/stream_test.lgo
 +++ b/websocket/stream_test.lgo
 @@ -1030,10 +1030,25 @@ var hpackStaticValue = [61]string{
@@ -1060,11 +1060,33 @@ index 149fd0b..da340e6 100644
  		select {
  		case pending <- cancel:
  		case <-r.Context().Done():
-@@ -1071,7 +1087,13 @@ func TestStreamCancelUnblocksPendingNext(t *testing.T) {
- 	select {
- 	case cancel = <-pending:
- 	case <-time.After(10 * time.Second):
+@@ -1067,14 +1083,7 @@ func TestStreamCancelUnblocksPendingNext(t *testing.T) {
+ 		t.Fatalf("extended CONNECT status = %d, want 200", status)
+ 		return
+ 	}
+-	var cancel context.CancelFunc
+-	select {
+-	case cancel = <-pending:
+-	case <-time.After(10 * time.Second):
 -		t.Fatal("session did not reach Next")
+-		return
+-	}
+-	cancel()
++	cancelAfterStreamRead(t, pending, reading)
+ 	select {
+ 	case err := <-done:
+ 		if err == nil {
+@@ -1088,3 +1097,21 @@ func TestStreamCancelUnblocksPendingNext(t *testing.T) {
+ 		t.Fatal("Next did not return after cancel")
+ 	}
+ }
++
++func cancelAfterStreamRead(t *testing.T, pending <-chan context.CancelFunc, reading <-chan struct{}) {
++	t.Helper()
++	var cancel context.CancelFunc
++	select {
++	case cancel = <-pending:
++	case <-time.After(10 * time.Second):
 +		t.Fatal("session did not provide its cancel function")
 +		return
 +	}
@@ -1072,6 +1094,7 @@ index 149fd0b..da340e6 100644
 +	case <-reading:
 +	case <-time.After(10 * time.Second):
 +		t.Fatal("Next did not enter the request body read")
- 		return
- 	}
- 	cancel()
++		return
++	}
++	cancel()
++}

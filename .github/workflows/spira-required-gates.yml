@@ -49,9 +49,9 @@ jobs:
         run: |
           mkdir -p "$GITHUB_WORKSPACE/evidence"
           test "$(git rev-parse HEAD)" = 192c1b0b2f8ab195638bcebe0779c6b4f9a39b70
-          printf '%s  %s\n' ad98529e9d752c6509d03e743b6d63f4f9f5fea8e64e5a23606f2893a4d6d1a5 ../probe/ci-tools/spira-round7.patch | sha256sum --check --strict
+          printf '%s  %s\n' d50666f660079dfd80fa612b5318be6a7c5902e27e1a4161d2a3c455197bf244 ../probe/ci-tools/spira-round7.patch | sha256sum --check --strict
           git apply --index --whitespace=error ../probe/ci-tools/spira-round7.patch
-          test "$(git write-tree)" = c1238923b3409db5e9ab87b9a77e9be9b70df354
+          test "$(git write-tree)" = c5899054a264b2cbee8d0d3b4dcf2b9c90348682
           git rev-parse HEAD > "$GITHUB_WORKSPACE/evidence/spira-source.txt"
           git write-tree >> "$GITHUB_WORKSPACE/evidence/spira-source.txt"
           git diff --cached --name-only -z | xargs -0 sha256sum > "$GITHUB_WORKSPACE/evidence/candidate.sha256"
@@ -114,7 +114,7 @@ jobs:
         working-directory: spira
         run: |
           sha256sum --check --strict "$GITHUB_WORKSPACE/evidence/candidate.sha256"
-          test "$(git write-tree)" = c1238923b3409db5e9ab87b9a77e9be9b70df354
+          test "$(git write-tree)" = c5899054a264b2cbee8d0d3b4dcf2b9c90348682
           git diff --check
           node --version > "$GITHUB_WORKSPACE/evidence/node-version.txt"
           pnpm --version > "$GITHUB_WORKSPACE/evidence/pnpm-version.txt"
