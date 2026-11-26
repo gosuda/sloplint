@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "scope": "BamTiScript PR253 changed-argument alias union-order baseline",
+  "source": {
+    "head": "87be57b3bdee04bdc9606d0fadde7912b20a52a6",
+    "relations_sha256": "3479aaa39ad13441b543153d340ad3a12b12e5b6c0303f11fe62911d194834d9"
+  },
+  "producer": {
+    "repository": "gosuda/sloplint",
+    "commit": "bbffcb342e1fa75ee04b81feffc20a42ce4e5cd4",
+    "run": 45847801184,
+    "job": 140005913989,
+    "artifact": 15132475858,
+    "zip_sha256": "cc35ee09c96239114e3ea74dea95a62e064f072a89887ebf19009cde539ed767"
+  },
+  "results": {
+    "typescript": "7.0.2",
+    "typescript_all_four_exit": 1,
+    "typescript_required_diagnostic": "TS2322",
+    "rust_exit": 101,
+    "rust_forward": false,
+    "rust_reverse": true,
+    "rust_direct": true,
+    "rust_after_nested_refutation": false,
+    "source_restored_diff_exit": 0
+  },
+  "historical_first_probe": {
+    "commit": "bde3d26c516b59655210a720f71192ce7ee8c55c",
+    "run": 45846977956,
+    "status": "Harness failed on incorrectly constructed reversed union; not counted as completed RED proof."
+  },
+  "next_candidate": {
+    "branch": "ci/bamti-alias-views-20261126-r17",
+    "producer": "deaf593cfc84ff19ef829080a010bd0b88aaf5da",
+    "status": "Native gates running; not published product source"
+  },
+  "retirement": "Baseline workflow removed additively after evidence collection.",
+  "observed_at": "2026-11-26T15:48:30.404Z"
+}
