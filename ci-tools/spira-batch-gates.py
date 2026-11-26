@@ -27,6 +27,7 @@ class Regression:
     package: str
     test: str
     failures: tuple[str, ...]
+    timeout: int = 120
 
 
 WORKSPACE = Path(os.environ["GITHUB_WORKSPACE"])
@@ -72,6 +73,24 @@ def regressions(label: str) -> tuple[Regression, ...]:
         return (Regression("second-idle-timeout", "db/db.lgo", "merged.ConnMaxIdleTime = o.ConnMaxIdleTime", "_ = o.ConnMaxIdleTime", "./db", "^TestOpenHonorsSecondIdleTimeout$", ("second idle timeout was ignored",)),)
     if label == "42":
         return (Regression("live-unidirectional-cap", "@logos/src/logos/net/http/h3_server.go", "h3ServerUniStreams       = 100", "h3ServerUniStreams       = 101", "./http3", "^TestH3PublicCapsIncomingUniStreamsAt100$", ("101st active stream opened past the 100-stream cap",)),)
+    if label == "43":
+        return (
+            Regression("stream-read-cancellation", "websocket/conn.lgo", "\t\tdefer c.joinStreamCancellation(ctx, &err)()\n\t}\n\tif err := c.readDeadline(ctx); err != nil {", "\t}\n\tif err := c.readDeadline(ctx); err != nil {", "./websocket", "^TestStreamCancelUnblocksPendingNext$", ("Next did not return after cancel",)),
+            Regression("generated-sweep-cause", "cmd/spira/templates/account-store.lgo.tmpl", 'slog.ErrorContext(ctx, "account: sweep expired sessions", "err", err)', 'slog.ErrorContext(ctx, "account: sweep expired sessions")', "./cmd/spira", "^TestNewGeneratedSQLiteAppRuns$", ("omits the planted sweep cause",), 1200),
+        )
+    if label == "44":
+        duplicate = '\t\tif frame == 7 {\n\t\t\treturn errors.New("duplicate GOAWAY frame on the control stream")\n\t\t}\n'
+        length = '\t\tsize, err := quicvarint.Read(reader)\n\t\tif err != nil {\n\t\t\treturn nil\n\t\t}\n'
+        return (
+            Regression("truncated-goaway", "http3/goaway_test.lgo", duplicate + length, length + duplicate, "./http3", "^TestReadH3GoAwayTailRejectsTruncatedDuplicate$", ("want duplicate rejection",)),
+            Regression("udp-cleanup", "http3/server.lgo", 'errors.Join(fmt.Errorf("http3: listen %s: %w", tcpAddr, lerr), conn.Close())', 'fmt.Errorf("http3: listen %s: %w", tcpAddr, lerr)', "./http3", "^TestH3StartReleasesUDPAfterTCPConflict$", ("stayed bound after failed Start",)),
+            Regression("udp-retry-bound", "http3/server.lgo", "for attempt := 1; attempt < 8; attempt++ {", "for attempt := 1; ; attempt++ {", "./http3", "^TestH3StartPersistentUDPConflictExhaustsRetries$", ("want exhausted UDP EADDRINUSE before deadline",)),
+        )
+    if label == "45":
+        return (
+            Regression("independent-drop-context", "db/faults_test.lgo", "cleanup, stop := context.WithTimeout(context.Background(), 5*time.Second)", "cleanup, stop := context.WithTimeout(ctx, 5*time.Second)", "./db", "^TestConstraintProbeDropsAfterContextCancellation$", ("drop fault_uniq_cancel", "context canceled")),
+            Regression("catalog-cause-redaction", "fault/fault.lgo", "return View{Code: f.Code, Message: f.Message, Fields: publicFields(f)}", "return View{Code: f.Code, Message: f.Error(), Fields: publicFields(f)}", "./example/shop/catalog", "^(TestCatalogUnknownProductStaysClientSafe|TestCatalogWrappedFaultHTTPHidesCause)$", ("client-visible output holds", "--- FAIL: TestCatalogUnknownProductStaysClientSafe", "--- FAIL: TestCatalogWrappedFaultHTTPHidesCause")),
+        )
     return ()
 
 
@@ -82,12 +101,13 @@ def prove(case: Regression, folder: Path) -> bool:
     command = ["logos", "test", "-race", "-count=1", "-v", "-run", case.test, case.package]
     try:
         path.write_text(original.replace(case.original, case.mutant))
-        red = run(command, folder / f"{case.label}-red.log", 120)
+        red = run(command, folder / f"{case.label}-red.log", case.timeout)
         output = (folder / f"{case.label}-red.log").read_text(errors="replace")
         reproduced = red != 0 and all(message in output for message in case.failures)
     finally:
         path.write_text(original)
-    green = run(command, folder / f"{case.label}-green.log", 120)
+    green = run(command, folder / f"{case.label}-green.log", case.timeout)
+    (folder / f"{case.label}-results.json").write_text(json.dumps({"command": command, "red": red, "reproduced": reproduced, "green": green}, indent=2) + "\n")
     return reproduced and green == 0
 
 

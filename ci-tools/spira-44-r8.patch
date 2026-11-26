@@ -1,0 +1,113 @@
+diff --git a/docs/specs/http3.md b/docs/specs/http3.md
+index 62c08f0..ad32d74 100644
+--- a/docs/specs/http3.md
++++ b/docs/specs/http3.md
+@@ -155,7 +155,9 @@ These limits and timeouts apply to the LoGOs backend that `http3.Server` uses.
+ - `TestH3ServeWithoutH3OpensNoUDP` proves that `Serve` with `H3` false serves TCP from the caller listener without TLS and binds no UDP.
+ - `TestH3RejectsNonH3ALPNOnUDP` proves that the UDP listener negotiates only ALPN `h3`, including for `GetConfigForClient` configs, without mutating the caller configs.
+ - `TestH3ServeUsesCallerSocketsAndKeepsThemOnFailure` proves that `Serve` answers on both caller sockets and leaves them usable after a missing router, missing TLS, or a busy server.
+-- `TestH3StartSucceedsAfterTransientUDPConflict` proves that `Start` retries a bounded number of times until a transient UDP conflict clears.
++- `TestH3StartSucceedsAfterTransientUDPConflict` proves that `Start` succeeds after a transient UDP conflict clears.
++- `TestH3StartPersistentUDPConflictExhaustsRetries` proves that persistent contention returns UDP `EADDRINUSE` after seven waits, before the caller deadline.
++- `TestH3StartReleasesUDPAfterTCPConflict` requires TCP listen `EADDRINUSE` and proves the acquired UDP socket was released.
+ - `TestH3StartReleasesUDPAfterTCPConflict` proves that a TCP conflict closes the bound UDP socket.
+ - `TestH3RunsStagesAndRepliesLikeTCP` proves that one router runs the same stages and writes the same data, page, and problem replies over UDP and TCP.
+ - `TestH3AltSvcEdgeCases` proves that `Start` installs no stage, that disabled `H3` binds no UDP, and that a stopped server advertises nothing.
+diff --git a/http3/goaway_test.lgo b/http3/goaway_test.lgo
+index 8aac4f5..3eae523 100644
+--- a/http3/goaway_test.lgo
++++ b/http3/goaway_test.lgo
+@@ -161,16 +161,13 @@ func readH3GoAwayTail(reader quicvarint.Reader) error {
+ 		if err != nil {
+ 			return nil
+ 		}
++		if frame == 7 {
++			return errors.New("duplicate GOAWAY frame on the control stream")
++		}
+ 		size, err := quicvarint.Read(reader)
+ 		if err != nil {
+ 			return nil
+ 		}
+-		if frame == 7 {
+-			if cerr := checkH3GoAway(reader, size); cerr != nil {
+-				return cerr
+-			}
+-			return errors.New("duplicate GOAWAY frame on the control stream")
+-		}
+ 		if _, err := io.CopyN(io.Discard, reader, int64(size)); err != nil {
+ 			return nil
+ 		}
+@@ -267,3 +264,11 @@ func TestReadH3GoAwayTailRejectsDuplicate(t *testing.T) {
+ 		return
+ 	}
+ }
++
++func TestReadH3GoAwayTailRejectsTruncatedDuplicate(t *testing.T) {
++	for _, tail := range [][]byte{{0x07}, {0x07, 0x40}, {0x07, 0x80, 0x00, 0x00}} {
++		if err := readH3GoAwayTail(quicvarint.NewReader(bytes.NewReader(tail))); err == nil || err.Error() != "duplicate GOAWAY frame on the control stream" {
++			t.Errorf("truncated duplicate GOAWAY %x = %v, want duplicate rejection", tail, err)
++		}
++	}
++}
+diff --git a/http3/http3_test.lgo b/http3/http3_test.lgo
+index b92bfb1..7b31c69 100644
+--- a/http3/http3_test.lgo
++++ b/http3/http3_test.lgo
+@@ -1480,11 +1480,17 @@ func TestH3StartReleasesUDPAfterTCPConflict(t *testing.T) {
+ 		server := &http3.Server{Addr: addr, Router: web.NewRouter(), TLS: &tls.Config{Certificates: []tls.Certificate{cert}}, H3: true, ShutdownGrace: 2 * time.Second}
+ 		ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+ 		defer cancel()
+-		if err := server.Start(ctx); err == nil {
++		err = server.Start(ctx)
++		if err == nil {
+ 			defer stopH3Server(t, server)
+ 			t.Fatal("Start over an occupied TCP port succeeded")
+ 			return
+ 		}
++		op, ok := errors.AsType[*net.OpError](err)
++		if !ok || op.Op != "listen" || op.Net != "tcp" || !errors.Is(err, syscall.EADDRINUSE) {
++			t.Fatalf("Start error = %v, want TCP listen EADDRINUSE", err)
++			return
++		}
+ 		rebound, berr := net.ListenPacket("udp", addr)
+ 		if berr != nil {
+ 			t.Fatalf("UDP port %s stayed bound after failed Start: %v", addr, berr)
+@@ -1498,6 +1504,38 @@ func TestH3StartReleasesUDPAfterTCPConflict(t *testing.T) {
+ 	})
+ }
+ 
++func TestH3StartPersistentUDPConflictExhaustsRetries(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		packet, err := net.ListenPacket("udp", "127.0.0.1:0")
++		if err != nil {
++			t.Fatalf("occupy UDP port: %v", err)
++			return
++		}
++		defer func() {
++			if err := packet.Close(); err != nil {
++				t.Errorf("close UDP port: %v", err)
++			}
++		}()
++		cert, _ := testCert(t)
++		server := &http3.Server{Addr: packet.LocalAddr().String(), Router: web.NewRouter(), TLS: &tls.Config{Certificates: []tls.Certificate{cert}}, H3: true}
++		defer stopH3Server(t, server)
++		ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
++		defer cancel()
++		started := time.Now()
++		err = server.Start(ctx)
++		if !errors.Is(err, http3.ErrListenUDP) || !errors.Is(err, syscall.EADDRINUSE) || ctx.Err() != nil {
++			t.Fatalf("persistent UDP conflict = %v, context %v, want exhausted UDP EADDRINUSE before deadline", err, ctx.Err())
++			return
++		}
++		if elapsed := time.Since(started); elapsed != 70*time.Millisecond {
++			t.Fatalf("retry duration = %v, want seven 10ms waits", elapsed)
++		}
++		if addr := server.BoundUDPAddrForTest(); addr != "" {
++			t.Fatalf("UDP bound after exhausted retries: %s", addr)
++		}
++	})
++}
++
+ type h3ReplyCase struct {
+ 	path        string
+ 	status      int

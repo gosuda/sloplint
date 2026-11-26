@@ -1,0 +1,120 @@
+diff --git a/db/faults_test.lgo b/db/faults_test.lgo
+index fad7857..de82f33 100644
+--- a/db/faults_test.lgo
++++ b/db/faults_test.lgo
+@@ -18,7 +18,9 @@ import (
+ 
+ func faultExec(t *testing.T, pool *db.Pool, statement string) {
+ 	t.Helper()
+-	if _, err := db.Exec(t.Context(), pool, statement); err != nil {
++	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
++	defer cancel()
++	if _, err := db.Exec(ctx, pool, statement); err != nil {
+ 		t.Fatalf("faultExec %q: %v", statement, err)
+ 		return
+ 	}
+@@ -181,12 +183,16 @@ type constraintProbe struct {
+ 
+ func withConstraintProbe(t *testing.T, ctx context.Context, pool *db.Pool, p constraintProbe) {
+ 	t.Helper()
++	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
++	defer cancel()
+ 	if _, err := db.Exec(ctx, pool, "CREATE TABLE "+p.table+" (n integer not null unique)"); err != nil {
+ 		t.Fatalf("create %s: %v", p.table, err)
+ 		return
+ 	}
+ 	defer func() {
+-		if _, derr := db.Exec(context.Background(), pool, "DROP TABLE "+p.table); derr != nil {
++		cleanup, stop := context.WithTimeout(context.Background(), 5*time.Second)
++		defer stop()
++		if _, derr := db.Exec(cleanup, pool, "DROP TABLE "+p.table); derr != nil {
+ 			t.Errorf("drop %s: %v", p.table, derr)
+ 		}
+ 	}()
+@@ -201,3 +207,22 @@ func withConstraintProbe(t *testing.T, ctx context.Context, pool *db.Pool, p con
+ 	}
+ 	p.check(dupErr)
+ }
++
++func TestConstraintProbeDropsAfterContextCancellation(t *testing.T) {
++	pool := openPool(t)
++	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
++	defer cancel()
++	withConstraintProbe(t, ctx, pool, constraintProbe{
++		table: "fault_uniq_cancel",
++		mark:  "?",
++		check: func(err error) {
++			if !errors.Is(err, db.ErrConstraintViolation) {
++				t.Fatalf("duplicate insert = %v, want constraint violation", err)
++				return
++			}
++			cancel()
++		},
++	})
++	faultExec(t, pool, "CREATE TABLE fault_uniq_cancel (n INTEGER NOT NULL UNIQUE)")
++	faultExec(t, pool, "DROP TABLE fault_uniq_cancel")
++}
+diff --git a/example/shop/catalog/fault_test.lgo b/example/shop/catalog/fault_test.lgo
+index b1c220c..3494f95 100644
+--- a/example/shop/catalog/fault_test.lgo
++++ b/example/shop/catalog/fault_test.lgo
+@@ -10,23 +10,34 @@ import (
+ 
+ 	"github.com/gosuda/spira/example/shop/catalog"
+ 	"github.com/gosuda/spira/fault/faulttest"
++	"github.com/gosuda/spira/web"
+ )
+ 
++const catalogProbeCause = "SECRET-CATALOG-73019\n<catalog-probe data-value=\"untrusted\">"
++
+ func TestCatalogUnknownProductStaysClientSafe(t *testing.T) {
+-	const secret = "SECRET-CATALOG-73019"
+-	raw := faulttest.PublicJSON(t, catalog.ErrUnknownProduct.Wrap(errors.New(secret)))
+-	faulttest.RefuseLeak(t, raw, secret)
+-	if !strings.Contains(string(raw), `"catalog.unknown_product"`) {
+-		t.Fatalf("public view %s lacks the fault code", raw)
++	wrapped := catalog.ErrUnknownProduct.Wrap(errors.New(catalogProbeCause))
++	if !strings.Contains(wrapped.Error(), catalogProbeCause) {
++		t.Fatalf("operator diagnostic %q lost its cause", wrapped.Error())
+ 		return
+ 	}
+-	if !strings.Contains(string(raw), "The product was not found.") {
+-		t.Fatalf("public view %s lacks the constant message", raw)
++	assertCatalogPublic(t, faulttest.PublicJSON(t, wrapped))
++}
++
++func TestCatalogWrappedFaultHTTPHidesCause(t *testing.T) {
++	router := web.NewRouter()
++	router.Handle(http.MethodGet, "/catalog-fault", func(_ *web.Context) (web.Reply, error) {
++		return nil, catalog.ErrUnknownProduct.Wrap(errors.New(catalogProbeCause))
++	})
++	response := get(t, router, "/catalog-fault", nil)
++	if response.Code != http.StatusNotFound {
++		t.Fatalf("wrapped fault status = %d, want 404", response.Code)
+ 		return
+ 	}
++	assertCatalogPublic(t, response.Body.Bytes())
+ }
+ 
+-func TestCatalogMissingProductHidesWrappedCause(t *testing.T) {
++func TestCatalogMissingProductReturnsSafeNotFound(t *testing.T) {
+ 	pool := openPool(t)
+ 	if pool == nil {
+ 		return
+@@ -37,9 +48,14 @@ func TestCatalogMissingProductHidesWrappedCause(t *testing.T) {
+ 		t.Fatalf("missing status = %d, want 404", missing.Code)
+ 		return
+ 	}
+-	faulttest.RefuseLeak(t, missing.Body.Bytes(), "SECRET-CATALOG-73019")
++	assertCatalogPublic(t, missing.Body.Bytes())
++}
++
++func assertCatalogPublic(t *testing.T, raw []byte) {
++	t.Helper()
++	faulttest.RefuseLeak(t, raw, "SECRET-CATALOG-73019", "catalog-probe", "untrusted")
+ 	var problem map[string]string
+-	if err := json.Unmarshal(missing.Body.Bytes(), &problem); err != nil {
++	if err := json.Unmarshal(raw, &problem); err != nil {
+ 		t.Fatalf("decode missing product fault: %v", err)
+ 		return
+ 	}

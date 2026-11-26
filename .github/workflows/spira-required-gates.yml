@@ -79,6 +79,9 @@ jobs:
         working-directory: logos
         run: |
           set -euo pipefail
+          export GOENV=off GOCACHEPROG=''
+          go env GOENV GOCACHEPROG > "$GITHUB_WORKSPACE/evidence/bootstrap-cache-environment.txt"
+          test -z "$(go env GOCACHEPROG)"
           test "$(git rev-parse HEAD)" = 2cfe17218b4d3311c5746b94a1858bf3fe9a3e45
           git rev-parse HEAD > "$GITHUB_WORKSPACE/evidence/logos-source.txt"
           git rev-parse HEAD^{tree} >> "$GITHUB_WORKSPACE/evidence/logos-source.txt"
@@ -95,6 +98,9 @@ jobs:
         working-directory: spira
         run: |
           set -euo pipefail
+          export GOENV=off GOCACHEPROG=''
+          "$LOGOS_ROOT/bin/go" env GOENV GOCACHEPROG > "$GITHUB_WORKSPACE/evidence/gate-cache-environment.txt"
+          test -z "$("$LOGOS_ROOT/bin/go" env GOCACHEPROG)"
           GOROOT="$LOGOS_ROOT" uv run --no-project --python 3.13 ../probe/ci-tools/spira-batch-gates.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: ${{ !cancelled() }}
