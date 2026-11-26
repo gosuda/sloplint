@@ -1,26 +1,30 @@
 {
-  "label": "elegant-mermaid-26",
+  "label": "elegant-mermaid-review-followup",
   "repository": "gosuda/elegant-mermaid",
-  "number": 26,
-  "head": "3d6bc75bf7f4c00f9a587727c1d8748894524520",
-  "branch": "deps/upgrade-2026-11-26",
+  "source_pr": 26,
+  "head": "afa5a631ec41cb1e9aa0634b2d547d084bd27e33",
+  "branch": "fix/ci-oracle-review-followup-20261126",
   "base_ref": "main",
-  "base_sha": "277e83b2e3d80c14f75334869b86a607c7ab3ffd",
-  "tree": "b26bf5201c63aa992f7054373a57c6ba19384ae8",
-  "patch": "remaining-elegant26-v5.patch",
-  "patch_sha256": "af9bcb0a88f14d1b8e9e605e8535125ec5eb4cf296ac926f32b0672e5c3cd954",
+  "base_sha": "afa5a631ec41cb1e9aa0634b2d547d084bd27e33",
+  "tree": "895ecf3c8bf8ce800a8db523bb9cf24351f0affc",
+  "patch": "remaining-elegant-followup.patch",
+  "patch_sha256": "8c724083d103a535844d39ce33f15d2fc618dfbaae37a6a2a405e75f28f8afd9",
   "files": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "45853fba5193b574d9aa8e8beb2919c947a49304a2390e402cb76e5341a92a8e"
-    },
-    {
-      "path": ".github/workflows/verify.yml",
-      "sha256": "0deda453776b855b53d41ce26bbad808a0938743bf162d62394e4baf8ba7ebd3"
+      "sha256": "598402782eb0042b29a8fc07374b4cf3fd85ec4dd8f94cb84e61a082904cb52a"
     },
     {
       "path": ".github/workflows/pages.yml",
-      "sha256": "9c17d08c902b3583504badb742687431c7c829ad10f3059f4fad78994e550e28"
+      "sha256": "919a121ab33d1e1029b6717c55903c2c64ca8e071bb939c5c67c85e5979eef7a"
+    },
+    {
+      "path": ".github/workflows/verify.yml",
+      "sha256": "dbe8a4a478706a505bed30da4384c741de5f236348c0c58de76947abed8f4591"
+    },
+    {
+      "path": ".depot/workflows/ci.yml",
+      "sha256": "b380249666756334b584823a668d06d2770db7ec18f4b32e0d9c20e568fe7661"
     },
     {
       "path": "tools/upstream-oracle/package.json",
@@ -29,14 +33,6 @@
     {
       "path": "tools/upstream-oracle/pnpm-lock.yaml",
       "sha256": "f68a71acf5642257fc93b93fbd2de766ba51a2d136dbb49d4bf5a30b7e076252"
-    },
-    {
-      "path": "crates/elegant-mermaid-cli/src/render/markdown/links.rs",
-      "sha256": "836afa9171a24d684565af1f3253736eb41592af2dae13f85cea06f8c92aa6ef"
-    },
-    {
-      "path": "playground/src/routes/+page.svelte",
-      "sha256": "eada892ac2338bece4a881a7e6935dc373d3f9c793e205e6c96d8336ad5877b0"
     }
   ]
 }

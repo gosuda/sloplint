@@ -79,7 +79,7 @@ def main() -> int:
     config.write_text("self-hosted-runner:\n  labels: [depot-ubuntu-24.04, depot-ubuntu-24.04-8, depot-windows-2025]\n")
     if mode == "full":
         commands = (
-            ("workflow-lint", ["go", "run", "github.com/rhysd/actionlint/cmd/actionlint@v1.7.7", "-config-file", str(config), "-shellcheck=", "-pyflakes=", ".github/workflows/ci.yml", ".github/workflows/verify.yml", ".github/workflows/pages.yml"]),
+            ("workflow-lint", ["go", "run", "github.com/rhysd/actionlint/cmd/actionlint@v1.7.7", "-config-file", str(config), "-shellcheck=", "-pyflakes=", ".github/workflows/ci.yml", ".github/workflows/verify.yml", ".github/workflows/pages.yml", ".depot/workflows/ci.yml"]),
             ("gen-check", ["just", "gen-check"]),
             ("go-check", ["just", "go-check"]),
             ("rust-check", ["just", "rust-check"]),
