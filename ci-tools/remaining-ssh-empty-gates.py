@@ -48,8 +48,8 @@ def control(path: str, edits: list[list[str]], test: str, marker: str, name: str
     try:
         source.write_text(text)
         code = run(["go", "test", "-count=1", "-timeout", "120s", "-run", test, package], name)
-        log = (EVIDENCE / f"{name}.log").read_text()
-        expected = code != 0 and code != 124 and marker in log
+        log = (EVIDENCE / f"{name}.log").read_bytes()
+        expected = code != 0 and code != 124 and marker.encode("utf-8") in log
         return {"observed_exit": code, "expected_rejection": 0 if expected else 1}
     finally:
         source.write_bytes(original)
