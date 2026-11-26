@@ -50,7 +50,10 @@ def run(name: str, args: list[str], expected: int = 0, cwd: Path = SOURCE, limit
                     "seconds": time.monotonic() - started, "timed_out": timed_out,
                     "log_sha256": hashlib.sha256(text.encode()).hexdigest()})
     (EVIDENCE / "results.json").write_text(json.dumps({"manifest": MANIFEST, "results": RESULTS}, indent=2) + "\n")
-    print(f"PROBE_EXIT {name} {process.returncode} timed_out={timed_out}\n{text[-25000:]}", flush=True)
+    preview = text[-25000:]
+    if process.returncode != expected and len(text) > 25000:
+        preview = text[:12000] + "\nOUTPUT_MIDDLE_OMITTED; complete log preserved in artifact\n" + preview
+    print(f"PROBE_EXIT {name} {process.returncode} timed_out={timed_out}\n{preview}", flush=True)
     assert not timed_out and process.returncode == expected, (name, process.returncode, expected, timed_out)
     return text
 
@@ -222,44 +225,69 @@ def baseline_queries() -> dict[str, list[str]]:
     assert len([line for line in results["legacy"] if line.startswith("PUBLIC_QUERY_ROW ")]) == 370
     return results
 
-def original_context_tests() -> None:
-    module_file = SOURCE / "crates/sloplint-syntax/tests/grammar_gaps.rs"
-    path = SOURCE / "crates/sloplint-syntax/tests/grammar_gaps/powershell_context_boundaries.rs"
-    anchor = '#[path = "grammar_gaps/powershell.rs"]\nmod powershell;\n'
-    declaration = '#[path = "grammar_gaps/powershell_context_boundaries.rs"]\nmod powershell_context_boundaries;\n'
-    regression = (PROOF / "context-regressions.rs").read_bytes()
-    snapshots = [
-        ("current", str(MANIFEST["base"]), str(MANIFEST["base_tree"]), 101),
-        ("previous", "3071f522049cbe2d440bc68ca20e8887fdbdaa9a", "171bbe1c7137faf98fb7981f69288120cd18bdf6", 0),
-    ]
-    for label, head, tree, expected in snapshots:
-        if label == "previous":
-            run("previous-source-fetch", ["git", "fetch", "--depth=1", "origin", head])
-            run("previous-source-checkout", ["git", "checkout", "--detach", head])
-        identity = unchanged_snapshot(head, tree)
-        original = module_file.read_bytes()
-        assert not path.exists()
-        try:
-            text = original.decode()
-            assert text.count(anchor) == 1
-            module_file.write_text(text.replace(anchor, anchor + declaration))
-            path.write_bytes(regression)
-            run(label + "-context-format", ["cargo", "fmt", "--all"])
-            print("NARROW_CONTEXT_TEST_SOURCE " + json.dumps({"label": label, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "content": path.read_text()}), flush=True)
-            args = ["cargo", "test", "--locked", "-p", "sloplint-syntax", "--test", "grammar_gaps"]
-            run(label + "-context-tests-compile", [*args, "--no-run"])
-            run(label + "-indented-dash-witness", [*args, "powershell_context_boundaries::indented_bare_dashes_follow_separated_line_continuations", "--", "--exact", "--nocapture"], expected=expected)
-            if label == "current":
-                for control in ("owned_branches_keep_public_fields_and_keyword_ranges", "mixed_native_spaces_keep_a_single_separator", "mixed_case_branches_keep_their_native_ownership"):
-                    run("current-control-" + control, [*args, "powershell_context_boundaries::" + control, "--", "--exact", "--nocapture"])
-        finally:
-            module_file.write_bytes(original)
-            path.unlink()
-            assert unchanged_snapshot(head, tree) == identity
-    run("restore-maintained-source", ["git", "checkout", "--detach", str(MANIFEST["base"])])
-    unchanged_snapshot(str(MANIFEST["base"]), str(MANIFEST["base_tree"]))
-    output(["git", "read-tree", "HEAD"], env=INDEX_ENVIRONMENT)
-    full_identity(str(MANIFEST["base_tree"]), set())
+def verify_frozen_context_tests() -> None:
+    receipt = json.loads((PROOF / "prior-preparation-receipt.json").read_text())
+    assert receipt["source_base"] == MANIFEST["base"] and receipt["source_tree"] == MANIFEST["base_tree"]
+    assert hashlib.sha256((PROOF / "context-regressions.rs").read_bytes()).hexdigest() == receipt["regression_source_sha256"]
+    archives = [path for path in (EVIDENCE / "prior-preparation").rglob("*") if path.is_file() and zipfile.is_zipfile(path)]
+    assert len(archives) == 1
+    archive = archives[0]
+    assert hashlib.sha256(archive.read_bytes()).hexdigest() == receipt["zip_sha256"]
+    with zipfile.ZipFile(archive) as handle:
+        def read_member(name: str) -> bytes:
+            matches = [member for member in handle.namelist() if Path(member).name == name]
+            assert len(matches) == 1, (name, matches)
+            return handle.read(matches[0])
+        saved = json.loads(read_member("results.json"))
+        assert saved["manifest"]["base"] == MANIFEST["base"]
+        assert saved["manifest"]["base_tree"] == MANIFEST["base_tree"]
+        for name in ("context-regressions.rs", "context-cases.json", "context-oracle.ps1", "context-native-expected.json"):
+            assert saved["manifest"]["proof_sha256"][name] == MANIFEST["proof_sha256"][name], name
+        wanted = {
+            "current-context-tests-compile": 0,
+            "current-indented-dash-witness": 101,
+            "current-control-owned_branches_keep_public_fields_and_keyword_ranges": 0,
+            "current-control-mixed_native_spaces_keep_a_single_separator": 0,
+            "current-control-mixed_case_branches_keep_their_native_ownership": 0,
+            "previous-context-tests-compile": 0,
+            "previous-indented-dash-witness": 0,
+        }
+        frozen = {}
+        for name, expected in wanted.items():
+            result = next(item for item in saved["results"] if item["name"] == name)
+            assert result["exit"] == result["expected"] == expected and not result["timed_out"], result
+            content = read_member(name + ".log")
+            assert hashlib.sha256(content).hexdigest() == result["log_sha256"], name
+            text = content.decode()
+            if not name.endswith("-compile"):
+                assert "running 1 test" in text, name
+                assert ("test result: FAILED. 0 passed; 1 failed;" if expected else "test result: ok. 1 passed; 0 failed;") in text, name
+            frozen[name] = result
+            if name == "previous-indented-dash-witness":
+                observed = re.findall(r"NATIVE_CONTINUED_DASH_CASE ([^\s]+) (\d+)", text)
+                cases = json.loads((PROOF / "context-cases.json").read_text())
+                expected_ids = {case["id"] for case in cases if case["id"].startswith("continued-") and "-none-" not in case["id"]}
+                assert len(observed) == len(expected_ids) == 96
+                assert {identifier for identifier, _ in observed} == expected_ids
+                assert all(count == "3" for _, count in observed)
+        failed = next(item for item in saved["results"] if item["name"] == "separator-context-powershell-regressions")
+        failure_log = read_member("separator-context-powershell-regressions.log")
+        assert hashlib.sha256(failure_log).hexdigest() == failed["log_sha256"]
+        (EVIDENCE / "rejected-separator-experiment.log").write_bytes(failure_log)
+        print("REJECTED_SEPARATOR_EXPERIMENT " + json.dumps(receipt["source_failure"]) + "\n" + failure_log.decode()[:14000], flush=True)
+    restored = receipt["restored_snapshots"]
+    for head, tree, count in [
+        (str(MANIFEST["base"]), str(MANIFEST["base_tree"]), 4905),
+        ("3071f522049cbe2d440bc68ca20e8887fdbdaa9a", "171bbe1c7137faf98fb7981f69288120cd18bdf6", 4902),
+    ]:
+        assert len([snapshot for snapshot in restored if snapshot["head"] == head and snapshot["tree"] == tree and snapshot["tracked_blobs"] == count]) >= 2
+    identity = unchanged_snapshot(str(MANIFEST["base"]), str(MANIFEST["base_tree"]))
+    assert identity in restored
+    record = {"producer": receipt["producer"], "run": receipt["run"], "job": receipt["job"],
+              "artifact": receipt["artifact"], "zip_sha256": receipt["zip_sha256"],
+              "formatted_test_sha256": receipt["formatted_regression_sha256"], "results": frozen, "restored_sources": restored}
+    (EVIDENCE / "reused-context-baseline.json").write_text(json.dumps(record, indent=2) + "\n")
+    print("VERIFIED_REUSED_CONTEXT_BASELINE " + json.dumps(record, sort_keys=True), flush=True)
 
 def context_spans(kind: str, content: str, tree: str) -> list[str]:
     encoded = content.encode()
@@ -412,7 +440,7 @@ def prepare() -> None:
     binary = tree_sitter()
     native_oracles()
     queries = baseline_queries()
-    original_context_tests()
+    verify_frozen_context_tests()
     controls = json.loads((PROOF / "near-controls.json").read_text())
     control_root = EVIDENCE / "near-controls"
     control_root.mkdir()
@@ -478,6 +506,10 @@ def prepare() -> None:
         if name == "conditional-context":
             context_parsers(binary, name, branch_only=True)
         run(name + "-format", ["cargo", "fmt", "--all"])
+        if name == "separator-context":
+            baseline = json.loads((PROOF / "prior-preparation-receipt.json").read_text())
+            test_file = SOURCE / "crates/sloplint-syntax/tests/grammar_gaps/powershell_context_boundaries.rs"
+            assert hashlib.sha256(test_file.read_bytes()).hexdigest() == baseline["formatted_regression_sha256"]
         changed = set(output(["git", "diff", "--name-only"]).splitlines())
         changed.update(output(["git", "ls-files", "--others", "--exclude-standard"]).splitlines())
         assert changed <= allowed | generated, sorted(changed - allowed - generated)

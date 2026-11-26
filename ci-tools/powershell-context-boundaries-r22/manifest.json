@@ -39,7 +39,7 @@
   "source_review": {
     "proposal": "803f218dff4427fdb70f38a7ff1c125b9f9e23b9",
     "conditional_and_docs": "Parent independently reviewed exact source hashes and found no design blocker; all native/source gates remain required.",
-    "separator": "Independent reviewer approved the disjoint legacy/native-space split as a first experiment, requiring exact old query spans and an additional mixed-space control."
+    "separator": "Disjoint separator alternative experiment was rejected by three frozen regressions. The next experiment assigns whitespace lexical precedence2, preserving the single repeat and all literal names; all original query and native controls remain required."
   },
   "context_native_cases": 448,
   "context_required_parser_cases": 432,
@@ -90,8 +90,8 @@
     "token-parser-cases.json": "6ed75b48d91d1d1a2c8221c43896caacde3de402cb0181a9347eb424aecda024",
     "terminator-parser-cases.json": "c096a8ff4c56af01fa66883d4948ebe2e38cbac0a919b6a2f12fe9db4b0e2da8",
     "terminator-native-expected.json": "35b2e3bb17ded486a61dd72f67ce56d4537ef86f89725cab9f768985412d862f",
-    "verify.py": "6ebfabf4e471c8abdc59ae9d891524b60a40f805e943ddc72f28fb17c4917326",
-    "authored-stages.json": "49d7ed398cb9cb16e7ee43face3c3b24b44a175ff16a28455047ab5034333548",
+    "verify.py": "617dd59b4d0839da1a244eeb00f91be5e8fbc6e346833d51d8646a02eb4548f4",
+    "authored-stages.json": "3613e7cc17a359bdcc384ce483edb393b12945a671ec69c6acfe70b75f2e4817",
     "followup-cases.json": "13d35c2437eafe38a219e8548a820718cb58d1744bf4c827d6bf45a8c5ea297c",
     "followup-oracle.ps1": "2166f6d4bab520ac415791d21f1d775075734068cd6eb9866aed511da7e44b15",
     "followup-native-expected.json": "259320f0032660df9dc29d20c705e30c3f32990113d2b00203b6775a96b6fa22",
@@ -103,6 +103,32 @@
     "context-baseline-receipt.json": "fdf219cf90b84f3c060896ca6e64e90e374f4d96f837468a955bf2c609bd738e",
     "context-regressions.rs": "a8ac4a4b24213ae997ab9a39be8d6da88b36ccb14bdb9a018c23ee7f507b5aae",
     "context-observer.rs": "5d05d0407041286ff67e72994ca15e540cdd430eb4df0e79ea4cde990af29cb3",
-    "context-original-observations.json": "2c74cf462dc682cf831247dc0c079902c0d87868aeff7dc5b226c20b59bf9114"
+    "context-original-observations.json": "2c74cf462dc682cf831247dc0c079902c0d87868aeff7dc5b226c20b59bf9114",
+    "prior-preparation-receipt.json": "8ac4b7a8cc824b555d6734343e3e9b73aa3b9b1f86c92a8a0f17512542790782"
+  },
+  "rejected_separator_experiment": {
+    "producer": "676b22c83d7274e51e66cc02a8812d9c184a7332",
+    "run": 45892216991,
+    "job": 140157372158,
+    "artifact": 15151539335,
+    "zip_sha256": "d9a0accdbeacd7968660c37d7ba62d771eaa4e3429caccadc96113f7b8a3b338",
+    "phase": "separator-context-powershell-regressions",
+    "exit": 101,
+    "failed_tests": [
+      "indented_bare_dashes_follow_separated_line_continuations",
+      "legacy_redirect_targets_keep_spacing_outside_the_word",
+      "spaced_dash_redirection_retains_its_legacy_separator_capture"
+    ],
+    "passed": 105,
+    "notes": "The disjoint separator alternatives preserved the mixed-space control but did not fix the three boundary regressions. Conditional guard stage passed 258 native cases, all focused PowerShell tests, corpus/generation, and exact source checks. Full x64/ARM64/lint jobs were skipped."
+  },
+  "baseline_reuse": {
+    "producer": "676b22c83d7274e51e66cc02a8812d9c184a7332",
+    "run": 45892216991,
+    "artifact": 15151539335,
+    "zip_sha256": "d9a0accdbeacd7968660c37d7ba62d771eaa4e3429caccadc96113f7b8a3b338",
+    "regression_source_sha256": "a8ac4a4b24213ae997ab9a39be8d6da88b36ccb14bdb9a018c23ee7f507b5aae",
+    "formatted_regression_sha256": "c77753c041f18f4b22bcd6bdca25d121003640dd7ba73810dce6631c77e8639f",
+    "scope": "Only identical frozen baseline compilations/current RED/previous96-case GREEN and current public range controls are reused; their ZIP, log hashes, test bytes, one-test counts and restored source identities are all checked. Candidate source gates still run."
   }
 }

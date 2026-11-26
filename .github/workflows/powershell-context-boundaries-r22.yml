@@ -45,6 +45,14 @@ jobs:
           run-id: 45888591536
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/powershell-context-boundaries-r22/baseline
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          artifact-ids: 15151539335
+          skip-decompress: true
+          digest-mismatch: error
+          run-id: 45892216991
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/powershell-context-boundaries-r22/prior-preparation
       - name: Generate exact staged candidates and compare native semantics
         id: prepare
         run: uv run --no-project --python 3.15 proof/ci-tools/powershell-context-boundaries-r22/verify.py prepare

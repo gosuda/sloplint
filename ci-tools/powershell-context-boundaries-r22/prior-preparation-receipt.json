@@ -1,0 +1,60 @@
+{
+  "producer": "676b22c83d7274e51e66cc02a8812d9c184a7332",
+  "run": 45892216991,
+  "job": 140157372158,
+  "artifact": 15151539335,
+  "zip_sha256": "d9a0accdbeacd7968660c37d7ba62d771eaa4e3429caccadc96113f7b8a3b338",
+  "job_log_sha256": "c42cb9668c0b1a4fd5815fac4d6d072cf5ba351a0b44a53818071bf5d53166ea",
+  "source_base": "83f73f04e7f20bf405dbf4c2de3bd5467c8010bb",
+  "source_tree": "703b3a5a445883598bfb7ef05c263a76d6629235",
+  "regression_source_sha256": "a8ac4a4b24213ae997ab9a39be8d6da88b36ccb14bdb9a018c23ee7f507b5aae",
+  "formatted_regression_sha256": "c77753c041f18f4b22bcd6bdca25d121003640dd7ba73810dce6631c77e8639f",
+  "restored_snapshots": [
+    {
+      "head": "83f73f04e7f20bf405dbf4c2de3bd5467c8010bb",
+      "index_sha256": "6d1356e9a95311d7f8447e4b31e41b60047cd08580cf9a966c99c4d1a3a983eb",
+      "tracked_blobs": 4905,
+      "tree": "703b3a5a445883598bfb7ef05c263a76d6629235"
+    },
+    {
+      "head": "83f73f04e7f20bf405dbf4c2de3bd5467c8010bb",
+      "index_sha256": "6d1356e9a95311d7f8447e4b31e41b60047cd08580cf9a966c99c4d1a3a983eb",
+      "tracked_blobs": 4905,
+      "tree": "703b3a5a445883598bfb7ef05c263a76d6629235"
+    },
+    {
+      "head": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+      "index_sha256": "2efe050e2dc0c875054b046b8cb1b4aa57da1775ca81c0681e9f3ead00061b99",
+      "tracked_blobs": 4902,
+      "tree": "171bbe1c7137faf98fb7981f69288120cd18bdf6"
+    },
+    {
+      "head": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+      "index_sha256": "2efe050e2dc0c875054b046b8cb1b4aa57da1775ca81c0681e9f3ead00061b99",
+      "tracked_blobs": 4902,
+      "tree": "171bbe1c7137faf98fb7981f69288120cd18bdf6"
+    },
+    {
+      "head": "83f73f04e7f20bf405dbf4c2de3bd5467c8010bb",
+      "index_sha256": "6d1356e9a95311d7f8447e4b31e41b60047cd08580cf9a966c99c4d1a3a983eb",
+      "tracked_blobs": 4905,
+      "tree": "703b3a5a445883598bfb7ef05c263a76d6629235"
+    }
+  ],
+  "source_failure": {
+    "producer": "676b22c83d7274e51e66cc02a8812d9c184a7332",
+    "run": 45892216991,
+    "job": 140157372158,
+    "artifact": 15151539335,
+    "zip_sha256": "d9a0accdbeacd7968660c37d7ba62d771eaa4e3429caccadc96113f7b8a3b338",
+    "phase": "separator-context-powershell-regressions",
+    "exit": 101,
+    "failed_tests": [
+      "indented_bare_dashes_follow_separated_line_continuations",
+      "legacy_redirect_targets_keep_spacing_outside_the_word",
+      "spaced_dash_redirection_retains_its_legacy_separator_capture"
+    ],
+    "passed": 105,
+    "notes": "The disjoint separator alternatives preserved the mixed-space control but did not fix the three boundary regressions. Conditional guard stage passed 258 native cases, all focused PowerShell tests, corpus/generation, and exact source checks. Full x64/ARM64/lint jobs were skipped."
+  }
+}
