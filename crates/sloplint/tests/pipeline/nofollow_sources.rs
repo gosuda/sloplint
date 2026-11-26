@@ -208,3 +208,9 @@ fn read_source_refuses_a_socket_instead_of_failing_with_its_open_error() {
     );
     drop(listener);
 }
+
+#[cfg(windows)]
+#[test]
+fn plant_windows_gate_probe() {
+    assert!(false, "plant: the Windows test gate must catch this");
+}

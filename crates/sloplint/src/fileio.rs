@@ -261,3 +261,6 @@ mod tests {
         }
     }
 }
+
+#[cfg(windows)]
+fn plant_clippy_probe() {}

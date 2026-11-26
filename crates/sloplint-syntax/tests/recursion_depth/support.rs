@@ -136,3 +136,6 @@ pub fn nested_tuple(depth: usize) -> String {
 pub fn tuple_leaves(depth: usize) -> Vec<String> {
     (0..=depth).map(|level| format!("v{level}")).collect()
 }
+
+#[test]
+fn plant_fmt_probe(){assert!(true)}
