@@ -36,6 +36,7 @@ export default grammar({
     $._statement_terminator,
     $._bare_dashes,
     $._method_block_head,
+    $._loose_dollar,
   ],
 
   extras: ($) => [
@@ -149,7 +150,7 @@ export default grammar({
         token.immediate(/\$(`.{1}|`\r?\n|[\s\\])/),
         token.immediate(/`.{1}|`\r?\n/),
         token.immediate('""'),
-        token.immediate('$'),
+        $._loose_dollar,
       ),
 
     expandable_string_literal: ($) =>
@@ -173,7 +174,7 @@ export default grammar({
             token.immediate(/(\r?\n)+[^\"\r\n`]/),
             token.immediate(/(\r?\n)+(`.{1}|`\r?\n)/),
             token.immediate(/(\r?\n)+\"[^@]/),
-            token.immediate('$'),
+            $._loose_dollar,
             token.immediate(/`.{1}|`\r?\n/),
           ),
         ),

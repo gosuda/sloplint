@@ -7,7 +7,8 @@
 enum TOKEN_TYPE {
     STATEMENT_TERMINATOR,
     BARE_DASHES,
-    METHOD_BLOCK_HEAD
+    METHOD_BLOCK_HEAD,
+    LOOSE_DOLLAR
 };
 
 /* --- API --- */
@@ -157,6 +158,27 @@ static bool scan_method_block_head(TSLexer *lexer)
     lexer->result_symbol = METHOD_BLOCK_HEAD;
     return true;
 }
+// sloplint: a lone `$` inside an expandable string, when it does not open
+// `${`, `$(` or a variable. The internal lexer cannot express `$` not
+// followed by `{` (no lookahead), so an external token covers the lone case.
+// `${name` without `}` and `${}` then have no valid token and raise an error
+// as PowerShell does. A `$` that could open a longer `$` token (variable,
+// sub-expression, `$` escape or `$` whitespace) is left to the internal lexer
+// so the longer match wins, as before.
+static bool scan_loose_dollar(void *payload, TSLexer *lexer, const bool *valid_symbols)
+{
+    if (!valid_symbols[LOOSE_DOLLAR]) return false;
+    if (lexer->lookahead != '$') return false;
+    lexer->advance(lexer, false);
+    int32_t next = lexer->lookahead;
+    if (next == '{' || next == '(') return false;
+    if (next == '$' || next == '^' || next == '?' || next == '`') return false;
+    if (next == '\\' || iswspace(next)) return false;
+    if (iswalnum(next) || next == '_') return false;
+    lexer->mark_end(lexer);
+    lexer->result_symbol = LOOSE_DOLLAR;
+    return true;
+}
 
 bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols)
 {
@@ -164,6 +186,7 @@ bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer,
         (lexer->lookahead == '.' || lexer->lookahead == ':')) {
         return scan_method_block_head(lexer);
     }
+    if (scan_loose_dollar(payload, lexer, valid_symbols)) return true;
     // The statement terminator consumes nothing, so it must be tried last: when
     // both are valid, a `--` has to win over the empty terminator.
     if (scan_bare_dashes(payload, lexer, valid_symbols)) return true;

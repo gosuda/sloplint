@@ -454,11 +454,8 @@
           }
         },
         {
-          "type": "IMMEDIATE_TOKEN",
-          "content": {
-            "type": "STRING",
-            "value": "$"
-          }
+          "type": "SYMBOL",
+          "name": "_loose_dollar"
         }
       ]
     },
@@ -534,11 +531,8 @@
                 }
               },
               {
-                "type": "IMMEDIATE_TOKEN",
-                "content": {
-                  "type": "STRING",
-                  "value": "$"
-                }
+                "type": "SYMBOL",
+                "name": "_loose_dollar"
               },
               {
                 "type": "IMMEDIATE_TOKEN",
@@ -7325,6 +7319,10 @@
     {
       "type": "SYMBOL",
       "name": "_method_block_head"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_loose_dollar"
     }
   ],
   "inline": [],
