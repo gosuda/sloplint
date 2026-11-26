@@ -1,0 +1,2882 @@
+diff --git a/middleware.go b/middleware.go
+--- a/middleware.go
++++ b/middleware.go
+@@ -1,360 +1,368 @@
+-package main
+-
+-import (
+-	"crypto/ecdsa"
+-	cryptorand "crypto/rand"
+-	"crypto/sha256"
+-	"crypto/tls"
+-	"crypto/x509"
+-	"encoding/binary"
+-	"encoding/pem"
+-	"errors"
+-	"fmt"
+-	"io"
+-	"math/rand"
+-	"net"
+-	"os"
+-	"strings"
+-	"sync"
+-	"time"
+-	"unicode"
+-
+-	"github.com/iwanhae/ssh-chat/chat"
+-	pb "github.com/iwanhae/ssh-chat/proto"
+-	"google.golang.org/grpc"
+-	"google.golang.org/grpc/codes"
+-	"google.golang.org/grpc/credentials"
+-	"google.golang.org/grpc/keepalive"
+-	"google.golang.org/grpc/peer"
+-	"google.golang.org/grpc/status"
+-)
+-
+-func loadClientPublicKey(path string) (*ecdsa.PublicKey, error) {
+-	data, err := os.ReadFile(path)
+-	if err != nil {
+-		return nil, fmt.Errorf("read client public key: %w", err)
+-	}
+-	block, _ := pem.Decode(data)
+-	if block == nil {
+-		return nil, errors.New("client public key is not PEM")
+-	}
+-	key, err := x509.ParsePKIXPublicKey(block.Bytes)
+-	if err != nil {
+-		return nil, fmt.Errorf("parse client public key: %w", err)
+-	}
+-	publicKey, ok := key.(*ecdsa.PublicKey)
+-	if !ok {
+-		return nil, errors.New("client public key must use ECDSA")
+-	}
+-	return publicKey, nil
+-}
+-
+-func authenticationDigest(ip string, timestamp int64) [32]byte {
+-	message := make([]byte, len(ip)+8)
+-	copy(message, ip)
+-	binary.BigEndian.PutUint64(message[len(ip):], uint64(timestamp))
+-	return sha256.Sum256(message)
+-}
+-
+-func verifySignature(publicKey *ecdsa.PublicKey, ip string, timestamp int64, signature []byte) error {
+-	now := time.Now().UnixMilli()
+-	if timestamp < now-60_000 || timestamp > now+60_000 {
+-		return errors.New("authentication timestamp is outside the one-minute window")
+-	}
+-	digest := authenticationDigest(ip, timestamp)
+-	if !ecdsa.VerifyASN1(publicKey, digest[:], signature) {
+-		return errors.New("authentication signature is invalid")
+-	}
+-	return nil
+-}
+-
+-type middlewareStream struct {
+-	messages chan *pb.ChatMessage
+-	overflow chan struct{}
+-}
+-
+-type replyState struct {
+-	id   string
+-	text string
+-}
+-
+-type gRPCServer struct {
+-	pb.UnimplementedStreamMiddlewareServer
+-	chatServer          *chat.ChatServer
+-	activeStreamMu      sync.Mutex
+-	activeStreams       map[string]*middlewareStream
+-	authMu              sync.Mutex
+-	usedAuthentications map[[32]byte]int64
+-	clientPubKey        *ecdsa.PublicKey
+-	authEnabled         bool
+-}
+-
+-func newGRPCServer(server *chat.ChatServer, authEnabled bool) (*gRPCServer, error) {
+-	service := &gRPCServer{
+-		chatServer:          server,
+-		activeStreams:       make(map[string]*middlewareStream),
+-		usedAuthentications: make(map[[32]byte]int64),
+-		authEnabled:         authEnabled,
+-	}
+-	if authEnabled {
+-		key, err := loadClientPublicKey("ai_grpc_client.pub")
+-		if err != nil {
+-			return nil, err
+-		}
+-		service.clientPubKey = key
+-	}
+-	return service, nil
+-}
+-
+-func (s *gRPCServer) authenticate(message *pb.AIResponse, clientIP string) error {
+-	if message.Ip == "" || message.AuthTimestamp == 0 || len(message.AuthSignature) == 0 {
+-		return status.Error(codes.Unauthenticated, "IP, timestamp, and signature are required")
+-	}
+-	ip := net.ParseIP(clientIP)
+-	if (ip == nil || !ip.IsLoopback()) && message.Ip != clientIP {
+-		return status.Error(codes.Unauthenticated, "signed IP does not match the peer")
+-	}
+-	if err := verifySignature(s.clientPubKey, message.Ip, message.AuthTimestamp, message.AuthSignature); err != nil {
+-		return status.Error(codes.Unauthenticated, err.Error())
+-	}
+-	digest := authenticationDigest(message.Ip, message.AuthTimestamp)
+-	s.authMu.Lock()
+-	defer s.authMu.Unlock()
+-	now := time.Now().UnixMilli()
+-	for token, expires := range s.usedAuthentications {
+-		if expires < now {
+-			delete(s.usedAuthentications, token)
+-		}
+-	}
+-	if _, exists := s.usedAuthentications[digest]; exists {
+-		return status.Error(codes.Unauthenticated, "authentication has already been used")
+-	}
+-	if len(s.usedAuthentications) >= 4096 {
+-		return status.Error(codes.ResourceExhausted, "authentication window is full")
+-	}
+-	s.usedAuthentications[digest] = message.AuthTimestamp + 60_000
+-	return nil
+-}
+-
+-// StreamChat owns its receive goroutine until the RPC context is canceled.
+-// A stream enters the broadcast map only after its required authentication.
+-func (s *gRPCServer) StreamChat(stream pb.StreamMiddleware_StreamChatServer) error {
+-	remote, ok := peer.FromContext(stream.Context())
+-	if !ok {
+-		return status.Error(codes.Unauthenticated, "missing peer address")
+-	}
+-	clientIP := remote.Addr.String()
+-	if host, _, err := net.SplitHostPort(clientIP); err == nil {
+-		clientIP = host
+-	}
+-	replies := make(map[string]replyState)
+-	if s.authEnabled {
+-		message, err := stream.Recv()
+-		if err != nil {
+-			return err
+-		}
+-		if err := s.authenticate(message, clientIP); err != nil {
+-			return err
+-		}
+-		if err := s.handleResponse(message, replies); err != nil {
+-			return err
+-		}
+-	}
+-	id := cryptorand.Text()
+-	subscription := &middlewareStream{messages: make(chan *pb.ChatMessage, 100), overflow: make(chan struct{})}
+-	s.activeStreamMu.Lock()
+-	s.activeStreams[id] = subscription
+-	s.activeStreamMu.Unlock()
+-	defer func() {
+-		s.activeStreamMu.Lock()
+-		delete(s.activeStreams, id)
+-		s.activeStreamMu.Unlock()
+-	}()
+-
+-	received := make(chan error, 1)
+-	go func() {
+-		for {
+-			message, err := stream.Recv()
+-			if errors.Is(err, io.EOF) {
+-				received <- nil
+-				return
+-			}
+-			if err != nil {
+-				received <- err
+-				return
+-			}
+-			if err := s.handleResponse(message, replies); err != nil {
+-				received <- err
+-				return
+-			}
+-		}
+-	}()
+-	for {
+-		select {
+-		case <-subscription.overflow:
+-			return status.Error(codes.ResourceExhausted, "middleware feed exceeded its queue; reconnect")
+-		case message := <-subscription.messages:
+-			if err := stream.Send(message); err != nil {
+-				return err
+-			}
+-		case err := <-received:
+-			if err != nil {
+-				return err
+-			}
+-			// A client may stop sending replies while it continues receiving chat.
+-			received = nil
+-		case <-stream.Context().Done():
+-			return stream.Context().Err()
+-		}
+-	}
+-}
+-
+-// Each RPC owns its reply map. Prompt IDs select replies within that RPC;
+-// generated storage IDs keep prompts and independent assistants distinct.
+-func (s *gRPCServer) handleResponse(message *pb.AIResponse, replies map[string]replyState) error {
+-	if message.MessageId == "" {
+-		return nil
+-	}
+-	reply, exists := replies[message.MessageId]
+-	if message.Text == "" {
+-		if message.IsFinal {
+-			delete(replies, message.MessageId)
+-		}
+-		return nil
+-	}
+-	if !exists && len(replies) >= 100 {
+-		return status.Error(codes.ResourceExhausted, "too many unfinished replies")
+-	}
+-	chunk := sanitizeReplyText(message.Text)
+-	if len(reply.text)+len(chunk) > 64*1024 {
+-		return status.Error(codes.ResourceExhausted, "reply exceeds 64 KiB")
+-	}
+-	text := reply.text + chunk
+-	if exists {
+-		updated, err := s.chatServer.UpdateMessage(reply.id, text)
+-		if err != nil {
+-			return err
+-		}
+-		if !updated {
+-			return status.Error(codes.NotFound, "reply is no longer in chat history")
+-		}
+-	} else {
+-		nick := sanitizeNickname(message.Nick)
+-		if nick == "" {
+-			nick = "AI"
+-		}
+-		stored, err := s.chatServer.AppendMessageWithID(chat.Message{
+-			Time: time.Now(), Nick: nick, Text: text, Color: 31 + rand.Intn(6),
+-		})
+-		if err != nil {
+-			return err
+-		}
+-		reply.id = stored.ID
+-	}
+-	reply.text = text
+-	if message.IsFinal {
+-		delete(replies, message.MessageId)
+-	} else {
+-		replies[message.MessageId] = reply
+-	}
+-	return nil
+-}
+-
+-func sanitizeReplyText(raw string) string {
+-	var text strings.Builder
+-	text.Grow(len(raw))
+-	for _, r := range raw {
+-		switch r {
+-		case '\r', '\n', '\t':
+-			text.WriteByte(' ')
+-		default:
+-			if unicode.IsPrint(r) {
+-				text.WriteRune(r)
+-			}
+-		}
+-	}
+-	return text.String()
+-}
+-
+-func (s *gRPCServer) BroadcastMessage(message chat.Message) {
+-	out := &pb.ChatMessage{
+-		MessageId: message.ID,
+-		Nick:      message.Nick,
+-		Text:      message.Text,
+-		Timestamp: message.Time.Unix(),
+-		Ip:        message.IP,
+-	}
+-	s.activeStreamMu.Lock()
+-	defer s.activeStreamMu.Unlock()
+-	for id, stream := range s.activeStreams {
+-		select {
+-		case stream.messages <- out:
+-		default:
+-			close(stream.overflow)
+-			delete(s.activeStreams, id)
+-		}
+-	}
+-}
+-
+-func startGRPCServer(server *chat.ChatServer, securityMode string, authEnabled bool, hostKeyPath string) (*grpc.Server, *gRPCServer, error) {
+-	if authEnabled && securityMode == "none" {
+-		return nil, nil, errors.New("signed middleware authentication requires TLS")
+-	}
+-	service, err := newGRPCServer(server, authEnabled)
+-	if err != nil {
+-		return nil, nil, err
+-	}
+-	options := []grpc.ServerOption{
+-		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+-			MinTime:             5 * time.Second,
+-			PermitWithoutStream: true,
+-		}),
+-		grpc.KeepaliveParams(keepalive.ServerParameters{
+-			MaxConnectionIdle: 9999 * time.Minute,
+-			Time:              30 * time.Second,
+-			Timeout:           10 * time.Second,
+-		}),
+-	}
+-	switch securityMode {
+-	case "none":
+-	case "tls", "mtls":
+-		certificate, err := tls.LoadX509KeyPair("grpc_server.cert", hostKeyPath)
+-		if err != nil {
+-			return nil, nil, fmt.Errorf("load gRPC certificate: %w", err)
+-		}
+-		config := &tls.Config{Certificates: []tls.Certificate{certificate}, MinVersion: tls.VersionTLS12}
+-		if securityMode == "mtls" {
+-			data, err := os.ReadFile("ai_grpc_client.ca.cert")
+-			if err != nil {
+-				return nil, nil, fmt.Errorf("read gRPC client CA: %w", err)
+-			}
+-			config.ClientCAs = x509.NewCertPool()
+-			if !config.ClientCAs.AppendCertsFromPEM(data) {
+-				return nil, nil, errors.New("gRPC client CA contains no certificate")
+-			}
+-			config.ClientAuth = tls.RequireAndVerifyClientCert
+-		}
+-		options = append(options, grpc.Creds(credentials.NewTLS(config)))
+-	default:
+-		return nil, nil, fmt.Errorf("invalid gRPC security mode %q; expected none, tls, or mtls", securityMode)
+-	}
+-	grpcServer := grpc.NewServer(options...)
+-	pb.RegisterStreamMiddlewareServer(grpcServer, service)
+-	return grpcServer, service, nil
+-}
+-
+-func stopGRPCServer(server *grpc.Server) {
+-	done := make(chan struct{})
+-	go func() {
+-		server.GracefulStop()
+-		close(done)
+-	}()
+-	timer := time.NewTimer(3 * time.Second)
+-	defer timer.Stop()
+-	select {
+-	case <-done:
+-	case <-timer.C:
+-		server.Stop()
+-		<-done
+-	}
+-}
++package main
++
++import (
++	"crypto/ecdsa"
++	cryptorand "crypto/rand"
++	"crypto/sha256"
++	"crypto/tls"
++	"crypto/x509"
++	"encoding/binary"
++	"encoding/pem"
++	"errors"
++	"fmt"
++	"io"
++	"math/rand"
++	"net"
++	"os"
++	"strings"
++	"sync"
++	"time"
++	"unicode"
++
++	"github.com/iwanhae/ssh-chat/chat"
++	pb "github.com/iwanhae/ssh-chat/proto"
++	"google.golang.org/grpc"
++	"google.golang.org/grpc/codes"
++	"google.golang.org/grpc/credentials"
++	"google.golang.org/grpc/keepalive"
++	"google.golang.org/grpc/peer"
++	"google.golang.org/grpc/status"
++)
++
++func loadClientPublicKey(path string) (*ecdsa.PublicKey, error) {
++	data, err := os.ReadFile(path)
++	if err != nil {
++		return nil, fmt.Errorf("read client public key: %w", err)
++	}
++	block, _ := pem.Decode(data)
++	if block == nil {
++		return nil, errors.New("client public key is not PEM")
++	}
++	key, err := x509.ParsePKIXPublicKey(block.Bytes)
++	if err != nil {
++		return nil, fmt.Errorf("parse client public key: %w", err)
++	}
++	publicKey, ok := key.(*ecdsa.PublicKey)
++	if !ok {
++		return nil, errors.New("client public key must use ECDSA")
++	}
++	return publicKey, nil
++}
++
++func authenticationDigest(ip string, timestamp int64) [32]byte {
++	message := make([]byte, len(ip)+8)
++	copy(message, ip)
++	binary.BigEndian.PutUint64(message[len(ip):], uint64(timestamp))
++	return sha256.Sum256(message)
++}
++
++func verifySignature(publicKey *ecdsa.PublicKey, ip string, timestamp int64, signature []byte) error {
++	now := time.Now().UnixMilli()
++	if timestamp < now-60_000 || timestamp > now+60_000 {
++		return errors.New("authentication timestamp is outside the one-minute window")
++	}
++	digest := authenticationDigest(ip, timestamp)
++	if !ecdsa.VerifyASN1(publicKey, digest[:], signature) {
++		return errors.New("authentication signature is invalid")
++	}
++	return nil
++}
++
++type middlewareStream struct {
++	messages chan *pb.ChatMessage
++	overflow chan struct{}
++}
++
++type replyState struct {
++	id   string
++	text string
++}
++
++type gRPCServer struct {
++	pb.UnimplementedStreamMiddlewareServer
++	chatServer          *chat.ChatServer
++	activeStreamMu      sync.Mutex
++	activeStreams       map[string]*middlewareStream
++	authMu              sync.Mutex
++	usedAuthentications map[[32]byte]int64
++	clientPubKey        *ecdsa.PublicKey
++	authEnabled         bool
++}
++
++func newGRPCServer(server *chat.ChatServer, authEnabled bool) (*gRPCServer, error) {
++	service := &gRPCServer{
++		chatServer:          server,
++		activeStreams:       make(map[string]*middlewareStream),
++		usedAuthentications: make(map[[32]byte]int64),
++		authEnabled:         authEnabled,
++	}
++	if authEnabled {
++		key, err := loadClientPublicKey("ai_grpc_client.pub")
++		if err != nil {
++			return nil, err
++		}
++		service.clientPubKey = key
++	}
++	return service, nil
++}
++
++func (s *gRPCServer) authenticate(message *pb.AIResponse, clientIP string) error {
++	if message.Ip == "" || message.AuthTimestamp == 0 || len(message.AuthSignature) == 0 {
++		return status.Error(codes.Unauthenticated, "IP, timestamp, and signature are required")
++	}
++	ip := net.ParseIP(clientIP)
++	if (ip == nil || !ip.IsLoopback()) && message.Ip != clientIP {
++		return status.Error(codes.Unauthenticated, "signed IP does not match the peer")
++	}
++	if err := verifySignature(s.clientPubKey, message.Ip, message.AuthTimestamp, message.AuthSignature); err != nil {
++		return status.Error(codes.Unauthenticated, err.Error())
++	}
++	digest := authenticationDigest(message.Ip, message.AuthTimestamp)
++	s.authMu.Lock()
++	defer s.authMu.Unlock()
++	now := time.Now().UnixMilli()
++	for token, expires := range s.usedAuthentications {
++		if expires < now {
++			delete(s.usedAuthentications, token)
++		}
++	}
++	if _, exists := s.usedAuthentications[digest]; exists {
++		return status.Error(codes.Unauthenticated, "authentication has already been used")
++	}
++	if len(s.usedAuthentications) >= 4096 {
++		return status.Error(codes.ResourceExhausted, "authentication window is full")
++	}
++	s.usedAuthentications[digest] = message.AuthTimestamp + 60_000
++	return nil
++}
++
++// StreamChat owns its receive goroutine until the RPC context is canceled.
++// A stream enters the broadcast map only after its required authentication.
++func (s *gRPCServer) StreamChat(stream pb.StreamMiddleware_StreamChatServer) error {
++	remote, ok := peer.FromContext(stream.Context())
++	if !ok {
++		return status.Error(codes.Unauthenticated, "missing peer address")
++	}
++	clientIP := remote.Addr.String()
++	if host, _, err := net.SplitHostPort(clientIP); err == nil {
++		clientIP = host
++	}
++	replies := make(map[string]replyState)
++	if s.authEnabled {
++		message, err := stream.Recv()
++		if err != nil {
++			return err
++		}
++		if err := s.authenticate(message, clientIP); err != nil {
++			return err
++		}
++		if err := s.handleResponse(message, replies); err != nil {
++			return err
++		}
++	}
++	id := cryptorand.Text()
++	subscription := &middlewareStream{messages: make(chan *pb.ChatMessage, 100), overflow: make(chan struct{})}
++	s.activeStreamMu.Lock()
++	s.activeStreams[id] = subscription
++	s.activeStreamMu.Unlock()
++	defer func() {
++		s.activeStreamMu.Lock()
++		delete(s.activeStreams, id)
++		s.activeStreamMu.Unlock()
++	}()
++
++	received := make(chan error, 1)
++	go func() {
++		for {
++			message, err := stream.Recv()
++			if errors.Is(err, io.EOF) {
++				received <- nil
++				return
++			}
++			if err != nil {
++				received <- err
++				return
++			}
++			if err := s.handleResponse(message, replies); err != nil {
++				received <- err
++				return
++			}
++		}
++	}()
++	for {
++		select {
++		case <-subscription.overflow:
++			return status.Error(codes.ResourceExhausted, "middleware feed exceeded its queue; reconnect")
++		case message := <-subscription.messages:
++			if err := stream.Send(message); err != nil {
++				return err
++			}
++		case err := <-received:
++			if err != nil {
++				return err
++			}
++			// A client may stop sending replies while it continues receiving chat.
++			received = nil
++		case <-stream.Context().Done():
++			return stream.Context().Err()
++		}
++	}
++}
++
++// Each RPC owns its reply map. Prompt IDs select replies within that RPC;
++// generated storage IDs keep prompts and independent assistants distinct.
++func (s *gRPCServer) handleResponse(message *pb.AIResponse, replies map[string]replyState) error {
++	switch message.Format {
++	case pb.ResponseFormat_SNAPSHOT, pb.ResponseFormat_DELTA:
++	default:
++		return status.Error(codes.InvalidArgument, "unknown response format")
++	}
++	if message.MessageId == "" {
++		return nil
++	}
++	reply, exists := replies[message.MessageId]
++	if message.Text == "" {
++		if message.IsFinal {
++			delete(replies, message.MessageId)
++		}
++		return nil
++	}
++	if !exists && !message.IsFinal && len(replies) >= 100 {
++		return status.Error(codes.ResourceExhausted, "too many unfinished replies")
++	}
++	text := sanitizeReplyText(message.Text)
++	if message.Format == pb.ResponseFormat_DELTA {
++		if len(reply.text)+len(text) > 64*1024 {
++			return status.Error(codes.ResourceExhausted, "reply exceeds 64 KiB")
++		}
++		text = reply.text + text
++	}
++	if len(text) > 64*1024 {
++		return status.Error(codes.ResourceExhausted, "reply exceeds 64 KiB")
++	}
++	if exists {
++		updated, err := s.chatServer.UpdateMessage(reply.id, text)
++		if err != nil {
++			return err
++		}
++		if !updated {
++			return status.Error(codes.NotFound, "reply is no longer in chat history")
++		}
++	} else {
++		nick := sanitizeNickname(message.Nick)
++		if nick == "" {
++			nick = "AI"
++		}
++		stored, err := s.chatServer.AppendMessageWithID(chat.Message{
++			Time: time.Now(), Nick: nick, Text: text, Color: 31 + rand.Intn(6),
++		})
++		if err != nil {
++			return err
++		}
++		reply.id = stored.ID
++	}
++	reply.text = text
++	if message.IsFinal {
++		delete(replies, message.MessageId)
++	} else {
++		replies[message.MessageId] = reply
++	}
++	return nil
++}
++
++func sanitizeReplyText(raw string) string {
++	var text strings.Builder
++	text.Grow(len(raw))
++	for _, r := range raw {
++		switch {
++		case unicode.IsGraphic(r) || r == '\u200c' || r == '\u200d':
++			text.WriteRune(r)
++		case unicode.IsSpace(r):
++			text.WriteByte(' ')
++		}
++	}
++	return text.String()
++}
++
++func (s *gRPCServer) BroadcastMessage(message chat.Message) {
++	out := &pb.ChatMessage{
++		MessageId: message.ID,
++		Nick:      message.Nick,
++		Text:      message.Text,
++		Timestamp: message.Time.Unix(),
++		Ip:        message.IP,
++	}
++	s.activeStreamMu.Lock()
++	defer s.activeStreamMu.Unlock()
++	for id, stream := range s.activeStreams {
++		select {
++		case stream.messages <- out:
++		default:
++			close(stream.overflow)
++			delete(s.activeStreams, id)
++		}
++	}
++}
++
++func startGRPCServer(server *chat.ChatServer, securityMode string, authEnabled bool, hostKeyPath string) (*grpc.Server, *gRPCServer, error) {
++	if authEnabled && securityMode == "none" {
++		return nil, nil, errors.New("signed middleware authentication requires TLS")
++	}
++	service, err := newGRPCServer(server, authEnabled)
++	if err != nil {
++		return nil, nil, err
++	}
++	options := []grpc.ServerOption{
++		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
++			MinTime:             5 * time.Second,
++			PermitWithoutStream: true,
++		}),
++		grpc.KeepaliveParams(keepalive.ServerParameters{
++			MaxConnectionIdle: 9999 * time.Minute,
++			Time:              30 * time.Second,
++			Timeout:           10 * time.Second,
++		}),
++	}
++	switch securityMode {
++	case "none":
++	case "tls", "mtls":
++		certificate, err := tls.LoadX509KeyPair("grpc_server.cert", hostKeyPath)
++		if err != nil {
++			return nil, nil, fmt.Errorf("load gRPC certificate: %w", err)
++		}
++		config := &tls.Config{Certificates: []tls.Certificate{certificate}, MinVersion: tls.VersionTLS12}
++		if securityMode == "mtls" {
++			data, err := os.ReadFile("ai_grpc_client.ca.cert")
++			if err != nil {
++				return nil, nil, fmt.Errorf("read gRPC client CA: %w", err)
++			}
++			config.ClientCAs = x509.NewCertPool()
++			if !config.ClientCAs.AppendCertsFromPEM(data) {
++				return nil, nil, errors.New("gRPC client CA contains no certificate")
++			}
++			config.ClientAuth = tls.RequireAndVerifyClientCert
++		}
++		options = append(options, grpc.Creds(credentials.NewTLS(config)))
++	default:
++		return nil, nil, fmt.Errorf("invalid gRPC security mode %q; expected none, tls, or mtls", securityMode)
++	}
++	grpcServer := grpc.NewServer(options...)
++	pb.RegisterStreamMiddlewareServer(grpcServer, service)
++	return grpcServer, service, nil
++}
++
++func stopGRPCServer(server *grpc.Server) {
++	done := make(chan struct{})
++	go func() {
++		server.GracefulStop()
++		close(done)
++	}()
++	timer := time.NewTimer(3 * time.Second)
++	defer timer.Stop()
++	select {
++	case <-done:
++	case <-timer.C:
++		server.Stop()
++		<-done
++	}
++}
+diff --git a/middleware_test.go b/middleware_test.go
+--- a/middleware_test.go
++++ b/middleware_test.go
+@@ -1,535 +1,663 @@
+-package main
+-
+-import (
+-	"bytes"
+-	"context"
+-	"crypto/ecdsa"
+-	"crypto/elliptic"
+-	"crypto/rand"
+-	"crypto/sha256"
+-	"crypto/tls"
+-	"crypto/x509"
+-	"encoding/binary"
+-	"encoding/pem"
+-	"math/big"
+-	"net"
+-	"os"
+-	"path/filepath"
+-	"strings"
+-	"testing"
+-	"time"
+-
+-	"github.com/iwanhae/ssh-chat/chat"
+-	pb "github.com/iwanhae/ssh-chat/proto"
+-	"google.golang.org/grpc"
+-	"google.golang.org/grpc/codes"
+-	"google.golang.org/grpc/credentials"
+-	"google.golang.org/grpc/credentials/insecure"
+-	"google.golang.org/grpc/status"
+-)
+-
+-func await(t *testing.T, condition func() bool) {
+-	t.Helper()
+-	deadline := time.NewTimer(5 * time.Second)
+-	defer deadline.Stop()
+-	tick := time.NewTicker(time.Millisecond)
+-	defer tick.Stop()
+-	for !condition() {
+-		select {
+-		case <-deadline.C:
+-			t.Fatal("condition did not become true within five seconds")
+-		case <-tick.C:
+-		}
+-	}
+-}
+-
+-func streamCount(service *gRPCServer) int {
+-	service.activeStreamMu.Lock()
+-	defer service.activeStreamMu.Unlock()
+-	return len(service.activeStreams)
+-}
+-
+-func startTestRPC(t *testing.T, server *grpc.Server, service *gRPCServer, transport credentials.TransportCredentials) pb.StreamMiddlewareClient {
+-	t.Helper()
+-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+-	if err != nil {
+-		t.Fatal(err)
+-	}
+-	stopped := make(chan error, 1)
+-	go func() { stopped <- server.Serve(listener) }()
+-	t.Cleanup(func() {
+-		server.Stop()
+-		select {
+-		case err := <-stopped:
+-			if err != nil {
+-				t.Error(err)
+-			}
+-		case <-time.After(5 * time.Second):
+-			t.Error("gRPC server did not stop")
+-		}
+-	})
+-	connection, err := grpc.NewClient(listener.Addr().String(), grpc.WithTransportCredentials(transport))
+-	if err != nil {
+-		t.Fatal(err)
+-	}
+-	t.Cleanup(func() {
+-		if err := connection.Close(); err != nil {
+-			t.Error(err)
+-		}
+-	})
+-	return pb.NewStreamMiddlewareClient(connection)
+-}
+-
+-func TestBidirectionalMessagesSurviveTheStorageRefactor(t *testing.T) {
+-	for _, kind := range []string{"memory", "sqlite"} {
+-		t.Run(kind, func(t *testing.T) {
+-			var store chat.MessageStore = chat.NewMemoryMessageStore()
+-			if kind == "sqlite" {
+-				var err error
+-				store, err = chat.NewSQLiteMessageStore(filepath.Join(t.TempDir(), "chat.db"))
+-				if err != nil {
+-					t.Fatal(err)
+-				}
+-			}
+-			core, err := chat.NewChatServer(store)
+-			if err != nil {
+-				t.Fatal(err)
+-			}
+-			t.Cleanup(func() {
+-				if err := core.Close(); err != nil {
+-					t.Error(err)
+-				}
+-			})
+-			server, service, err := startGRPCServer(core, "none", false, "unused")
+-			if err != nil {
+-				t.Fatal(err)
+-			}
+-			core.SetUserMessageHandler(service.BroadcastMessage)
+-			client := startTestRPC(t, server, service, insecure.NewCredentials())
+-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+-			defer cancel()
+-			stream, err := client.StreamChat(ctx)
+-			if err != nil {
+-				t.Fatal(err)
+-			}
+-			await(t, func() bool { return streamCount(service) == 1 })
+-			core.AppendUserMessage(chat.Message{Time: time.Now(), Nick: "reader", Text: "question", IP: "192.0.2.1", Color: 32})
+-			first, err := stream.Recv()
+-			if err != nil {
+-				t.Fatal(err)
+-			}
+-			if first.MessageId == "" || first.Nick != "reader" || first.Text != "question" || first.Ip != "192.0.2.1" {
+-				t.Fatalf("incorrect outbound message: %v", first)
+-			}
+-			if err := stream.Send(&pb.AIResponse{MessageId: first.MessageId, Nick: "Assistant", Text: "part\x1b"}); err != nil {
+-				t.Fatal(err)
+-			}
+-			replyID := ""
+-			await(t, func() bool {
+-				for _, m := range core.Messages() {
+-					if m.ID != first.MessageId && m.Nick == "Assistant" && m.Text == "part" {
+-						replyID = m.ID
+-						return true
+-					}
+-				}
+-				return false
+-			})
+-			if err := stream.Send(&pb.AIResponse{MessageId: first.MessageId, Text: " complete\nanswer\u009b", IsFinal: true}); err != nil {
+-				t.Fatal(err)
+-			}
+-			await(t, func() bool {
+-				for _, m := range core.Messages() {
+-					if m.ID == replyID && m.Text == "part complete answer" {
+-						return true
+-					}
+-				}
+-				return false
+-			})
+-			prompts, replies := 0, 0
+-			for _, message := range core.Messages() {
+-				if message.ID == first.MessageId {
+-					prompts++
+-					if message.Nick != "reader" || message.Text != "question" {
+-						t.Fatalf("prompt was overwritten: %+v", message)
+-					}
+-				}
+-				if message.Nick == "Assistant" {
+-					replies++
+-					if message.ID != replyID || message.Text != "part complete answer" {
+-						t.Fatalf("reply identity or incremental text changed: %+v", message)
+-					}
+-				}
+-			}
+-			if prompts != 1 || replies != 1 {
+-				t.Fatalf("prompt and reply must coexist exactly once: prompts=%d replies=%d", prompts, replies)
+-			}
+-			core.AppendSystemMessage("administration")
+-			core.AppendUserMessage(chat.Message{Time: time.Now(), Nick: "reader", Text: "next", Color: 32})
+-			next, err := stream.Recv()
+-			if err != nil {
+-				t.Fatal(err)
+-			}
+-			if next.Text != "next" || next.MessageId == first.MessageId {
+-				t.Fatalf("response loop or unstable ID: %v", next)
+-			}
+-			for _, nickname := range []string{"AI", "server"} {
+-				core.AppendUserMessage(chat.Message{Time: time.Now(), Nick: nickname, Text: "human", Color: 32})
+-				delivered, err := stream.Recv()
+-				if err != nil || delivered.GetNick() != nickname {
+-					t.Fatalf("user nickname was filtered: %q %v %v", nickname, delivered, err)
+-				}
+-			}
+-			if err := stream.CloseSend(); err != nil {
+-				t.Fatal(err)
+-			}
+-			type delivery struct {
+-				message *pb.ChatMessage
+-				err     error
+-			}
+-			pending := make(chan delivery, 1)
+-			go func() {
+-				message, err := stream.Recv()
+-				pending <- delivery{message: message, err: err}
+-			}()
+-			select {
+-			case early := <-pending:
+-				t.Fatalf("half-close ended the receive feed: %v", early.err)
+-			case <-time.After(50 * time.Millisecond):
+-			}
+-			core.AppendUserMessage(chat.Message{Time: time.Now(), Nick: "reader", Text: "after half-close", Color: 32})
+-			select {
+-			case delivered := <-pending:
+-				if delivered.err != nil || delivered.message.GetText() != "after half-close" {
+-					t.Fatalf("half-closed feed did not receive chat: %+v", delivered)
+-				}
+-			case <-time.After(5 * time.Second):
+-				t.Fatal("half-closed feed timed out")
+-			}
+-			cancel()
+-			await(t, func() bool { return streamCount(service) == 0 })
+-		})
+-	}
+-}
+-
+-func signAuthentication(t *testing.T, key *ecdsa.PrivateKey, ip string, timestamp int64) []byte {
+-	t.Helper()
+-	message := make([]byte, len(ip)+8)
+-	copy(message, ip)
+-	binary.BigEndian.PutUint64(message[len(ip):], uint64(timestamp))
+-	digest := sha256.Sum256(message)
+-	signature, err := ecdsa.SignASN1(rand.Reader, key, digest[:])
+-	if err != nil {
+-		t.Fatal(err)
+-	}
+-	return signature
+-}
+-
+-func TestAuthenticationPrecedesBroadcastRegistration(t *testing.T) {
+-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+-	if err != nil {
+-		t.Fatal(err)
+-	}
+-	core, err := chat.NewChatServer(chat.NewMemoryMessageStore())
+-	if err != nil {
+-		t.Fatal(err)
+-	}
+-	t.Cleanup(func() {
+-		if err := core.Close(); err != nil {
+-			t.Error(err)
+-		}
+-	})
+-	service := &gRPCServer{chatServer: core, activeStreams: make(map[string]*middlewareStream), usedAuthentications: make(map[[32]byte]int64), clientPubKey: &key.PublicKey, authEnabled: true}
+-	server := grpc.NewServer()
+-	pb.RegisterStreamMiddlewareServer(server, service)
+-	client := startTestRPC(t, server, service, insecure.NewCredentials())
+-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+-	defer cancel()
+-	invalid, err := client.StreamChat(ctx)
+-	if err != nil {
+-		t.Fatal(err)
+-	}
+-	if err := invalid.Send(&pb.AIResponse{Ip: "127.0.0.1", AuthTimestamp: time.Now().UnixMilli(), AuthSignature: []byte("invalid")}); err != nil {
+-		t.Fatal(err)
+-	}
+-	if _, err := invalid.Recv(); status.Code(err) != codes.Unauthenticated {
+-		t.Fatalf("invalid signature accepted: %v", err)
+-	}
+-	if streamCount(service) != 0 {
+-		t.Fatal("unauthenticated stream entered broadcast map")
+-	}
+-	valid, err := client.StreamChat(ctx)
+-	if err != nil {
+-		t.Fatal(err)
+-	}
+-	timestamp := time.Now().UnixMilli()
+-	signature := signAuthentication(t, key, "127.0.0.1", timestamp)
+-	if err := valid.Send(&pb.AIResponse{Ip: "127.0.0.1", AuthTimestamp: timestamp, AuthSignature: signature}); err != nil {
+-		t.Fatal(err)
+-	}
+-	await(t, func() bool { return streamCount(service) == 1 })
+-	duplicate, err := client.StreamChat(ctx)
+-	if err != nil {
+-		t.Fatal(err)
+-	}
+-	if err := duplicate.Send(&pb.AIResponse{Ip: "127.0.0.1", AuthTimestamp: timestamp, AuthSignature: signature}); err != nil {
+-		t.Fatal(err)
+-	}
+-	if _, err := duplicate.Recv(); status.Code(err) != codes.Unauthenticated {
+-		t.Fatalf("replayed authentication accepted: %v", err)
+-	}
+-	if streamCount(service) != 1 {
+-		t.Fatal("replayed stream entered broadcast map")
+-	}
+-	service.BroadcastMessage(chat.Message{ID: "authenticated", Time: time.Now(), Nick: "reader", Text: "visible"})
+-	got, err := valid.Recv()
+-	if err != nil || got.GetMessageId() != "authenticated" {
+-		t.Fatalf("authenticated delivery failed: %v %v", got, err)
+-	}
+-	old := timestamp - 120_000
+-	if err := verifySignature(&key.PublicKey, "127.0.0.1", old, signAuthentication(t, key, "127.0.0.1", old)); err == nil {
+-		t.Fatal("stale signature accepted")
+-	}
+-	if err := verifySignature(&key.PublicKey, "192.0.2.1", timestamp, signAuthentication(t, key, "127.0.0.1", timestamp)); err == nil {
+-		t.Fatal("signature for a different IP accepted")
+-	}
+-}
+-
+-func TestTLSModesAndCustomHostKey(t *testing.T) {
+-	t.Chdir(t.TempDir())
+-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+-	if err != nil {
+-		t.Fatal(err)
+-	}
+-	template := &x509.Certificate{
+-		SerialNumber: big.NewInt(1), NotBefore: time.Now().Add(-time.Minute), NotAfter: time.Now().Add(time.Hour),
+-		IsCA: true, BasicConstraintsValid: true, KeyUsage: x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature,
+-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+-		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+-	}
+-	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+-	if err != nil {
+-		t.Fatal(err)
+-	}
+-	certificatePEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
+-	privateDER, err := x509.MarshalECPrivateKey(key)
+-	if err != nil {
+-		t.Fatal(err)
+-	}
+-	if err := os.WriteFile("grpc_server.cert", certificatePEM, 0600); err != nil {
+-		t.Fatal(err)
+-	}
+-	if err := os.WriteFile("custom-host.key", pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: privateDER}), 0600); err != nil {
+-		t.Fatal(err)
+-	}
+-	if err := os.WriteFile("ai_grpc_client.ca.cert", certificatePEM, 0600); err != nil {
+-		t.Fatal(err)
+-	}
+-	roots := x509.NewCertPool()
+-	if !roots.AppendCertsFromPEM(certificatePEM) {
+-		t.Fatal("test certificate is invalid")
+-	}
+-	certificate, err := tls.LoadX509KeyPair("grpc_server.cert", "custom-host.key")
+-	if err != nil {
+-		t.Fatal(err)
+-	}
+-	for _, mode := range []string{"tls", "mtls"} {
+-		t.Run(mode, func(t *testing.T) {
+-			core, err := chat.NewChatServer(chat.NewMemoryMessageStore())
+-			if err != nil {
+-				t.Fatal(err)
+-			}
+-			t.Cleanup(func() {
+-				if err := core.Close(); err != nil {
+-					t.Error(err)
+-				}
+-			})
+-			server, service, err := startGRPCServer(core, mode, false, "custom-host.key")
+-			if err != nil {
+-				t.Fatal(err)
+-			}
+-			transport := credentials.NewTLS(&tls.Config{RootCAs: roots, Certificates: []tls.Certificate{certificate}, MinVersion: tls.VersionTLS12})
+-			client := startTestRPC(t, server, service, transport)
+-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+-			defer cancel()
+-			stream, err := client.StreamChat(ctx)
+-			if err != nil {
+-				t.Fatal(err)
+-			}
+-			await(t, func() bool { return streamCount(service) == 1 })
+-			service.BroadcastMessage(chat.Message{ID: "secure", Time: time.Now(), Nick: "reader", Text: "secured"})
+-			got, err := stream.Recv()
+-			if err != nil || got.GetMessageId() != "secure" {
+-				t.Fatalf("secure delivery failed: %v %v", got, err)
+-			}
+-		})
+-	}
+-}
+-
+-func TestCLIContainsBothSetsOfOptions(t *testing.T) {
+-	command := newRootCommand()
+-	for _, flag := range []string{"addr", "host-key", "max-per-ip", "shutdown-countdown", "db-path", "sqlite", "ssh-port", "grpc-port", "grpc-host", "grpc-security", "grpc-auth"} {
+-		if command.Flags().Lookup(flag) == nil {
+-			t.Fatalf("lost option --%s", flag)
+-		}
+-	}
+-	if grpcPort != "3333" || grpcHost != "127.0.0.1" || sshPort != "2222" || grpcSecurityMode != "none" || grpcAuthEnabled {
+-		t.Fatal("middleware defaults changed")
+-	}
+-	if got := sanitizeNickname("\x1breader\n"); got != "reader" {
+-		t.Fatalf("nickname sanitizer lost: %q", got)
+-	}
+-}
+-
+-func TestListenerCollisionDoesNotTouchHistory(t *testing.T) {
+-	for _, flag := range []string{"addr", "ssh-port"} {
+-		t.Run(flag, func(t *testing.T) {
+-			path := filepath.Join(t.TempDir(), "history.db")
+-			store, err := chat.NewSQLiteMessageStore(path)
+-			if err != nil {
+-				t.Fatal(err)
+-			}
+-			if err := store.Init(); err != nil {
+-				t.Fatal(err)
+-			}
+-			if err := store.AppendMessage(chat.Message{ID: "retained", Time: time.Now(), Nick: "reader", Text: "history", Color: 32}); err != nil {
+-				t.Fatal(err)
+-			}
+-			if err := store.Close(); err != nil {
+-				t.Fatal(err)
+-			}
+-			before, err := os.ReadFile(path)
+-			if err != nil {
+-				t.Fatal(err)
+-			}
+-			reservation, err := net.Listen("tcp", "127.0.0.1:0")
+-			if err != nil {
+-				t.Fatal(err)
+-			}
+-			address := reservation.Addr().String()
+-			_, port, err := net.SplitHostPort(address)
+-			if err != nil {
+-				t.Fatal(err)
+-			}
+-			if err := reservation.Close(); err != nil {
+-				t.Fatal(err)
+-			}
+-			command := newRootCommand()
+-			value := address
+-			if flag == "ssh-port" {
+-				value = port
+-			}
+-			command.SetArgs([]string{"--" + flag, value, "--grpc-port", port, "--sqlite", "--db-path", path})
+-			if err := command.Execute(); err == nil || !strings.Contains(err.Error(), "listen for gRPC middleware") {
+-				t.Fatalf("listener collision did not fail before server startup: %v", err)
+-			}
+-			after, err := os.ReadFile(path)
+-			if err != nil {
+-				t.Fatal(err)
+-			}
+-			if !bytes.Equal(before, after) {
+-				t.Fatal("listener collision changed chat history")
+-			}
+-			released, err := net.Listen("tcp", address)
+-			if err != nil {
+-				t.Fatalf("failed startup leaked SSH listener: %v", err)
+-			}
+-			if err := released.Close(); err != nil {
+-				t.Fatal(err)
+-			}
+-		})
+-	}
+-}
+-
+-func TestRemoteMiddlewareRequiresAuthenticatedTransport(t *testing.T) {
+-	for _, host := range []string{"0.0.0.0", "::", "192.0.2.1"} {
+-		for _, mode := range []string{"none", "tls"} {
+-			if _, err := middlewareAddress(host, "3333", mode, false); err == nil {
+-				t.Fatalf("unauthenticated remote middleware allowed: %s %s", host, mode)
+-			}
+-		}
+-		if _, err := middlewareAddress(host, "3333", "mtls", false); err != nil {
+-			t.Fatal(err)
+-		}
+-		if _, err := middlewareAddress(host, "3333", "tls", true); err != nil {
+-			t.Fatal(err)
+-		}
+-	}
+-	if address, err := middlewareAddress("127.0.0.1", "3333", "none", false); err != nil || address != "127.0.0.1:3333" {
+-		t.Fatalf("loopback default failed: %q %v", address, err)
+-	}
+-	if _, err := middlewareAddress("127.0.0.1", "3333", "none", true); err == nil {
+-		t.Fatal("signed authentication allowed without TLS")
+-	}
+-}
+-
+-func TestBroadcastOverflowClosesTheSubscriber(t *testing.T) {
+-	subscription := &middlewareStream{messages: make(chan *pb.ChatMessage, 1), overflow: make(chan struct{})}
+-	service := &gRPCServer{activeStreams: map[string]*middlewareStream{"slow": subscription}}
+-	service.BroadcastMessage(chat.Message{ID: "first", Nick: "reader", Text: "first"})
+-	service.BroadcastMessage(chat.Message{ID: "second", Nick: "reader", Text: "second"})
+-	select {
+-	case <-subscription.overflow:
+-	default:
+-		t.Fatal("queue overflow silently discarded a message")
+-	}
+-	if streamCount(service) != 0 {
+-		t.Fatal("overflowed subscriber remained registered")
+-	}
+-	if first := <-subscription.messages; first.GetMessageId() != "first" {
+-		t.Fatalf("queue overwrote an earlier message: %v", first)
+-	}
+-}
+-
+-func TestPromptIDsNeverBecomeReplyStorageIDs(t *testing.T) {
+-	for _, kind := range []string{"memory", "sqlite"} {
+-		t.Run(kind, func(t *testing.T) {
+-			var store chat.MessageStore = chat.NewMemoryMessageStore()
+-			if kind == "sqlite" {
+-				var err error
+-				store, err = chat.NewSQLiteMessageStore(filepath.Join(t.TempDir(), "chat.db"))
+-				if err != nil {
+-					t.Fatal(err)
+-				}
+-			}
+-			core, err := chat.NewChatServer(store)
+-			if err != nil {
+-				t.Fatal(err)
+-			}
+-			t.Cleanup(func() {
+-				if err := core.Close(); err != nil {
+-					t.Error(err)
+-				}
+-			})
+-			prompt, err := core.AppendMessageWithID(chat.Message{ID: "prompt", Time: time.Now(), Nick: "reader", Text: "question", Color: 32})
+-			if err != nil {
+-				t.Fatal(err)
+-			}
+-			service := &gRPCServer{chatServer: core}
+-			replies := make(map[string]replyState)
+-			if err := service.handleResponse(&pb.AIResponse{MessageId: prompt.ID, Nick: "Assistant", Text: "first"}, replies); err != nil {
+-				t.Fatalf("reply must have a separate storage ID: %v", err)
+-			}
+-			if err := service.handleResponse(&pb.AIResponse{MessageId: prompt.ID, Text: " second", IsFinal: true}, replies); err != nil {
+-				t.Fatal(err)
+-			}
+-			prompts, responses := 0, 0
+-			for _, message := range core.Messages() {
+-				if message.ID == prompt.ID {
+-					prompts++
+-					if message.Text != "question" || message.Nick != "reader" {
+-						t.Fatalf("prompt was overwritten: %+v", message)
+-					}
+-				}
+-				if message.Nick == "Assistant" {
+-					responses++
+-					if message.ID == prompt.ID || message.Text != "first second" {
+-						t.Fatalf("reply must have a separate storage ID and append chunks: %+v", message)
+-					}
+-				}
+-			}
+-			if prompts != 1 || responses != 1 || len(replies) != 0 {
+-				t.Fatalf("reply lifecycle lost prompt or duplicated response: %d %d %d", prompts, responses, len(replies))
+-			}
+-		})
+-	}
+-}
++package main
++
++import (
++	"bytes"
++	"context"
++	"crypto/ecdsa"
++	"crypto/elliptic"
++	"crypto/rand"
++	"crypto/sha256"
++	"crypto/tls"
++	"crypto/x509"
++	"encoding/binary"
++	"encoding/pem"
++	"fmt"
++	"math/big"
++	"net"
++	"os"
++	"path/filepath"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/iwanhae/ssh-chat/chat"
++	pb "github.com/iwanhae/ssh-chat/proto"
++	"google.golang.org/grpc"
++	"google.golang.org/grpc/codes"
++	"google.golang.org/grpc/credentials"
++	"google.golang.org/grpc/credentials/insecure"
++	"google.golang.org/grpc/status"
++)
++
++func await(t *testing.T, condition func() bool) {
++	t.Helper()
++	deadline := time.NewTimer(5 * time.Second)
++	defer deadline.Stop()
++	tick := time.NewTicker(time.Millisecond)
++	defer tick.Stop()
++	for !condition() {
++		select {
++		case <-deadline.C:
++			t.Fatal("condition did not become true within five seconds")
++		case <-tick.C:
++		}
++	}
++}
++
++func streamCount(service *gRPCServer) int {
++	service.activeStreamMu.Lock()
++	defer service.activeStreamMu.Unlock()
++	return len(service.activeStreams)
++}
++
++func startTestRPC(t *testing.T, server *grpc.Server, service *gRPCServer, transport credentials.TransportCredentials) pb.StreamMiddlewareClient {
++	t.Helper()
++	listener, err := net.Listen("tcp", "127.0.0.1:0")
++	if err != nil {
++		t.Fatal(err)
++	}
++	stopped := make(chan error, 1)
++	go func() { stopped <- server.Serve(listener) }()
++	t.Cleanup(func() {
++		server.Stop()
++		select {
++		case err := <-stopped:
++			if err != nil {
++				t.Error(err)
++			}
++		case <-time.After(5 * time.Second):
++			t.Error("gRPC server did not stop")
++		}
++	})
++	connection, err := grpc.NewClient(listener.Addr().String(), grpc.WithTransportCredentials(transport))
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(func() {
++		if err := connection.Close(); err != nil {
++			t.Error(err)
++		}
++	})
++	return pb.NewStreamMiddlewareClient(connection)
++}
++
++func TestBidirectionalMessagesSurviveTheStorageRefactor(t *testing.T) {
++	for _, kind := range []string{"memory", "sqlite"} {
++		t.Run(kind, func(t *testing.T) {
++			var store chat.MessageStore = chat.NewMemoryMessageStore()
++			if kind == "sqlite" {
++				var err error
++				store, err = chat.NewSQLiteMessageStore(filepath.Join(t.TempDir(), "chat.db"))
++				if err != nil {
++					t.Fatal(err)
++				}
++			}
++			core, err := chat.NewChatServer(store)
++			if err != nil {
++				t.Fatal(err)
++			}
++			t.Cleanup(func() {
++				if err := core.Close(); err != nil {
++					t.Error(err)
++				}
++			})
++			server, service, err := startGRPCServer(core, "none", false, "unused")
++			if err != nil {
++				t.Fatal(err)
++			}
++			core.SetUserMessageHandler(service.BroadcastMessage)
++			client := startTestRPC(t, server, service, insecure.NewCredentials())
++			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++			defer cancel()
++			stream, err := client.StreamChat(ctx)
++			if err != nil {
++				t.Fatal(err)
++			}
++			await(t, func() bool { return streamCount(service) == 1 })
++			core.AppendUserMessage(chat.Message{Time: time.Now(), Nick: "reader", Text: "question", IP: "192.0.2.1", Color: 32})
++			first, err := stream.Recv()
++			if err != nil {
++				t.Fatal(err)
++			}
++			if first.MessageId == "" || first.Nick != "reader" || first.Text != "question" || first.Ip != "192.0.2.1" {
++				t.Fatalf("incorrect outbound message: %v", first)
++			}
++			if err := stream.Send(&pb.AIResponse{MessageId: first.MessageId, Nick: "Assistant", Text: "part\x1b", Format: pb.ResponseFormat_DELTA}); err != nil {
++				t.Fatal(err)
++			}
++			replyID := ""
++			await(t, func() bool {
++				for _, m := range core.Messages() {
++					if m.ID != first.MessageId && m.Nick == "Assistant" && m.Text == "part" {
++						replyID = m.ID
++						return true
++					}
++				}
++				return false
++			})
++			if err := stream.Send(&pb.AIResponse{MessageId: first.MessageId, Text: " complete\nanswer\u009b", IsFinal: true, Format: pb.ResponseFormat_DELTA}); err != nil {
++				t.Fatal(err)
++			}
++			await(t, func() bool {
++				for _, m := range core.Messages() {
++					if m.ID == replyID && m.Text == "part complete answer" {
++						return true
++					}
++				}
++				return false
++			})
++			prompts, replies := 0, 0
++			for _, message := range core.Messages() {
++				if message.ID == first.MessageId {
++					prompts++
++					if message.Nick != "reader" || message.Text != "question" {
++						t.Fatalf("prompt was overwritten: %+v", message)
++					}
++				}
++				if message.Nick == "Assistant" {
++					replies++
++					if message.ID != replyID || message.Text != "part complete answer" {
++						t.Fatalf("reply identity or incremental text changed: %+v", message)
++					}
++				}
++			}
++			if prompts != 1 || replies != 1 {
++				t.Fatalf("prompt and reply must coexist exactly once: prompts=%d replies=%d", prompts, replies)
++			}
++			core.AppendSystemMessage("administration")
++			core.AppendUserMessage(chat.Message{Time: time.Now(), Nick: "reader", Text: "next", Color: 32})
++			next, err := stream.Recv()
++			if err != nil {
++				t.Fatal(err)
++			}
++			if next.Text != "next" || next.MessageId == first.MessageId {
++				t.Fatalf("response loop or unstable ID: %v", next)
++			}
++			for _, nickname := range []string{"AI", "server"} {
++				core.AppendUserMessage(chat.Message{Time: time.Now(), Nick: nickname, Text: "human", Color: 32})
++				delivered, err := stream.Recv()
++				if err != nil || delivered.GetNick() != nickname {
++					t.Fatalf("user nickname was filtered: %q %v %v", nickname, delivered, err)
++				}
++			}
++			if err := stream.CloseSend(); err != nil {
++				t.Fatal(err)
++			}
++			type delivery struct {
++				message *pb.ChatMessage
++				err     error
++			}
++			pending := make(chan delivery, 1)
++			go func() {
++				message, err := stream.Recv()
++				pending <- delivery{message: message, err: err}
++			}()
++			select {
++			case early := <-pending:
++				t.Fatalf("half-close ended the receive feed: %v", early.err)
++			case <-time.After(50 * time.Millisecond):
++			}
++			core.AppendUserMessage(chat.Message{Time: time.Now(), Nick: "reader", Text: "after half-close", Color: 32})
++			select {
++			case delivered := <-pending:
++				if delivered.err != nil || delivered.message.GetText() != "after half-close" {
++					t.Fatalf("half-closed feed did not receive chat: %+v", delivered)
++				}
++			case <-time.After(5 * time.Second):
++				t.Fatal("half-closed feed timed out")
++			}
++			cancel()
++			await(t, func() bool { return streamCount(service) == 0 })
++		})
++	}
++}
++
++func signAuthentication(t *testing.T, key *ecdsa.PrivateKey, ip string, timestamp int64) []byte {
++	t.Helper()
++	message := make([]byte, len(ip)+8)
++	copy(message, ip)
++	binary.BigEndian.PutUint64(message[len(ip):], uint64(timestamp))
++	digest := sha256.Sum256(message)
++	signature, err := ecdsa.SignASN1(rand.Reader, key, digest[:])
++	if err != nil {
++		t.Fatal(err)
++	}
++	return signature
++}
++
++func TestAuthenticationPrecedesBroadcastRegistration(t *testing.T) {
++	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
++	if err != nil {
++		t.Fatal(err)
++	}
++	core, err := chat.NewChatServer(chat.NewMemoryMessageStore())
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(func() {
++		if err := core.Close(); err != nil {
++			t.Error(err)
++		}
++	})
++	service := &gRPCServer{chatServer: core, activeStreams: make(map[string]*middlewareStream), usedAuthentications: make(map[[32]byte]int64), clientPubKey: &key.PublicKey, authEnabled: true}
++	server := grpc.NewServer()
++	pb.RegisterStreamMiddlewareServer(server, service)
++	client := startTestRPC(t, server, service, insecure.NewCredentials())
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++	invalid, err := client.StreamChat(ctx)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err := invalid.Send(&pb.AIResponse{Ip: "127.0.0.1", AuthTimestamp: time.Now().UnixMilli(), AuthSignature: []byte("invalid")}); err != nil {
++		t.Fatal(err)
++	}
++	if _, err := invalid.Recv(); status.Code(err) != codes.Unauthenticated {
++		t.Fatalf("invalid signature accepted: %v", err)
++	}
++	if streamCount(service) != 0 {
++		t.Fatal("unauthenticated stream entered broadcast map")
++	}
++	valid, err := client.StreamChat(ctx)
++	if err != nil {
++		t.Fatal(err)
++	}
++	timestamp := time.Now().UnixMilli()
++	signature := signAuthentication(t, key, "127.0.0.1", timestamp)
++	if err := valid.Send(&pb.AIResponse{Ip: "127.0.0.1", AuthTimestamp: timestamp, AuthSignature: signature}); err != nil {
++		t.Fatal(err)
++	}
++	await(t, func() bool { return streamCount(service) == 1 })
++	duplicate, err := client.StreamChat(ctx)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err := duplicate.Send(&pb.AIResponse{Ip: "127.0.0.1", AuthTimestamp: timestamp, AuthSignature: signature}); err != nil {
++		t.Fatal(err)
++	}
++	if _, err := duplicate.Recv(); status.Code(err) != codes.Unauthenticated {
++		t.Fatalf("replayed authentication accepted: %v", err)
++	}
++	if streamCount(service) != 1 {
++		t.Fatal("replayed stream entered broadcast map")
++	}
++	service.BroadcastMessage(chat.Message{ID: "authenticated", Time: time.Now(), Nick: "reader", Text: "visible"})
++	got, err := valid.Recv()
++	if err != nil || got.GetMessageId() != "authenticated" {
++		t.Fatalf("authenticated delivery failed: %v %v", got, err)
++	}
++	old := timestamp - 120_000
++	if err := verifySignature(&key.PublicKey, "127.0.0.1", old, signAuthentication(t, key, "127.0.0.1", old)); err == nil {
++		t.Fatal("stale signature accepted")
++	}
++	if err := verifySignature(&key.PublicKey, "192.0.2.1", timestamp, signAuthentication(t, key, "127.0.0.1", timestamp)); err == nil {
++		t.Fatal("signature for a different IP accepted")
++	}
++}
++
++func TestTLSModesAndCustomHostKey(t *testing.T) {
++	t.Chdir(t.TempDir())
++	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
++	if err != nil {
++		t.Fatal(err)
++	}
++	template := &x509.Certificate{
++		SerialNumber: big.NewInt(1), NotBefore: time.Now().Add(-time.Minute), NotAfter: time.Now().Add(time.Hour),
++		IsCA: true, BasicConstraintsValid: true, KeyUsage: x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature,
++		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
++		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
++	}
++	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
++	if err != nil {
++		t.Fatal(err)
++	}
++	certificatePEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
++	privateDER, err := x509.MarshalECPrivateKey(key)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err := os.WriteFile("grpc_server.cert", certificatePEM, 0600); err != nil {
++		t.Fatal(err)
++	}
++	if err := os.WriteFile("custom-host.key", pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: privateDER}), 0600); err != nil {
++		t.Fatal(err)
++	}
++	if err := os.WriteFile("ai_grpc_client.ca.cert", certificatePEM, 0600); err != nil {
++		t.Fatal(err)
++	}
++	roots := x509.NewCertPool()
++	if !roots.AppendCertsFromPEM(certificatePEM) {
++		t.Fatal("test certificate is invalid")
++	}
++	certificate, err := tls.LoadX509KeyPair("grpc_server.cert", "custom-host.key")
++	if err != nil {
++		t.Fatal(err)
++	}
++	for _, mode := range []string{"tls", "mtls"} {
++		t.Run(mode, func(t *testing.T) {
++			core, err := chat.NewChatServer(chat.NewMemoryMessageStore())
++			if err != nil {
++				t.Fatal(err)
++			}
++			t.Cleanup(func() {
++				if err := core.Close(); err != nil {
++					t.Error(err)
++				}
++			})
++			server, service, err := startGRPCServer(core, mode, false, "custom-host.key")
++			if err != nil {
++				t.Fatal(err)
++			}
++			transport := credentials.NewTLS(&tls.Config{RootCAs: roots, Certificates: []tls.Certificate{certificate}, MinVersion: tls.VersionTLS12})
++			client := startTestRPC(t, server, service, transport)
++			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
++			defer cancel()
++			stream, err := client.StreamChat(ctx)
++			if err != nil {
++				t.Fatal(err)
++			}
++			await(t, func() bool { return streamCount(service) == 1 })
++			service.BroadcastMessage(chat.Message{ID: "secure", Time: time.Now(), Nick: "reader", Text: "secured"})
++			got, err := stream.Recv()
++			if err != nil || got.GetMessageId() != "secure" {
++				t.Fatalf("secure delivery failed: %v %v", got, err)
++			}
++		})
++	}
++}
++
++func TestCLIContainsBothSetsOfOptions(t *testing.T) {
++	command := newRootCommand()
++	for _, flag := range []string{"addr", "host-key", "max-per-ip", "shutdown-countdown", "db-path", "sqlite", "ssh-port", "grpc-port", "grpc-host", "grpc-security", "grpc-auth"} {
++		if command.Flags().Lookup(flag) == nil {
++			t.Fatalf("lost option --%s", flag)
++		}
++	}
++	if grpcPort != "3333" || grpcHost != "127.0.0.1" || sshPort != "2222" || grpcSecurityMode != "none" || grpcAuthEnabled {
++		t.Fatal("middleware defaults changed")
++	}
++	if got := sanitizeNickname("\x1breader\n"); got != "reader" {
++		t.Fatalf("nickname sanitizer lost: %q", got)
++	}
++}
++
++func TestListenerCollisionDoesNotTouchHistory(t *testing.T) {
++	for _, flag := range []string{"addr", "ssh-port"} {
++		t.Run(flag, func(t *testing.T) {
++			path := filepath.Join(t.TempDir(), "history.db")
++			store, err := chat.NewSQLiteMessageStore(path)
++			if err != nil {
++				t.Fatal(err)
++			}
++			if err := store.Init(); err != nil {
++				t.Fatal(err)
++			}
++			if err := store.AppendMessage(chat.Message{ID: "retained", Time: time.Now(), Nick: "reader", Text: "history", Color: 32}); err != nil {
++				t.Fatal(err)
++			}
++			if err := store.Close(); err != nil {
++				t.Fatal(err)
++			}
++			before, err := os.ReadFile(path)
++			if err != nil {
++				t.Fatal(err)
++			}
++			reservation, err := net.Listen("tcp", "127.0.0.1:0")
++			if err != nil {
++				t.Fatal(err)
++			}
++			address := reservation.Addr().String()
++			_, port, err := net.SplitHostPort(address)
++			if err != nil {
++				t.Fatal(err)
++			}
++			if err := reservation.Close(); err != nil {
++				t.Fatal(err)
++			}
++			command := newRootCommand()
++			value := address
++			if flag == "ssh-port" {
++				value = port
++			}
++			command.SetArgs([]string{"--" + flag, value, "--grpc-port", port, "--sqlite", "--db-path", path})
++			if err := command.Execute(); err == nil || !strings.Contains(err.Error(), "listen for gRPC middleware") {
++				t.Fatalf("listener collision did not fail before server startup: %v", err)
++			}
++			after, err := os.ReadFile(path)
++			if err != nil {
++				t.Fatal(err)
++			}
++			if !bytes.Equal(before, after) {
++				t.Fatal("listener collision changed chat history")
++			}
++			released, err := net.Listen("tcp", address)
++			if err != nil {
++				t.Fatalf("failed startup leaked SSH listener: %v", err)
++			}
++			if err := released.Close(); err != nil {
++				t.Fatal(err)
++			}
++		})
++	}
++}
++
++func TestRemoteMiddlewareRequiresAuthenticatedTransport(t *testing.T) {
++	for _, host := range []string{"0.0.0.0", "::", "192.0.2.1"} {
++		for _, mode := range []string{"none", "tls"} {
++			if _, err := middlewareAddress(host, "3333", mode, false); err == nil {
++				t.Fatalf("unauthenticated remote middleware allowed: %s %s", host, mode)
++			}
++		}
++		if _, err := middlewareAddress(host, "3333", "mtls", false); err != nil {
++			t.Fatal(err)
++		}
++		if _, err := middlewareAddress(host, "3333", "tls", true); err != nil {
++			t.Fatal(err)
++		}
++	}
++	if address, err := middlewareAddress("127.0.0.1", "3333", "none", false); err != nil || address != "127.0.0.1:3333" {
++		t.Fatalf("loopback default failed: %q %v", address, err)
++	}
++	if _, err := middlewareAddress("127.0.0.1", "3333", "none", true); err == nil {
++		t.Fatal("signed authentication allowed without TLS")
++	}
++}
++
++func TestBroadcastOverflowClosesTheSubscriber(t *testing.T) {
++	subscription := &middlewareStream{messages: make(chan *pb.ChatMessage, 1), overflow: make(chan struct{})}
++	service := &gRPCServer{activeStreams: map[string]*middlewareStream{"slow": subscription}}
++	service.BroadcastMessage(chat.Message{ID: "first", Nick: "reader", Text: "first"})
++	service.BroadcastMessage(chat.Message{ID: "second", Nick: "reader", Text: "second"})
++	select {
++	case <-subscription.overflow:
++	default:
++		t.Fatal("queue overflow silently discarded a message")
++	}
++	if streamCount(service) != 0 {
++		t.Fatal("overflowed subscriber remained registered")
++	}
++	if first := <-subscription.messages; first.GetMessageId() != "first" {
++		t.Fatalf("queue overwrote an earlier message: %v", first)
++	}
++}
++
++func TestPromptIDsNeverBecomeReplyStorageIDs(t *testing.T) {
++	for _, kind := range []string{"memory", "sqlite"} {
++		t.Run(kind, func(t *testing.T) {
++			var store chat.MessageStore = chat.NewMemoryMessageStore()
++			if kind == "sqlite" {
++				var err error
++				store, err = chat.NewSQLiteMessageStore(filepath.Join(t.TempDir(), "chat.db"))
++				if err != nil {
++					t.Fatal(err)
++				}
++			}
++			core, err := chat.NewChatServer(store)
++			if err != nil {
++				t.Fatal(err)
++			}
++			t.Cleanup(func() {
++				if err := core.Close(); err != nil {
++					t.Error(err)
++				}
++			})
++			prompt, err := core.AppendMessageWithID(chat.Message{ID: "prompt", Time: time.Now(), Nick: "reader", Text: "question", Color: 32})
++			if err != nil {
++				t.Fatal(err)
++			}
++			service := &gRPCServer{chatServer: core}
++			replies := make(map[string]replyState)
++			if err := service.handleResponse(&pb.AIResponse{MessageId: prompt.ID, Nick: "Assistant", Text: "first", Format: pb.ResponseFormat_DELTA}, replies); err != nil {
++				t.Fatalf("reply must have a separate storage ID: %v", err)
++			}
++			if err := service.handleResponse(&pb.AIResponse{MessageId: prompt.ID, Text: " second", IsFinal: true, Format: pb.ResponseFormat_DELTA}, replies); err != nil {
++				t.Fatal(err)
++			}
++			prompts, responses := 0, 0
++			for _, message := range core.Messages() {
++				if message.ID == prompt.ID {
++					prompts++
++					if message.Text != "question" || message.Nick != "reader" {
++						t.Fatalf("prompt was overwritten: %+v", message)
++					}
++				}
++				if message.Nick == "Assistant" {
++					responses++
++					if message.ID == prompt.ID || message.Text != "first second" {
++						t.Fatalf("reply must have a separate storage ID and append chunks: %+v", message)
++					}
++				}
++			}
++			if prompts != 1 || responses != 1 || len(replies) != 0 {
++				t.Fatalf("reply lifecycle lost prompt or duplicated response: %d %d %d", prompts, responses, len(replies))
++			}
++		})
++	}
++}
++
++func TestReplyFormatsAndUnicodeSurviveStorage(t *testing.T) {
++	for _, kind := range []string{"memory", "sqlite"} {
++		t.Run(kind, func(t *testing.T) {
++			var store chat.MessageStore = chat.NewMemoryMessageStore()
++			if kind == "sqlite" {
++				var err error
++				store, err = chat.NewSQLiteMessageStore(filepath.Join(t.TempDir(), "chat.db"))
++				if err != nil {
++					t.Fatal(err)
++				}
++			}
++			core, err := chat.NewChatServer(store)
++			if err != nil {
++				t.Fatal(err)
++			}
++			t.Cleanup(func() {
++				if err := core.Close(); err != nil {
++					t.Error(err)
++				}
++			})
++			service := &gRPCServer{chatServer: core}
++			replies := make(map[string]replyState)
++			cases := []struct {
++				name   string
++				first  string
++				second string
++				format pb.ResponseFormat
++				want   string
++			}{
++				{name: "legacy", first: "par", second: "partial", want: "partial"},
++				{name: "delta", first: "par", second: "tial", format: pb.ResponseFormat_DELTA, want: "partial"},
++				{name: "unicode", first: "100\u00a0km \u0645\u06cc\u200c\u0631\u0648\u0645 ", second: "\U0001f469\u200d\U0001f52c\u2028safe\x1b\u009b\u202e", format: pb.ResponseFormat_DELTA, want: "100\u00a0km \u0645\u06cc\u200c\u0631\u0648\u0645 \U0001f469\u200d\U0001f52c safe"},
++			}
++			for _, example := range cases {
++				if err := service.handleResponse(&pb.AIResponse{MessageId: example.name, Nick: example.name, Text: example.first, Format: example.format}, replies); err != nil {
++					t.Fatal(err)
++				}
++				if err := service.handleResponse(&pb.AIResponse{MessageId: example.name, Text: example.second, Format: example.format, IsFinal: true}, replies); err != nil {
++					t.Fatal(err)
++				}
++				found := false
++				for _, message := range core.Messages() {
++					if message.Nick == example.name {
++						if found || message.Text != example.want {
++							t.Fatalf("reply format or Unicode text was altered: case=%s got=%q want=%q", example.name, message.Text, example.want)
++						}
++						found = true
++					}
++				}
++				if !found {
++					t.Fatalf("reply %s was not stored", example.name)
++				}
++			}
++			count, err := store.GetMessageCount()
++			if err != nil {
++				t.Fatal(err)
++			}
++			if err := service.handleResponse(&pb.AIResponse{MessageId: "invalid", Text: "ignored", Format: pb.ResponseFormat(99)}, replies); status.Code(err) != codes.InvalidArgument {
++				t.Fatalf("unknown response format accepted: %v", err)
++			}
++			after, err := store.GetMessageCount()
++			if err != nil || after != count {
++				t.Fatalf("invalid format changed history: %d %d %v", count, after, err)
++			}
++		})
++	}
++}
++
++func TestFinalReplyDoesNotConsumeAnUnfinishedSlot(t *testing.T) {
++	core, err := chat.NewChatServer(chat.NewMemoryMessageStore())
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(func() {
++		if err := core.Close(); err != nil {
++			t.Error(err)
++		}
++	})
++	service := &gRPCServer{chatServer: core}
++	replies := make(map[string]replyState)
++	for index := 0; index < 100; index++ {
++		if err := service.handleResponse(&pb.AIResponse{MessageId: fmt.Sprintf("pending-%d", index), Text: "pending"}, replies); err != nil {
++			t.Fatal(err)
++		}
++	}
++	before, err := core.Store.GetMessageCount()
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err := service.handleResponse(&pb.AIResponse{MessageId: "finished", Text: "complete", IsFinal: true}, replies); err != nil {
++		t.Fatalf("final reply consumed an unfinished slot: %v", err)
++	}
++	after, err := core.Store.GetMessageCount()
++	if err != nil || after != before+1 {
++		t.Fatalf("final reply was not stored: before=%d after=%d err=%v", before, after, err)
++	}
++	if len(replies) != 100 {
++		t.Fatalf("pending count changed after final reply: %d", len(replies))
++	}
++	if err := service.handleResponse(&pb.AIResponse{MessageId: "overflow", Text: "pending"}, replies); status.Code(err) != codes.ResourceExhausted {
++		t.Fatalf("unfinished reply bound was lost: %v", err)
++	}
++}
++
++func TestUnknownReplyFormatDoesNotFinalizeAnOpenReply(t *testing.T) {
++	core, err := chat.NewChatServer(chat.NewMemoryMessageStore())
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(func() {
++		if err := core.Close(); err != nil {
++			t.Error(err)
++		}
++	})
++	service := &gRPCServer{chatServer: core}
++	replies := make(map[string]replyState)
++	if err := service.handleResponse(&pb.AIResponse{MessageId: "open", Text: "pending"}, replies); err != nil {
++		t.Fatal(err)
++	}
++	if err := service.handleResponse(&pb.AIResponse{MessageId: "open", IsFinal: true, Format: pb.ResponseFormat(99)}, replies); status.Code(err) != codes.InvalidArgument {
++		t.Fatalf("invalid format finalized an open reply: %v", err)
++	}
++	if len(replies) != 1 {
++		t.Fatal("invalid format discarded reply state")
++	}
++}
+diff --git a/proto/middleware.pb.go b/proto/middleware.pb.go
+--- a/proto/middleware.pb.go
++++ b/proto/middleware.pb.go
+@@ -1,271 +1,336 @@
+-// Code generated by protoc-gen-go. DO NOT EDIT.
+-// versions:
+-// 	protoc-gen-go v1.36.9
+-// 	protoc        v6.30.2
+-// source: middleware.proto
+-
+-package proto
+-
+-import (
+-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+-	reflect "reflect"
+-	sync "sync"
+-	unsafe "unsafe"
+-)
+-
+-const (
+-	// Verify that this generated code is sufficiently up-to-date.
+-	_ = protoimpl.EnforceVersion(20 - protoimpl.MinVersion)
+-	// Verify that runtime/protoimpl is sufficiently up-to-date.
+-	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
+-)
+-
+-// ChatMessage represents a message from an SSH client
+-type ChatMessage struct {
+-	state         protoimpl.MessageState `protogen:"open.v1"`
+-	MessageId     string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"` // Unique message ID for tracking
+-	Nick          string                 `protobuf:"bytes,2,opt,name=nick,proto3" json:"nick,omitempty"`                            // Nickname of the sender
+-	Text          string                 `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`                            // Message text
+-	Timestamp     int64                  `protobuf:"varint,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`                 // Unix timestamp in seconds
+-	Ip            string                 `protobuf:"bytes,5,opt,name=ip,proto3" json:"ip,omitempty"`                                // IP address of the sender
+-	unknownFields protoimpl.UnknownFields
+-	sizeCache     protoimpl.SizeCache
+-}
+-
+-func (x *ChatMessage) Reset() {
+-	*x = ChatMessage{}
+-	mi := &file_middleware_proto_msgTypes[0]
+-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+-	ms.StoreMessageInfo(mi)
+-}
+-
+-func (x *ChatMessage) String() string {
+-	return protoimpl.X.MessageStringOf(x)
+-}
+-
+-func (*ChatMessage) ProtoMessage() {}
+-
+-func (x *ChatMessage) ProtoReflect() protoreflect.Message {
+-	mi := &file_middleware_proto_msgTypes[0]
+-	if x != nil {
+-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+-		if ms.LoadMessageInfo() == nil {
+-			ms.StoreMessageInfo(mi)
+-		}
+-		return ms
+-	}
+-	return mi.MessageOf(x)
+-}
+-
+-// Deprecated: Use ChatMessage.ProtoReflect.Descriptor instead.
+-func (*ChatMessage) Descriptor() ([]byte, []int) {
+-	return file_middleware_proto_rawDescGZIP(), []int{0}
+-}
+-
+-func (x *ChatMessage) GetMessageId() string {
+-	if x != nil {
+-		return x.MessageId
+-	}
+-	return ""
+-}
+-
+-func (x *ChatMessage) GetNick() string {
+-	if x != nil {
+-		return x.Nick
+-	}
+-	return ""
+-}
+-
+-func (x *ChatMessage) GetText() string {
+-	if x != nil {
+-		return x.Text
+-	}
+-	return ""
+-}
+-
+-func (x *ChatMessage) GetTimestamp() int64 {
+-	if x != nil {
+-		return x.Timestamp
+-	}
+-	return 0
+-}
+-
+-func (x *ChatMessage) GetIp() string {
+-	if x != nil {
+-		return x.Ip
+-	}
+-	return ""
+-}
+-
+-// AIResponse carries incremental reply text. Each stream owns one in-progress
+-// reply per referenced prompt. is_final ends that reply. A half-closed send side
+-// continues receiving ChatMessage events. Queue overflow ends the RPC explicitly.
+-type AIResponse struct {
+-	state         protoimpl.MessageState `protogen:"open.v1"`
+-	MessageId     string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`              // References the ChatMessage ID being responded to
+-	Text          string                 `protobuf:"bytes,2,opt,name=text,proto3" json:"text,omitempty"`                                         // Next text fragment, appended to the reply
+-	IsFinal       bool                   `protobuf:"varint,3,opt,name=is_final,json=isFinal,proto3" json:"is_final,omitempty"`                   // True if this is the last chunk for this message_id
+-	AuthSignature []byte                 `protobuf:"bytes,4,opt,name=auth_signature,json=authSignature,proto3" json:"auth_signature,omitempty"`  // One-use ECDSA authentication signature (first message; TLS required)
+-	AuthTimestamp int64                  `protobuf:"varint,5,opt,name=auth_timestamp,json=authTimestamp,proto3" json:"auth_timestamp,omitempty"` // Unix timestamp in milliseconds (signed with signature)
+-	Nick          string                 `protobuf:"bytes,6,opt,name=nick,proto3" json:"nick,omitempty"`                                         // Nickname for the AI sender
+-	Ip            string                 `protobuf:"bytes,7,opt,name=ip,proto3" json:"ip,omitempty"`                                             // IPv4 address of the client (signed with signature)
+-	unknownFields protoimpl.UnknownFields
+-	sizeCache     protoimpl.SizeCache
+-}
+-
+-func (x *AIResponse) Reset() {
+-	*x = AIResponse{}
+-	mi := &file_middleware_proto_msgTypes[1]
+-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+-	ms.StoreMessageInfo(mi)
+-}
+-
+-func (x *AIResponse) String() string {
+-	return protoimpl.X.MessageStringOf(x)
+-}
+-
+-func (*AIResponse) ProtoMessage() {}
+-
+-func (x *AIResponse) ProtoReflect() protoreflect.Message {
+-	mi := &file_middleware_proto_msgTypes[1]
+-	if x != nil {
+-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+-		if ms.LoadMessageInfo() == nil {
+-			ms.StoreMessageInfo(mi)
+-		}
+-		return ms
+-	}
+-	return mi.MessageOf(x)
+-}
+-
+-// Deprecated: Use AIResponse.ProtoReflect.Descriptor instead.
+-func (*AIResponse) Descriptor() ([]byte, []int) {
+-	return file_middleware_proto_rawDescGZIP(), []int{1}
+-}
+-
+-func (x *AIResponse) GetMessageId() string {
+-	if x != nil {
+-		return x.MessageId
+-	}
+-	return ""
+-}
+-
+-func (x *AIResponse) GetText() string {
+-	if x != nil {
+-		return x.Text
+-	}
+-	return ""
+-}
+-
+-func (x *AIResponse) GetIsFinal() bool {
+-	if x != nil {
+-		return x.IsFinal
+-	}
+-	return false
+-}
+-
+-func (x *AIResponse) GetAuthSignature() []byte {
+-	if x != nil {
+-		return x.AuthSignature
+-	}
+-	return nil
+-}
+-
+-func (x *AIResponse) GetAuthTimestamp() int64 {
+-	if x != nil {
+-		return x.AuthTimestamp
+-	}
+-	return 0
+-}
+-
+-func (x *AIResponse) GetNick() string {
+-	if x != nil {
+-		return x.Nick
+-	}
+-	return ""
+-}
+-
+-func (x *AIResponse) GetIp() string {
+-	if x != nil {
+-		return x.Ip
+-	}
+-	return ""
+-}
+-
+-var File_middleware_proto protoreflect.FileDescriptor
+-
+-const file_middleware_proto_rawDesc = "" +
+-	"\n" +
+-	"\x10middleware.proto\x12\asshchat\"\x82\x01\n" +
+-	"\vChatMessage\x12\x1d\n" +
+-	"\n" +
+-	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x12\n" +
+-	"\x04nick\x18\x02 \x01(\tR\x04nick\x12\x12\n" +
+-	"\x04text\x18\x03 \x01(\tR\x04text\x12\x1c\n" +
+-	"\ttimestamp\x18\x04 \x01(\x03R\ttimestamp\x12\x0e\n" +
+-	"\x02ip\x18\x05 \x01(\tR\x02ip\"\xcc\x01\n" +
+-	"\n" +
+-	"AIResponse\x12\x1d\n" +
+-	"\n" +
+-	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x12\n" +
+-	"\x04text\x18\x02 \x01(\tR\x04text\x12\x19\n" +
+-	"\bis_final\x18\x03 \x01(\bR\aisFinal\x12%\n" +
+-	"\x0eauth_signature\x18\x04 \x01(\fR\rauthSignature\x12%\n" +
+-	"\x0eauth_timestamp\x18\x05 \x01(\x03R\rauthTimestamp\x12\x12\n" +
+-	"\x04nick\x18\x06 \x01(\tR\x04nick\x12\x0e\n" +
+-	"\x02ip\x18\a \x01(\tR\x02ip2Q\n" +
+-	"\x10StreamMiddleware\x12=\n" +
+-	"\n" +
+-	"StreamChat\x12\x13.sshchat.AIResponse\x1a\x14.sshchat.ChatMessage\"\x00(\x010\x01B)Z'github.com/iwanhae/ssh-chat/proto;protob\x06proto3"
+-
+-var (
+-	file_middleware_proto_rawDescOnce sync.Once
+-	file_middleware_proto_rawDescData []byte
+-)
+-
+-func file_middleware_proto_rawDescGZIP() []byte {
+-	file_middleware_proto_rawDescOnce.Do(func() {
+-		file_middleware_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_middleware_proto_rawDesc), len(file_middleware_proto_rawDesc)))
+-	})
+-	return file_middleware_proto_rawDescData
+-}
+-
+-var file_middleware_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+-var file_middleware_proto_goTypes = []any{
+-	(*ChatMessage)(nil), // 0: sshchat.ChatMessage
+-	(*AIResponse)(nil),  // 1: sshchat.AIResponse
+-}
+-var file_middleware_proto_depIdxs = []int32{
+-	1, // 0: sshchat.StreamMiddleware.StreamChat:input_type -> sshchat.AIResponse
+-	0, // 1: sshchat.StreamMiddleware.StreamChat:output_type -> sshchat.ChatMessage
+-	1, // [1:2] is the sub-list for method output_type
+-	0, // [0:1] is the sub-list for method input_type
+-	0, // [0:0] is the sub-list for extension type_name
+-	0, // [0:0] is the sub-list for extension extendee
+-	0, // [0:0] is the sub-list for field type_name
+-}
+-
+-func init() { file_middleware_proto_init() }
+-func file_middleware_proto_init() {
+-	if File_middleware_proto != nil {
+-		return
+-	}
+-	type x struct{}
+-	out := protoimpl.TypeBuilder{
+-		File: protoimpl.DescBuilder{
+-			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
+-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_middleware_proto_rawDesc), len(file_middleware_proto_rawDesc)),
+-			NumEnums:      0,
+-			NumMessages:   2,
+-			NumExtensions: 0,
+-			NumServices:   1,
+-		},
+-		GoTypes:           file_middleware_proto_goTypes,
+-		DependencyIndexes: file_middleware_proto_depIdxs,
+-		MessageInfos:      file_middleware_proto_msgTypes,
+-	}.Build()
+-	File_middleware_proto = out.File
+-	file_middleware_proto_goTypes = nil
+-	file_middleware_proto_depIdxs = nil
+-}
++// Code generated by protoc-gen-go. DO NOT EDIT.
++// versions:
++// 	protoc-gen-go v1.36.9
++// 	protoc        v6.30.2
++// source: middleware.proto
++
++package proto
++
++import (
++	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
++	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
++	reflect "reflect"
++	sync "sync"
++	unsafe "unsafe"
++)
++
++const (
++	// Verify that this generated code is sufficiently up-to-date.
++	_ = protoimpl.EnforceVersion(20 - protoimpl.MinVersion)
++	// Verify that runtime/protoimpl is sufficiently up-to-date.
++	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
++)
++
++// ResponseFormat defines how text changes the current reply.
++// SNAPSHOT is the legacy default; clients opt in to incremental DELTA messages.
++type ResponseFormat int32
++
++const (
++	ResponseFormat_SNAPSHOT ResponseFormat = 0
++	ResponseFormat_DELTA    ResponseFormat = 1
++)
++
++// Enum value maps for ResponseFormat.
++var (
++	ResponseFormat_name = map[int32]string{
++		0: "SNAPSHOT",
++		1: "DELTA",
++	}
++	ResponseFormat_value = map[string]int32{
++		"SNAPSHOT": 0,
++		"DELTA":    1,
++	}
++)
++
++func (x ResponseFormat) Enum() *ResponseFormat {
++	p := new(ResponseFormat)
++	*p = x
++	return p
++}
++
++func (x ResponseFormat) String() string {
++	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
++}
++
++func (ResponseFormat) Descriptor() protoreflect.EnumDescriptor {
++	return file_middleware_proto_enumTypes[0].Descriptor()
++}
++
++func (ResponseFormat) Type() protoreflect.EnumType {
++	return &file_middleware_proto_enumTypes[0]
++}
++
++func (x ResponseFormat) Number() protoreflect.EnumNumber {
++	return protoreflect.EnumNumber(x)
++}
++
++// Deprecated: Use ResponseFormat.Descriptor instead.
++func (ResponseFormat) EnumDescriptor() ([]byte, []int) {
++	return file_middleware_proto_rawDescGZIP(), []int{0}
++}
++
++// ChatMessage represents a message from an SSH client
++type ChatMessage struct {
++	state         protoimpl.MessageState `protogen:"open.v1"`
++	MessageId     string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"` // Unique message ID for tracking
++	Nick          string                 `protobuf:"bytes,2,opt,name=nick,proto3" json:"nick,omitempty"`                            // Nickname of the sender
++	Text          string                 `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`                            // Message text
++	Timestamp     int64                  `protobuf:"varint,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`                 // Unix timestamp in seconds
++	Ip            string                 `protobuf:"bytes,5,opt,name=ip,proto3" json:"ip,omitempty"`                                // IP address of the sender
++	unknownFields protoimpl.UnknownFields
++	sizeCache     protoimpl.SizeCache
++}
++
++func (x *ChatMessage) Reset() {
++	*x = ChatMessage{}
++	mi := &file_middleware_proto_msgTypes[0]
++	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
++	ms.StoreMessageInfo(mi)
++}
++
++func (x *ChatMessage) String() string {
++	return protoimpl.X.MessageStringOf(x)
++}
++
++func (*ChatMessage) ProtoMessage() {}
++
++func (x *ChatMessage) ProtoReflect() protoreflect.Message {
++	mi := &file_middleware_proto_msgTypes[0]
++	if x != nil {
++		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
++		if ms.LoadMessageInfo() == nil {
++			ms.StoreMessageInfo(mi)
++		}
++		return ms
++	}
++	return mi.MessageOf(x)
++}
++
++// Deprecated: Use ChatMessage.ProtoReflect.Descriptor instead.
++func (*ChatMessage) Descriptor() ([]byte, []int) {
++	return file_middleware_proto_rawDescGZIP(), []int{0}
++}
++
++func (x *ChatMessage) GetMessageId() string {
++	if x != nil {
++		return x.MessageId
++	}
++	return ""
++}
++
++func (x *ChatMessage) GetNick() string {
++	if x != nil {
++		return x.Nick
++	}
++	return ""
++}
++
++func (x *ChatMessage) GetText() string {
++	if x != nil {
++		return x.Text
++	}
++	return ""
++}
++
++func (x *ChatMessage) GetTimestamp() int64 {
++	if x != nil {
++		return x.Timestamp
++	}
++	return 0
++}
++
++func (x *ChatMessage) GetIp() string {
++	if x != nil {
++		return x.Ip
++	}
++	return ""
++}
++
++// AIResponse carries a snapshot by default, preserving existing clients.
++// Each stream owns one in-progress reply per referenced prompt. is_final ends
++// that reply. A half-closed send side continues receiving ChatMessage events.
++// Queue overflow ends the RPC explicitly.
++type AIResponse struct {
++	state         protoimpl.MessageState `protogen:"open.v1"`
++	MessageId     string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`              // References the ChatMessage ID being responded to
++	Text          string                 `protobuf:"bytes,2,opt,name=text,proto3" json:"text,omitempty"`                                         // Full reply snapshot, or next fragment when format is DELTA
++	IsFinal       bool                   `protobuf:"varint,3,opt,name=is_final,json=isFinal,proto3" json:"is_final,omitempty"`                   // True if this is the last chunk for this message_id
++	AuthSignature []byte                 `protobuf:"bytes,4,opt,name=auth_signature,json=authSignature,proto3" json:"auth_signature,omitempty"`  // One-use ECDSA authentication signature (first message; TLS required)
++	AuthTimestamp int64                  `protobuf:"varint,5,opt,name=auth_timestamp,json=authTimestamp,proto3" json:"auth_timestamp,omitempty"` // Unix timestamp in milliseconds (signed with signature)
++	Nick          string                 `protobuf:"bytes,6,opt,name=nick,proto3" json:"nick,omitempty"`                                         // Nickname for the AI sender
++	Ip            string                 `protobuf:"bytes,7,opt,name=ip,proto3" json:"ip,omitempty"`                                             // IPv4 address of the client (signed with signature)
++	Format        ResponseFormat         `protobuf:"varint,8,opt,name=format,proto3,enum=sshchat.ResponseFormat" json:"format,omitempty"`        // Applies to this message; absent means SNAPSHOT
++	unknownFields protoimpl.UnknownFields
++	sizeCache     protoimpl.SizeCache
++}
++
++func (x *AIResponse) Reset() {
++	*x = AIResponse{}
++	mi := &file_middleware_proto_msgTypes[1]
++	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
++	ms.StoreMessageInfo(mi)
++}
++
++func (x *AIResponse) String() string {
++	return protoimpl.X.MessageStringOf(x)
++}
++
++func (*AIResponse) ProtoMessage() {}
++
++func (x *AIResponse) ProtoReflect() protoreflect.Message {
++	mi := &file_middleware_proto_msgTypes[1]
++	if x != nil {
++		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
++		if ms.LoadMessageInfo() == nil {
++			ms.StoreMessageInfo(mi)
++		}
++		return ms
++	}
++	return mi.MessageOf(x)
++}
++
++// Deprecated: Use AIResponse.ProtoReflect.Descriptor instead.
++func (*AIResponse) Descriptor() ([]byte, []int) {
++	return file_middleware_proto_rawDescGZIP(), []int{1}
++}
++
++func (x *AIResponse) GetMessageId() string {
++	if x != nil {
++		return x.MessageId
++	}
++	return ""
++}
++
++func (x *AIResponse) GetText() string {
++	if x != nil {
++		return x.Text
++	}
++	return ""
++}
++
++func (x *AIResponse) GetIsFinal() bool {
++	if x != nil {
++		return x.IsFinal
++	}
++	return false
++}
++
++func (x *AIResponse) GetAuthSignature() []byte {
++	if x != nil {
++		return x.AuthSignature
++	}
++	return nil
++}
++
++func (x *AIResponse) GetAuthTimestamp() int64 {
++	if x != nil {
++		return x.AuthTimestamp
++	}
++	return 0
++}
++
++func (x *AIResponse) GetNick() string {
++	if x != nil {
++		return x.Nick
++	}
++	return ""
++}
++
++func (x *AIResponse) GetIp() string {
++	if x != nil {
++		return x.Ip
++	}
++	return ""
++}
++
++func (x *AIResponse) GetFormat() ResponseFormat {
++	if x != nil {
++		return x.Format
++	}
++	return ResponseFormat_SNAPSHOT
++}
++
++var File_middleware_proto protoreflect.FileDescriptor
++
++const file_middleware_proto_rawDesc = "" +
++	"\n" +
++	"\x10middleware.proto\x12\asshchat\"\x82\x01\n" +
++	"\vChatMessage\x12\x1d\n" +
++	"\n" +
++	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x12\n" +
++	"\x04nick\x18\x02 \x01(\tR\x04nick\x12\x12\n" +
++	"\x04text\x18\x03 \x01(\tR\x04text\x12\x1c\n" +
++	"\ttimestamp\x18\x04 \x01(\x03R\ttimestamp\x12\x0e\n" +
++	"\x02ip\x18\x05 \x01(\tR\x02ip\"\xfd\x01\n" +
++	"\n" +
++	"AIResponse\x12\x1d\n" +
++	"\n" +
++	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x12\n" +
++	"\x04text\x18\x02 \x01(\tR\x04text\x12\x19\n" +
++	"\bis_final\x18\x03 \x01(\bR\aisFinal\x12%\n" +
++	"\x0eauth_signature\x18\x04 \x01(\fR\rauthSignature\x12%\n" +
++	"\x0eauth_timestamp\x18\x05 \x01(\x03R\rauthTimestamp\x12\x12\n" +
++	"\x04nick\x18\x06 \x01(\tR\x04nick\x12\x0e\n" +
++	"\x02ip\x18\a \x01(\tR\x02ip\x12/\n" +
++	"\x06format\x18\b \x01(\x0e2\x17.sshchat.ResponseFormatR\x06format*)\n" +
++	"\x0eResponseFormat\x12\f\n" +
++	"\bSNAPSHOT\x10\x00\x12\t\n" +
++	"\x05DELTA\x10\x012Q\n" +
++	"\x10StreamMiddleware\x12=\n" +
++	"\n" +
++	"StreamChat\x12\x13.sshchat.AIResponse\x1a\x14.sshchat.ChatMessage\"\x00(\x010\x01B)Z'github.com/iwanhae/ssh-chat/proto;protob\x06proto3"
++
++var (
++	file_middleware_proto_rawDescOnce sync.Once
++	file_middleware_proto_rawDescData []byte
++)
++
++func file_middleware_proto_rawDescGZIP() []byte {
++	file_middleware_proto_rawDescOnce.Do(func() {
++		file_middleware_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_middleware_proto_rawDesc), len(file_middleware_proto_rawDesc)))
++	})
++	return file_middleware_proto_rawDescData
++}
++
++var file_middleware_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
++var file_middleware_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
++var file_middleware_proto_goTypes = []any{
++	(ResponseFormat)(0), // 0: sshchat.ResponseFormat
++	(*ChatMessage)(nil), // 1: sshchat.ChatMessage
++	(*AIResponse)(nil),  // 2: sshchat.AIResponse
++}
++var file_middleware_proto_depIdxs = []int32{
++	0, // 0: sshchat.AIResponse.format:type_name -> sshchat.ResponseFormat
++	2, // 1: sshchat.StreamMiddleware.StreamChat:input_type -> sshchat.AIResponse
++	1, // 2: sshchat.StreamMiddleware.StreamChat:output_type -> sshchat.ChatMessage
++	2, // [2:3] is the sub-list for method output_type
++	1, // [1:2] is the sub-list for method input_type
++	1, // [1:1] is the sub-list for extension type_name
++	1, // [1:1] is the sub-list for extension extendee
++	0, // [0:1] is the sub-list for field type_name
++}
++
++func init() { file_middleware_proto_init() }
++func file_middleware_proto_init() {
++	if File_middleware_proto != nil {
++		return
++	}
++	type x struct{}
++	out := protoimpl.TypeBuilder{
++		File: protoimpl.DescBuilder{
++			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
++			RawDescriptor: unsafe.Slice(unsafe.StringData(file_middleware_proto_rawDesc), len(file_middleware_proto_rawDesc)),
++			NumEnums:      1,
++			NumMessages:   2,
++			NumExtensions: 0,
++			NumServices:   1,
++		},
++		GoTypes:           file_middleware_proto_goTypes,
++		DependencyIndexes: file_middleware_proto_depIdxs,
++		EnumInfos:         file_middleware_proto_enumTypes,
++		MessageInfos:      file_middleware_proto_msgTypes,
++	}.Build()
++	File_middleware_proto = out.File
++	file_middleware_proto_goTypes = nil
++	file_middleware_proto_depIdxs = nil
++}
+diff --git a/proto/middleware.proto b/proto/middleware.proto
+--- a/proto/middleware.proto
++++ b/proto/middleware.proto
+@@ -1,35 +1,44 @@
+-syntax = "proto3";
+-
+-package sshchat;
+-
+-option go_package = "github.com/iwanhae/ssh-chat/proto;proto";
+-
+-// StreamMiddleware defines bidirectional streaming for SSH chat and AI messages
+-service StreamMiddleware {
+-  // StreamChat establishes a bidirectional stream:
+-  // - Server sends ChatMessage when SSH clients send messages
+-  // - Client sends AIResponse with incremental streaming text chunks
+-  rpc StreamChat(stream AIResponse) returns (stream ChatMessage) {}
+-}
+-
+-// ChatMessage represents a message from an SSH client
+-message ChatMessage {
+-  string message_id = 1;  // Unique message ID for tracking
+-  string nick = 2;        // Nickname of the sender
+-  string text = 3;        // Message text
+-  int64 timestamp = 4;    // Unix timestamp in seconds
+-  string ip = 5;          // IP address of the sender
+-}
+-
+-// AIResponse carries incremental reply text. Each stream owns one in-progress
+-// reply per referenced prompt. is_final ends that reply. A half-closed send side
+-// continues receiving ChatMessage events. Queue overflow ends the RPC explicitly.
+-message AIResponse {
+-  string message_id = 1;  // References the ChatMessage ID being responded to
+-  string text = 2;        // Next text fragment, appended to the reply
+-  bool is_final = 3;      // True if this is the last chunk for this message_id
+-  bytes auth_signature = 4;  // One-use ECDSA authentication signature (first message; TLS required)
+-  int64 auth_timestamp = 5;  // Unix timestamp in milliseconds (signed with signature)
+-  string nick = 6;        // Nickname for the AI sender
+-  string ip = 7;          // IPv4 address of the client (signed with signature)
+-}
++syntax = "proto3";
++
++package sshchat;
++
++option go_package = "github.com/iwanhae/ssh-chat/proto;proto";
++
++// StreamMiddleware defines bidirectional streaming for SSH chat and AI messages
++service StreamMiddleware {
++  // StreamChat establishes a bidirectional stream:
++  // - Server sends ChatMessage when SSH clients send messages
++  // - Client sends AIResponse snapshots or explicitly selected delta chunks
++  rpc StreamChat(stream AIResponse) returns (stream ChatMessage) {}
++}
++
++// ChatMessage represents a message from an SSH client
++message ChatMessage {
++  string message_id = 1;  // Unique message ID for tracking
++  string nick = 2;        // Nickname of the sender
++  string text = 3;        // Message text
++  int64 timestamp = 4;    // Unix timestamp in seconds
++  string ip = 5;          // IP address of the sender
++}
++
++// ResponseFormat defines how text changes the current reply.
++// SNAPSHOT is the legacy default; clients opt in to incremental DELTA messages.
++enum ResponseFormat {
++  SNAPSHOT = 0;
++  DELTA = 1;
++}
++
++// AIResponse carries a snapshot by default, preserving existing clients.
++// Each stream owns one in-progress reply per referenced prompt. is_final ends
++// that reply. A half-closed send side continues receiving ChatMessage events.
++// Queue overflow ends the RPC explicitly.
++message AIResponse {
++  string message_id = 1;  // References the ChatMessage ID being responded to
++  string text = 2;        // Full reply snapshot, or next fragment when format is DELTA
++  bool is_final = 3;      // True if this is the last chunk for this message_id
++  bytes auth_signature = 4;  // One-use ECDSA authentication signature (first message; TLS required)
++  int64 auth_timestamp = 5;  // Unix timestamp in milliseconds (signed with signature)
++  string nick = 6;        // Nickname for the AI sender
++  string ip = 7;          // IPv4 address of the client (signed with signature)
++  ResponseFormat format = 8; // Applies to this message; absent means SNAPSHOT
++}
+diff --git a/proto/middleware_grpc.pb.go b/proto/middleware_grpc.pb.go
+--- a/proto/middleware_grpc.pb.go
++++ b/proto/middleware_grpc.pb.go
+@@ -1,125 +1,125 @@
+-// Code generated by protoc-gen-go-grpc. DO NOT EDIT.
+-// versions:
+-// - protoc-gen-go-grpc v1.5.1
+-// - protoc             v6.30.2
+-// source: middleware.proto
+-
+-package proto
+-
+-import (
+-	context "context"
+-	grpc "google.golang.org/grpc"
+-	codes "google.golang.org/grpc/codes"
+-	status "google.golang.org/grpc/status"
+-)
+-
+-// This is a compile-time assertion to ensure that this generated file
+-// is compatible with the grpc package it is being compiled against.
+-// Requires gRPC-Go v1.64.0 or later.
+-const _ = grpc.SupportPackageIsVersion9
+-
+-const (
+-	StreamMiddleware_StreamChat_FullMethodName = "/sshchat.StreamMiddleware/StreamChat"
+-)
+-
+-// StreamMiddlewareClient is the client API for StreamMiddleware service.
+-//
+-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+-//
+-// StreamMiddleware defines bidirectional streaming for SSH chat and AI messages
+-type StreamMiddlewareClient interface {
+-	// StreamChat establishes a bidirectional stream:
+-	// - Server sends ChatMessage when SSH clients send messages
+-	// - Client sends AIResponse with incremental streaming text chunks
+-	StreamChat(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[AIResponse, ChatMessage], error)
+-}
+-
+-type streamMiddlewareClient struct {
+-	cc grpc.ClientConnInterface
+-}
+-
+-func NewStreamMiddlewareClient(cc grpc.ClientConnInterface) StreamMiddlewareClient {
+-	return &streamMiddlewareClient{cc}
+-}
+-
+-func (c *streamMiddlewareClient) StreamChat(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[AIResponse, ChatMessage], error) {
+-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+-	stream, err := c.cc.NewStream(ctx, &StreamMiddleware_ServiceDesc.Streams[0], StreamMiddleware_StreamChat_FullMethodName, cOpts...)
+-	if err != nil {
+-		return nil, err
+-	}
+-	x := &grpc.GenericClientStream[AIResponse, ChatMessage]{ClientStream: stream}
+-	return x, nil
+-}
+-
+-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+-type StreamMiddleware_StreamChatClient = grpc.BidiStreamingClient[AIResponse, ChatMessage]
+-
+-// StreamMiddlewareServer is the server API for StreamMiddleware service.
+-// All implementations must embed UnimplementedStreamMiddlewareServer
+-// for forward compatibility.
+-//
+-// StreamMiddleware defines bidirectional streaming for SSH chat and AI messages
+-type StreamMiddlewareServer interface {
+-	// StreamChat establishes a bidirectional stream:
+-	// - Server sends ChatMessage when SSH clients send messages
+-	// - Client sends AIResponse with incremental streaming text chunks
+-	StreamChat(grpc.BidiStreamingServer[AIResponse, ChatMessage]) error
+-	mustEmbedUnimplementedStreamMiddlewareServer()
+-}
+-
+-// UnimplementedStreamMiddlewareServer must be embedded to have
+-// forward compatible implementations.
+-//
+-// NOTE: this should be embedded by value instead of pointer to avoid a nil
+-// pointer dereference when methods are called.
+-type UnimplementedStreamMiddlewareServer struct{}
+-
+-func (UnimplementedStreamMiddlewareServer) StreamChat(grpc.BidiStreamingServer[AIResponse, ChatMessage]) error {
+-	return status.Errorf(codes.Unimplemented, "method StreamChat not implemented")
+-}
+-func (UnimplementedStreamMiddlewareServer) mustEmbedUnimplementedStreamMiddlewareServer() {}
+-func (UnimplementedStreamMiddlewareServer) testEmbeddedByValue()                          {}
+-
+-// UnsafeStreamMiddlewareServer may be embedded to opt out of forward compatibility for this service.
+-// Use of this interface is not recommended, as added methods to StreamMiddlewareServer will
+-// result in compilation errors.
+-type UnsafeStreamMiddlewareServer interface {
+-	mustEmbedUnimplementedStreamMiddlewareServer()
+-}
+-
+-func RegisterStreamMiddlewareServer(s grpc.ServiceRegistrar, srv StreamMiddlewareServer) {
+-	// If the following call pancis, it indicates UnimplementedStreamMiddlewareServer was
+-	// embedded by pointer and is nil.  This will cause panics if an
+-	// unimplemented method is ever invoked, so we test this at initialization
+-	// time to prevent it from happening at runtime later due to I/O.
+-	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+-		t.testEmbeddedByValue()
+-	}
+-	s.RegisterService(&StreamMiddleware_ServiceDesc, srv)
+-}
+-
+-func _StreamMiddleware_StreamChat_Handler(srv interface{}, stream grpc.ServerStream) error {
+-	return srv.(StreamMiddlewareServer).StreamChat(&grpc.GenericServerStream[AIResponse, ChatMessage]{ServerStream: stream})
+-}
+-
+-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+-type StreamMiddleware_StreamChatServer = grpc.BidiStreamingServer[AIResponse, ChatMessage]
+-
+-// StreamMiddleware_ServiceDesc is the grpc.ServiceDesc for StreamMiddleware service.
+-// It's only intended for direct use with grpc.RegisterService,
+-// and not to be introspected or modified (even as a copy)
+-var StreamMiddleware_ServiceDesc = grpc.ServiceDesc{
+-	ServiceName: "sshchat.StreamMiddleware",
+-	HandlerType: (*StreamMiddlewareServer)(nil),
+-	Methods:     []grpc.MethodDesc{},
+-	Streams: []grpc.StreamDesc{
+-		{
+-			StreamName:    "StreamChat",
+-			Handler:       _StreamMiddleware_StreamChat_Handler,
+-			ServerStreams: true,
+-			ClientStreams: true,
+-		},
+-	},
+-	Metadata: "middleware.proto",
+-}
++// Code generated by protoc-gen-go-grpc. DO NOT EDIT.
++// versions:
++// - protoc-gen-go-grpc v1.5.1
++// - protoc             v6.30.2
++// source: middleware.proto
++
++package proto
++
++import (
++	context "context"
++	grpc "google.golang.org/grpc"
++	codes "google.golang.org/grpc/codes"
++	status "google.golang.org/grpc/status"
++)
++
++// This is a compile-time assertion to ensure that this generated file
++// is compatible with the grpc package it is being compiled against.
++// Requires gRPC-Go v1.64.0 or later.
++const _ = grpc.SupportPackageIsVersion9
++
++const (
++	StreamMiddleware_StreamChat_FullMethodName = "/sshchat.StreamMiddleware/StreamChat"
++)
++
++// StreamMiddlewareClient is the client API for StreamMiddleware service.
++//
++// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
++//
++// StreamMiddleware defines bidirectional streaming for SSH chat and AI messages
++type StreamMiddlewareClient interface {
++	// StreamChat establishes a bidirectional stream:
++	// - Server sends ChatMessage when SSH clients send messages
++	// - Client sends AIResponse snapshots or explicitly selected delta chunks
++	StreamChat(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[AIResponse, ChatMessage], error)
++}
++
++type streamMiddlewareClient struct {
++	cc grpc.ClientConnInterface
++}
++
++func NewStreamMiddlewareClient(cc grpc.ClientConnInterface) StreamMiddlewareClient {
++	return &streamMiddlewareClient{cc}
++}
++
++func (c *streamMiddlewareClient) StreamChat(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[AIResponse, ChatMessage], error) {
++	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
++	stream, err := c.cc.NewStream(ctx, &StreamMiddleware_ServiceDesc.Streams[0], StreamMiddleware_StreamChat_FullMethodName, cOpts...)
++	if err != nil {
++		return nil, err
++	}
++	x := &grpc.GenericClientStream[AIResponse, ChatMessage]{ClientStream: stream}
++	return x, nil
++}
++
++// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
++type StreamMiddleware_StreamChatClient = grpc.BidiStreamingClient[AIResponse, ChatMessage]
++
++// StreamMiddlewareServer is the server API for StreamMiddleware service.
++// All implementations must embed UnimplementedStreamMiddlewareServer
++// for forward compatibility.
++//
++// StreamMiddleware defines bidirectional streaming for SSH chat and AI messages
++type StreamMiddlewareServer interface {
++	// StreamChat establishes a bidirectional stream:
++	// - Server sends ChatMessage when SSH clients send messages
++	// - Client sends AIResponse snapshots or explicitly selected delta chunks
++	StreamChat(grpc.BidiStreamingServer[AIResponse, ChatMessage]) error
++	mustEmbedUnimplementedStreamMiddlewareServer()
++}
++
++// UnimplementedStreamMiddlewareServer must be embedded to have
++// forward compatible implementations.
++//
++// NOTE: this should be embedded by value instead of pointer to avoid a nil
++// pointer dereference when methods are called.
++type UnimplementedStreamMiddlewareServer struct{}
++
++func (UnimplementedStreamMiddlewareServer) StreamChat(grpc.BidiStreamingServer[AIResponse, ChatMessage]) error {
++	return status.Errorf(codes.Unimplemented, "method StreamChat not implemented")
++}
++func (UnimplementedStreamMiddlewareServer) mustEmbedUnimplementedStreamMiddlewareServer() {}
++func (UnimplementedStreamMiddlewareServer) testEmbeddedByValue()                          {}
++
++// UnsafeStreamMiddlewareServer may be embedded to opt out of forward compatibility for this service.
++// Use of this interface is not recommended, as added methods to StreamMiddlewareServer will
++// result in compilation errors.
++type UnsafeStreamMiddlewareServer interface {
++	mustEmbedUnimplementedStreamMiddlewareServer()
++}
++
++func RegisterStreamMiddlewareServer(s grpc.ServiceRegistrar, srv StreamMiddlewareServer) {
++	// If the following call pancis, it indicates UnimplementedStreamMiddlewareServer was
++	// embedded by pointer and is nil.  This will cause panics if an
++	// unimplemented method is ever invoked, so we test this at initialization
++	// time to prevent it from happening at runtime later due to I/O.
++	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
++		t.testEmbeddedByValue()
++	}
++	s.RegisterService(&StreamMiddleware_ServiceDesc, srv)
++}
++
++func _StreamMiddleware_StreamChat_Handler(srv interface{}, stream grpc.ServerStream) error {
++	return srv.(StreamMiddlewareServer).StreamChat(&grpc.GenericServerStream[AIResponse, ChatMessage]{ServerStream: stream})
++}
++
++// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
++type StreamMiddleware_StreamChatServer = grpc.BidiStreamingServer[AIResponse, ChatMessage]
++
++// StreamMiddleware_ServiceDesc is the grpc.ServiceDesc for StreamMiddleware service.
++// It's only intended for direct use with grpc.RegisterService,
++// and not to be introspected or modified (even as a copy)
++var StreamMiddleware_ServiceDesc = grpc.ServiceDesc{
++	ServiceName: "sshchat.StreamMiddleware",
++	HandlerType: (*StreamMiddlewareServer)(nil),
++	Methods:     []grpc.MethodDesc{},
++	Streams: []grpc.StreamDesc{
++		{
++			StreamName:    "StreamChat",
++			Handler:       _StreamMiddleware_StreamChat_Handler,
++			ServerStreams: true,
++			ClientStreams: true,
++		},
++	},
++	Metadata: "middleware.proto",
++}

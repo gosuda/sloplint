@@ -1,0 +1,34 @@
+{
+  "label": "ssh-chat-9-review",
+  "repository": "gosuda/ssh-chat",
+  "number": 9,
+  "head": "116ef952bd54da6e7a06e846c1000b9a3ff48706",
+  "branch": "fix/ssh-chat1-modular-middleware-20261126",
+  "base_ref": "main",
+  "base_sha": "179d41e6e32c79fe2619b1f718d560edb2a8c33a",
+  "tree": "752fbe4e88b3b9ba7ac4c057f728c6f7d3e292a1",
+  "patch": "remaining-ssh-contract.patch",
+  "patch_sha256": "fcdcf834a84006bfb465b28b15d5e3dc2b737c660d2362f0d3926202cb74a38e",
+  "files": [
+    {
+      "path": "middleware.go",
+      "sha256": "774d2b86da2854393821d012a6688cc8d5ed502f1c7f52507a2694efdf89ed2b"
+    },
+    {
+      "path": "middleware_test.go",
+      "sha256": "f9ec57e553412c459c59b29d3b8b54650dabf6bf18e22c787bad201b81b02dbb"
+    },
+    {
+      "path": "proto/middleware.pb.go",
+      "sha256": "fe236f62f29ed8497d6d3511d077713a2c27fa9cd1eb2514abe774b4dc4a232f"
+    },
+    {
+      "path": "proto/middleware.proto",
+      "sha256": "b95a312c5ed8f8110f16c16871dd90b76a1a9c688eee3e6e255ce96daa96716b"
+    },
+    {
+      "path": "proto/middleware_grpc.pb.go",
+      "sha256": "1d39b724c7e65df0f007aea9ff0733ca60af1c5b99ce92bfb8228b01a6d20e87"
+    }
+  ]
+}

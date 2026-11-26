@@ -1,0 +1,123 @@
+[
+  {
+    "name": "forwarding",
+    "path": "chat/client.go",
+    "edits": [
+      [
+        "c.server.AppendUserMessage(Message{",
+        "c.server.AppendMessage(Message{"
+      ]
+    ],
+    "test": "^TestStreamedMessagesUseTheSelectedStore$",
+    "marker": "user message lacks a stable broadcast ID",
+    "package": "./chat"
+  },
+  {
+    "name": "sqlite-update",
+    "path": "chat/db.go",
+    "edits": [
+      [
+        "WHERE message_id = ?",
+        "WHERE message_id = ? AND 0"
+      ]
+    ],
+    "test": "^TestSQLiteMessageIDsMigrateAndPersist$",
+    "marker": "persist update: false",
+    "package": "./chat"
+  },
+  {
+    "name": "prompt-identity",
+    "path": "middleware.go",
+    "edits": [
+      [
+        "Time: time.Now(), Nick: nick, Text: text, Color: 31 + rand.Intn(6),",
+        "ID: message.MessageId, Time: time.Now(), Nick: nick, Text: text, Color: 31 + rand.Intn(6),"
+      ]
+    ],
+    "test": "^TestPromptIDsNeverBecomeReplyStorageIDs$",
+    "marker": "reply must have a separate storage ID",
+    "package": "."
+  },
+  {
+    "name": "startup-history",
+    "path": "client.go",
+    "edits": [
+      [
+        "\tgrpcAddress, err := middlewareAddress(grpcHost, grpcPort, grpcSecurityMode, grpcAuthEnabled)\n\tif err != nil {\n\t\treturn err\n\t}\n\t// Acquire both listeners before opening the store or recording any messages.\n\tsshListener, err := net.Listen(\"tcp\", addr)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"listen for SSH: %w\", err)\n\t}\n\tdefer sshListener.Close()\n\tlistener, err := net.Listen(\"tcp\", grpcAddress)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"listen for gRPC middleware: %w\", err)\n\t}\n\tdefer listener.Close()\n\n",
+        ""
+      ],
+      [
+        "\tgrpcServer, middleware, err := startGRPCServer(globalChat, grpcSecurityMode, grpcAuthEnabled, hostKeyPath)",
+        "\tgrpcAddress, err := middlewareAddress(grpcHost, grpcPort, grpcSecurityMode, grpcAuthEnabled)\n\tif err != nil {\n\t\treturn err\n\t}\n\t// Acquire both listeners before opening the store or recording any messages.\n\tsshListener, err := net.Listen(\"tcp\", addr)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"listen for SSH: %w\", err)\n\t}\n\tdefer sshListener.Close()\n\tlistener, err := net.Listen(\"tcp\", grpcAddress)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"listen for gRPC middleware: %w\", err)\n\t}\n\tdefer listener.Close()\n\n\tgrpcServer, middleware, err := startGRPCServer(globalChat, grpcSecurityMode, grpcAuthEnabled, hostKeyPath)"
+      ]
+    ],
+    "test": "^TestListenerCollisionDoesNotTouchHistory$",
+    "marker": "listener collision changed chat history",
+    "package": "."
+  },
+  {
+    "name": "auth-replay",
+    "path": "middleware.go",
+    "edits": [
+      [
+        "\tif _, exists := s.usedAuthentications[digest]; exists {\n\t\treturn status.Error(codes.Unauthenticated, \"authentication has already been used\")\n\t}\n",
+        ""
+      ]
+    ],
+    "test": "^TestAuthenticationPrecedesBroadcastRegistration$",
+    "marker": "replayed authentication accepted",
+    "package": "."
+  },
+  {
+    "name": "overflow",
+    "path": "middleware.go",
+    "edits": [
+      [
+        "close(stream.overflow)",
+        "// Deliberately omit the overflow signal."
+      ]
+    ],
+    "test": "^TestBroadcastOverflowClosesTheSubscriber$",
+    "marker": "queue overflow silently discarded a message",
+    "package": "."
+  },
+  {
+    "name": "unicode-preservation",
+    "path": "middleware.go",
+    "edits": [
+      [
+        "case unicode.IsGraphic(r) || r == '\\u200c' || r == '\\u200d':",
+        "case unicode.IsPrint(r):"
+      ]
+    ],
+    "test": "^TestReplyFormatsAndUnicodeSurviveStorage$",
+    "marker": "reply format or Unicode text was altered: case=unicode",
+    "package": "."
+  },
+  {
+    "name": "legacy-snapshots",
+    "path": "middleware.go",
+    "edits": [
+      [
+        "if message.Format == pb.ResponseFormat_DELTA {",
+        "if message.Format == pb.ResponseFormat_DELTA || message.Format == pb.ResponseFormat_SNAPSHOT {"
+      ]
+    ],
+    "test": "^TestReplyFormatsAndUnicodeSurviveStorage$",
+    "marker": "reply format or Unicode text was altered: case=legacy",
+    "package": "."
+  },
+  {
+    "name": "final-reply-slot",
+    "path": "middleware.go",
+    "edits": [
+      [
+        "if !exists && !message.IsFinal && len(replies) >= 100 {",
+        "if !exists && len(replies) >= 100 {"
+      ]
+    ],
+    "test": "^TestFinalReplyDoesNotConsumeAnUnfinishedSlot$",
+    "marker": "final reply consumed an unfinished slot",
+    "package": "."
+  }
+]
