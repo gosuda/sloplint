@@ -74,8 +74,8 @@ elif sys.argv[1] == "verify":
         source = [
             "type A = S12;",
             "type B = T12;",
-            "type S0 = { back: A; infer: <T>(value: {}) => string; value: string };",
-            f"type T0 = {{ back: B; infer: (value: {{}}) => string; value: {leaf} }};",
+            "type S0 = { back: A; infer: <T>(value: {}) => T; value: string };",
+            f"type T0 = {{ back: B; infer: (value: {{}}) => unknown; value: {leaf} }};",
         ]
         for depth in range(1, 13):
             source += [

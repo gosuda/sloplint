@@ -6166,6 +6166,7 @@ mod tests {
             let number = table.number();
             let empty = table.object_type(Vec::new());
             let unused = SymbolId::new(10004);
+            let inferred_result = table.named(unused);
             let generic = table.function_with_parameters(
                 vec![unused],
                 vec![FunctionParameter::new(
@@ -6174,9 +6175,9 @@ mod tests {
                     false,
                     false,
                 )],
-                string,
+                inferred_result,
             );
-            let concrete = table.function(vec![empty], string);
+            let concrete = table.function(vec![empty], table.unknown());
             let left = SymbolId::new(10000);
             let left_parameter = SymbolId::new(10001);
             let right = SymbolId::new(10002);
