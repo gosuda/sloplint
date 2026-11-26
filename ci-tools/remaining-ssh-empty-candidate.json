@@ -1,0 +1,26 @@
+{
+  "label": "ssh-chat-9-empty-snapshot",
+  "repository": "gosuda/ssh-chat",
+  "number": 9,
+  "head": "d736c171b1ab14af536e78066827ad3c047fa5f3",
+  "branch": "fix/ssh-chat1-modular-middleware-20261126",
+  "base_ref": "main",
+  "base_sha": "179d41e6e32c79fe2619b1f718d560edb2a8c33a",
+  "tree": "56eb0f8c6b5a49d9bd8122ea9786932c55a8f456",
+  "patch": "remaining-ssh-empty.patch",
+  "patch_sha256": "1890927955c8df65026b4da4db5a8a0a272e3102ae6b1450505648956122b0a7",
+  "files": [
+    {
+      "path": "middleware.go",
+      "sha256": "06a9fb0c16655005d340682565098f1e537e39ee0e9d5db3fd8e4fbc62e5c749"
+    },
+    {
+      "path": "middleware_test.go",
+      "sha256": "2278874ba9495b639acdda1a5aa6767056c8d083910578ee9cb190f392222f25"
+    },
+    {
+      "path": "proto/README.md",
+      "sha256": "da0a5fe9a4e0fe8534255e1c2dc0a9c02a0f79fdef33071893d1eda2d5948392"
+    }
+  ]
+}
