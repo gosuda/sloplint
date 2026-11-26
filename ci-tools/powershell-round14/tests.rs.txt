@@ -1,0 +1,30 @@
+
+#[test]
+fn unicode_escape_spelling_is_not_searchable_text() {
+    for source in [
+        "Write-Host $r/\"`u{1F600}x$id\"\n",
+        "Write-Host $r/`u{1F600}x$id\n",
+        "Write-Host $r/\"`u{000041}x$id\"\n",
+    ] {
+        let analysis = run_clean(source);
+        let command = call(&analysis, "Write-Host");
+        assert_eq!(command.args.len(), 1, "{source}");
+        assert!(
+            matches!(command.args[0].shape, ArgShape::Concat { longest_static: 1 }),
+            "{source}: {:?}",
+            command.args[0].shape
+        );
+    }
+}
+
+#[test]
+fn bare_word_interpolation_excludes_the_variable_spelling() {
+    let analysis = run_clean("Write-Host v$VERSION.tar.gz\n");
+    let command = call(&analysis, "Write-Host");
+    assert_eq!(command.args.len(), 1);
+    assert!(
+        matches!(command.args[0].shape, ArgShape::Concat { longest_static: 7 }),
+        "shape: {:?}",
+        command.args[0].shape
+    );
+}

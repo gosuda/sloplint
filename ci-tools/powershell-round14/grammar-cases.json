@@ -1,0 +1,117 @@
+[
+  {
+    "id": "if-comment",
+    "source": "if (Get-Date\n# Filter below\n| Select-Object -First 1) {}\n",
+    "accepted": true
+  },
+  {
+    "id": "group-comment",
+    "source": "(Get-Date\n# Filter below\n| Write-Output)\n",
+    "accepted": true
+  },
+  {
+    "id": "group-two-comments",
+    "source": "(Get-Date\n# first\n# second\n| Write-Output)\n",
+    "accepted": true
+  },
+  {
+    "id": "group-inline-comment",
+    "source": "(Get-Date # first\n| Write-Output)\n",
+    "accepted": true
+  },
+  {
+    "id": "group-block-comment",
+    "source": "(Get-Date\n<# filter #>\n| Write-Output)\n",
+    "accepted": true
+  },
+  {
+    "id": "group-nested-block-comment",
+    "source": "(Get-Date\n<# before <# nested #> after #>\n| Write-Output)\n",
+    "accepted": true
+  },
+  {
+    "id": "group-multiline-block-comment",
+    "source": "(Get-Date\n<# before\n\nafter #>\n| Write-Output)\n",
+    "accepted": true
+  },
+  {
+    "id": "group-empty-line",
+    "source": "(Get-Date\n\n| Write-Output)\n",
+    "accepted": false
+  },
+  {
+    "id": "group-comment-then-empty",
+    "source": "(Get-Date\n# first\n\n| Write-Output)\n",
+    "accepted": false
+  },
+  {
+    "id": "group-empty-then-comment",
+    "source": "(Get-Date\n\n# first\n| Write-Output)\n",
+    "accepted": false
+  },
+  {
+    "id": "group-spaces-empty",
+    "source": "(Get-Date\n   \n| Write-Output)\n",
+    "accepted": false
+  },
+  {
+    "id": "foreach-comment",
+    "source": "foreach ($x in Get-Date\n# first\n| Write-Output) {}\n",
+    "accepted": true
+  },
+  {
+    "id": "while-comment",
+    "source": "while (Get-Date\n# first\n| Write-Output) {}\n",
+    "accepted": true
+  },
+  {
+    "id": "switch-comment",
+    "source": "switch (Get-Date\n# first\n| Write-Output) { default {} }\n",
+    "accepted": true
+  },
+  {
+    "id": "group-nbsp",
+    "source": "(Get-Date\n | Write-Output)\n",
+    "accepted": true
+  },
+  {
+    "id": "group-next-line",
+    "source": "(Get-Date\n| Write-Output)\n",
+    "accepted": true
+  },
+  {
+    "id": "group-em-space",
+    "source": "(Get-Date\n | Write-Output)\n",
+    "accepted": true
+  },
+  {
+    "id": "group-narrow-nbsp",
+    "source": "(Get-Date\n | Write-Output)\n",
+    "accepted": true
+  },
+  {
+    "id": "group-bom",
+    "source": "(Get-Date\n﻿| Write-Output)\n",
+    "accepted": false
+  },
+  {
+    "id": "group-zero-width",
+    "source": "(Get-Date\n​| Write-Output)\n",
+    "accepted": false
+  },
+  {
+    "id": "group-word-joiner",
+    "source": "(Get-Date\n⁠| Write-Output)\n",
+    "accepted": false
+  },
+  {
+    "id": "group-vertical-tab",
+    "source": "(Get-Date\n\u000b| Write-Output)\n",
+    "accepted": true
+  },
+  {
+    "id": "group-formfeed",
+    "source": "(Get-Date\n\f| Write-Output)\n",
+    "accepted": true
+  }
+]
