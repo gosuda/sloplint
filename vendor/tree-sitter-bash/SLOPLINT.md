@@ -61,6 +61,10 @@ any error node. These patches remove the errors that were reproduced on real scr
   starts a concatenated word. `CLOSING_BRACE` is valid only while the expansion can end.
 - Extglob pattern: an opening single quote ends the pattern token, as a double quote
   already did. An escaped single quote is consumed as an ordinary pattern character.
+- Deserializer hardening (D1-D3): the scanner validates every length before
+  its read (`length < 4` entry guard, per-heredoc `length - size` plus
+  `delimiter_size` bounds) and resets instead of asserting on malformed
+  input; well-formed round-trips are unchanged.
 
 No backtick change. An earlier version of this patch changed how a backtick starts a
 concatenated substitution. It was removed because it changed the tree of valid input.
