@@ -139,6 +139,26 @@ sloplint check --mode ratchet   # reports only findings absent from the baseline
 
 `sloplint baseline` refuses to replace an existing regular file that is not a sloplint baseline, such as `sloplint.toml` or a source file: it exits 2 and leaves the file untouched; delete the file to record a baseline there.
 
+### What sloplint writes
+
+`check` writes nothing to the project tree: findings go to stdout, and the
+per-user cache lives outside the checkout. Every finding carries a `fix:`
+line describing the change a human or agent should make; applying it is
+always opt-in and never done by `check`. Repeated runs on a clean tree print
+byte-identical output and change nothing.
+
+`baseline` writes exactly one file: the path named by `project.baseline`,
+relative to the project root. Recording is opt-in: only `baseline` writes
+the baseline file, and only `init` writes the configuration. The file is
+replaced atomically, never rewritten in place: a linked reader keeps seeing
+the complete previous baseline. Recording twice without changes writes
+byte-identical content, and ratchet runs against the same tree report
+byte-identical results. Hard-link preservation holds for every other path:
+`check` never touches sources, so their link counts hold.
+
+`sloplint init` writes exactly `sloplint.toml` in the current directory. It
+refuses when the name already exists and leaves no temporary file behind.
+
 The cache is per-user and never stored in the checkout. It lives in `sloplint/<hash of the project root>/cache-v2/` under `$XDG_CACHE_HOME` when that is absolute, else under `~/.cache`, `~/Library/Caches`, or `%LOCALAPPDATA%`. The key includes a hash of the running executable. `--no-cache` skips it. A damaged or mismatched cache falls back to a fresh analysis.
 
 sloplint warns and runs without the cache when the cache directory is a symlink, is not a directory, is writable by group or others, or sits inside the project root, when no home directory is set, or when the running executable cannot be read.
