@@ -66,7 +66,7 @@ elif mode == "verify":
             witness.write_text(text)
             output = run(
                 f"typescript-{parameter}-{reverse}",
-                ["node", "node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--pretty", "false", str(witness)],
+                ["node", "node_modules/typescript/bin/tsc", "--ignoreConfig", "--noEmit", "--strict", "--skipLibCheck", "--pretty", "false", str(witness)],
                 expected,
                 "error TS2322:" if expected else "",
             )
