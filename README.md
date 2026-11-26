@@ -52,7 +52,7 @@ Prerequisites: Git, [rustup](https://rustup.rs/), and a C/C++ toolchain for the 
 cargo install --git https://github.com/gosuda/sloplint --locked
 ```
 
-This places the `sloplint` binary in `~/.cargo/bin`; make sure that directory is on your `PATH`. The release workflow builds archives for six targets (x86_64 and aarch64 on Linux, macOS, and Windows), but no release has been published yet.
+This places the `sloplint` binary in `~/.cargo/bin`; make sure that directory is on your `PATH`. The release workflow builds archives for six targets (x86_64 and aarch64 on Linux, macOS, and Windows), but no release has been published yet. All runners use Depot. Windows ARM64 is cross-compiled without native runtime verification, and macOS x86_64 smoke tests use Rosetta. See [CI and release guarantees](docs/ci.md).
 
 ## Usage
 

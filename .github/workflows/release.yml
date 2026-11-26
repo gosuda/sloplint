@@ -37,26 +37,24 @@ jobs:
       contents: read
     uses: ./.github/workflows/ci.yml
     with:
-      # The build matrix below performs the same release build and self-lint.
+      # The build matrix below builds every target and self-lints runnable binaries.
       skip-release-build: true
 
   build:
     needs: verify-tag
-    runs-on: >-
-      ${{ matrix.os == 'ubuntu-24.04' && 'depot-ubuntu-24.04'
-      || matrix.os == 'ubuntu-24.04-arm' && 'depot-ubuntu-24.04-arm'
-      || matrix.os }}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-24.04, target: x86_64-unknown-linux-gnu }
-          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu }
-          - { os: macos-26-intel, target: x86_64-apple-darwin }
-          - { os: macos-26, target: aarch64-apple-darwin }
-          - { os: windows-2025, target: x86_64-pc-windows-msvc }
-          - { os: windows-11-arm, target: aarch64-pc-windows-msvc }
+          - { runner: depot-ubuntu-24.04, target: x86_64-unknown-linux-gnu, smoke: true }
+          - { runner: depot-ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu, smoke: true }
+          - { runner: depot-macos-latest, target: x86_64-apple-darwin, smoke: true }
+          - { runner: depot-macos-latest, target: aarch64-apple-darwin, smoke: true }
+          - { runner: depot-windows-2025-4, target: x86_64-pc-windows-msvc, smoke: true }
+          # Depot has no Windows ARM64 host. Build this target without runtime proof.
+          - { runner: depot-windows-2025-4, target: aarch64-pc-windows-msvc, smoke: false }
     env:
       CARGO_INCREMENTAL: "0"
       CARGO_PROFILE_DEV_DEBUG: line-tables-only
@@ -67,20 +65,24 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Require Rosetta for macOS x64 execution
+        if: matrix.target == 'x86_64-apple-darwin'
+        run: arch -x86_64 /usr/bin/true
       - run: rustup target add ${{ matrix.target }}
       - name: Preserve vendor dependency fingerprints
         run: TZ=UTC find vendor -exec touch -t 200001010000 {} +
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          shared-key: ${{ matrix.target }}
       - run: cargo build --release --locked --target ${{ matrix.target }}
       - name: Smoke-test binary
+        if: matrix.smoke
         run: |
           bin="target/${{ matrix.target }}/release/sloplint"
           if [ "$RUNNER_OS" = Windows ]; then bin="$bin.exe"; fi
           reported="$("$bin" --version | tr -d '\r')"
           test "$reported" = "sloplint ${GITHUB_REF_NAME#v}"
           "$bin" check crates --format agent --strictness standard --mode threshold --fail-on minor
+      - name: Report cross-compiled Windows ARM64 artifact
+        if: ${{ !matrix.smoke }}
+        run: echo '::notice::Windows ARM64 was cross-compiled on Depot x64. Native execution and self-lint are not certified for this target.'
       - name: Archive Unix
         if: runner.os != 'Windows'
         run: |
@@ -156,7 +158,7 @@ jobs:
 
   attest:
     needs: [verify-tag, ci, build, sbom]
-    runs-on: ubuntu-24.04
+    runs-on: depot-ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: read
@@ -185,7 +187,7 @@ jobs:
 
   publish:
     needs: [verify-tag, ci, build, sbom, attest]
-    runs-on: ubuntu-24.04
+    runs-on: depot-ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: write
@@ -204,6 +206,8 @@ jobs:
         run: |
           read -ra targets <<<"$RELEASE_TARGETS"
           bash scripts/verify-release.sh dist "$GITHUB_REF_NAME" dist "${targets[@]}"
+      # Depot is an ephemeral self-hosted runner. Verify the artifact and
+      # exact repository/workflow/tag/commit identity instead of host ownership.
       - name: Verify attestations
         env:
           GH_TOKEN: ${{ github.token }}
@@ -213,8 +217,7 @@ jobs:
               --repo "$GITHUB_REPOSITORY" \
               --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
               --source-ref "$GITHUB_REF" \
-              --source-digest "$GITHUB_SHA" \
-              --deny-self-hosted-runners
+              --source-digest "$GITHUB_SHA"
           done
       - name: Publish release
         env:
