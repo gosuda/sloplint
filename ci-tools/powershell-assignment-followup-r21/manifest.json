@@ -1,0 +1,38 @@
+{
+  "base": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+  "base_tree": "171bbe1c7137faf98fb7981f69288120cd18bdf6",
+  "pre_base": "61c88ec4d492dd1ab72f76b15b84fa9434cccfaa",
+  "pre_tree": "589aff2ec97f6e6f8179453ff6882fe19b3b65b2",
+  "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+  "mode": "Freeze native AST/argv/extents and real legacy custom-query behavior on unchanged pre-r20 and published-r20 source. No production edits. Comma and ordinary-character-escape cases are observations before choosing product assertions.",
+  "cases": {
+    "conditional": 96,
+    "checked_argv": 54,
+    "observational_comma_argv": 18,
+    "observational_ordinary_escapes": 8
+  },
+  "proof_sha256": {
+    "verify.py": "5226f2366aad49be45acff16c33c19765e8c5f42874ba8e93b88f96a2fbf28c3",
+    "native-oracle.ps1": "2166f6d4bab520ac415791d21f1d775075734068cd6eb9866aed511da7e44b15",
+    "cases.json": "13d35c2437eafe38a219e8548a820718cb58d1744bf4c827d6bf45a8c5ea297c",
+    "frozen-modules.json": "eb57abc090ba6c3c4b277097ed3acd3f5670ed381357168d0bad9b5b4bba8ae5"
+  },
+  "threads": [
+    "PRRT_kwDOVOMFM868heFN",
+    "PRRT_kwDOVOMFM868heGc",
+    "PRRT_kwDOVOMFM868heHT"
+  ],
+  "parser_cache_isolation": {
+    "environment": "TREE_SITTER_LIBDIR",
+    "source": "https://github.com/tree-sitter/tree-sitter/blob/v0.27.1/crates/loader/src/loader.rs",
+    "strategy": "Separate empty library directories for pre/current sources, recording each compiled library digest."
+  },
+  "prior_published_receipt": {
+    "head": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+    "tree": "171bbe1c7137faf98fb7981f69288120cd18bdf6",
+    "source_run": 45875733057,
+    "ordinary_pr_run": 45877442939,
+    "ordinary_conclusion": "success",
+    "retirement": "3a2ede51f89777df54121ca9e65d572bb497826f"
+  }
+}
