@@ -1,0 +1,812 @@
+{
+  "schema_version": 2,
+  "as_of": "2026-11-26 13:52:53 UTC",
+  "scope": "Independent public website, SSH, elegant-mermaid, and PowerShell grammar repair slice; Flats design handed to coordinator",
+  "publication_policy": "Additive feature-branch updates only. No force, amend, PR merge, auto-merge, or direct main update. Native proofs run on Depot; failures stay failures.",
+  "website": {
+    "actual_base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+    "producer": "18455f1b144bbefae8553282c0f913350cda2604",
+    "run": 45813811928,
+    "candidates": [
+      {
+        "number": 317,
+        "head": "fe872e6560fdbbe149a470205f423bf86fddb781",
+        "branch": "dependabot/go_modules/github.com/tdewolff/minify/v2-2.25.0",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "old_tree": "6cf1d8a414262b53299cf624224c009ea1e783e8",
+        "tree": "385040a7411cfb7b933064bc276f8f87d3f0fc87",
+        "previous_gate_run": 45813811928,
+        "previous_gate_job": 139888225918,
+        "commit": "8e302f18ba68523b976453c3abaab00f39034fcc",
+        "proof_run": 45832362539,
+        "proof_job": 139952139166,
+        "proof_producer": "d7eab1f7a16e18c56c4617aa2d143dd67bb40253",
+        "artifact": 15121989955,
+        "artifact_sha256": "352bf03e00f42595bf7a21576f3ba603800a701cab4b8cb1dd745fb5fed0a185"
+      },
+      {
+        "number": 316,
+        "head": "bb5447e7461b33649be6178395c11a181e015bb7",
+        "branch": "dependabot/npm_and_yarn/npm_and_yarn-af3e3560b6",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "old_tree": "f06eec888e0ed9e04d759aeba7d31d94efdf239b",
+        "tree": "125085f7c95ddd6f565a899cff6e76a316ec406d",
+        "previous_gate_run": 45813811928,
+        "previous_gate_job": 139888225786,
+        "commit": "f913edd243936c090285a9ed6cc116f0fb73d57f",
+        "proof_run": 45832362539,
+        "proof_job": 139952139166,
+        "proof_producer": "d7eab1f7a16e18c56c4617aa2d143dd67bb40253",
+        "artifact": 15121989955,
+        "artifact_sha256": "352bf03e00f42595bf7a21576f3ba603800a701cab4b8cb1dd745fb5fed0a185"
+      },
+      {
+        "number": 315,
+        "head": "e7cd6450e51add32687d42f5ae64df8f74210410",
+        "branch": "dependabot/npm_and_yarn/markdownlint-cli2-0.24.1",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "old_tree": "e355930ab2474713b42905e3488843d1bd1ae981",
+        "tree": "3f72b5baad45c6ac268fa43e8065bef84e61c8fd",
+        "previous_gate_run": 45813811928,
+        "previous_gate_job": 139888225797,
+        "commit": "cc3430f0e0c4c0f07ad1464dd6d56164aebe91f9",
+        "proof_run": 45832362539,
+        "proof_job": 139952139166,
+        "proof_producer": "d7eab1f7a16e18c56c4617aa2d143dd67bb40253",
+        "artifact": 15121989955,
+        "artifact_sha256": "352bf03e00f42595bf7a21576f3ba603800a701cab4b8cb1dd745fb5fed0a185"
+      },
+      {
+        "number": 314,
+        "head": "1da99cf9949c6ee3112d0492c0b0bf118255def2",
+        "branch": "dependabot/npm_and_yarn/caniuse-lite-1.0.30001826",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "old_tree": "4834c93d6356ea905a31b7244bb17434c21b883a",
+        "tree": "1f87b682854b7c7281c73c120ffc1ed21ac854fc",
+        "previous_gate_run": 45813811928,
+        "previous_gate_job": 139888225802,
+        "commit": "c8752a22082d9e03b33baf0a56752457aa4f2a0f",
+        "proof_run": 45832362539,
+        "proof_job": 139952139166,
+        "proof_producer": "d7eab1f7a16e18c56c4617aa2d143dd67bb40253",
+        "artifact": 15121989955,
+        "artifact_sha256": "352bf03e00f42595bf7a21576f3ba603800a701cab4b8cb1dd745fb5fed0a185"
+      },
+      {
+        "number": 313,
+        "head": "4cd143876ecc79b2bbcb5d945e1bbef088053570",
+        "branch": "dependabot/npm_and_yarn/prettier-3.10.1",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "old_tree": "4de66457501a7225b9e1c504597659e11c9b11b7",
+        "tree": "d3fdc59c8b0c80b9f02e135522859bc1aec0cddc",
+        "previous_gate_run": 45813811928,
+        "previous_gate_job": 139888225836,
+        "commit": "2d3c12ef4ab2c366b85081dce899c3ac3c212349",
+        "proof_run": 45832362539,
+        "proof_job": 139952139166,
+        "proof_producer": "d7eab1f7a16e18c56c4617aa2d143dd67bb40253",
+        "artifact": 15121989955,
+        "artifact_sha256": "352bf03e00f42595bf7a21576f3ba603800a701cab4b8cb1dd745fb5fed0a185"
+      },
+      {
+        "number": 312,
+        "head": "d8afe501e920c53c26629f8955fb3cab8c695b56",
+        "branch": "dependabot/go_modules/github.com/a-h/templ-0.3.1118",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "old_tree": "a71b149836168da937646b3924ece1ecbf634eba",
+        "tree": "368288b06ecfe15c380ca132caffdbc68ffc24c2",
+        "previous_gate_run": 45813811928,
+        "previous_gate_job": 139888225512,
+        "commit": "115b24b203ed85c446c59c1cd249a381e7bf127f",
+        "proof_run": 45832362539,
+        "proof_job": 139952139166,
+        "proof_producer": "d7eab1f7a16e18c56c4617aa2d143dd67bb40253",
+        "artifact": 15121989955,
+        "artifact_sha256": "352bf03e00f42595bf7a21576f3ba603800a701cab4b8cb1dd745fb5fed0a185"
+      },
+      {
+        "number": 309,
+        "head": "ba266e2f5a7822a0c05218672d74eaf40544978e",
+        "branch": "dependabot/go_modules/golang.org/x/image-0.48.0",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "old_tree": "a2ae74d2da75dc80fb825b80783d62a21c7ef583",
+        "tree": "d99d47f9f6f134799f0c003603d24c17f9a61dbc",
+        "previous_gate_run": 45813811928,
+        "previous_gate_job": 139888225925,
+        "commit": "181b29e7d7cdb0297374b3bda20e17a6598f1131",
+        "proof_run": 45832362539,
+        "proof_job": 139952139166,
+        "proof_producer": "d7eab1f7a16e18c56c4617aa2d143dd67bb40253",
+        "artifact": 15121989955,
+        "artifact_sha256": "352bf03e00f42595bf7a21576f3ba603800a701cab4b8cb1dd745fb5fed0a185"
+      },
+      {
+        "number": 307,
+        "head": "a31493893848e1d819d28959c238033b7e727a8f",
+        "branch": "dependabot/npm_and_yarn/tailwindcss/cli-4.3.5",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "old_tree": "7a8af4a873c9b5b4bd58851cd88f442df9c935cb",
+        "tree": "6cf4b17c397ffc5f565b75d4d78b979bd78a5ba9",
+        "previous_gate_run": 45813811928,
+        "previous_gate_job": 139888225849,
+        "commit": "872b69af82a4908ddb31915d6eac4a51a3cf46a5",
+        "proof_run": 45832362539,
+        "proof_job": 139952139166,
+        "proof_producer": "d7eab1f7a16e18c56c4617aa2d143dd67bb40253",
+        "artifact": 15121989955,
+        "artifact_sha256": "352bf03e00f42595bf7a21576f3ba603800a701cab4b8cb1dd745fb5fed0a185"
+      }
+    ],
+    "snapshot_as_of": "2026-11-26 13:34:55 UTC",
+    "guard_followup": {
+      "producer": "d7eab1f7a16e18c56c4617aa2d143dd67bb40253",
+      "run": 45832362539,
+      "job": 139952139166,
+      "artifact": 15121989955,
+      "artifact_sha256": "352bf03e00f42595bf7a21576f3ba603800a701cab4b8cb1dd745fb5fed0a185",
+      "candidates": [
+        {
+          "number": 317,
+          "head": "fe872e6560fdbbe149a470205f423bf86fddb781",
+          "branch": "dependabot/go_modules/github.com/tdewolff/minify/v2-2.25.0",
+          "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+          "old_tree": "6cf1d8a414262b53299cf624224c009ea1e783e8",
+          "tree": "385040a7411cfb7b933064bc276f8f87d3f0fc87",
+          "previous_gate_run": 45813811928,
+          "previous_gate_job": 139888225918,
+          "commit": "8e302f18ba68523b976453c3abaab00f39034fcc",
+          "proof_run": 45832362539,
+          "proof_job": 139952139166,
+          "proof_producer": "d7eab1f7a16e18c56c4617aa2d143dd67bb40253",
+          "artifact": 15121989955,
+          "artifact_sha256": "352bf03e00f42595bf7a21576f3ba603800a701cab4b8cb1dd745fb5fed0a185"
+        },
+        {
+          "number": 316,
+          "head": "bb5447e7461b33649be6178395c11a181e015bb7",
+          "branch": "dependabot/npm_and_yarn/npm_and_yarn-af3e3560b6",
+          "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+          "old_tree": "f06eec888e0ed9e04d759aeba7d31d94efdf239b",
+          "tree": "125085f7c95ddd6f565a899cff6e76a316ec406d",
+          "previous_gate_run": 45813811928,
+          "previous_gate_job": 139888225786,
+          "commit": "f913edd243936c090285a9ed6cc116f0fb73d57f",
+          "proof_run": 45832362539,
+          "proof_job": 139952139166,
+          "proof_producer": "d7eab1f7a16e18c56c4617aa2d143dd67bb40253",
+          "artifact": 15121989955,
+          "artifact_sha256": "352bf03e00f42595bf7a21576f3ba603800a701cab4b8cb1dd745fb5fed0a185"
+        },
+        {
+          "number": 315,
+          "head": "e7cd6450e51add32687d42f5ae64df8f74210410",
+          "branch": "dependabot/npm_and_yarn/markdownlint-cli2-0.24.1",
+          "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+          "old_tree": "e355930ab2474713b42905e3488843d1bd1ae981",
+          "tree": "3f72b5baad45c6ac268fa43e8065bef84e61c8fd",
+          "previous_gate_run": 45813811928,
+          "previous_gate_job": 139888225797,
+          "commit": "cc3430f0e0c4c0f07ad1464dd6d56164aebe91f9",
+          "proof_run": 45832362539,
+          "proof_job": 139952139166,
+          "proof_producer": "d7eab1f7a16e18c56c4617aa2d143dd67bb40253",
+          "artifact": 15121989955,
+          "artifact_sha256": "352bf03e00f42595bf7a21576f3ba603800a701cab4b8cb1dd745fb5fed0a185"
+        },
+        {
+          "number": 314,
+          "head": "1da99cf9949c6ee3112d0492c0b0bf118255def2",
+          "branch": "dependabot/npm_and_yarn/caniuse-lite-1.0.30001826",
+          "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+          "old_tree": "4834c93d6356ea905a31b7244bb17434c21b883a",
+          "tree": "1f87b682854b7c7281c73c120ffc1ed21ac854fc",
+          "previous_gate_run": 45813811928,
+          "previous_gate_job": 139888225802,
+          "commit": "c8752a22082d9e03b33baf0a56752457aa4f2a0f",
+          "proof_run": 45832362539,
+          "proof_job": 139952139166,
+          "proof_producer": "d7eab1f7a16e18c56c4617aa2d143dd67bb40253",
+          "artifact": 15121989955,
+          "artifact_sha256": "352bf03e00f42595bf7a21576f3ba603800a701cab4b8cb1dd745fb5fed0a185"
+        },
+        {
+          "number": 313,
+          "head": "4cd143876ecc79b2bbcb5d945e1bbef088053570",
+          "branch": "dependabot/npm_and_yarn/prettier-3.10.1",
+          "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+          "old_tree": "4de66457501a7225b9e1c504597659e11c9b11b7",
+          "tree": "d3fdc59c8b0c80b9f02e135522859bc1aec0cddc",
+          "previous_gate_run": 45813811928,
+          "previous_gate_job": 139888225836,
+          "commit": "2d3c12ef4ab2c366b85081dce899c3ac3c212349",
+          "proof_run": 45832362539,
+          "proof_job": 139952139166,
+          "proof_producer": "d7eab1f7a16e18c56c4617aa2d143dd67bb40253",
+          "artifact": 15121989955,
+          "artifact_sha256": "352bf03e00f42595bf7a21576f3ba603800a701cab4b8cb1dd745fb5fed0a185"
+        },
+        {
+          "number": 312,
+          "head": "d8afe501e920c53c26629f8955fb3cab8c695b56",
+          "branch": "dependabot/go_modules/github.com/a-h/templ-0.3.1118",
+          "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+          "old_tree": "a71b149836168da937646b3924ece1ecbf634eba",
+          "tree": "368288b06ecfe15c380ca132caffdbc68ffc24c2",
+          "previous_gate_run": 45813811928,
+          "previous_gate_job": 139888225512,
+          "commit": "115b24b203ed85c446c59c1cd249a381e7bf127f",
+          "proof_run": 45832362539,
+          "proof_job": 139952139166,
+          "proof_producer": "d7eab1f7a16e18c56c4617aa2d143dd67bb40253",
+          "artifact": 15121989955,
+          "artifact_sha256": "352bf03e00f42595bf7a21576f3ba603800a701cab4b8cb1dd745fb5fed0a185"
+        },
+        {
+          "number": 309,
+          "head": "ba266e2f5a7822a0c05218672d74eaf40544978e",
+          "branch": "dependabot/go_modules/golang.org/x/image-0.48.0",
+          "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+          "old_tree": "a2ae74d2da75dc80fb825b80783d62a21c7ef583",
+          "tree": "d99d47f9f6f134799f0c003603d24c17f9a61dbc",
+          "previous_gate_run": 45813811928,
+          "previous_gate_job": 139888225925,
+          "commit": "181b29e7d7cdb0297374b3bda20e17a6598f1131",
+          "proof_run": 45832362539,
+          "proof_job": 139952139166,
+          "proof_producer": "d7eab1f7a16e18c56c4617aa2d143dd67bb40253",
+          "artifact": 15121989955,
+          "artifact_sha256": "352bf03e00f42595bf7a21576f3ba603800a701cab4b8cb1dd745fb5fed0a185"
+        },
+        {
+          "number": 307,
+          "head": "a31493893848e1d819d28959c238033b7e727a8f",
+          "branch": "dependabot/npm_and_yarn/tailwindcss/cli-4.3.5",
+          "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+          "old_tree": "7a8af4a873c9b5b4bd58851cd88f442df9c935cb",
+          "tree": "6cf4b17c397ffc5f565b75d4d78b979bd78a5ba9",
+          "previous_gate_run": 45813811928,
+          "previous_gate_job": 139888225849,
+          "commit": "872b69af82a4908ddb31915d6eac4a51a3cf46a5",
+          "proof_run": 45832362539,
+          "proof_job": 139952139166,
+          "proof_producer": "d7eab1f7a16e18c56c4617aa2d143dd67bb40253",
+          "artifact": 15121989955,
+          "artifact_sha256": "352bf03e00f42595bf7a21576f3ba603800a701cab4b8cb1dd745fb5fed0a185"
+        }
+      ],
+      "controls": 96,
+      "gate": "success"
+    },
+    "initial_full_gate_candidates": [
+      {
+        "pr": 317,
+        "source_head": "c27241fe4283bc81a9b87997984b80634e4cb42a",
+        "published_head": "fe872e6560fdbbe149a470205f423bf86fddb781",
+        "tree": "6cf1d8a414262b53299cf624224c009ea1e783e8",
+        "job": 139888225918,
+        "patch_sha256": "dfa8ddea95a44d17920ee887b45eac491aba1f2d05cd3457981e40b534fcd2b4"
+      },
+      {
+        "pr": 316,
+        "source_head": "cb3e3590c8730c938f3ccdb56d8cf911dedcdec4",
+        "published_head": "bb5447e7461b33649be6178395c11a181e015bb7",
+        "tree": "f06eec888e0ed9e04d759aeba7d31d94efdf239b",
+        "job": 139888225786,
+        "patch_sha256": "dfa8ddea95a44d17920ee887b45eac491aba1f2d05cd3457981e40b534fcd2b4"
+      },
+      {
+        "pr": 315,
+        "source_head": "909f9c6eac5a8593a05ccddb0c82aa29ae760b0a",
+        "published_head": "e7cd6450e51add32687d42f5ae64df8f74210410",
+        "tree": "e355930ab2474713b42905e3488843d1bd1ae981",
+        "job": 139888225797,
+        "patch_sha256": "dfa8ddea95a44d17920ee887b45eac491aba1f2d05cd3457981e40b534fcd2b4"
+      },
+      {
+        "pr": 314,
+        "source_head": "ad2244ba955487a5db435da53c6ddd938f66d805",
+        "published_head": "1da99cf9949c6ee3112d0492c0b0bf118255def2",
+        "tree": "4834c93d6356ea905a31b7244bb17434c21b883a",
+        "job": 139888225802,
+        "patch_sha256": "dfa8ddea95a44d17920ee887b45eac491aba1f2d05cd3457981e40b534fcd2b4"
+      },
+      {
+        "pr": 313,
+        "source_head": "65cb860e96abc0a0036b8200fd32798e43a20b49",
+        "published_head": "4cd143876ecc79b2bbcb5d945e1bbef088053570",
+        "tree": "4de66457501a7225b9e1c504597659e11c9b11b7",
+        "job": 139888225836,
+        "patch_sha256": "dfa8ddea95a44d17920ee887b45eac491aba1f2d05cd3457981e40b534fcd2b4"
+      },
+      {
+        "pr": 312,
+        "source_head": "9984f6b8917e4c206faac2edf806ac0eceb4a5a8",
+        "published_head": "d8afe501e920c53c26629f8955fb3cab8c695b56",
+        "tree": "a71b149836168da937646b3924ece1ecbf634eba",
+        "job": 139888225512,
+        "patch_sha256": "dfa8ddea95a44d17920ee887b45eac491aba1f2d05cd3457981e40b534fcd2b4"
+      },
+      {
+        "pr": 309,
+        "source_head": "4603124363c39b9f0ad205815556380761c073b4",
+        "published_head": "ba266e2f5a7822a0c05218672d74eaf40544978e",
+        "tree": "a2ae74d2da75dc80fb825b80783d62a21c7ef583",
+        "job": 139888225925,
+        "patch_sha256": "dfa8ddea95a44d17920ee887b45eac491aba1f2d05cd3457981e40b534fcd2b4"
+      },
+      {
+        "pr": 307,
+        "source_head": "47a548e4ea2373f04615dbc97af524ede87a9a20",
+        "published_head": "a31493893848e1d819d28959c238033b7e727a8f",
+        "tree": "7a8af4a873c9b5b4bd58851cd88f442df9c935cb",
+        "job": 139888225849,
+        "patch_sha256": "dfa8ddea95a44d17920ee887b45eac491aba1f2d05cd3457981e40b534fcd2b4"
+      }
+    ],
+    "prior_snapshot": [
+      {
+        "repository": "gosuda/website",
+        "number": 317,
+        "state": "open",
+        "head": "fe872e6560fdbbe149a470205f423bf86fddb781",
+        "expected_head_unchanged": true,
+        "base_record": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "total_threads": 0,
+        "unresolved": []
+      },
+      {
+        "repository": "gosuda/website",
+        "number": 316,
+        "state": "open",
+        "head": "bb5447e7461b33649be6178395c11a181e015bb7",
+        "expected_head_unchanged": true,
+        "base_record": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "total_threads": 0,
+        "unresolved": []
+      },
+      {
+        "repository": "gosuda/website",
+        "number": 315,
+        "state": "open",
+        "head": "e7cd6450e51add32687d42f5ae64df8f74210410",
+        "expected_head_unchanged": true,
+        "base_record": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "total_threads": 0,
+        "unresolved": []
+      },
+      {
+        "repository": "gosuda/website",
+        "number": 314,
+        "state": "open",
+        "head": "1da99cf9949c6ee3112d0492c0b0bf118255def2",
+        "expected_head_unchanged": true,
+        "base_record": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "total_threads": 0,
+        "unresolved": []
+      },
+      {
+        "repository": "gosuda/website",
+        "number": 313,
+        "state": "open",
+        "head": "4cd143876ecc79b2bbcb5d945e1bbef088053570",
+        "expected_head_unchanged": true,
+        "base_record": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "total_threads": 0,
+        "unresolved": []
+      },
+      {
+        "repository": "gosuda/website",
+        "number": 312,
+        "state": "open",
+        "head": "d8afe501e920c53c26629f8955fb3cab8c695b56",
+        "expected_head_unchanged": true,
+        "base_record": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "total_threads": 0,
+        "unresolved": []
+      },
+      {
+        "repository": "gosuda/website",
+        "number": 309,
+        "state": "open",
+        "head": "ba266e2f5a7822a0c05218672d74eaf40544978e",
+        "expected_head_unchanged": true,
+        "base_record": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "total_threads": 0,
+        "unresolved": []
+      },
+      {
+        "repository": "gosuda/website",
+        "number": 307,
+        "state": "open",
+        "head": "a31493893848e1d819d28959c238033b7e727a8f",
+        "expected_head_unchanged": true,
+        "base_record": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "total_threads": 0,
+        "unresolved": []
+      }
+    ],
+    "snapshot_pending_refresh": true
+  },
+  "ssh": {
+    "label": "ssh-chat-9-empty-snapshot",
+    "repository": "gosuda/ssh-chat",
+    "number": 9,
+    "head": "d736c171b1ab14af536e78066827ad3c047fa5f3",
+    "branch": "fix/ssh-chat1-modular-middleware-20261126",
+    "base_ref": "main",
+    "base_sha": "179d41e6e32c79fe2619b1f718d560edb2a8c33a",
+    "tree": "56eb0f8c6b5a49d9bd8122ea9786932c55a8f456",
+    "patch": "remaining-ssh-empty.patch",
+    "patch_sha256": "1890927955c8df65026b4da4db5a8a0a272e3102ae6b1450505648956122b0a7",
+    "files": [
+      {
+        "path": "middleware.go",
+        "sha256": "06a9fb0c16655005d340682565098f1e537e39ee0e9d5db3fd8e4fbc62e5c749"
+      },
+      {
+        "path": "middleware_test.go",
+        "sha256": "2278874ba9495b639acdda1a5aa6767056c8d083910578ee9cb190f392222f25"
+      },
+      {
+        "path": "proto/README.md",
+        "sha256": "da0a5fe9a4e0fe8534255e1c2dc0a9c02a0f79fdef33071893d1eda2d5948392"
+      }
+    ],
+    "published_head": "cdc11f9505ea291d72d23d286c28cb88be1eb540",
+    "linux_producer": "8f3e785cd4d8e99f383cddf93495115ca80d88ef",
+    "linux_run": 45823830681,
+    "linux_job": 139922706301,
+    "windows_producer": "2100bb976f72b22966848779d75187363037f0af",
+    "windows_run": 45823001959,
+    "windows_job": 139919816886,
+    "linux_artifact": 15120170566,
+    "linux_artifact_sha256": "7281c7562b48dcba65a7feb5204acd59040b4283c31dd54d70898f83add04e63",
+    "windows_artifact": 15119670359,
+    "windows_artifact_sha256": "64ed88ff56c4e39ab788a47072b095859ccb892012b87522c6bc350d40a9c5a2",
+    "unresolved_threads": 0,
+    "thread_count": 15,
+    "original_pr": {
+      "number": 1,
+      "head": "1dd8ea93aad5a9a1543db75d05c3609ac0dcdc3e",
+      "state": "unchanged and conflicted",
+      "access_result": "Normal maintainer edit rejected: FORBIDDEN / Resource not accessible by integration"
+    },
+    "controls": [
+      "forwarding",
+      "sqlite-update",
+      "prompt-identity",
+      "startup-history",
+      "auth-replay",
+      "overflow",
+      "unicode-preservation",
+      "legacy-snapshots",
+      "final-reply-slot",
+      "empty-snapshot"
+    ],
+    "snapshot": {
+      "repository": "gosuda/ssh-chat",
+      "number": 9,
+      "state": "open",
+      "head": "cdc11f9505ea291d72d23d286c28cb88be1eb540",
+      "expected_head_unchanged": true,
+      "base_record": "179d41e6e32c79fe2619b1f718d560edb2a8c33a",
+      "mergeable": true,
+      "mergeable_state": "clean",
+      "total_threads": 15,
+      "unresolved": []
+    }
+  },
+  "elegant27": {
+    "url": "https://github.com/gosuda/elegant-mermaid/pull/27",
+    "published_head": "d7352dc5f8fc406b345631b322dbd27d438b6938",
+    "tree": "571167cdc982b7af15a7a2f96f053b7ae8e0d69e",
+    "base": "afa5a631ec41cb1e9aa0634b2d547d084bd27e33",
+    "former_pr": 26,
+    "former_pr_merged_by_other_actor": true,
+    "former_threads_already_resolved_by_other_actor": true,
+    "unresolved_threads": 0,
+    "thread_count": 2,
+    "initial_source_commit": "6aeb314c6196c3a21c0a2f4c1406ff52915e72ec",
+    "initial_tree": "895ecf3c8bf8ce800a8db523bb9cf24351f0affc",
+    "full_run": 45818260293,
+    "full_job": 139903501240,
+    "full_result": "failure: just verify exits 1; all preceding independent core/reference commands exit 0",
+    "house_job": 139903501085,
+    "house_result": "success",
+    "playground_job": 139903501301,
+    "playground_result": "success",
+    "windows_job": 139903501363,
+    "windows_result": "success",
+    "quality_job": 139903501375,
+    "quality_result": "failure: 2075 fixtures, 1363 exceptions, four aggregate thresholds and exception-list mismatch",
+    "main_quality_job": 139903501303,
+    "main_quality_result": "failure: exact actual main, 2075 fixtures, 1362 exceptions, same four aggregate thresholds and exception-list mismatch",
+    "lean_diagnostics": [
+      "LaneBandsFindRouteClearProof.lean:1157:26 unused Bind.bind simp argument",
+      "LaneBandsFindRouteClearProof.lean:1157:37 unused Except.bind simp argument",
+      "LaneBandsFindRouteClearProof.lean:1160:26 unused Bind.bind simp argument",
+      "LaneBandsFindRouteClearProof.lean:1160:37 unused Except.bind simp argument",
+      "LaneEndsPinEnds.lean:78:5 unused h binding"
+    ],
+    "lean_reader_run": 45830069117,
+    "lean_reader_job": 139944210322,
+    "guard_run": 45828778803,
+    "guard_job": 139939719650,
+    "guard_result": "success: all 78 old/new shell controls, real Go environment, actionlint, unchanged other workflow fields/recipes, exact final tree and clean worktree",
+    "guard_artifact": 15120589394,
+    "guard_artifact_sha256": "e300579be97dfa582de99db370bc4e04b03bc373860996889216ff0fccff030c",
+    "fully_verified": false
+  },
+  "elegant24": {
+    "candidate": {
+      "label": "elegant-mermaid24-actual-base-integration",
+      "repository": "gosuda/elegant-mermaid",
+      "source_pr": 24,
+      "head": "801d75e266e0f827817238286171c517fe84b5b2",
+      "source_tree": "e17fcb5bd5f915494889511c6c2de2b7a06a6081",
+      "branch": "fix/layered-proof-closure",
+      "base_ref": "main",
+      "base_sha": "afa5a631ec41cb1e9aa0634b2d547d084bd27e33",
+      "merge_base": "277e83b2e3d80c14f75334869b86a607c7ab3ffd",
+      "integration_tree": "7c7facd2f3f91f630e54eb93d0a548fd36e653cc",
+      "tree": "cd966185163456e24a30eae268ec52a8804543df",
+      "patch": "remaining-elegant24.patch",
+      "patch_sha256": "9cf96eab10a225157c048bf27b6a76d43d66b0b188dbfee483e5a5cfc23cb1ab",
+      "feature_paths_preserved": 387,
+      "page_blob": "c6777ee954cf109ea556fad1b43fb6dcc57f3b4f",
+      "ci_followup_commit": "6aeb314c6196c3a21c0a2f4c1406ff52915e72ec",
+      "files": [
+        {
+          "path": ".github/workflows/ci.yml",
+          "sha256": "598402782eb0042b29a8fc07374b4cf3fd85ec4dd8f94cb84e61a082904cb52a"
+        },
+        {
+          "path": ".github/workflows/pages.yml",
+          "sha256": "919a121ab33d1e1029b6717c55903c2c64ca8e071bb939c5c67c85e5979eef7a"
+        },
+        {
+          "path": ".github/workflows/verify.yml",
+          "sha256": "dbe8a4a478706a505bed30da4384c741de5f236348c0c58de76947abed8f4591"
+        },
+        {
+          "path": "AGENTS.md",
+          "sha256": "1b71ec70c23bd6252f491e008adf62b8d4642159eb7f31b5d761841f36c88269"
+        },
+        {
+          "path": "Cargo.lock",
+          "sha256": "241755972b070b23125c689dc81c5dcd7a1bfe4f7da1b2697c10dc7c7fb813c6"
+        },
+        {
+          "path": "Justfile",
+          "sha256": "dbe1798f40064cc2f503d6f7fe17e6e594c6b5272072d0d9e60780a7d81dc681"
+        },
+        {
+          "path": "go.mod",
+          "sha256": "755bfcad76194dc6b9c7758963c2700a771103b0bab750f9ea9934dedf50d4c2"
+        },
+        {
+          "path": "go.sum",
+          "sha256": "69c2c5e89ac4cd2b03f647b3f65c7b2d502450b51b75988062439cce4068a7e1"
+        },
+        {
+          "path": "playground/package.json",
+          "sha256": "44c0351adebd8d478765aa8ffe557113a957184574f24d179a23c3ae454e6ae5"
+        },
+        {
+          "path": "playground/pnpm-lock.yaml",
+          "sha256": "f0500adc79b900fb23579396d0ff1aa7f80903f5a91b3d5c05b503ec3cbfa5b7"
+        },
+        {
+          "path": "tools/upstream-oracle/package.json",
+          "sha256": "b670dbcc795515ff5ed24b8301c9bdac0a539eea7e7171f5f7d58426b3557fa5"
+        },
+        {
+          "path": "tools/upstream-oracle/pnpm-lock.yaml",
+          "sha256": "f68a71acf5642257fc93b93fbd2de766ba51a2d136dbb49d4bf5a30b7e076252"
+        },
+        {
+          "path": ".depot/workflows/ci.yml",
+          "sha256": "b380249666756334b584823a668d06d2770db7ec18f4b32e0d9c20e568fe7661"
+        }
+      ]
+    },
+    "final_tree": "4edb92f8213003450e3b12838498fd776cb6591e",
+    "published": false,
+    "feature_paths_preserved": 387,
+    "full_run": 45828040968,
+    "full_job": 139937199163,
+    "full_status": "in_progress",
+    "house_job": 139937199231,
+    "house_result": "success",
+    "playground_job": 139937199226,
+    "playground_result": "success",
+    "windows_job": 139937198560,
+    "windows_result": "success",
+    "quality_job": 139937199153,
+    "quality": {
+      "head": "801d75e266e0f827817238286171c517fe84b5b2",
+      "tree": "cd966185163456e24a30eae268ec52a8804543df",
+      "fixtures": 2075,
+      "exceptions": 1282,
+      "metrics_sha256": "0ec1c3a4a55a9699b95cb360d857d585bcb84e165bf3724f78448bb478403903",
+      "gates": [
+        "gate 1 hard constraints: FAIL",
+        "gate 2 total crossings: FAIL",
+        "gate 3 total soft cost: FAIL",
+        "gate 4 exceptions <= 5 percent: FAIL"
+      ],
+      "diagnostics": [
+        "corpus/quality-exceptions.json differs from computed exceptions"
+      ]
+    },
+    "baseline_run": 45829530120,
+    "baseline_job": 139942357656,
+    "baseline_quality": {
+      "head": "801d75e266e0f827817238286171c517fe84b5b2",
+      "tree": "e17fcb5bd5f915494889511c6c2de2b7a06a6081",
+      "fixtures": 2075,
+      "exceptions": 1282,
+      "metrics_sha256": "0ec1c3a4a55a9699b95cb360d857d585bcb84e165bf3724f78448bb478403903",
+      "gates": [
+        "gate 1 hard constraints: FAIL",
+        "gate 2 total crossings: FAIL",
+        "gate 3 total soft cost: FAIL",
+        "gate 4 exceptions <= 5 percent: FAIL"
+      ],
+      "diagnostics": [
+        "corpus/quality-exceptions.json differs from computed exceptions"
+      ]
+    },
+    "identical_quality_metrics": true,
+    "guard_run": 45828778803,
+    "guard_job": 139939720074,
+    "guard_result": "success",
+    "guard_artifact": 15120784176,
+    "guard_artifact_sha256": "a4b09330404110746991c49852ce7029193e47d8369ea72e4939f63e365c9bd6",
+    "fully_verified": false,
+    "pending_action": "Read final native verifier result, compare any failure with unchanged feature source, then publish additive actual-base integration after fresh head/base checks. Final workflow correction is already verified separately."
+  },
+  "sloplint137_grammar": {
+    "source_commit": "39c584db3d6bbdbe92c0ae82a248806bfa4ce235",
+    "head": "948fa8b3ec6a76a02dcc2d9cb95410404c672de9",
+    "base": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+    "tree": "452d04614542aa3cb90fdea3b4899ba442e45254",
+    "producer": "a337dc56de4bc9bfa8ff4a30c3a6c762f7e8e599",
+    "run": 45827219552,
+    "job": 139934361696,
+    "artifact": 15121005011,
+    "artifact_sha256": "4212bb37e560ca49113d6ea0a727835fef3dc103fa773962e9754631ae585b62",
+    "source_files": [
+      {
+        "path": "crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs",
+        "blob": "507fec1aeceb1b02cf8ad95ca14868c72918a420",
+        "sha256": "cd2d95707d212d14f9903e4fd6f3f55a754afa41f05888e14b35edc39a87991f"
+      },
+      {
+        "path": "vendor/tree-sitter-powershell/SLOPLINT.md",
+        "blob": "4d22be53559d57ee5a4c02cd02ee952498b7d9b4",
+        "sha256": "e6795820920d9c2730d48fb87be3f29d61952b25d3e72bcdfcd134118639accf"
+      },
+      {
+        "path": "vendor/tree-sitter-powershell/grammar.js",
+        "blob": "29c135a94083e2857ecbea82210c7f4e4227d626",
+        "sha256": "2919aa8cfe138655174201d2258022807cc81dfc00bacdcbc73ea4fa35966250"
+      },
+      {
+        "path": "vendor/tree-sitter-powershell/sloplint-grammar.patch",
+        "blob": "639d9db00b3efd6437f59ff5dc019b1b926d216e",
+        "sha256": "c6dde0caf37bfc0ff42acd2acfd99c7c21872cd300a61559422dda74299876fd"
+      },
+      {
+        "path": "vendor/tree-sitter-powershell/src/grammar.json",
+        "blob": "3b42ac23cf23d095b4411380b1c3dd05b21d01e6",
+        "sha256": "5289ac5c521a75fbc896d9890ef7fb4d84864bd07db8c087e727e5b0a41da725"
+      },
+      {
+        "path": "vendor/tree-sitter-powershell/src/parser.c",
+        "blob": "f4c9654423155c4c703920bd18c28383a29bbbae",
+        "sha256": "c966821323806ef6f41f0316256405db6f2aa0cfb7eb67a7394c07ee15c57470"
+      },
+      {
+        "path": "vendor/tree-sitter-powershell/src/scanner.c",
+        "blob": "37a6f2ba9b44a5d19945ae36108d8b7a79dcc66d",
+        "sha256": "c5fc60ea7427b7e0605e0818354c1d125ca7a4210112f538351c465de09c3699"
+      },
+      {
+        "path": "vendor/tree-sitter-powershell/test/corpus/sloplint_multiline_boundaries.txt",
+        "blob": "2466b7510d68415c832130b0c688b7139e9c2db8",
+        "sha256": "e59508f6313084cae69fa6822e0045913db7a8ca534d827e222bdc479b3f7c98"
+      }
+    ],
+    "proof_files": [
+      {
+        "path": ".github/workflows/remaining-runner-gates.yml",
+        "sha256": "f013e1e958da5ba94faa5ef680e006f661f393684b089724e3c95cccec092850"
+      },
+      {
+        "path": "ci-tools/remaining-s137-prepare.py",
+        "sha256": "9483593c5d8d289dd401eb1b552ee2472b00f8c9eb1d2ada181db6e198d89218"
+      },
+      {
+        "path": "ci-tools/remaining-s137-input.json",
+        "sha256": "1672945b0fb00a478d72131b07dd506a5378adf0094d2e2dde78fb1e28854682"
+      },
+      {
+        "path": "ci-tools/remaining-s137-input.patch",
+        "sha256": "904cd613918a99e9732135e28ea43474c3470c1cebf24dbeb2d54de4f1c6fd76"
+      },
+      {
+        "path": "ci-tools/remaining-s137-cases.json",
+        "sha256": "bdce454fa0b1af982fdb8b3d7c85f45b35b2f0ac64451a4cee7babc0ea6ff8d8"
+      },
+      {
+        "path": "ci-tools/remaining-s137-oracle.ps1",
+        "sha256": "4b7c31e31bfcbcef4ff8a8d5abf3d7850e211add893f2e9a0da34902fc8d3f02"
+      }
+    ],
+    "results": {
+      "extract-powershell": 0,
+      "powershell-oracle": 0,
+      "tree-sitter-version": 0,
+      "apply": 0,
+      "scanner-syntax": 0,
+      "generate": 0,
+      "corpus-update": 0,
+      "corpus": 0,
+      "rustfmt": 0,
+      "upstream-init": 0,
+      "upstream-remote": 0,
+      "upstream-fetch": 0,
+      "upstream-checkout": 0,
+      "upstream-stage-intent": 0,
+      "grammar-verify": 0,
+      "diff-check": 0
+    },
+    "pr_ref_updated_by_this_worker": false,
+    "combined_required_gates_owned_by": "/root/bitcoin_round7",
+    "handoff_url": "https://github.com/gosuda/sloplint/blob/7f859528b7b298ea5c10928f0065fb29cac48fd0/ci-tools/remaining-s137-handoff.json"
+  },
+  "flats": {
+    "changed": false,
+    "stage": "D2 independently accepted by coordinator; awaiting exact source scope before any implementation",
+    "design_sha256": "232c1be52690c7f826c87cd86e2abcc53615c94b4e7f7955eec6f6f96b960e4f",
+    "instruction": "flats-dev-workflow requires a separate different-model reviewer for design, implementation, and testing",
+    "platform_rejection": "agent thread limit reached",
+    "actual_main": "81235c28ba7d51ea12aad4740da198d54b8a59b5",
+    "heads": {
+      "236": "bc89bb1912422cb7d73b6864fdf4570978fd4438",
+      "242": "fc50dec92555539a029b3c6040c221b28cec319a",
+      "243": "2a51d466e3d4dc848d82ed99954d4f1ab2dd81de",
+      "248": "863801718fce4cb188b072cd29e0e170a3096af2",
+      "265": "f8badac07f5745bcd71b55de30778c0585408336",
+      "272": "bc4b4cdb4d78fb2b70aaf7fbdb6ae66a8d143815"
+    },
+    "conflict_pr": 248,
+    "platform_rejection_historical": true,
+    "later_update_source": "Coordinator message at this checkpoint: real different-model D1 review rejected five gaps, D2 then independently accepted. This worker has not received the exact D2/source assignment and has made no Flats edits.",
+    "changed_by_this_worker": false
+  },
+  "probe": {
+    "repository": "gosuda/sloplint",
+    "branch": "ci/remaining-runner-gates-20261126",
+    "head": "d7eab1f7a16e18c56c4617aa2d143dd67bb40253",
+    "retired": false,
+    "pending_job": 139937199163
+  }
+}
