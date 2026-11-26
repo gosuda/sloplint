@@ -287,12 +287,13 @@ fn a_double_dash_ends_the_options_of_a_native_command() {
     assert_eq!(dotnet.args[1].shape, ArgShape::Other, "-- is a parameter");
     let build = run_clean(DOTNET_BUILD);
     let dotnet = call(&build, "dotnet");
-    let word = "VersionSuffix=\"$($manifest.PrivateData.PSData.Prerelease)\"";
     assert_eq!(dotnet.args.len(), 9, "nine arguments: {:?}", dotnet.args);
-    assert_eq!(
-        str_len(&dotnet.args[8]),
-        Some(len(word)),
-        "the value after -p: is one word with its quotes and subexpression: {:?}",
+    assert!(
+        matches!(
+            dotnet.args[8].shape,
+            ArgShape::Concat { longest_static: 31 }
+        ),
+        "the value after -p: is one word with its quotes and subexpression, variables discounted: {:?}",
         dotnet.args
     );
 }

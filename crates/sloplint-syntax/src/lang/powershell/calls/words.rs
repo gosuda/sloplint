@@ -147,3 +147,40 @@ fn ps_word_unicode_escape_end(raw: &str) -> Option<usize> {
     }
     Some(1 + 1 + digits.len() + 1)
 }
+
+// Byte spans of `$variable` interpolations the grammar leaves as plain word
+// text (v$VERSION.tar.gz emits no interpolation child). Single-quoted
+// stretches stay verbatim, so dollars inside them are never dynamics.
+pub(super) fn ps_word_inline_dynamics(raw: &str) -> Vec<(usize, usize)> {
+    let mut out = Vec::new();
+    let mut offset = 0;
+    let mut verbatim = false;
+    while offset < raw.len() {
+        let ch = match raw[offset..].chars().next() {
+            Some(ch) => ch,
+            None => break,
+        };
+        if verbatim {
+            if ch == '\'' {
+                if raw[offset + 1..].starts_with('\'') {
+                    offset += 2;
+                    continue;
+                }
+                verbatim = false;
+            }
+            offset += ch.len_utf8();
+            continue;
+        }
+        if ch == '\'' {
+            verbatim = true;
+        } else if ch == '$' {
+            if let Some(end) = ps_word_variable_end(&raw[offset..]) {
+                out.push((offset, offset + end));
+                offset += end;
+                continue;
+            }
+        }
+        offset += ch.len_utf8();
+    }
+    out
+}

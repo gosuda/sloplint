@@ -272,12 +272,13 @@ fn native_options_with_an_attached_value_are_single_words() {
 fn a_variable_command_takes_a_long_option_with_a_variable_value() {
     let analysis = run_clean(ROCKSDB_RUNNER);
     let invoke = call(&analysis, "$exe");
+    let expected = len("--gtest_filter=");
     assert!(
-        invoke
-            .args
-            .iter()
-            .any(|a| str_len(a) == Some(len("--gtest_filter=$test"))),
-        "the long option is one word: {:?}",
+        invoke.args.iter().any(|a| matches!(
+            a.shape,
+            ArgShape::Concat { longest_static: l } if l == expected
+        )),
+        "the long option is one word with its variable discounted: {:?}",
         invoke.args
     );
 }

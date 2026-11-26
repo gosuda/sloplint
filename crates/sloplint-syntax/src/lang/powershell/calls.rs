@@ -10,7 +10,7 @@ use crate::hooks::{
 };
 
 use super::funcs::{ps_var_name, single_named};
-use words::{ps_word_static_run, ps_word_variable_end};
+use words::{ps_word_inline_dynamics, ps_word_static_run, ps_word_variable_end};
 
 fn ps_string_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     let fallback = narrow(text(cx, n).chars().count().saturating_sub(2));
@@ -210,8 +210,19 @@ fn ps_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
                     longest_static: ps_generic_static(cx, node),
                 }
             } else {
-                ArgShape::Str {
-                    longest_static: narrow(text(cx, node).chars().count()),
+                // Bare words can still interpolate: v$VERSION.tar.gz emits
+                // no interpolation child. Discount inline variables instead
+                // of counting the whole word as literal text.
+                let raw = text(cx, node);
+                let dynamics = ps_word_inline_dynamics(raw);
+                if dynamics.is_empty() {
+                    ArgShape::Str {
+                        longest_static: narrow(raw.chars().count()),
+                    }
+                } else {
+                    ArgShape::Concat {
+                        longest_static: ps_word_static_run(raw, &dynamics),
+                    }
                 }
             }
         }

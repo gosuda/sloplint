@@ -229,3 +229,22 @@ fn grouped_pipelines_continue_across_comment_and_nbsp_lines() {
     run_clean("(Get-Date\n\u{a0}| Write-Output)\n");
     assert!(run("(Get-Date\n\n| Write-Output)\n").parse_error.is_some());
 }
+
+#[test]
+fn bare_words_discount_inline_variables() {
+    // v$VERSION.tar.gz emits no interpolation child, but the word still
+    // interpolates: only the literal runs count.
+    let analysis = run_clean("Write-Host v$VERSION.tar.gz\n");
+    let arguments = &call(&analysis, "Write-Host").args;
+    assert_eq!(arguments.len(), 1);
+    let ArgShape::Concat { longest_static } = arguments[0].shape else {
+        panic!("expected interpolated word: {:?}", arguments[0].shape);
+    };
+    assert_eq!(longest_static, 7, ".tar.gz is the longest literal run");
+    // No dollar, no interpolation: the whole word stays a plain literal.
+    let analysis = run_clean("Write-Host hello\n");
+    let ArgShape::Str { longest_static } = call(&analysis, "Write-Host").args[0].shape else {
+        panic!("expected plain literal");
+    };
+    assert_eq!(longest_static, 5);
+}
