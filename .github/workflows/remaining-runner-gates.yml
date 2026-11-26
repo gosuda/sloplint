@@ -1,105 +1,39 @@
-name: Remaining public runner gates
-
+name: Remaining public repair gates
 on:
   push:
     branches: [ci/remaining-runner-gates-20261126]
     paths:
       - .github/workflows/remaining-runner-gates.yml
-      - ci-tools/remaining-*
-      - ci-tools/website-ci.patch
-
+      - ci-tools/remaining-s137-*
 permissions:
   contents: read
   actions: read
-
-defaults:
-  run:
-    shell: bash
-
 jobs:
-  ssh-empty-gates:
-    runs-on: depot-ubuntu-24.04-4
+  powershell-grammar-prepare:
+    runs-on: depot-ubuntu-24.04-8
     timeout-minutes: 30
     env:
-      GOENV: 'off'
-      GOCACHEPROG: ''
-      GOTOOLCHAIN: local
-      GOMAXPROCS: '4'
-      GOFLAGS: '-p=4'
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-          path: probe
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          repository: gosuda/ssh-chat
-          ref: d736c171b1ab14af536e78066827ad3c047fa5f3
-          persist-credentials: false
-          path: source
-      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
-        with:
-          go-version: '1.27.4'
-          cache: false
-      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
-        with:
-          enable-cache: false
-      - name: Prove the exact reconciliation and its regression controls
-        run: |
-          export GOENV=off GOCACHEPROG=''
-          test -z "$(go env GOCACHEPROG)"
-          uv run --no-project --python 3.13 probe/ci-tools/remaining-ssh-empty-gates.py
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-        if: always()
-        with:
-          name: remaining-ssh-empty-gates-${{ github.sha }}
-          path: evidence/
-          if-no-files-found: error
-          retention-days: 14
-
-  ssh-empty-windows:
-    runs-on: depot-windows-2025
-    timeout-minutes: 20
-    defaults:
-      run:
-        shell: pwsh
-    env:
-      GOENV: 'off'
-      GOCACHEPROG: ''
-      GOTOOLCHAIN: local
       PYTHONIOENCODING: utf-8
     steps:
-      - name: Preserve the immutable patch bytes
-        run: git config --global core.autocrlf false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          persist-credentials: false
           path: probe
+          persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          repository: gosuda/ssh-chat
-          ref: d736c171b1ab14af536e78066827ad3c047fa5f3
-          persist-credentials: false
+          ref: 948fa8b3ec6a76a02dcc2d9cb95410404c672de9
           path: source
-      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
-        with:
-          go-version: '1.24.4'
-          cache: false
+          persist-credentials: false
       - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
         with:
+          python-version: '3.13'
           enable-cache: false
-      - name: Generate with plugins installed outside PATH
-        run: |
-          $env:GOENV = 'off'
-          $env:GOCACHEPROG = ''
-          [string]$probeGoCacheProgram = go env GOCACHEPROG
-          if ($LASTEXITCODE -ne 0) { throw 'go env failed' }
-          if ($probeGoCacheProgram.Trim()) { throw 'GOCACHEPROG was injected' }
-          uv run --no-project --python 3.13 probe/ci-tools/remaining-ssh-empty-windows.py
+      - name: Check the pinned parser and prepare the exact grammar artifacts
+        run: uv run --no-project --python 3.13 probe/ci-tools/remaining-s137-prepare.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
-          name: remaining-ssh-empty-windows-${{ github.sha }}
+          name: remaining-s137-grammar-${{ github.sha }}
           path: |
             evidence/*.json
             evidence/*.log

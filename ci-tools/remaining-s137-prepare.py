@@ -59,6 +59,9 @@ def parser_cases(binary: Path, cases: list[dict[str, str | bool]], phase: str) -
             mismatches.append(str(case["id"]))
             print("PARSER_MISMATCH " + json.dumps({"phase": phase, **record}), flush=True)
             (EVIDENCE / f"{phase}-case-{index}.log").write_text(result.stdout)
+            if phase == "candidate" and len(mismatches) <= 2:
+                diagnostic = subprocess.run([str(binary), "parse", str(path)], cwd=VENDOR, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False, timeout=30)
+                print("PARSER_DETAIL " + diagnostic.stdout[:6000], flush=True)
     (EVIDENCE / f"{phase}-cases.json").write_text(json.dumps(records, indent=2) + "\n")
     print("PARSER_CASES " + json.dumps({"phase": phase, "count": len(cases), "mismatches": mismatches}), flush=True)
     return mismatches

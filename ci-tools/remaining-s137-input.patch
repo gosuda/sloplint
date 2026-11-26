@@ -1,7 +1,7 @@
 diff --git a/vendor/tree-sitter-powershell/grammar.js b/vendor/tree-sitter-powershell/grammar.js
 --- a/vendor/tree-sitter-powershell/grammar.js
 +++ b/vendor/tree-sitter-powershell/grammar.js
-@@ -1,1590 +1,1590 @@
+@@ -1,1590 +1,1595 @@
 -const PREC = {
 -  KEYWORD: 1,
 -  UNARY: 2,
@@ -1631,6 +1631,7 @@ diff --git a/vendor/tree-sitter-powershell/grammar.js b/vendor/tree-sitter-power
 +    $._bare_dashes,
 +    $._method_block_head,
 +    $._loose_dollar,
++    $._here_string_newline,
 +  ],
 +
 +  extras: ($) => [
@@ -1762,9 +1763,13 @@ diff --git a/vendor/tree-sitter-powershell/grammar.js b/vendor/tree-sitter-power
 +            token.immediate(/[^\$\r\n`]+/),
 +            $.variable,
 +            $.sub_expression,
-+            // sloplint: leave the next line's interpolation or escape opener
-+            // intact. The longer closing-delimiter token still owns its break.
-+            token.immediate(/\r?\n/),
++            // sloplint: a line that starts with a backtick must not lose half
++            // of an escape pair to the line-break token: ``````PowerShell.
++            // The break takes the whole pair.
++            token.immediate(/(\r?\n)+[^\"\$\r\n`]/),
++            token.immediate(/(\r?\n)+(`.{1}|`\r?\n)/),
++            token.immediate(/(\r?\n)+\"[^@]/),
++            $._here_string_newline,
 +            $._loose_dollar,
 +            token.immediate(/`.{1}|`\r?\n/),
 +          ),
@@ -4437,9 +4442,9 @@ diff --git a/vendor/tree-sitter-powershell/SLOPLINT.md b/vendor/tree-sitter-powe
 +
 +## Multiline interpolation and parenthesized pipelines
 +
-+Expandable here-string line breaks are separate tokens, so they cannot consume
-+the next line's interpolation or escape opener. The closing delimiter keeps its
-+preceding line break. Parenthesized pipelines use the same statement terminator
++An expandable here-string line break immediately before a dollar is a separate
++external token. It leaves the interpolation opener intact. Closing delimiters
++and line-start escapes retain their existing line-break tokens. Parenthesized pipelines use the same statement terminator
 +as top-level pipelines, including grouped expressions and control-flow clauses.
 +A blank line cannot reconnect either form to a leading pipe.
 +
@@ -4802,3 +4807,491 @@ diff --git a/vendor/tree-sitter-powershell/SLOPLINT.md b/vendor/tree-sitter-powe
 +`powershell_syntax.rs` check both parse health and the adapter's facts. The
 +original 0.26.4 comparison had 29 failures out of 30 tests. The one test that
 +passed checked that invalid snippets still report a parse error.
+diff --git a/vendor/tree-sitter-powershell/src/scanner.c b/vendor/tree-sitter-powershell/src/scanner.c
+--- a/vendor/tree-sitter-powershell/src/scanner.c
++++ b/vendor/tree-sitter-powershell/src/scanner.c
+@@ -1,216 +1,268 @@
+-// Copyright (c) Microsoft Corporation. All rights reserved.
+-// Licensed under the MIT License. See the LICENSE file in the project root for full license information.
+-
+-#include "tree_sitter/parser.h"
+-#include <wctype.h>
+-
+-enum TOKEN_TYPE {
+-    STATEMENT_TERMINATOR,
+-    BARE_DASHES,
+-    METHOD_BLOCK_HEAD,
+-    LOOSE_DOLLAR
+-};
+-
+-/* --- API --- */
+-
+-void *tree_sitter_powershell_external_scanner_create();
+-
+-void tree_sitter_powershell_external_scanner_destroy(void *p);
+-
+-unsigned tree_sitter_powershell_external_scanner_serialize(void *payload, char *buffer);
+-
+-void tree_sitter_powershell_external_scanner_deserialize(void *payload, const char *buffer, unsigned length);
+-
+-bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols);
+-
+-/* --- Internal Functions --- */
+-
+-static void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
+-
+-// sloplint: true when the lookahead starts the keyword `else` or `elseif`,
+-// as a whole word. The lookahead is consumed; the caller has already marked
+-// the end of the zero-width terminator token.
+-static bool at_else_keyword(TSLexer *lexer)
+-{
+-    static const char word[] = "else";
+-    for (int i = 0; word[i] != 0; i++) {
+-        if (towlower(lexer->lookahead) != (wint_t)word[i]) return false;
+-        skip(lexer);
+-    }
+-    if (towlower(lexer->lookahead) == 'i') {
+-        skip(lexer);
+-        if (towlower(lexer->lookahead) != 'f') return false;
+-        skip(lexer);
+-    }
+-    wint_t c = lexer->lookahead;
+-    return !(iswalnum(c) || c == '_' || c == '-');
+-}
+-
+-static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool *valid_symbols)
+-{
+-    if (valid_symbols[STATEMENT_TERMINATOR]) {
+-        lexer->result_symbol = STATEMENT_TERMINATOR;
+-        // This token has no characters -- everything is lookahead to determine its existence
+-        lexer->mark_end(lexer);
+-
+-        bool saw_newline = false;
+-        bool saw_blank_line = false;
+-        for (;;) {
+-            if (lexer->lookahead == 0) return true;
+-            if (lexer->lookahead == '}') return true;
+-            if (lexer->lookahead == ';') return true;
+-            if (lexer->lookahead == ')') return true;
+-            if (lexer->lookahead == '\n') {
+-                saw_blank_line = saw_blank_line || saw_newline;
+-                saw_newline = true;
+-            }
+-            else if (lexer->lookahead == '`') {
+-                // A backtick before a line break joins the lines, so it is
+-                // white space here: `$x -replace "a", "b" `` newline newline `}`.
+-                skip(lexer);
+-                if (lexer->lookahead == '\r') skip(lexer);
+-                if (lexer->lookahead != '\n') return false;
+-            }
+-            else if (!iswspace(lexer->lookahead)) {
+-                // A line break ends the statement, except when the next
+-                // line continues an if statement: `}` newline `else {`.
+-                // A leading pipe on the next line continues the pipeline.
+-                // An intervening blank line ends the statement.
+-                if (saw_newline) {
+-                    if (lexer->lookahead == '|' && !saw_blank_line) return false;
+-                    return !at_else_keyword(lexer);
+-                }
+-                return false;
+-            }
+-            skip(lexer);
+-        }
+-    }
+-
+-    return false;
+-}
+-
+-// A bare `-` or `--` argument: `--` ends option parsing for a native command
+-// (`git log -- path`, `cargo test -- --nocapture`) and `-` names stdin
+-// (`tar -xf -`). `--` is also the decrement operator and `-` the unary minus,
+-// so the lexer cannot tell them apart by length or precedence: the token is
+-// recognised only when the dashes are followed by whitespace, `(` or `{`,
+-// a command separator, or the end of the command.
+-// sloplint: PowerShell treats non-breaking and zero-width spaces as
+-// horizontal whitespace (see grammar extras). The external scanner skips
+-// exactly those plus ASCII space and tab, never line breaks, so a `--`
+-// after ` \u00A0` is still an option terminator.
+-static bool is_horizontal_space(int32_t c)
+-{
+-    return c == ' ' || c == '\t' || c == 0x00A0 || c == 0xFEFF || c == 0x200B || c == 0x2060;
+-}
+-
+-static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_symbols)
+-{
+-    if (!valid_symbols[BARE_DASHES]) return false;
+-
+-    while (is_horizontal_space(lexer->lookahead)) skip(lexer);
+-    if (lexer->lookahead != '-') return false;
+-    lexer->advance(lexer, false);
+-    if (lexer->lookahead == '-') lexer->advance(lexer, false);
+-    lexer->mark_end(lexer);
+-
+-    switch (lexer->lookahead) {
+-        case 0:
+-        case ' ':
+-        case '\t':
+-        case 0x00A0:
+-        case 0xFEFF:
+-        case 0x200B:
+-        case 0x2060:
+-        case '\r':
+-        case '\n':
+-        case ';':
+-        case '|':
+-        case '&':
+-        case '(':
+-        case ')':
+-        case '{':
+-        case '}':
+-            lexer->result_symbol = BARE_DASHES;
+-            return true;
+-        default:
+-            return false;
+-    }
+-}
+-
+-/* --- API Implementation --- */
+-
+-// sloplint: `.Name` or `::Name` when `{` follows the name at once, as in
+-// $a.Where{ $_ }. The token ends before the brace. Anything else is left to
+-// the internal lexer, which re-reads the input from the start.
+-static bool scan_method_block_head(TSLexer *lexer)
+-{
+-    if (lexer->lookahead == ':') {
+-        lexer->advance(lexer, false);
+-        if (lexer->lookahead != ':') return false;
+-        lexer->advance(lexer, false);
+-    } else if (lexer->lookahead == '.') {
+-        lexer->advance(lexer, false);
+-    } else {
+-        return false;
+-    }
+-    if (!(iswalpha(lexer->lookahead) || lexer->lookahead == '_')) return false;
+-    while (iswalnum(lexer->lookahead) || lexer->lookahead == '_') {
+-        lexer->advance(lexer, false);
+-    }
+-    if (lexer->lookahead != '{') return false;
+-    lexer->mark_end(lexer);
+-    lexer->result_symbol = METHOD_BLOCK_HEAD;
+-    return true;
+-}
+-// sloplint: a lone `$` inside an expandable string, when it does not open
+-// `${`, `$(` or a variable. The internal lexer cannot express `$` not
+-// followed by `{` (no lookahead), so an external token covers the lone case.
+-// `${name` without `}` and `${}` then have no valid token and raise an error
+-// as PowerShell does. Variables and sub-expressions stay with the internal
+-// lexer. A plain dollar before whitespace, a backslash or a backtick ends
+-// here, leaving the following here-string closing newline untouched.
+-static bool scan_loose_dollar(void *payload, TSLexer *lexer, const bool *valid_symbols)
+-{
+-    if (!valid_symbols[LOOSE_DOLLAR]) return false;
+-    if (lexer->lookahead != '$') return false;
+-    lexer->advance(lexer, false);
+-    int32_t next = lexer->lookahead;
+-    if (next == '{' || next == '(') return false;
+-    if (next == '$' || next == '^' || next == '?') return false;
+-    if (iswalnum(next) || next == '_') return false;
+-    lexer->mark_end(lexer);
+-    lexer->result_symbol = LOOSE_DOLLAR;
+-    return true;
+-}
+-
+-bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols)
+-{
+-    if (valid_symbols[METHOD_BLOCK_HEAD] &&
+-        (lexer->lookahead == '.' || lexer->lookahead == ':')) {
+-        return scan_method_block_head(lexer);
+-    }
+-    if (scan_loose_dollar(payload, lexer, valid_symbols)) return true;
+-    // The statement terminator consumes nothing, so it must be tried last: when
+-    // both are valid, a `--` has to win over the empty terminator.
+-    if (scan_bare_dashes(payload, lexer, valid_symbols)) return true;
+-    return scan_statement_terminator(payload, lexer, valid_symbols);
+-}
+-
+-void *tree_sitter_powershell_external_scanner_create()
+-{
+-    return NULL;
+-}
+-
+-void tree_sitter_powershell_external_scanner_destroy(void *p)
+-{
+-}
+-
+-unsigned tree_sitter_powershell_external_scanner_serialize(void *payload, char *buffer)
+-{
+-    return 0;
+-}
+-
+-void tree_sitter_powershell_external_scanner_deserialize(void *payload, const char *buffer, unsigned length)
+-{
+-}
++// Copyright (c) Microsoft Corporation. All rights reserved.
++// Licensed under the MIT License. See the LICENSE file in the project root for full license information.
++
++#include "tree_sitter/parser.h"
++#include <wctype.h>
++
++enum TOKEN_TYPE {
++    STATEMENT_TERMINATOR,
++    BARE_DASHES,
++    METHOD_BLOCK_HEAD,
++    LOOSE_DOLLAR,
++    HERE_STRING_NEWLINE
++};
++
++/* --- API --- */
++
++void *tree_sitter_powershell_external_scanner_create();
++
++void tree_sitter_powershell_external_scanner_destroy(void *p);
++
++unsigned tree_sitter_powershell_external_scanner_serialize(void *payload, char *buffer);
++
++void tree_sitter_powershell_external_scanner_deserialize(void *payload, const char *buffer, unsigned length);
++
++bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols);
++
++/* --- Internal Functions --- */
++
++static void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
++
++// sloplint: true when the lookahead starts the keyword `else` or `elseif`,
++// as a whole word. The lookahead is consumed; the caller has already marked
++// the end of the zero-width terminator token.
++static bool at_else_keyword(TSLexer *lexer)
++{
++    static const char word[] = "else";
++    for (int i = 0; word[i] != 0; i++) {
++        if (towlower(lexer->lookahead) != (wint_t)word[i]) return false;
++        skip(lexer);
++    }
++    if (towlower(lexer->lookahead) == 'i') {
++        skip(lexer);
++        if (towlower(lexer->lookahead) != 'f') return false;
++        skip(lexer);
++    }
++    wint_t c = lexer->lookahead;
++    return !(iswalnum(c) || c == '_' || c == '-');
++}
++
++static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool *valid_symbols)
++{
++    if (valid_symbols[STATEMENT_TERMINATOR]) {
++        lexer->result_symbol = STATEMENT_TERMINATOR;
++        // This token has no characters -- everything is lookahead to determine its existence
++        lexer->mark_end(lexer);
++
++        bool saw_newline = false;
++        bool saw_blank_line = false;
++        for (;;) {
++            if (lexer->lookahead == 0) return true;
++            if (lexer->lookahead == '}') return true;
++            if (lexer->lookahead == ';') return true;
++            if (lexer->lookahead == ')') return true;
++            if (lexer->lookahead == '\n') {
++                saw_blank_line = saw_blank_line || saw_newline;
++                saw_newline = true;
++            }
++            else if (lexer->lookahead == '`') {
++                // A backtick before a line break joins the lines, so it is
++                // white space here: `$x -replace "a", "b" `` newline newline `}`.
++                skip(lexer);
++                if (lexer->lookahead == '\r') skip(lexer);
++                if (lexer->lookahead != '\n') return false;
++            }
++            else if (!iswspace(lexer->lookahead)) {
++                // A line break ends the statement, except when the next
++                // line continues an if statement: `}` newline `else {`.
++                // A leading pipe on the next line continues the pipeline.
++                // An intervening blank line ends the statement.
++                if (saw_newline) {
++                    if (lexer->lookahead == '|' && !saw_blank_line) return false;
++                    return !at_else_keyword(lexer);
++                }
++                return false;
++            }
++            skip(lexer);
++        }
++    }
++
++    return false;
++}
++
++// A bare `-` or `--` argument: `--` ends option parsing for a native command
++// (`git log -- path`, `cargo test -- --nocapture`) and `-` names stdin
++// (`tar -xf -`). `--` is also the decrement operator and `-` the unary minus,
++// so the lexer cannot tell them apart by length or precedence: the token is
++// recognised only when the dashes are followed by whitespace, `(` or `{`,
++// a command separator, or the end of the command.
++// sloplint: PowerShell treats non-breaking and zero-width spaces as
++// horizontal whitespace (see grammar extras). The external scanner skips
++// exactly those plus ASCII space and tab, never line breaks, so a `--`
++// after ` \u00A0` is still an option terminator.
++static bool is_horizontal_space(int32_t c)
++{
++    return c == ' ' || c == '\t' || c == 0x00A0 || c == 0xFEFF || c == 0x200B || c == 0x2060;
++}
++
++static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_symbols)
++{
++    if (!valid_symbols[BARE_DASHES]) return false;
++
++    while (is_horizontal_space(lexer->lookahead)) skip(lexer);
++    if (lexer->lookahead != '-') return false;
++    lexer->advance(lexer, false);
++    if (lexer->lookahead == '-') lexer->advance(lexer, false);
++    lexer->mark_end(lexer);
++
++    switch (lexer->lookahead) {
++        case 0:
++        case ' ':
++        case '\t':
++        case 0x00A0:
++        case 0xFEFF:
++        case 0x200B:
++        case 0x2060:
++        case '\r':
++        case '\n':
++        case ';':
++        case '|':
++        case '&':
++        case '(':
++        case ')':
++        case '{':
++        case '}':
++            lexer->result_symbol = BARE_DASHES;
++            return true;
++        default:
++            return false;
++    }
++}
++
++/* --- API Implementation --- */
++
++// sloplint: `.Name` or `::Name` when `{` follows the name at once, as in
++// $a.Where{ $_ }. The token ends before the brace. Anything else is left to
++// the internal lexer, which re-reads the input from the start.
++static bool scan_method_block_head(TSLexer *lexer)
++{
++    if (lexer->lookahead == ':') {
++        lexer->advance(lexer, false);
++        if (lexer->lookahead != ':') return false;
++        lexer->advance(lexer, false);
++    } else if (lexer->lookahead == '.') {
++        lexer->advance(lexer, false);
++    } else {
++        return false;
++    }
++    if (!(iswalpha(lexer->lookahead) || lexer->lookahead == '_')) return false;
++    while (iswalnum(lexer->lookahead) || lexer->lookahead == '_') {
++        lexer->advance(lexer, false);
++    }
++    if (lexer->lookahead != '{') return false;
++    lexer->mark_end(lexer);
++    lexer->result_symbol = METHOD_BLOCK_HEAD;
++    return true;
++}
++// sloplint: a lone `$` inside an expandable string, when it does not open
++// `${`, `$(` or a variable. The internal lexer cannot express `$` not
++// followed by `{` (no lookahead), so an external token covers the lone case.
++// `${name` without `}` and `${}` then have no valid token and raise an error
++// as PowerShell does. Variables and sub-expressions stay with the internal
++// lexer. A plain dollar before whitespace, a backslash or a backtick ends
++// here, leaving the following here-string closing newline untouched.
++static bool scan_loose_dollar(void *payload, TSLexer *lexer, const bool *valid_symbols)
++{
++    if (!valid_symbols[LOOSE_DOLLAR]) return false;
++    if (lexer->lookahead != '$') return false;
++    lexer->advance(lexer, false);
++    int32_t next = lexer->lookahead;
++    if (next == '{' || next == '(') return false;
++    if (next == '$' || next == '^' || next == '?') return false;
++    if (iswalnum(next) || next == '_') return false;
++    lexer->mark_end(lexer);
++    lexer->result_symbol = LOOSE_DOLLAR;
++    return true;
++}
++
++// sloplint: only separate a here-string line break when the next line
++// starts interpolation. Never take the closing delimiter's line break.
++static bool scan_here_string_newline(TSLexer *lexer)
++{
++    bool saw_newline = false;
++    while (lexer->lookahead == '\r' || lexer->lookahead == '\n') {
++        if (lexer->lookahead == '\r') {
++            lexer->advance(lexer, false);
++            if (lexer->lookahead != '\n') return false;
++        }
++        lexer->advance(lexer, false);
++        saw_newline = true;
++    }
++    if (!saw_newline || lexer->lookahead != '    if (valid_symbols[METHOD_BLOCK_HEAD] &&
++        (lexer->lookahead == '.' || lexer->lookahead == ':')) {
++        return scan_method_block_head(lexer);
++    }
++    if (scan_loose_dollar(payload, lexer, valid_symbols)) return true;
++    // The statement terminator consumes nothing, so it must be tried last: when
++    // both are valid, a `--` has to win over the empty terminator.
++    if (scan_bare_dashes(payload, lexer, valid_symbols)) return true;
++    return scan_statement_terminator(payload, lexer, valid_symbols);
++}
++
++void *tree_sitter_powershell_external_scanner_create()
++{
++    return NULL;
++}
++
++void tree_sitter_powershell_external_scanner_destroy(void *p)
++{
++}
++
++unsigned tree_sitter_powershell_external_scanner_serialize(void *payload, char *buffer)
++{
++    return 0;
++}
++
++void tree_sitter_powershell_external_scanner_deserialize(void *payload, const char *buffer, unsigned length)
++{
++}
++) return false;
++    lexer->mark_end(lexer);
++    lexer->result_symbol = HERE_STRING_NEWLINE;
++    return true;
++}
++
++bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols)
++{
++    if (valid_symbols[HERE_STRING_NEWLINE] &&
++        (lexer->lookahead == '\r' || lexer->lookahead == '\n')) {
++        return scan_here_string_newline(lexer);
++    }
++    if (valid_symbols[METHOD_BLOCK_HEAD] &&
++        (lexer->lookahead == '.' || lexer->lookahead == ':')) {
++        return scan_method_block_head(lexer);
++    }
++    if (scan_loose_dollar(payload, lexer, valid_symbols)) return true;
++    // The statement terminator consumes nothing, so it must be tried last: when
++    // both are valid, a `--` has to win over the empty terminator.
++    if (scan_bare_dashes(payload, lexer, valid_symbols)) return true;
++    return scan_statement_terminator(payload, lexer, valid_symbols);
++}
++
++void *tree_sitter_powershell_external_scanner_create()
++{
++    return NULL;
++}
++
++void tree_sitter_powershell_external_scanner_destroy(void *p)
++{
++}
++
++unsigned tree_sitter_powershell_external_scanner_serialize(void *payload, char *buffer)
++{
++    return 0;
++}
++
++void tree_sitter_powershell_external_scanner_deserialize(void *payload, const char *buffer, unsigned length)
++{
++}
