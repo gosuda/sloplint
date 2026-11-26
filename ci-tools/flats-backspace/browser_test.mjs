@@ -53,15 +53,17 @@ try {
   const b = await open("Backspace observer");
   for (const { name, input, caret, expected } of cases) {
   for (const operation of ["keyboard", "native-delete"]) {
-    await a.locator(".cm-content").focus();
-    await a.keyboard.press("ControlOrMeta+a");
-    await a.keyboard.insertText(input);
-    await wait(async () => await text(a) === input && await text(b) === input, "two-line seed did not converge");
-    await a.locator(".cm-content").evaluate((el, anchor) => {
+    await a.locator(".cm-content").evaluate((el, { input, caret }) => {
       const view = el.cmTile.root.view;
-      view.dispatch({ selection: { anchor } });
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: input },
+        selection: { anchor: caret },
+      });
       view.focus();
-    }, caret);
+    }, { input, caret });
+    await wait(async () => await text(a) === input && await text(b) === input &&
+      await a.locator("#status").innerText() === "Saved" &&
+      await b.locator("#status").innerText() === "Saved", "seed did not converge and save");
     const before = await a.locator(".cm-content").evaluate((el) => {
       const view = el.cmTile.root.view;
       const main = view.state.selection.main;
@@ -83,7 +85,7 @@ try {
       executed = await a.evaluate(() => document.execCommand("delete"));
     }
     assert.equal(executed, true, operation + " did not execute");
-    await wait(async () => await text(a) === await text(b) &&
+    await wait(async () => await text(a) !== input && await text(a) === await text(b) &&
       await a.locator("#status").innerText() === "Saved" &&
       await b.locator("#status").innerText() === "Saved", "joined edit did not converge and save");
     const after = await a.locator(".cm-content").evaluate((el) => ({

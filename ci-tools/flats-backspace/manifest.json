@@ -18,7 +18,7 @@
       "tree": "91efebe5baab56592f04481d3516dc3a2163d5e4"
     }
   ],
-  "driver_sha256": "e3beee43f54b7450454edc5807fd0c5ac19c08202f93f62b09ac9e918cc88cc5",
+  "driver_sha256": "0161d20346be24c2fc71de0e2621af8b1c432d5f6b21bab3ab3874d2795527a8",
   "build_sha256": "52aaeda91f1e8cb3454a38bbe8d59c6648abb1de66daba295b5f294453ae3c7a",
   "go": "1.27.4",
   "node": "26.13.1",
