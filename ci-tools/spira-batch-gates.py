@@ -58,7 +58,10 @@ def run(command: list[str], log: Path, timeout: int = 1800) -> int:
 
 
 def regressions(label: str) -> tuple[Regression, ...]:
-    return ()
+    return (
+        Regression("stream-read-cancellation", "websocket/conn.lgo", "\t\tdefer c.joinStreamCancellation(ctx, &err)()\n\t}\n\tif err := c.readDeadline(ctx); err != nil {", "\t}\n\tif err := c.readDeadline(ctx); err != nil {", "./websocket", "^TestStreamCancelUnblocksPendingNext$", ("Next did not return after cancel",)),
+        Regression("stream-read-identity", "websocket/stream_test.lgo", "done <- streamCancelResult{read: err, followup: perr}", "done <- streamCancelResult{read: errors.Join(err, perr)}", "./websocket", "^TestStreamCancelUnblocksPendingNext$", ("follow-up Next = <nil>, want ErrClosed",)),
+    )
 
 
 def prove(case: Regression, folder: Path) -> bool:
@@ -122,38 +125,6 @@ def dashboard_proofs(folder: Path) -> dict[str, bool]:
     return {"actual-row-oracle": reproduced and old_oracle == 0 and green == 0, "fragment-parser": parser_reproduced and parser_green == 0}
 
 
-
-def completed_shutdown_proof(folder: Path) -> bool:
-    server = SOURCE / "http3/server.lgo"
-    tests = SOURCE / "http3/http3_stop_test.lgo"
-    saved_server = server.read_text()
-    saved_tests = tests.read_text()
-    original_tests = subprocess.check_output(["git", "show", "HEAD:http3/http3_stop_test.lgo"], cwd=SOURCE, text=True)
-    selection = "\tselect {\n\tcase <-shutDone:\n\tcase <-ctx.Done():\n\t\tcerr := r.closeConn()\n\t\treturn errors.Join(ctx.Err(), cerr)\n\t}\n"
-    assert saved_server.count(selection) == 1
-    command = ["logos", "test", "-race", "-count=1", "-v", "-run", "^TestH3StopCallerDeadlineClosesUDPWithCallerError$", "./http3"]
-    try:
-        server.write_text(saved_server.replace(selection, "\t<-shutDone\n"))
-        tests.write_text(original_tests)
-        red = run(command, folder / "completed-shutdown-old-test-red.log", 120)
-        red_output = (folder / "completed-shutdown-old-test-red.log").read_text(errors="replace")
-        reproduced = red != 0 and "joined the shutdown fault" in red_output
-        tests.write_text(saved_tests)
-        completed_green = run(command, folder / "completed-shutdown-new-test-green.log", 120)
-        completed_output = (folder / "completed-shutdown-new-test-green.log").read_text(errors="replace")
-    finally:
-        server.write_text(saved_server)
-        tests.write_text(saved_tests)
-    ordinary_green = run(command, folder / "caller-shutdown-restored-green.log", 120)
-    ordinary_output = (folder / "caller-shutdown-restored-green.log").read_text(errors="replace")
-    marker = "--- PASS: TestH3StopCallerDeadlineClosesUDPWithCallerError "
-    executed = marker in completed_output and marker in ordinary_output
-    result = {"old_red": red, "reproduced": reproduced, "completed_green": completed_green, "ordinary_green": ordinary_green, "explicit_passes": executed}
-    (folder / "shutdown-proof-results.json").write_text(json.dumps(result, indent=2) + "\n")
-    print(f"SHUTDOWN_PROOF {json.dumps(result, sort_keys=True)}", flush=True)
-    return reproduced and completed_green == 0 and ordinary_green == 0 and executed
-
-
 def check(candidate: Candidate) -> dict[str, object]:
     folder = EVIDENCE / candidate.label
     folder.mkdir(parents=True)
@@ -161,8 +132,7 @@ def check(candidate: Candidate) -> dict[str, object]:
     git("checkout", "--detach", candidate.checkout)
     patch = PROBE / "ci-tools" / f"spira-{candidate.label}-r8.patch"
     assert hashlib.sha256(patch.read_bytes()).hexdigest() == candidate.patch_sha256
-    if patch.stat().st_size:
-        git("apply", "--index", "--whitespace=error", str(patch))
+    git("apply", "--index", "--whitespace=error", str(patch))
     assert git("write-tree") == candidate.tree
     git("diff", "--cached", "--check")
     files: dict[str, str] = {}
@@ -193,8 +163,6 @@ def check(candidate: Candidate) -> dict[str, object]:
             proofs["immutable-forwarder"] = "func MethodOK(arg string) bool" in source and "var MethodOK" not in source
         if candidate.label == "dashboard":
             proofs.update(dashboard_proofs(folder))
-        if candidate.label == "30":
-            proofs["completed-shutdown-verdict"] = completed_shutdown_proof(folder)
         result["proofs"] = proofs
     git("diff", "--exit-code")
     assert git("write-tree") == candidate.tree
