@@ -104,9 +104,9 @@ def main() -> int:
                 jobs.append(item)
             except ValueError as error:
                 failures.append({**item, "error": str(error)})
-    report = {"head_count": len(source["heads"]), "workflow_instances": len(source["files"]), "unique_blobs": len(blobs), "jobs": jobs, "failures": failures}
+    report = {"head_count": len(source["heads"]), "default_heads": sum(head.get("scope") == "default" for head in source["heads"]), "pull_request_heads": sum(head.get("scope") == "pull_request" for head in source["heads"]), "empty_repositories": source.get("emptyRepositories", []), "workflow_instances": len(source["files"]), "unique_blobs": len(blobs), "jobs": jobs, "failures": failures}
     (ROOT / "group1_round7_runner_values.json").write_text(json.dumps(report, indent=2) + "\n")
-    print(json.dumps({"heads": report["head_count"], "workflow_instances": report["workflow_instances"], "unique_blobs": report["unique_blobs"], "job_instances": len(jobs), "dynamic_job_instances": sum(bool(job.get("dynamic")) for job in jobs), "reusable_job_instances": sum("reusable" in job for job in jobs), "labels": sorted({label for job in jobs for label in job.get("labels", [])}), "failures": failures}, indent=2))
+    print(json.dumps({"heads": report["head_count"], "default_heads": report["default_heads"], "pull_request_heads": report["pull_request_heads"], "empty_repositories": report["empty_repositories"], "workflow_instances": report["workflow_instances"], "unique_blobs": report["unique_blobs"], "job_instances": len(jobs), "dynamic_job_instances": sum(bool(job.get("dynamic")) for job in jobs), "reusable_job_instances": sum("reusable" in job for job in jobs), "labels": sorted({label for job in jobs for label in job.get("labels", [])}), "failures": failures}, indent=2))
     return int(bool(failures))
 
 
