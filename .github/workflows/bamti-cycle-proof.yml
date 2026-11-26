@@ -14,7 +14,7 @@ defaults:
 jobs:
   quality:
     runs-on: depot-ubuntu-24.04-8
-    timeout-minutes: 75
+    timeout-minutes: 45
     env:
       CARGO_TERM_COLOR: never
       CARGO_BUILD_JOBS: "8"

@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import signal
 from pathlib import Path
 import subprocess
 import sys
@@ -29,12 +30,21 @@ def identity() -> None:
 
 def run(name: str, args: list[str], expected: int = 0, required: str = "") -> str:
     print(f"RUN {name}: {args!r}", flush=True)
-    process = subprocess.run(args, cwd=source, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
-    output = process.stdout
+    limit = 30 if name.startswith("typescript-") else 1200 if name == "workspace" else 180 if "recursive" in name or "alias" in name else 600
+    process = subprocess.Popen(args, cwd=source, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True)
+    timed_out = False
+    try:
+        output, _ = process.communicate(timeout=limit)
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        os.killpg(process.pid, signal.SIGKILL)
+        output, _ = process.communicate()
+        print(f"TIMEOUT {name}: {limit} seconds; actual process exit {process.returncode}", flush=True)
     (evidence / f"{name}.log").write_text(output)
     exits[name] = process.returncode
     (evidence / "results.json").write_text(json.dumps({"manifest": manifest, "exits": exits}, indent=2, sort_keys=True) + "\n")
     print(f"EXIT {name}: {process.returncode}\n{output[-20000:]}", flush=True)
+    assert not timed_out, f"{name}: exceeded {limit} seconds; actual process exit {process.returncode}"
     assert process.returncode == expected, f"{name}: expected {expected}, got {process.returncode}"
     if required:
         assert required in output, f"{name}: missing {required!r}"
