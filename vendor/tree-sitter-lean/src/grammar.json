@@ -10675,6 +10675,15 @@
                 "name": "escape_sequence"
               },
               {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_string_gap"
+                },
+                "named": true,
+                "value": "escape_sequence"
+              },
+              {
                 "type": "IMMEDIATE_TOKEN",
                 "content": {
                   "type": "PREC",
@@ -10721,10 +10730,6 @@
               {
                 "type": "PATTERN",
                 "value": "u\\{[0-9a-fA-F]+\\}"
-              },
-              {
-                "type": "PATTERN",
-                "value": "\\r?\\n[ \\t]*"
               }
             ]
           }
@@ -10746,6 +10751,15 @@
               {
                 "type": "SYMBOL",
                 "name": "escape_sequence"
+              },
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_string_gap"
+                },
+                "named": true,
+                "value": "escape_sequence"
               },
               {
                 "type": "SYMBOL",
@@ -11046,6 +11060,10 @@
     {
       "type": "SYMBOL",
       "name": "error_sentinel"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_string_gap"
     }
   ],
   "inline": [],

@@ -34,6 +34,7 @@ enum TokenType {
   NORM_OPEN,
   NORM_CLOSE,
   ERROR_SENTINEL,
+  STRING_GAP,
 };
 
 #define NORM_BAR        0x2016 // ‖
@@ -438,11 +439,32 @@ static int scan_layout(struct Scanner *scanner, TSLexer *lexer,
   return 0;
 }
 
+/* String gaps consume exactly one physical line break. A second newline
+   before content is an error, not ordinary multiline string text. */
+static bool scan_string_gap(TSLexer *lexer) {
+  advance(lexer);
+  if (lexer->lookahead == '\r') advance(lexer);
+  if (lexer->lookahead != '\n') return false;
+  advance(lexer);
+  while (lexer->lookahead == ' '
+      || lexer->lookahead == '\t'
+      || lexer->lookahead == '\r') {
+    advance(lexer);
+  }
+  if (lexer->lookahead == '\n') return false;
+  lexer->mark_end(lexer);
+  lexer->result_symbol = STRING_GAP;
+  return true;
+}
+
 /* ---------- dispatch ----------------------------------------------------- */
 
 static bool scan(struct Scanner *scanner, TSLexer *lexer,
                  const bool *valid_symbols) {
   if (valid_symbols[ERROR_SENTINEL]) return false;
+  if (valid_symbols[STRING_GAP] && lexer->lookahead == '\\') {
+    return scan_string_gap(lexer);
+  }
 
   /* Layout tokens have to be considered before the whitespace skip —
      they're triggered by newlines and leading-line indentation. */
