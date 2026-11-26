@@ -1,6 +1,6 @@
 {
   "repo": "gosuda/flats",
-  "purpose": "Read exact DOMReader instance state and range boundaries before another candidate",
+  "purpose": "Development-time native browser proof; temporary authored build-input correction, no maintained source publication or stage acceptance",
   "sources": [
     {
       "name": "old",
@@ -11,10 +11,15 @@
       "name": "baseline",
       "head": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
       "tree": "91efebe5baab56592f04481d3516dc3a2163d5e4"
+    },
+    {
+      "name": "candidate",
+      "head": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
+      "tree": "91efebe5baab56592f04481d3516dc3a2163d5e4"
     }
   ],
-  "driver_sha256": "0161d20346be24c2fc71de0e2621af8b1c432d5f6b21bab3ab3874d2795527a8",
-  "build_sha256": "52aaeda91f1e8cb3454a38bbe8d59c6648abb1de66daba295b5f294453ae3c7a",
+  "driver_sha256": "4e9ea26ae3f9278c32ab051e833674c4c81e06ff75a5baea9a7d66c917feefa3",
+  "build_sha256": "2003b106ee51cfe7d180b3d40a93c7c79220345a3893ebeaf5d7492be403f8bf",
   "go": "1.27.4",
   "node": "26.13.1",
   "playwright": "1.65.1"

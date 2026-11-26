@@ -99,6 +99,11 @@ for source in sources:
         record["observations"] = observations
         record["complete"] = "BACKSPACE_PROBE_COMPLETE " in result.stdout and len(observations) == 18
         assert result.returncode in (0, 1), result.returncode
+        if source["name"] == "candidate" and result.returncode == 0:
+            for name in cast(dict[str, str], record["candidate_changes"]):
+                print("GENERATED_SOURCE_JSON " + json.dumps({"path": name,
+                    "sha256": hashlib.sha256((root / name).read_bytes()).hexdigest(),
+                    "content": (root / name).read_text()}), flush=True)
     finally:
         test_path.write_bytes(original)
         for file, original_bytes in saved.items():

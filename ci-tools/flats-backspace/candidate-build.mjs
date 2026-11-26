@@ -51,14 +51,16 @@ const docsDOMReader = {
       { filter: /node_modules[\\/]@codemirror[\\/]view[\\/]dist[\\/]index\.js$/ },
       async ({ path: file }) => {
         const source = await readFile(file, "utf8");
+        const reader =
+          "constructor(points, view) {\n        this.points = points;";
         const boundary =
           "tile ? tile.breakAfter : isBlockElement(cur) && !isEmptyToEnd(cur, end)";
-        if (source.split(boundary).length !== 3)
+        if (source.split(reader).length !== 2 || source.split(boundary).length !== 3)
           throw new Error("CodeMirror DOM reader line boundary changed");
         return {
-          contents: source.replaceAll(
+          contents: source.replace(reader, reader + "\n        this.contentDOM = view.contentDOM;").replaceAll(
             boundary,
-            "tile ? tile.breakAfter && (cur.nextSibling || cur.parentNode != this.view.contentDOM) : isBlockElement(cur) && !isEmptyToEnd(cur, end)",
+            "tile ? tile.breakAfter && (cur.nextSibling || cur.parentNode != this.contentDOM) : isBlockElement(cur) && !isEmptyToEnd(cur, end)",
           ),
           loader: "js",
         };

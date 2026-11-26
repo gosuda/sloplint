@@ -41,7 +41,7 @@ async function open(name) {
   await context.addCookies([{ name: "flats-test-private", value: "1", url }]);
   await context.addInitScript((value) => localStorage.setItem("flats-docs-name", value), name);
   const page = await context.newPage();
-  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("pageerror", (error) => { errors.push(error.message); console.log("BROWSER_PAGE_ERROR " + error.message); });
   await page.goto(url);
   await page.locator(".cm-content").waitFor();
   await wait(async () => await page.locator("#status").innerText() === "Saved", "initial sync");
@@ -85,17 +85,23 @@ try {
       executed = await a.evaluate(() => document.execCommand("delete"));
     }
     assert.equal(executed, true, operation + " did not execute");
-    await wait(async () => await text(a) !== input && await text(a) === await text(b) &&
-      await a.locator("#status").innerText() === "Saved" &&
-      await b.locator("#status").innerText() === "Saved", "joined edit did not converge and save");
+    let settleError = "";
+    try {
+      await wait(async () => await text(a) !== input && await text(a) === await text(b) &&
+        await a.locator("#status").innerText() === "Saved" &&
+        await b.locator("#status").innerText() === "Saved", "joined edit did not converge and save");
+    } catch (error) {
+      if (!(error instanceof Error)) throw error;
+      settleError = error.message;
+    }
     const after = await a.locator(".cm-content").evaluate((el) => ({
       document: el.cmTile.root.view.state.doc.toString(),
       html: el.innerHTML,
       events: window.backspaceEvents,
     }));
     const remote = await text(b);
-    const record = { name, operation, browser: browser.version(), before, after, remote, expected,
-      passed: after.document === expected && remote === expected };
+    const record = { name, operation, settleError, browser: browser.version(), before, after, remote, expected,
+      passed: !settleError && after.document === expected && remote === expected };
     observations.push(record);
     console.log("BACKSPACE_OBSERVATION " + JSON.stringify(record));
     if (!record.passed) await a.screenshot({ path: path.join(evidence, name + "-" + operation + "-failure.png") });
