@@ -118,7 +118,7 @@ def main() -> None:
     run("upstream-checkout", ["git", "checkout", "-q", "FETCH_HEAD"], cwd=upstream)
     for path in ["grammar.js", "src/scanner.c"]:
         (upstream / path).write_bytes((VENDOR / path).read_bytes())
-    patch_bytes = subprocess.check_output(["git", "diff", "--binary", "--", "grammar.js", "src/scanner.c"], cwd=upstream)
+    patch_bytes = subprocess.check_output(["git", "-c", "diff.suppressBlankEmpty=true", "diff", "--binary", "--", "grammar.js", "src/scanner.c"], cwd=upstream)
     (VENDOR / "sloplint-grammar.patch").write_bytes(patch_bytes)
     os.environ["GRAMMARS_TS_BIN"] = str(tree_sitter)
     os.environ["GRAMMARS_SCRATCH"] = str(EVIDENCE / "grammar-reproduction")
