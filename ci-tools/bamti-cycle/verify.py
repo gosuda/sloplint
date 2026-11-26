@@ -93,7 +93,7 @@ elif mode == "verify":
     relation = source / "crates/bamts-compiler/src/checker/relations.rs"
     candidate = relation.read_bytes()
     baseline = subprocess.check_output(["git", "show", "HEAD:crates/bamts-compiler/src/checker/relations.rs"], cwd=source).decode()
-    marker = "#[cfg(test)]"
+    marker = "#[cfg(test)]\nmod tests {"
     assert baseline.count(marker) == 1 and candidate.decode().count(marker) == 1
     frozen_tests = candidate.decode().split(marker, 1)[1]
     try:
