@@ -45,6 +45,15 @@ PowerShell 7.7.0 native argv captures cover each separator after a command name,
 between arguments, and before and after single and double dashes. Rust adapter
 regressions assert those argument counts and the protected-space controls.
 
+## Backticks after ordinary newlines
+
+Leading-pipe lookahead stops at a backtick after an ordinary newline.
+An escape on the following line cannot reconnect the preceding statement.
+Attached command fragments retain an escaped CR, so the remaining LF is
+visible to that lookahead. Whitespace-separated LF and CRLF continuations
+remain valid. Native parser and tokenizer controls cover top-level and
+grouped pipelines, mixed newline forms, comments, and indentation.
+
 ## Native argument follow-up
 
 The command word rules explicitly exclude unquoted U+00A0 from plain
@@ -72,11 +81,11 @@ and hashes remain text, while a missing `)` inside `$(...)` is a syntax
 error. Balanced and nested expressions, escaped dollar signs, verbatim
 segments, and protected U+00A0 retain their argument boundaries.
 
-Parameter and command-name escape pairs exclude line breaks, leaving
-their LF and CRLF continuations to the line-continuation extra. Inside an
-already-started bare argument, a backtick can escape CR. The following LF
-then ends the command, matching the PowerShell 7.7.0 parser with either
-indented or column-one text on the next line.
+Parameter escape pairs exclude line breaks, leaving their LF and CRLF
+continuations to the line-continuation extra. Inside an already-started
+bare argument or command name, a backtick can escape CR. The following LF
+remains a statement boundary, matching the PowerShell 7.7.0 tokenizer.
+A separated backtick consumes CRLF as one line continuation.
 
 All 245 corpus cases pass with tree-sitter-cli 0.27.1. The five word-boundary
 corpus cases and Rust adapter regressions cover quoted path literals,

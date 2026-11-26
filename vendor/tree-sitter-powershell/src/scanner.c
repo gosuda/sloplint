@@ -107,6 +107,8 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool 
             continue;
         }
         if (c == '`') {
+            // Native leading-pipe lookahead stops at a backtick after a newline.
+            if (saw_newline) return true;
             skip(lexer);
             if (lexer->lookahead == '\r') {
                 skip(lexer);

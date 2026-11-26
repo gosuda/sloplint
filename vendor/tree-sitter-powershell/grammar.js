@@ -934,7 +934,9 @@ export default grammar({
         repeat(
           choice(
             token.immediate(/[^\{\}\(\);,\|\&`"'\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\r\n]+/),
-            token.immediate(new RegExp(WORD_ESC)),
+            // An attached backtick consumes CR inside the command token;
+            // the following LF remains a statement boundary.
+            token.immediate(new RegExp(ARGUMENT_ESC)),
             seq(token.immediate('"'), $._expandable_string_literal_immediate),
             seq(token.immediate('\''), $._string_literal_immediate),
             token.immediate('""'),

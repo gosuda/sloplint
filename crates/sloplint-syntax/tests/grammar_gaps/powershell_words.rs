@@ -82,7 +82,9 @@ fn variable_paths_parse_expandable_quoted_subexpressions() {
 #[test]
 fn command_continuations_keep_pipelines_with_lf_and_crlf() {
     for ending in ["\n", "\r\n"] {
-        let source = format!("Get-Date`{ending}| Write-Output{ending}");
+        // A continuation starts at a token boundary. An attached backtick
+        // escapes a newline character inside the native command name instead.
+        let source = format!("Get-Date `{ending}| Write-Output{ending}");
         let analysis = run_clean(&source);
         assert!(
             analysis

@@ -58,6 +58,8 @@ mod php;
 mod powershell;
 #[path = "grammar_gaps/powershell_continuations.rs"]
 mod powershell_continuations;
+#[path = "grammar_gaps/powershell_escaped_lines.rs"]
+mod powershell_escaped_lines;
 #[path = "grammar_gaps/powershell_literal_runs.rs"]
 mod powershell_literal_runs;
 #[path = "grammar_gaps/powershell_plain_escapes.rs"]

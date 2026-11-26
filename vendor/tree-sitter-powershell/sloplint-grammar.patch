@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 1f8b448..dc13bc3 100644
+index 1f8b448..9c7470d 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -7,29 +7,71 @@ const PREC = {
@@ -472,7 +472,7 @@ index 1f8b448..dc13bc3 100644
            // tree-sitter does not allow to control lexer
            // each start keyword into _statement rule must be present here
            // https://github.com/airbus-cert/tree-sitter-powershell/issues/24
-@@ -754,10 +918,23 @@ export default grammar({
+@@ -754,10 +918,25 @@ export default grammar({
            new RegExp(caseInsensitive('for-')),
            new RegExp(caseInsensitive('while-')),
            new RegExp(caseInsensitive('parallel-')),
@@ -493,11 +493,13 @@ index 1f8b448..dc13bc3 100644
            choice(
 -            token.immediate(/[^\{\}\(\);,\|\&"'\s\r\n]+/),
 +            token.immediate(/[^\{\}\(\);,\|\&`"'\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\r\n]+/),
-+            token.immediate(new RegExp(WORD_ESC)),
++            // An attached backtick consumes CR inside the command token;
++            // the following LF remains a statement boundary.
++            token.immediate(new RegExp(ARGUMENT_ESC)),
              seq(token.immediate('"'), $._expandable_string_literal_immediate),
              seq(token.immediate('\''), $._string_literal_immediate),
              token.immediate('""'),
-@@ -766,7 +943,8 @@ export default grammar({
+@@ -766,7 +945,8 @@ export default grammar({
          ),
        ),
 
@@ -507,7 +509,7 @@ index 1f8b448..dc13bc3 100644
 
      // Use to parse command path
      path_command_name: ($) =>
-@@ -781,41 +959,84 @@ export default grammar({
+@@ -781,41 +961,84 @@ export default grammar({
        prec.right(
          choice(
            $.command_parameter,
@@ -607,7 +609,7 @@ index 1f8b448..dc13bc3 100644
      verbatim_command_argument: ($) =>
        seq('--%', $._verbatim_command_argument_chars),
 
-@@ -827,8 +1048,10 @@ export default grammar({
+@@ -827,8 +1050,10 @@ export default grammar({
          seq($.file_redirection_operator, $.redirected_file_name),
        ),
 
@@ -619,7 +621,7 @@ index 1f8b448..dc13bc3 100644
 
      // Class
      class_attribute: ($) =>
-@@ -857,13 +1080,26 @@ export default grammar({
+@@ -857,13 +1082,26 @@ export default grammar({
          '(',
          optional($.class_method_parameter_list),
          ')',
@@ -646,7 +648,7 @@ index 1f8b448..dc13bc3 100644
          token(reservedWord('class')),
          $.simple_name,
          optional(seq(':', $.simple_name, repeat(seq(',', $.simple_name)))),
-@@ -884,6 +1120,7 @@ export default grammar({
+@@ -884,6 +1122,7 @@ export default grammar({
      // Enums
      enum_statement: ($) =>
        seq(
@@ -654,7 +656,7 @@ index 1f8b448..dc13bc3 100644
          token(reservedWord('enum')),
          $.simple_name,
          '{',
-@@ -895,7 +1132,20 @@ export default grammar({
+@@ -895,7 +1134,20 @@ export default grammar({
        seq($.simple_name, optional(seq('=', $.integer_literal))),
 
      // Expressions
@@ -676,7 +678,7 @@ index 1f8b448..dc13bc3 100644
 
      logical_expression: ($) =>
        prec.left(
-@@ -1008,7 +1258,35 @@ export default grammar({
+@@ -1008,7 +1260,35 @@ export default grammar({
      pre_decrement_expression: ($) => seq('--', $.unary_expression),
 
      cast_expression: ($) =>
@@ -713,7 +715,7 @@ index 1f8b448..dc13bc3 100644
 
      attributed_variable: ($) => seq($.type_literal, $.variable),
 
-@@ -1034,7 +1312,7 @@ export default grammar({
+@@ -1034,7 +1314,7 @@ export default grammar({
          $.variable,
        ),
 
@@ -722,7 +724,7 @@ index 1f8b448..dc13bc3 100644
 
      sub_expression: ($) =>
        seq('$(', field('statements', optional($.statement_list)), ')'),
-@@ -1042,8 +1320,12 @@ export default grammar({
+@@ -1042,8 +1322,12 @@ export default grammar({
      array_expression: ($) =>
        seq('@(', field('statements', optional($.statement_list)), ')'),
 
@@ -736,7 +738,7 @@ index 1f8b448..dc13bc3 100644
 
      hash_literal_expression: ($) =>
        seq('@{', optional($.hash_literal_body), '}'),
-@@ -1101,11 +1383,17 @@ export default grammar({
+@@ -1101,11 +1385,17 @@ export default grammar({
          $.invokation_foreach_expression,
        ),
 
@@ -756,7 +758,7 @@ index 1f8b448..dc13bc3 100644
          $.script_block_expression,
        ),
 
-@@ -1145,10 +1433,13 @@ export default grammar({
+@@ -1145,10 +1435,13 @@ export default grammar({
            $.comparison_argument_expression,
            seq(
              $.bitwise_argument_expression,
@@ -773,7 +775,7 @@ index 1f8b448..dc13bc3 100644
              ),
              $.comparison_argument_expression,
            ),
-@@ -1213,32 +1504,49 @@ export default grammar({
+@@ -1213,32 +1506,49 @@ export default grammar({
 
      type_literal: ($) => seq('[', $.type_spec, ']'),
 
@@ -837,7 +839,7 @@ index 1f8b448..dc13bc3 100644
 
      attribute_name: ($) => $.type_spec,
 diff --git a/src/scanner.c b/src/scanner.c
-index b46de2b..f8fd4f4 100644
+index b46de2b..84ae5f4 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
 @@ -6,7 +6,10 @@
@@ -852,7 +854,7 @@ index b46de2b..f8fd4f4 100644
  };
 
  /* --- API --- */
-@@ -25,53 +28,133 @@ bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer,
+@@ -25,53 +28,135 @@ bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer,
 
  static void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
 
@@ -947,6 +949,8 @@ index b46de2b..f8fd4f4 100644
 +            continue;
 +        }
 +        if (c == '`') {
++            // Native leading-pipe lookahead stops at a backtick after a newline.
++            if (saw_newline) return true;
 +            skip(lexer);
 +            if (lexer->lookahead == '\r') {
 +                skip(lexer);
@@ -1005,7 +1009,7 @@ index b46de2b..f8fd4f4 100644
          case '}':
              lexer->result_symbol = BARE_DASHES;
              return true;
-@@ -82,8 +165,80 @@ static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_sy
+@@ -82,8 +167,80 @@ static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_sy
 
  /* --- API Implementation --- */
 
