@@ -1,0 +1,34 @@
+{
+  "scope": "Native causal controls and implementation gates for Flats PR266's retained-heap test correction.",
+  "head": "86c7849c2f608fd751e9a478c2574c49e817f44d",
+  "tree": "11aa710adcb5e0f3bdcd609b1b57e7055d4f25ed",
+  "actual_main": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
+  "source_sha256": {
+    "docs/gates.md": "fb92548397e1f5f0dad33b882f6be9dec5b72e4653440e8730f798ce78ae0f8c",
+    "internal/notebook/markdown_read_capture_release_test.go": "03158b7df1e1d50895b6a59ae77ac3580b92339c9bda367a17cbc8d4142b484b",
+    "internal/notebook/markdown_read_memory_test.go": "1b010c165763eb293ec2ea513ddd3a2bd228150799262e33d941c443d820c811",
+    "internal/notebook/markdown_read_scaling_test.go": "6f4c062611e62194e6819973fa5928e6164144c9ba2cc3b71493e26e6f1bf15f",
+    "internal/notebook/reader_entry_test.go": "6c56a89fde4bf05ad42293fd273b876569b2ae95cda0706e78965d63548a87a3"
+  },
+  "proof_sha256": {
+    "verify.py": "944132812ca78f2afa4fd0b01e05e4098db652c55a6ba5c66430724e481f8a11",
+    "candidate-elements.json": "8f7824888d7b283470d2fa257e97d7f8de63decafe7a3067fc7af24a6f3856b2",
+    "retention_proof_test.go.txt": "bdc282b69d37ef1eaec6d080a0e102d922ff23d42e68c9197de03dd9085cf8c7"
+  },
+  "design": {
+    "commit": "2f779365b46eb8fae37b5c8a3974c034bdffd5e1",
+    "sha256": "7ca9ddc48b8a78b81f6b53a0e455763c68419cb62d90d73d0136c2a91a271835",
+    "receipt_commit": "20f8dfa4e97cccdcf380e22b4bbbaacc88dafe65",
+    "receipt_sha256": "a326a2d85d66adabc6fad2b281361a8f901686b4bb36166cf17d9c4cf3a794e0",
+    "verdict": "ACCEPT",
+    "session": "/root/bitcoin_round7/flats_retention_design_review",
+    "model": "gpt-6.2-sol"
+  },
+  "resources": {
+    "runner": "depot-ubuntu-24.04",
+    "cpus": 2,
+    "go": "1.27.4",
+    "go_cache_program": "disabled"
+  },
+  "limits": "Fault adapters are disposable test code and are excluded from the candidate. No memory threshold, CI resource, fixture size, source behavior or required gate is relaxed. Implementation and testing reviews remain pending."
+}
