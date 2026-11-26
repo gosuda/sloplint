@@ -1,0 +1,24 @@
+{
+  "base": "61c88ec4d492dd1ab72f76b15b84fa9434cccfaa",
+  "base_tree": "589aff2ec97f6e6f8179453ff6882fe19b3b65b2",
+  "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+  "mode": "Unchanged production source; frozen native observations and expected-RED regression probes.",
+  "proof_sha256": {
+    "verify.py": "ee43931e8f44408754d593beee0f4f0d1b47e87a1f7611f634c4d771a6974b51",
+    "frozen-elements.json": "1d42a7a33644eed20df35ca37fe28f800bd44a930aa45e13e00451298a3fb0a8",
+    "cases.json": "7312430316c9fe0a14437707c3a70bdf7769a5bece9c30832349ff2ecfa9843f",
+    "native-oracle.ps1": "cb1d34d29ed3fd73fa535a3b38689f8be8576600e2b329aeca559b61c69f6292",
+    "preserved-grammar-cases.json": "039f762b5971236a96d92f9875852072932a6779ed3fe1deace8288943942088",
+    "preserved-grammar-oracle.ps1": "4b7c31e31bfcbcef4ff8a8d5abf3d7850e211add893f2e9a0da34902fc8d3f02",
+    "preserved-literal-cases.json": "9eb65f67588aa21b61f8a0073794a496b7263b7b959f88f5099cd4c01a7f7d32",
+    "preserved-literal-oracle.ps1": "8bceaa20931d06609b35aaab9c107ea514d294fe36152a3c7b857ae9280f1eb6"
+  },
+  "threads": [
+    "PRRT_kwDOVOMFM868fgdS",
+    "PRRT_kwDOVOMFM868fgfR",
+    "PRRT_kwDOVOMFM868fgoO"
+  ],
+  "native_cases": 243,
+  "preserved_grammar_cases": 178,
+  "preserved_literal_cases": 39
+}
