@@ -54,6 +54,41 @@ fn character_literals_reject_string_gaps() {
 }
 
 #[test]
+fn string_gap_spans_consume_the_line_ending_and_all_indentation() {
+    for ending in ["\n", "\r\n"] {
+        let gap = format!("\\{ending}                    \t");
+        let source = format!("def send (n : Nat) := sink s!\"first{gap}{{n}}tail\"{ending}");
+        let tree = parse_raw(&source);
+        let mut nodes = vec![tree.root_node()];
+        let mut spans = Vec::new();
+        while let Some(node) = nodes.pop() {
+            if node.kind() == "escape_sequence" {
+                spans.push(node.byte_range());
+            }
+            let mut cursor = node.walk();
+            nodes.extend(node.named_children(&mut cursor));
+        }
+        let start = source.find(&gap).expect("fixture contains the string gap");
+        assert_eq!(spans, [start..start + gap.len()]);
+        let analysis = run_clean("src/gap-span.lean", &source);
+        let call = analysis
+            .facts
+            .calls
+            .iter()
+            .find(|call| call.callee == "sink")
+            .expect("sink receives the interpolated string");
+        assert!(
+            matches!(
+                call.args[0].shape,
+                sloplint_core::facts::ArgShape::Concat { longest_static: 5 }
+            ),
+            "indentation and interpolation must not count as literal text: {:?}",
+            call.args
+        );
+    }
+}
+
+#[test]
 fn string_gaps_reject_a_second_newline_before_content() {
     for ending in ["\n", "\r\n"] {
         for prefix in ["", "s!", "m!"] {
