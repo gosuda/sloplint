@@ -1,0 +1,98 @@
+diff --git a/bin/crush/lib/agent.ml b/bin/crush/lib/agent.ml
+index 24a7d35..51a81e2 100644
+--- a/bin/crush/lib/agent.ml
++++ b/bin/crush/lib/agent.ml
+@@ -580,7 +580,15 @@ let execute_calls t turn_sw calls =
+           (fun job ->
+             match job.promise with Some promise -> Lwt.cancel promise | None -> ())
+           jobs;
+-        Lwt.return_unit);
++        Lwt_list.iter_p
++          (fun job ->
++            match job.promise with
++            | None -> Lwt.return_unit
++            | Some promise ->
++                Lwt.catch
++                  (fun () -> promise >|= fun _ -> ())
++                  (function Lwt.Canceled -> Lwt.return_unit | exn -> Lwt.fail exn))
++          jobs);
+   Lwt_list.iter_s
+     (fun job ->
+       emit t (Tool_started { id = job.call.id; name = job.call.name; input = job.input }))
+diff --git a/bin/crush/lib/hooks.mli b/bin/crush/lib/hooks.mli
+index e91bbb3..e8538e9 100644
+--- a/bin/crush/lib/hooks.mli
++++ b/bin/crush/lib/hooks.mli
+@@ -2,8 +2,8 @@
+ 
+     Hooks receive one bounded JSON request on standard input. Pre-tool hooks authorize a
+     call, may replace its decoded input, and fail closed; lifecycle hooks are
+-    observational. Each invocation owns its process until it is reaped. Cancellation
+-    and timeout stop the process group before the invocation settles. On Windows,
++    observational. Each invocation owns its process until it is reaped. Cancellation and
++    timeout stop the process group before the invocation settles. On Windows,
+     process-group termination has the child-only scope of
+     {!Charamel_os.Process.kill_tree}. *)
+ 
+diff --git a/test/crush/test_agent.ml b/test/crush/test_agent.ml
+index ad2b529..83854b3 100644
+--- a/test/crush/test_agent.ml
++++ b/test/crush/test_agent.ml
+@@ -90,8 +90,8 @@ let config ~base_url (model : Charamel_fantasy.Model.t) =
+     models = { large = Some selected; small = Some selected };
+   }
+ 
+-let with_agent ?(hooks_config : Config.hook list = [])
+-    ?(clock = Charamel_os.Time.lwt) ~queue ~fallback f =
++let with_agent ?(hooks_config : Config.hook list = []) ?(clock = Charamel_os.Time.lwt)
++    ~queue ~fallback f =
+   Test_tools_test_support.with_scratch (fun root ->
+       let old_data = Sys.getenv_opt "XDG_DATA_HOME" in
+       Unix.putenv "XDG_DATA_HOME" root;
+@@ -297,8 +297,8 @@ let body_outcome_survives_stop_turn () =
+        exit 2; else exit 0; fi"
+     in
+     let post =
+-      "if grep -q allowed.txt; then printf '%s\\n' \"$$\" > .post-pid; printf \
+-       'ready\\n' > .body-ready; read release < .post-release; fi; exit 0"
++      "if grep -q allowed.txt; then printf '%s\\n' \"$$\" > .post-pid; printf 'ready\\n' \
++       > .body-ready; read release < .post-release; fi; exit 0"
+     in
+     let hooks_config : Config.hook list =
+       [
+@@ -368,7 +368,9 @@ let post_hook_time_is_not_tool_time () =
+         {
+           event = Config.Post_tool;
+           matcher = None;
+-          command = "cat >/dev/null; printf 'ready\\n' > .timing-ready; read release < .timing-release";
++          command =
++            "cat >/dev/null; printf 'ready\\n' > .timing-ready; read release < \
++             .timing-release";
+           timeout_s = 30;
+         };
+       ]
+@@ -397,11 +399,10 @@ let post_hook_time_is_not_tool_time () =
+             await (Lwt_io.close release))
+           (fun () ->
+             Test_tools_test_support.write_file
+-              (Filename.concat root "allowed.txt") "allowed-body";
++              (Filename.concat root "allowed.txt")
++              "allowed-body";
+             let pending = Agent.prompt agent "read the file" in
+-            ignore
+-              (await
+-                 (Lwt_unix.with_timeout 5. (fun () -> Lwt_io.read_line ready)));
++            ignore (await (Lwt_unix.with_timeout 5. (fun () -> Lwt_io.read_line ready)));
+             advance 10.;
+             await (Lwt_io.write_line release "resume");
+             await (Lwt_io.flush release);
+@@ -411,8 +412,7 @@ let post_hook_time_is_not_tool_time () =
+             let timings =
+               List.filter_map
+                 (function
+-                  | Agent.Tool_finished { elapsed_ms; _ } -> Some elapsed_ms
+-                  | _ -> None)
++                  | Agent.Tool_finished { elapsed_ms; _ } -> Some elapsed_ms | _ -> None)
+                 !events
+             in
+             Alcotest.(check (list int)) "post-hook time excluded" [ 0 ] timings))

@@ -18,11 +18,9 @@ class Candidate:
 
 
 CANDIDATES = (
-    Candidate(20, "7284666a5263dfc31d85506539158c20b3ca9340", "a4ecaeff348263124d0fcac15d277e4263edd8f327f332d3f283be5f0c1f87ad"),
-    Candidate(25, "d7a01482cc11ab2408b9b8fff9a40ab8c597a525"),
-    Candidate(26, "d866c2e3947c5186c82ddd144cf1c54a32bab949"),
-    Candidate(27, "abd498274ad77511b584229c12102493946a24d2"),
-    Candidate(28, "514a5720a788747b1fb1f7c1281a311013e40fd4", "7ee13f281b6abafc78f72f2c278c5978739a876b3dd5b22ca83d76d54918452c"),
+    Candidate(25, "d7a01482cc11ab2408b9b8fff9a40ab8c597a525", "d95199a70ebbfbced46b47a1c3b5798775a30ede65919f41d1b33f804fc97027"),
+    Candidate(27, "abd498274ad77511b584229c12102493946a24d2", "20ecb00e258e4b9b98d478a82a9e266e23cdce10ec18e84d5374d0c3664674ff"),
+    Candidate(28, "514a5720a788747b1fb1f7c1281a311013e40fd4", "8de4b5916018b79fb8e46e92549d40e8fc94969397104be93778dfdebcd22919"),
 )
 BASE = "84e5ff153f781c7e2d02804a5c24997858f618ab"
 WORKSPACE = Path(os.environ["GITHUB_WORKSPACE"])
@@ -94,11 +92,13 @@ def check(candidate: Candidate) -> dict[str, object]:
         args = ["dune", "exec", "--profile", "release", "test/crush/test_crush.exe", "--", "test", "cli", str(case_index), "--verbose"]
         try:
             module.write_bytes(subprocess.check_output(["git", "show", f"{candidate.head}:bin/crush/lib/catalog_cache.ml"], cwd=SOURCE))
+            assert run(["dune", "build", "--profile", "release", "bin/crush/main.exe"], folder / "cache-path-red-build.log") == 0
             code = run(args, folder / "cache-path-red.log")
             red_log = (folder / "cache-path-red.log").read_text(errors="replace")
             result["cache_path_red"] = code != 0 and "trust succeeds without a cache path" in red_log
         finally:
             module.write_bytes(repaired)
+        assert run(["dune", "build", "--profile", "release", "bin/crush/main.exe"], folder / "cache-path-green-build.log") == 0
         result["cache_path_green"] = run(args, folder / "cache-path-green.log")
     git("diff", "--exit-code")
     assert git("write-tree") == result["tree"]

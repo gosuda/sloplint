@@ -1,0 +1,88 @@
+diff --git a/bin/melt/main.ml b/bin/melt/main.ml
+index 8335e73..28b34a3 100644
+--- a/bin/melt/main.ml
++++ b/bin/melt/main.ml
+@@ -168,8 +168,8 @@ let restore_command env =
+        ~man:
+          [
+            `P
+-             "Paste the phrase, then send end-of-file: Ctrl-D on an empty line on \
+-              POSIX, or Ctrl-Z followed by Enter on Windows. Terminal input is hidden.";
++             "Paste the phrase, then send end-of-file: Ctrl-D on an empty line on POSIX, \
++              or Ctrl-Z followed by Enter on Windows. Terminal input is hidden.";
+          ])
+     (restore_term env)
+ 
+diff --git a/bin/melt/phrase.ml b/bin/melt/phrase.ml
+index 20cc58f..4805cc1 100644
+--- a/bin/melt/phrase.ml
++++ b/bin/melt/phrase.ml
+@@ -30,8 +30,7 @@ let read_stdin_phrase ?(is_tty = Charamel_os.Tty.is_tty_stdin)
+           ~finally:(fun () -> restore ())
+           (fun () ->
+             tell
+-              (if Sys.win32 then
+-                 "Enter recovery phrase; finish with Ctrl-Z, then Enter:"
++              (if Sys.win32 then "Enter recovery phrase; finish with Ctrl-Z, then Enter:"
+                else "Enter recovery phrase; finish with Ctrl-D on an empty line:");
+             let text = String.concat "\n" (read_lines input) in
+             tell "";
+diff --git a/bin/melt/phrase.mli b/bin/melt/phrase.mli
+index a09288a..96d0341 100644
+--- a/bin/melt/phrase.mli
++++ b/bin/melt/phrase.mli
+@@ -21,9 +21,8 @@ val read_stdin_phrase :
+     [input] (default: [stdin]) is returned, as from a pipe or a file. When true, echo is
+     disabled through [echo_off] (default: {!Charamel_os.Tty.echo_off}) for the duration of
+     the read. A prompt on standard error explains how to send end-of-file: Ctrl-D on an
+-    empty line on POSIX, or Ctrl-Z followed by Enter on Windows. Every line of [input]
+-    is read to end-of-file, and the lines are joined with
+-    ["\n"]. When [echo_off] raises [Unix.Unix_error], the result is
+-    [Error `Cannot_hide_input] and [input] is never read. [prompt] defaults to
+-    [prerr_endline]. A [Sys_error] while writing this optional diagnostic does not
+-    prevent reading the phrase or restoring echo. *)
++    empty line on POSIX, or Ctrl-Z followed by Enter on Windows. Every line of [input] is
++    read to end-of-file, and the lines are joined with ["\n"]. When [echo_off] raises
++    [Unix.Unix_error], the result is [Error `Cannot_hide_input] and [input] is never read.
++    [prompt] defaults to [prerr_endline]. A [Sys_error] while writing this optional
++    diagnostic does not prevent reading the phrase or restoring echo. *)
+diff --git a/lib/os/os_platform.mli b/lib/os/os_platform.mli
+index 0ca3535..7aa3bf4 100644
+--- a/lib/os/os_platform.mli
++++ b/lib/os/os_platform.mli
+@@ -96,8 +96,7 @@ module Tty : sig
+   (** Put back the state captured by {!enter_raw} or {!echo_off}. POSIX writes the saved
+       [termios] with [TCSADRAIN]. Windows restores only the input mode after {!echo_off},
+       or both console modes and code pages after {!enter_raw}. A mode the console rejects
+-      in the meantime is not an error, because
+-      the terminal is already on its way out. *)
++      in the meantime is not an error, because the terminal is already on its way out. *)
+ 
+   val controlling_input : unit -> Lwt_io.input_channel
+   (** A channel over the controlling terminal, independent of the process standard input,
+diff --git a/test/melt/dune b/test/melt/dune
+index 7f1bfb8..dca382b 100644
+--- a/test/melt/dune
++++ b/test/melt/dune
+@@ -6,6 +6,7 @@
+   melt_core
+   melt_phrase
+   charamel-ssh.keygen
++  charamel.os
+   alcotest
+   alcotest-lwt
+   fmt
+diff --git a/test/melt/test_melt_cli.ml b/test/melt/test_melt_cli.ml
+index 8329a0c..65925cf 100644
+--- a/test/melt/test_melt_cli.ml
++++ b/test/melt/test_melt_cli.ml
+@@ -255,8 +255,7 @@ let multiline_phrase_restores_via_pty () =
+         in
+         let lines =
+           List.init 4 (fun line ->
+-              List.filteri (fun index _ -> index / 6 = line) words
+-              |> String.concat " ")
++              List.filteri (fun index _ -> index / 6 = line) words |> String.concat " ")
+         in
+         let payload = String.concat "\n" lines ^ "\n\004" in
+         let output = Filename.concat root "key" in

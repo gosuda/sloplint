@@ -1,23 +1,72 @@
 diff --git a/bin/crush/lib/catalog_cache.ml b/bin/crush/lib/catalog_cache.ml
-index 119546a..d176f82 100644
+index 119546a..14ea254 100644
 --- a/bin/crush/lib/catalog_cache.ml
 +++ b/bin/crush/lib/catalog_cache.ml
-@@ -22,8 +22,13 @@ let catalog_json = function
+@@ -1,7 +1,6 @@
+ open Lwt.Infix
+ 
+-let path () =
+-  Filename.concat (Charamel_cli.Xdg.cache_dir ~app:"crush") "providers.json"
++let path () = Filename.concat (Charamel_cli.Xdg.cache_dir ~app:"crush") "providers.json"
+ 
+ let catalog_json = function
+   | Jsont.Object (members, _) -> (
+@@ -10,9 +9,7 @@ let catalog_json = function
+           let rec decode acc = function
+             | [] -> Ok (List.rev acc)
+             | value :: rest -> (
+-                match
+-                  Jsont.Json.decode Charamel_fantasy.Provider_info.jsont value
+-                with
++                match Jsont.Json.decode Charamel_fantasy.Provider_info.jsont value with
+                 | Ok provider -> decode (provider :: acc) rest
+                 | Error message -> Error message)
+           in
+@@ -22,22 +19,28 @@ let catalog_json = function
    | _ -> Error "providers cache must be an object"
  
  let read ~fs_root =
 -  let filename = Path.under ~root:fs_root (path ()) in
 -  Lwt.catch
+-    (fun () ->
+-      Lwt_unix.lstat filename >>= fun stat ->
+-      if stat.Unix.st_kind <> Unix.S_REG then
+-        Lwt.return (Error "providers cache is not a regular file")
+-      else if stat.Unix.st_size > 10 * 1024 * 1024 then
+-        Lwt.return (Error "providers cache exceeds 10 MiB")
+-      else
+-        Lwt_io.with_file ~mode:Lwt_io.Input filename (fun channel ->
+-            Lwt_io.read channel)
+-        >|= fun text -> Ok text)
+-    (function
+-      | Unix.Unix_error _ | Sys_error _ ->
+-          Lwt.return (Error "providers cache cannot be read")
+-      | exn -> Lwt.fail exn)
 +  let filename =
 +    try Ok (Path.under ~root:fs_root (path ()))
 +    with Invalid_argument message -> Error message
 +  in
 +  match filename with
 +  | Error message -> Lwt.return (Error message)
-+  | Ok filename -> Lwt.catch
-     (fun () ->
-       Lwt_unix.lstat filename >>= fun stat ->
-       if stat.Unix.st_kind <> Unix.S_REG then
++  | Ok filename ->
++      Lwt.catch
++        (fun () ->
++          Lwt_unix.lstat filename >>= fun stat ->
++          if stat.Unix.st_kind <> Unix.S_REG then
++            Lwt.return (Error "providers cache is not a regular file")
++          else if stat.Unix.st_size > 10 * 1024 * 1024 then
++            Lwt.return (Error "providers cache exceeds 10 MiB")
++          else
++            Lwt_io.with_file ~mode:Lwt_io.Input filename (fun channel ->
++                Lwt_io.read channel)
++            >|= fun text -> Ok text)
++        (function
++          | Unix.Unix_error _ | Sys_error _ ->
++              Lwt.return (Error "providers cache cannot be read")
++          | exn -> Lwt.fail exn)
+ 
+ let load ~fs_root =
+   read ~fs_root >|= fun contents ->
 diff --git a/bin/crush/lib/catalog_cache.mli b/bin/crush/lib/catalog_cache.mli
 index 5d244d5..7920921 100644
 --- a/bin/crush/lib/catalog_cache.mli
@@ -33,11 +82,182 @@ index 5d244d5..7920921 100644
  
  val load : fs_root:string -> Charamel_fantasy.Provider_info.t list Lwt.t
  (** [load ~fs_root] returns the decoded cache, or the embedded catalog when the cache
+diff --git a/bin/crush/lib/config.ml b/bin/crush/lib/config.ml
+index 2779de2..7a249a5 100644
+--- a/bin/crush/lib/config.ml
++++ b/bin/crush/lib/config.ml
+@@ -918,11 +918,11 @@ let project_trust ~fs_root ~trust ~extra path text =
+ let project_layer ~fs_root ~trust ~extra path text json =
+   match without_gated json with
+   | _, [] -> Lwt.return_ok (json, None)
+-  | stripped, gated ->
++  | stripped, gated -> (
+       project_trust ~fs_root ~trust ~extra path text >|= function
+       | Error _ as failure -> failure
+       | Ok (_, true) -> Ok (json, None)
+-      | Ok (record, false) -> Ok (stripped, Some { record with gated })
++      | Ok (record, false) -> Ok (stripped, Some { record with gated }))
+ 
+ (* Providers declared only in untrusted layers are withheld from the merged
+    configuration, but a selection in an untrusted layer can still name one of
+@@ -944,7 +944,7 @@ let provider_ids json =
+           List.map fst (Option.value (object_members providers) ~default:[]))
+ 
+ let catalog_selection catalog value =
+-  match selection_provider value, object_members value with
++  match (selection_provider value, object_members value) with
+   | Some provider_id, Some members -> (
+       match member_json "model" members with
+       | Some (Jsont.String (model_id, _)) ->
+@@ -1034,10 +1034,10 @@ let load_with ~fs_root ~env ~cwd ~extra =
+                   drop_dangling_selections ~catalog ~trusted:true dangling stripped
+                 in
+                 finish stripped ignored
+-            | _ ->
++            | _ -> (
+                 (match ignored with
+-                | Some record -> Lwt.return_ok (record, false)
+-                | None -> project_trust ~fs_root ~trust ~extra path text)
++                  | Some record -> Lwt.return_ok (record, false)
++                  | None -> project_trust ~fs_root ~trust ~extra path text)
+                 >>= function
+                 | Error _ as failure -> Lwt.return failure
+                 | Ok (record, trusted) ->
+@@ -1048,11 +1048,11 @@ let load_with ~fs_root ~env ~cwd ~extra =
+                       if trusted || dropped = [] then ignored
+                       else Some { record with gated = record.gated @ dropped }
+                     in
+-                    finish stripped ignored)
++                    finish stripped ignored))
+       in
+       clean_layers [] layers >>= function
+       | Error _ as failure -> Lwt.return failure
+-      | Ok layers ->
++      | Ok layers -> (
+           let merged =
+             List.fold_left
+               (fun merged (_, stripped, _) -> merge_json merged stripped)
+@@ -1077,7 +1077,7 @@ let load_with ~fs_root ~env ~cwd ~extra =
+                     | path :: _ -> path
+                     | [] -> "<expanded configuration>"
+                   in
+-                  Lwt.return_error (`Parse (path, message))))
++                  Lwt.return_error (`Parse (path, message)))))
+ 
+ let load ~fs_root ~env ~cwd = load_with ~fs_root ~env ~cwd ~extra:[]
+ 
+diff --git a/bin/crush/lib/config.mli b/bin/crush/lib/config.mli
+index be221fb..ad13815 100644
+--- a/bin/crush/lib/config.mli
++++ b/bin/crush/lib/config.mli
+@@ -132,8 +132,8 @@ val search_paths :
+   cwd:string -> git_root:string option -> home_config:string -> string list
+ (** [search_paths ~cwd ~git_root ~home_config] returns the ordered, duplicate-free
+     configuration candidates from the home directory through the project root to [cwd],
+-    each candidate ending in [crush.json]. Trailing [/.] components in directory
+-    arguments do not introduce duplicate candidates. *)
++    each candidate ending in [crush.json]. Trailing [/.] components in directory arguments
++    do not introduce duplicate candidates. *)
+ 
+ val merge : t -> t -> t
+ (** [merge left right] overlays [right] on [left]. Scalar members use right precedence;
+diff --git a/bin/crush/lib/models.ml b/bin/crush/lib/models.ml
+index adc8007..53ad2e4 100644
+--- a/bin/crush/lib/models.ml
++++ b/bin/crush/lib/models.ml
+@@ -41,7 +41,6 @@ let pp_error ppf = function
+ 
+ let catalog_cache_path = Catalog_cache.path
+ let cache_path fs_root = Path.under ~root:fs_root (catalog_cache_path ())
+-
+ let model_id model = model.Charamel_fantasy.Model.id
+ 
+ let prepend_models configured existing =
+diff --git a/bin/crush/main.ml b/bin/crush/main.ml
+index 3e027ad..efb7233 100644
+--- a/bin/crush/main.ml
++++ b/bin/crush/main.ml
+@@ -107,21 +107,19 @@ let gated_list (file : Config.project_file) = String.concat ", " file.Config.gat
+ let display_path path =
+   (* Repository-controlled paths reach the terminal: neutralize control
+      characters so a crafted directory name cannot rewrite the trust notice. *)
+-  String.map
+-    (fun c -> if c < ' ' || c = '\x7f' then '?' else c)
+-    path
++  String.map (fun c -> if c < ' ' || c = '\x7f' then '?' else c) path
+ 
+ (* The working directory is repository-controlled like the project paths, so it
+    is quoted for the shell and neutralized for the terminal: a directory name
+    with a space must paste as one argument, and control characters must not
+    rewrite the notice. *)
+ let display_cwd cwd =
+-  if String.exists (fun c -> c < ' ' || c = '\x7f') cwd && not Sys.win32 then
++  if String.exists (fun c -> c < ' ' || c = '\x7f') cwd && not Sys.win32 then (
+     let encoded = Buffer.create (5 * String.length cwd) in
+     String.iter (fun c -> Printf.bprintf encoded "\\0%03o" (Char.code c)) cwd;
+     (* The final /. prevents command substitution from stripping a newline that
+        belongs to the directory name. The displayed command contains no controls. *)
+-    Fmt.str "\"$(printf '%%b/.' %s)\"" (Filename.quote (Buffer.contents encoded))
++    Fmt.str "\"$(printf '%%b/.' %s)\"" (Filename.quote (Buffer.contents encoded)))
+   else display_path (Filename.quote cwd)
+ 
+ let report_untrusted (env : Env.t) ~cwd untrusted =
 diff --git a/test/crush/test_cli.ml b/test/crush/test_cli.ml
-index 0f2fd38..1167d0c 100644
+index 0f2fd38..69d7aa8 100644
 --- a/test/crush/test_cli.ml
 +++ b/test/crush/test_cli.ml
-@@ -398,6 +398,36 @@ let trust_hint_controls_are_copy_safe () =
+@@ -358,16 +358,18 @@ let trust_hint_controls_are_copy_safe () =
+           Test_tools_test_support.mkdir_p (Filename.concat root ".git");
+           let cwd = Filename.concat root name in
+           Test_tools_test_support.mkdir_p cwd;
+-          write_private (Filename.concat cwd "crush.json")
++          write_private
++            (Filename.concat cwd "crush.json")
+             {|{"providers":{"relay":{"type":"anthropic"}}}|};
+           let _, _, error = run_child_status root [ "dirs"; "--cwd"; cwd ] in
+-          Alcotest.(check bool) "hint has no literal tab" false
+-            (String.contains error '\t');
++          Alcotest.(check bool)
++            "hint has no literal tab" false (String.contains error '\t');
+           let start = String.index error '`' + 1 in
+           let stop = String.index_from error start '`' in
+           let hint = String.sub error start (stop - start) in
+           let prefix = "crush trust --cwd " in
+-          Alcotest.(check bool) "trust command prefix" true
++          Alcotest.(check bool)
++            "trust command prefix" true
+             (String.starts_with ~prefix hint);
+           let argument =
+             String.sub hint (String.length prefix)
+@@ -376,12 +378,14 @@ let trust_hint_controls_are_copy_safe () =
+           let status, decoded, diagnostics =
+             await
+             @@ Test_support.run_cli ~exe:"/bin/sh" ~env:(child_environment root)
+-                 ~timeout:5. [ "-c"; "printf '%s' " ^ argument ]
++                 ~timeout:5.
++                 [ "-c"; "printf '%s' " ^ argument ]
+           in
+           Alcotest.(check int) "copyable argument executes" 0 status;
+           Alcotest.(check string) "argument has no shell diagnostics" "" diagnostics;
+-          Alcotest.(check string) "argument keeps the exact directory"
+-            (Unix.realpath cwd) (Unix.realpath decoded);
++          Alcotest.(check string)
++            "argument keeps the exact directory" (Unix.realpath cwd)
++            (Unix.realpath decoded);
+           let status, _, diagnostics =
+             await
+             @@ Test_support.run_cli ~exe:"/bin/sh" ~env:(child_environment root)
+@@ -389,7 +393,8 @@ let trust_hint_controls_are_copy_safe () =
+                  [ "-c"; Filename.quote executable ^ " trust --cwd " ^ argument ]
+           in
+           Alcotest.(check int)
+-            ("copyable trust command succeeds: " ^ diagnostics) 0 status;
++            ("copyable trust command succeeds: " ^ diagnostics)
++            0 status;
+           let status, _, diagnostics = run_child_status root [ "dirs"; "--cwd"; cwd ] in
+           Alcotest.(check int) "trusted configuration reloads" 0 status;
+           Alcotest.(check bool)
+@@ -398,6 +403,39 @@ let trust_hint_controls_are_copy_safe () =
                 ~haystack:diagnostics)))
      [ "tab\tdir"; "line\ndir\n"; "control\x01dir" ]
  
@@ -48,7 +268,8 @@ index 0f2fd38..1167d0c 100644
 +  Test_tools_test_support.with_scratch (fun root ->
 +      let config = Filename.concat root "config" in
 +      Test_tools_test_support.mkdir_p config;
-+      write_private (Filename.concat root "crush.json")
++      write_private
++        (Filename.concat root "crush.json")
 +        {|{"providers":{"openai":{"type":"openai"}}}|};
 +      let env =
 +        [|
@@ -63,18 +284,20 @@ index 0f2fd38..1167d0c 100644
 +      in
 +      let status, output, error = run () in
 +      Alcotest.(check int) ("trust succeeds without a cache path: " ^ error) 0 status;
-+      Alcotest.(check bool) "provider approval is recorded" true
++      Alcotest.(check bool)
++        "provider approval is recorded" true
 +        (Test_support.contains ~needle:"Trusted " ~haystack:output);
 +      let status, output, error = run () in
 +      Alcotest.(check int) ("approved project reloads: " ^ error) 0 status;
-+      Alcotest.(check bool) "the saved approval is reused" true
++      Alcotest.(check bool)
++        "the saved approval is reused" true
 +        (Test_support.contains ~needle:"No project configuration needs trust."
 +           ~haystack:output))
 +
  let cases =
    [
      Test_tools_test_support.case "dirs uses child environment" `Quick dirs_command;
-@@ -431,4 +461,6 @@ let cases =
+@@ -431,4 +469,6 @@ let cases =
        trust_output_sanitizes_control_chars;
      Test_tools_test_support.case "trust hints preserve paths without raw controls" `Quick
        trust_hint_controls_are_copy_safe;
@@ -82,12 +305,80 @@ index 0f2fd38..1167d0c 100644
 +      trust_without_cache_directory;
    ]
 diff --git a/test/crush/test_config.ml b/test/crush/test_config.ml
-index cc34e65..167e424 100644
+index cc34e65..345251c 100644
 --- a/test/crush/test_config.ml
 +++ b/test/crush/test_config.ml
-@@ -572,7 +572,15 @@ let check_refreshed_catalog_model_survives_override () =
-                  candidate.Charamel_fantasy.Model.id
-                  = model.Charamel_fantasy.Model.id)
+@@ -508,30 +508,32 @@ let check_model_only_layer_requires_its_own_trust () =
+       write child
+         (Fmt.str {|{"models":{"large":{"provider":"openai","model":%S}}}|} model);
+       let loaded = load_or_fail ~env nested in
+-      Alcotest.(check string) "model-only child cannot replace home" "home"
++      Alcotest.(check string)
++        "model-only child cannot replace home" "home"
+         (selected_provider loaded.Config.config.Config.models "large");
+       let child_records =
+         List.filter (fun file -> file.Config.path = child) loaded.Config.untrusted
+       in
+-      Alcotest.(check int) "model-only child has a trust record" 1
+-        (List.length child_records);
++      Alcotest.(check int)
++        "model-only child has a trust record" 1 (List.length child_records);
+       grant_or_fail ~env child_records;
+-      Alcotest.(check string) "trusted child can select a real catalog model" "openai"
++      Alcotest.(check string)
++        "trusted child can select a real catalog model" "openai"
+         (selected_provider (load_or_fail ~env nested).Config.config.Config.models "large");
+       write child
+         {|{"models":{"large":{"provider":"openai","model":"override-only-model"}}}|};
+       let loaded = load_or_fail ~env nested in
+       grant_or_fail ~env
+         (List.filter (fun file -> file.Config.path = child) loaded.Config.untrusted);
+-      Alcotest.(check string) "trusted child cannot select a withheld-only model" "home"
++      Alcotest.(check string)
++        "trusted child cannot select a withheld-only model" "home"
+         (selected_provider (load_or_fail ~env nested).Config.config.Config.models "large"))
+ 
+ let check_refreshed_catalog_model_survives_override () =
+   with_config_tree (fun ~root ~xdg ~project ~nested ->
+       let provider =
+         List.find
+-          (fun provider ->
+-            provider.Charamel_fantasy.Provider_info.id = "openai")
++          (fun provider -> provider.Charamel_fantasy.Provider_info.id = "openai")
+           Charamel_fantasy.Catalog.embedded
+       in
+       let existing = List.hd provider.Charamel_fantasy.Provider_info.models in
+@@ -542,20 +544,16 @@ let check_refreshed_catalog_model_survives_override () =
+         { provider with Charamel_fantasy.Provider_info.models = [ model ] }
+       in
+       (match
+-         await
+-         @@ Crush_core.Models.save_catalog ~fs_root:"/" ~etag:"fixture"
+-              [ provider ]
++         await @@ Crush_core.Models.save_catalog ~fs_root:"/" ~etag:"fixture" [ provider ]
+        with
+       | Ok () -> ()
+       | Error error ->
+-          Alcotest.failf "save catalog failed: %a"
+-            Crush_core.Models.pp_update_error error);
++          Alcotest.failf "save catalog failed: %a" Crush_core.Models.pp_update_error error);
+       let env = tree_env ~root ~xdg in
+       write (xdg ^ "/crush/crush.json")
+         (Fmt.str {|{"models":{"large":{"provider":"openai","model":%S}}}|}
+            model.Charamel_fantasy.Model.id);
+-      write (project ^ "/crush.json")
+-        {|{"providers":{"openai":{"type":"openai"}}}|};
++      write (project ^ "/crush.json") {|{"providers":{"openai":{"type":"openai"}}}|};
+       let loaded = load_or_fail ~env nested in
+       Alcotest.(check string)
+         "home selection uses the refreshed catalog" "openai"
+@@ -569,10 +567,15 @@ let check_refreshed_catalog_model_survives_override () =
+            (fun provider ->
+              List.exists
+                (fun candidate ->
+-                 candidate.Charamel_fantasy.Model.id
+-                 = model.Charamel_fantasy.Model.id)
++                 candidate.Charamel_fantasy.Model.id = model.Charamel_fantasy.Model.id)
                 provider.Charamel_fantasy.Provider_info.models)
 -           resolved))
 +           resolved);
@@ -95,10 +386,18 @@ index cc34e65..167e424 100644
 +        (Fmt.str {|{"models":{"large":{"provider":"openai","model":%S}}}|}
 +           existing.Charamel_fantasy.Model.id);
 +      Alcotest.(check string)
-+        "an embedded model removed by the refresh loses the trust exception"
-+        "<none>"
-+        (selected_provider (load_or_fail ~env nested).Config.config.Config.models
-+           "large"))
++        "an embedded model removed by the refresh loses the trust exception" "<none>"
++        (selected_provider (load_or_fail ~env nested).Config.config.Config.models "large"))
  
  let check_missing_catalog_model_drops_home_selection () =
    with_config_tree (fun ~root ~xdg ~project ~nested ->
+@@ -580,7 +583,8 @@ let check_missing_catalog_model_drops_home_selection () =
+       write (xdg ^ "/crush/crush.json")
+         {|{"models":{"large":{"provider":"openai","model":"override-only-model"}}}|};
+       write (project ^ "/crush.json") {|{"providers":{"openai":{"type":"openai"}}}|};
+-      Alcotest.(check string) "withheld-only home selection permits the default" "<none>"
++      Alcotest.(check string)
++        "withheld-only home selection permits the default" "<none>"
+         (selected_provider (load_or_fail ~env nested).Config.config.Config.models "large"))
+ 
+ let cases =
