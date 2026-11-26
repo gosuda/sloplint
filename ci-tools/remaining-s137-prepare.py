@@ -98,7 +98,7 @@ def main() -> None:
     run("scanner-syntax", ["cc", "-fsyntax-only", "-std=c11", "-I", str(VENDOR / "src"), str(VENDOR / "src/scanner.c")])
     run("generate", [str(tree_sitter), "generate"], cwd=VENDOR)
     assert parser_cases(tree_sitter, cases, "candidate") == []
-    run("corpus-update", [str(tree_sitter), "test", "--update"], cwd=VENDOR)
+    run("corpus-update", [str(tree_sitter), "test", "--update", "--include", "^(multiline-here|parenthesized-pipe)-"], cwd=VENDOR)
     corpus_path = VENDOR / "test/corpus/sloplint_multiline_boundaries.txt"
     corpus_path.write_text(corpus_path.read_text().rstrip() + "\n")
     run("corpus", [str(tree_sitter), "test"], cwd=VENDOR)
