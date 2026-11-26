@@ -19,6 +19,7 @@ mod funcs;
 mod handlers;
 mod imports;
 mod macro_locals;
+mod scope;
 mod types;
 
 use macro_locals::push_cpp_piece_name;
@@ -216,7 +217,7 @@ impl LangHooks for CppHooks {
     }
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         if n.kind() == "identifier" || n.kind() == "field_identifier" {
-            push_cpp_piece_name(n, cx, out);
+            scope::push_cpp_piece_name(n, cx, out);
         }
     }
     fn decl_visible_in_initializer(&self) -> bool {
@@ -231,7 +232,7 @@ impl LangHooks for CppHooks {
     fn decl_scope_parent(&self, depth: usize, node: Node<'_>, _cx: &Cx<'_, '_>) -> usize {
         match node.kind() {
             "for_range_loop" | "qt_foreach_body" | "catch_clause" => depth,
-            "declaration" => statement_scope(depth, node),
+            "declaration" => scope::statement_scope(depth, node),
             _ => depth.saturating_sub(1),
         }
     }
@@ -240,10 +241,10 @@ impl LangHooks for CppHooks {
     }
     fn shadow_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<&'s str>) {
         match n.kind() {
-            "for_range_loop" => range_names(cx, n, out),
+            "for_range_loop" => scope::range_names(cx, n, out),
             "qt_foreach_body" => {
                 if let Some(parent) = cx.parent_of(n) {
-                    range_names(cx, parent, out);
+                    scope::range_names(cx, parent, out);
                 }
             }
             "catch_clause" => {
@@ -456,46 +457,5 @@ impl LangHooks for CppHooks {
             "REQUIRE" | "CHECK" | "REQUIRE_FALSE" | "CHECK_FALSE"
         )
         .then(|| calls::catch2_assert(cx, n))
-    }
-}
-
-fn statement_scope(depth: usize, node: Node<'_>) -> usize {
-    if node
-        .parent()
-        .is_some_and(|parent| parent.kind() == "case_statement")
-    {
-        return depth.saturating_sub(2);
-    }
-    let mut levels = 1;
-    let mut current = node.parent();
-    while let Some(outer) = current {
-        if matches!(
-            outer.kind(),
-            "if_statement" | "while_statement" | "switch_statement" | "for_range_loop"
-        ) {
-            return depth.saturating_sub(levels);
-        }
-        if !matches!(outer.kind(), "condition_clause" | "init_statement") {
-            break;
-        }
-        levels += 1;
-        current = outer.parent();
-    }
-    depth.saturating_sub(1)
-}
-
-fn range_names<'s>(cx: &Cx<'_, 's>, n: Node<'_>, out: &mut Vec<&'s str>) {
-    let Some(declarator) = child_by_field(n, "declarator") else {
-        return;
-    };
-    let found = c_family::leaf(declarator, CPP_DECLARATORS.wrap);
-    if found.kind() == "identifier" {
-        out.push(text(cx, found));
-    } else if found.kind() == "structured_binding_declarator" {
-        for id in named_children(found) {
-            if id.kind() == "identifier" {
-                out.push(text(cx, id));
-            }
-        }
     }
 }
