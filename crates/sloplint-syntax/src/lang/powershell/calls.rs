@@ -10,7 +10,7 @@ use crate::hooks::{
 };
 
 use super::funcs::{ps_var_name, single_named};
-use words::{ps_word_inline_dynamics, ps_word_static_run, ps_word_variable_end};
+use words::ps_word_shape;
 
 fn ps_string_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     let fallback = narrow(text(cx, n).chars().count().saturating_sub(2));
@@ -177,7 +177,10 @@ pub(crate) fn ps_arg_value(n: Node<'_>) -> Node<'_> {
     node
 }
 
-fn ps_generic_static(cx: &Cx<'_, '_>, node: Node<'_>) -> u32 {
+fn ps_generic_shape(cx: &Cx<'_, '_>, node: Node<'_>) -> ArgShape<'static> {
+    if node.named_child_count() == 0 {
+        return ps_word_shape(text(cx, node), &[]);
+    }
     let mut dynamics = Vec::new();
     let mut stack = vec![node];
     while let Some(current) = stack.pop() {
@@ -191,41 +194,14 @@ fn ps_generic_static(cx: &Cx<'_, '_>, node: Node<'_>) -> u32 {
         }
     }
     dynamics.sort_unstable_by_key(|&(start, _)| start);
-    ps_word_static_run(text(cx, node), &dynamics)
+    ps_word_shape(text(cx, node), &dynamics)
 }
 
 fn ps_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     let node = ps_arg_value(n);
     match node.kind() {
         "string_literal" => ps_string_shape(cx, node),
-        "generic_token" => {
-            let raw = text(cx, node);
-            let variable_path = ps_word_variable_end(raw)
-                .is_some_and(|end| matches!(raw.as_bytes().get(end), Some(b'/' | b'\\')));
-            if variable_path
-                || subtree_has_kind(node, "variable")
-                || subtree_has_kind(node, "sub_expression")
-            {
-                ArgShape::Concat {
-                    longest_static: ps_generic_static(cx, node),
-                }
-            } else {
-                // Bare words can still interpolate: v$VERSION.tar.gz emits
-                // no interpolation child. Discount inline variables instead
-                // of counting the whole word as literal text.
-                let raw = text(cx, node);
-                let dynamics = ps_word_inline_dynamics(raw);
-                if dynamics.is_empty() {
-                    ArgShape::Str {
-                        longest_static: narrow(raw.chars().count()),
-                    }
-                } else {
-                    ArgShape::Concat {
-                        longest_static: ps_word_static_run(raw, &dynamics),
-                    }
-                }
-            }
-        }
+        "generic_token" => ps_generic_shape(cx, node),
         "variable" => ArgShape::Ident(ps_var_name(text(cx, node))),
         "command_parameter" => ArgShape::Other,
         "additive_expression" | "additive_argument_expression" => {

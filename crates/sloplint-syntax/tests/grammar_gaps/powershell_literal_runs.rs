@@ -412,14 +412,14 @@ fn unicode_escape_counts_as_one_escaped_character() {
 }
 
 #[test]
-fn uppercase_unicode_escape_counts_as_one_escaped_character() {
+fn uppercase_backtick_escape_keeps_its_literal_suffix() {
     let analysis = run_clean("Write-Host $r/\"`U{1F600}x$id\"\n");
     let command = call(&analysis, "Write-Host");
     assert_eq!(command.args.len(), 1);
     assert!(
         matches!(
             command.args[0].shape,
-            ArgShape::Concat { longest_static: 1 }
+            ArgShape::Concat { longest_static: 8 }
         ),
         "shape: {:?}",
         command.args[0].shape
@@ -439,4 +439,110 @@ fn verbatim_unicode_escape_stays_literal() {
         "shape: {:?}",
         command.args[0].shape
     );
+}
+
+#[test]
+fn unicode_escape_spelling_is_not_searchable_text() {
+    for source in [
+        "Write-Host $r/\"`u{1F600}x$id\"\n",
+        "Write-Host $r/`u{1F600}x$id\n",
+        "Write-Host $r/\"`u{000041}x$id\"\n",
+    ] {
+        let analysis = run_clean(source);
+        let command = call(&analysis, "Write-Host");
+        assert_eq!(command.args.len(), 1, "{source}");
+        assert!(
+            matches!(
+                command.args[0].shape,
+                ArgShape::Concat { longest_static: 1 }
+            ),
+            "{source}: {:?}",
+            command.args[0].shape
+        );
+    }
+}
+
+#[test]
+fn bare_word_interpolation_excludes_the_variable_spelling() {
+    let analysis = run_clean("Write-Host v$VERSION.tar.gz\n");
+    let command = call(&analysis, "Write-Host");
+    assert_eq!(command.args.len(), 1);
+    assert!(
+        matches!(
+            command.args[0].shape,
+            ArgShape::Concat { longest_static: 7 }
+        ),
+        "shape: {:?}",
+        command.args[0].shape
+    );
+}
+
+#[test]
+fn uppercase_escape_spelling_stays_searchable() {
+    let analysis = run_clean("Write-Host $r/\"`U{1F600}x$id\"\n");
+    let command = call(&analysis, "Write-Host");
+    assert!(matches!(
+        command.args[0].shape,
+        ArgShape::Concat { longest_static: 8 }
+    ));
+}
+
+#[test]
+fn escaped_quotes_and_dollars_stay_literal() {
+    for source in [
+        "Write-Host pre`''$ReleaseName'\n",
+        "Write-Host v`$VERSION.tar.gz\n",
+    ] {
+        let analysis = run_clean(source);
+        let command = call(&analysis, "Write-Host");
+        assert!(
+            matches!(command.args[0].shape, ArgShape::Str { .. }),
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn a_hidden_subexpression_is_one_dynamic_hole() {
+    for source in [
+        "Write-Host VersionSuffix=\"$($manifest.PrivateData.PSData.Prerelease)\"\n",
+        "Write-Host VersionSuffix=\"$((Get-Date))\"\n",
+    ] {
+        let analysis = run_clean(source);
+        let command = call(&analysis, "Write-Host");
+        assert!(
+            matches!(
+                command.args[0].shape,
+                ArgShape::Concat { longest_static: 14 }
+            ),
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn a_comment_does_not_merge_separate_calls() {
+    let analysis = run_clean("Write-Host first\n<# note #> Write-Error $id\n");
+    assert_eq!(analysis.facts.calls.len(), 2);
+    assert_eq!(call(&analysis, "Write-Error").args.len(), 1);
+}
+
+#[test]
+fn a_literal_prefix_before_an_inline_variable_stays_searchable() {
+    let analysis = run_clean("Write-Host abcdefgh$VERSION.x\n");
+    let command = call(&analysis, "Write-Host");
+    assert!(matches!(
+        command.args[0].shape,
+        ArgShape::Concat { longest_static: 8 }
+    ));
+}
+
+#[test]
+fn computed_property_text_does_not_hide_a_short_literal() {
+    let analysis = run_clean("Write-Host v=\"$($manifest.PrivateData.PSData.Prerelease)\"\n");
+    let command = call(&analysis, "Write-Host");
+    assert!(matches!(
+        command.args[0].shape,
+        ArgShape::Concat { longest_static: 2 }
+    ));
 }
