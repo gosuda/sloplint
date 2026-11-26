@@ -1,0 +1,26 @@
+diff --git a/crates/bamts-compiler/src/program/tests.rs b/crates/bamts-compiler/src/program/tests.rs
+--- a/crates/bamts-compiler/src/program/tests.rs
++++ b/crates/bamts-compiler/src/program/tests.rs
+@@ -2424,10 +2424,14 @@
+     let config = ProjectConfig::parse(&root, root.path().join("tsconfig.json"), "{}").unwrap();
+     let loader = ProgramLoader::new(&root, config.options()).unwrap();
+     for entrypoint in entrypoints {
++        let started = std::time::Instant::now();
++        eprintln!("CORPUS_BEGIN {entrypoint}");
+         let resolved = loader
+             .load(entrypoint)
+             .unwrap_or_else(|error| panic!("{entrypoint}: {error}"));
++        eprintln!("CORPUS_LOADED {entrypoint} {:?}", started.elapsed());
+         let frontend = compile_program_frontend(&resolved, FrontendMode::Check);
++        eprintln!("CORPUS_CHECKED {entrypoint} {:?}", started.elapsed());
+         let executable = lower_program(
+             &resolved,
+             &frontend,
+@@ -2438,6 +2442,7 @@
+         )
+         .unwrap_or_else(|error| panic!("{entrypoint}: {error}"));
+         assert_eq!(executable.wire().modules().len(), resolved.modules().len());
++        eprintln!("CORPUS_END {entrypoint} {:?}", started.elapsed());
+     }
+ }
+ 
