@@ -55,7 +55,7 @@ abi = 15
 patch = "vendor/tree-sitter-bash/sloplint-grammar.patch"
 patch_status = "upstream-pending"
 patch_upstream = "https://github.com/tree-sitter/tree-sitter-bash/pull/368"
-notes = "Tag v0.25.1 is lightweight (no ^{} dereference) and matches the crate vcs_info. Latest release equals vendored. Open PR #368 covers 2 of 12 hunks; issues #232 and #260 cover the herestring shape; the rest is self-authored, including the recorded scanner deserialize-guard hunk."
+notes = "Tag v0.25.1 is lightweight (no ^{} dereference) and matches the crate vcs_info. Latest release equals vendored. Patch is 14 hunks (7 grammar.js plus 7 scanner.c: 4 functional and 3 deserialize guards D1-D3); open PR #368 covers 2 of the 14 (for/select-do separator, <> redirect); issues #232 and #260 cover the herestring shape; the rest is self-authored, including the D1-D3 guards, which validate lengths and reset on malformed input."
 
 [[grammar]]
 name = "tree-sitter-c"
@@ -206,7 +206,7 @@ name = "tree-sitter-lean"
 language = "lean"
 kind = "vendored-patched"
 upstream = "https://github.com/Julian/tree-sitter-lean"
-commit = "0d28e5d6e8c4755f5df7ef9bde3b6ec6f59fae94"
+commit = "fefc2eff9a83eeb72cda44646709e40e33e09175"
 tag = ""
 crate = ""
 crate_version = ""
@@ -214,8 +214,8 @@ generator = "0.27.1"
 abi = 15
 patch = "vendor/tree-sitter-lean/sloplint-grammar.patch"
 patch_status = "local"
-patch_upstream = ""
-notes = "Unpublished on crates.io and npm. No tags; pin is the PR #30 merge on main dated 2026-11-01. Manifest records the short-prefix-resolvable commit; the SLOPLINT.md full-sha spelling differs by two hex characters per the grounding record and should be fixed there (grammar content unchanged in this lane). Reference clone sits 3 commits ahead at fefc2eff. src/parser.c.gz is ABI 15."
+patch_upstream = "https://github.com/Julian/tree-sitter-lean/pull/36"
+notes = "Unpublished on crates.io and npm. No tags; pin is the PR #36 merge on main dated 2026-11-21 (upstream HEAD on 2026-11-24), moved from the PR #30 merge 0d28e5d6e8c4755f5df7ef9bde3b6ec6f59fae94. PR #36 adds string gaps: 5c56950 is applied with upstream authorship; d9736e6 (upstream's regenerated parser) is replaced by regenerating the patched grammar. The patch is rebased onto the PR #36 merge; its 53 hunks have no upstream PR (do-layout, dedents, for loops, Lake DSL and command heads, open renaming, binders, alternatives, identifier characters, plus the highlights.scm line for the removed public_section node). src/parser.c.gz is ABI 15."
 
 [[grammar]]
 name = "tree-sitter-logos"
@@ -263,7 +263,7 @@ abi = 15
 patch = "vendor/tree-sitter-ocaml/sloplint-grammar.patch"
 patch_status = "local"
 patch_upstream = ""
-notes = "Annotated tag; commit is the ^{} dereference and matches the crate vcs_info. SLOPLINT.md names no tag; resolved here via vcs_info plus ls-remote plus the grounding record (latest release v0.26.0). Three grammars (ocaml, interface, type) regenerated together; all three src/parser.c files are ABI 15. No upstream PR cited; audit proof pending."
+notes = "Annotated tag; commit is the ^{} dereference and matches the crate vcs_info. SLOPLINT.md names no tag; resolved here via vcs_info plus ls-remote plus the grounding record (latest release v0.26.0). Three grammars (ocaml, interface, type) regenerated together; all three src/parser.c files are ABI 15. Patch is 18 hunks over grammars/ocaml/grammar.js plus common/scanner.h for camlp5/cppo/camlp4/opa preprocessor dialects (quotations, directives, bypass forms); no upstream issue or pull request covers them."
 
 [[grammar]]
 name = "tree-sitter-odin"
@@ -295,7 +295,7 @@ abi = 15
 patch = "vendor/tree-sitter-php/sloplint-grammar.patch"
 patch_status = "local"
 patch_upstream = ""
-notes = "Tag v0.25.2 is the default-branch head and matches the crate vcs_info. Nested layout: common/define-grammar.js plus common/scanner.h feed both php/ and php_only/ dialects (both ABI 15). v0.25.2 absorbs the cast-word and clone-operand hunks (upstream commits cabf8bf and 81ff3f1); the reduced patch keeps only the trailing-comma, NUL, interpolation, and heredoc hunks, which have no upstream PR or issue."
+notes = "Tag v0.25.2 is the default-branch head and matches the crate vcs_info. Nested layout: common/define-grammar.js plus common/scanner.h feed both php/ and php_only/ dialects (both ABI 15). v0.25.2 absorbs the cast-word and clone-operand hunks (upstream commits cabf8bf and 81ff3f1); the reduced patch is 11 hunks keeping the trailing-comma, NUL, interpolation, heredoc, and P8 const-call/subscript hunks, which have no upstream PR or issue."
 
 [[grammar]]
 name = "tree-sitter-powershell"
