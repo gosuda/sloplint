@@ -368,18 +368,22 @@ fn default_agent_output_is_stable_for_threshold_and_ratchet_runs() {
     set_baseline(&root, BASELINE);
     let recorded = cli(&root, &["baseline", "--no-cache"]);
     assert!(recorded.status.success(), "{}", text(&recorded.stderr));
-    for mode in ["threshold", "ratchet"] {
+    for (mode, expected_baselined) in [("threshold", 0), ("ratchet", 1)] {
         let args = ["check", "--no-cache", "--mode", mode];
         let first = cli(&root, &args);
         let second = cli(&root, &args);
         for output in [&first, &second] {
             assert!(output.status.success(), "{}", text(&output.stderr));
+            let stdout = text(&output.stdout);
+            let summary = stdout.lines().find(|line| {
+                line.starts_with("summary: strictness=standard files=1 ")
+            });
+            let summary = summary.unwrap_or_else(|| {
+                panic!("default output must contain a completed agent summary: {stdout}")
+            });
             assert!(
-                text(&output.stdout)
-                    .lines()
-                    .any(|line| line.starts_with("summary: strictness=standard files=1 ")),
-                "default output must contain a completed agent summary: {}",
-                text(&output.stdout)
+                summary.contains(&format!("baselined={expected_baselined}")),
+                "{mode} mode must report baselined={expected_baselined}, got: {summary}"
             );
         }
         assert_eq!(first.stdout, second.stdout, "default output in {mode} mode");
