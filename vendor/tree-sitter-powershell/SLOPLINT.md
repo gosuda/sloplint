@@ -32,7 +32,7 @@ and loses every other finding for that file.
   `bash scripts/grammars.sh verify tree-sitter-powershell` checks the result
   against the vendored files. Run `tree-sitter test` in the vendor directory
   to include the sloplint corpus.
-- The regenerated parser uses ABI 15 and has 2,779 states.
+- The regenerated parser uses ABI 15 and has 2,707 states.
 
 ## Native argument follow-up
 
@@ -56,16 +56,22 @@ segments. Rust adapter regressions assert the resulting argument counts.
 ## Expandable path and continuation boundaries
 
 Variable-prefixed paths remain one `generic_token` argument. Double-quoted
-segments now use the existing subexpression parser, so a missing `)` inside
-`$(...)` produces a syntax error. Balanced and nested quoted expressions,
-escaped dollar signs, verbatim segments, and protected U+00A0 retain their
-argument boundaries.
+segments share the ordinary expandable-string body: literal dollar signs
+and hashes remain text, while a missing `)` inside `$(...)` is a syntax
+error. Balanced and nested expressions, escaped dollar signs, verbatim
+segments, and protected U+00A0 retain their argument boundaries.
 
-Backtick escapes in word and parameter names exclude line breaks. The
-shared parameter-word pattern requires a complete escape pair; it cannot
-steal the trailing backtick from a hyphenated command name. The existing
-line-continuation extra owns both LF and CRLF. The corpus adds four boundary
-cases, and adapter tests exercise both physical line endings.
+Parameter and command-name escape pairs exclude line breaks, leaving
+their LF and CRLF continuations to the line-continuation extra. Inside an
+already-started bare argument, a backtick can escape CR. The following LF
+then ends the command, matching the PowerShell 7.7.0 parser with either
+indented or column-one text on the next line.
+
+All 245 corpus cases pass with tree-sitter-cli 0.27.1. The five word-boundary
+corpus cases and Rust adapter regressions cover quoted path literals,
+interpolation, and the context-specific continuation behavior. Native
+PowerShell 7.7.0 parsing separately confirms these accepted and rejected
+forms; this comparison does not execute the commands.
 
 ## What v0.26.6 replaces
 
@@ -95,7 +101,7 @@ The remaining local groups do not have an upstream fix in this release:
 | Case-insensitive numbers, cast operands, type names and generic ranks, bitwise and membership operators | No issue or PR identified for these changes |
 | String text and here-string escapes, statement terminators, method-block scanner | No issue or PR identified for these changes |
 
-The current patch has 1,477 lines and 41 diff hunks. It includes the
+The current patch has 1,557 lines and 42 diff hunks. It includes the
 native argument corpus along with the grammar and scanner changes.
 
 ## Round 1 grammar changes

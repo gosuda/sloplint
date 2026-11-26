@@ -59,6 +59,8 @@ fn nbsp_delimits_command_names_outside_protected_segments() {
 fn variable_paths_parse_expandable_quoted_subexpressions() {
     for source in [
         "Copy-Item $PSScriptRoot/\"$(Get-Date)\" $dest\n",
+        "Copy-Item $PSScriptRoot/\"file$.txt\" $dest\n",
+        "Copy-Item $PSScriptRoot/\"#1.zip\" $dest\n",
         "Copy-Item $PSScriptRoot/\"`$(Get-Date\" $dest\n",
         "Copy-Item $PSScriptRoot/\"$(Get-Date -Format 'yyyy')\" $dest\n",
         "Copy-Item $PSScriptRoot/\"first\u{a0}$(Get-Date)\" $dest\n",
@@ -94,5 +96,20 @@ fn command_continuations_keep_pipelines_with_lf_and_crlf() {
                 .iter()
                 .any(|call| call.callee == "Write-Output")
         );
+    }
+}
+
+#[test]
+fn crlf_after_an_escape_inside_a_bare_argument_ends_the_command() {
+    for indentation in ["", "    "] {
+        let source = format!("Write-Output hello`\r\n{indentation}Get-Date\r\n");
+        let analysis = run_clean(&source);
+        let callees = analysis
+            .facts
+            .calls
+            .iter()
+            .map(|call| call.callee.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(callees, ["Write-Output", "Get-Date"], "{source:?}");
     }
 }

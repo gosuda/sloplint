@@ -1,8 +1,8 @@
 diff --git a/grammar.js b/grammar.js
-index 1f8b448..b9dcafa 100644
+index 1f8b448..50135ee 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -7,10 +7,35 @@ const PREC = {
+@@ -7,10 +7,36 @@ const PREC = {
    PARAM: 6,
  };
 
@@ -14,6 +14,7 @@ index 1f8b448..b9dcafa 100644
 +const WORD_SQ = /'[^']*'/.source;
 +const WORD_DQ = /"([^"`]|`.)*"/.source;
 +const WORD_ESC = /`[^\r\n]/.source;
++const ARGUMENT_ESC = /`[^\n]/.source;
 +const PARAMETER_WORD = /-+/.source +
 +  '(' + /[a-zA-Z_?\-]/.source + '|' + WORD_ESC + ')' +
 +  '(' + /[a-zA-Z0-9_?\-]/.source + '|' + WORD_ESC + ')*';
@@ -24,7 +25,7 @@ index 1f8b448..b9dcafa 100644
 + * @param {string} plain regex source of one plain character
 + */
 +function wordTail(plain) {
-+  return '(' + [plain, WORD_SQ, WORD_DQ, WORD_ESC].join('|') + ')*';
++  return '(' + [plain, WORD_SQ, WORD_DQ, ARGUMENT_ESC].join('|') + ')*';
 +}
 +
  export default grammar({
@@ -39,7 +40,7 @@ index 1f8b448..b9dcafa 100644
 
    extras: ($) => [
      $.comment,
-@@ -21,15 +46,27 @@ export default grammar({
+@@ -21,15 +47,27 @@ export default grammar({
    ],
 
    conflicts: ($) => [
@@ -68,7 +69,7 @@ index 1f8b448..b9dcafa 100644
 
      // Comments
      comment: ($) =>
-@@ -48,22 +85,24 @@ export default grammar({
+@@ -48,22 +86,24 @@ export default grammar({
      integer_literal: ($) =>
        choice($.decimal_integer_literal, $.hexadecimal_integer_literal),
 
@@ -98,7 +99,7 @@ index 1f8b448..b9dcafa 100644
          ),
        ),
 
-@@ -73,18 +112,18 @@ export default grammar({
+@@ -73,18 +113,18 @@ export default grammar({
          choice(
            seq(
              /[0-9]+\.[0-9]+/,
@@ -123,19 +124,44 @@ index 1f8b448..b9dcafa 100644
            ),
          ),
        ),
-@@ -103,7 +142,10 @@ export default grammar({
+@@ -98,21 +138,24 @@ export default grammar({
+         $.verbatim_here_string_characters,
+       ),
+
++    _expandable_string_part: ($) =>
++      choice(
++        // sloplint: lexical precedence keeps a text run that starts at
++        // white space or `#` after a variable or an escape ("`n## x",
++        // "$a ## y") from being read as a comment extra.
++        token.immediate(prec(1, /[^\$\"`]+/)),
++        $.variable,
++        $.sub_expression,
++        token.immediate(/\$(`.{1}|`\r?\n|[\s\\])/),
++        token.immediate(/`.{1}|`\r?\n/),
++        token.immediate('""'),
++        token.immediate('$'),
++      ),
++
+     expandable_string_literal: ($) =>
+       seq(
          /\"(\s*\#*)*/, // this is a trick to avoid tree-sitter allowing comment between tokens, as string should be tokenize but powershell allow subexpression inside it...
-         repeat(
-           choice(
+-        repeat(
+-          choice(
 -            token.immediate(/[^\$\"`]+/),
-+            // sloplint: lexical precedence keeps a text run that starts at
-+            // white space or `#` after a variable or an escape ("`n## x",
-+            // "$a ## y") from being read as a comment extra.
-+            token.immediate(prec(1, /[^\$\"`]+/)),
-             $.variable,
-             $.sub_expression,
-             token.immediate(/\$(`.{1}|`\r?\n|[\s\\])/),
-@@ -124,7 +166,11 @@ export default grammar({
+-            $.variable,
+-            $.sub_expression,
+-            token.immediate(/\$(`.{1}|`\r?\n|[\s\\])/),
+-            token.immediate(/`.{1}|`\r?\n/),
+-            token.immediate('""'),
+-            token.immediate('$'),
+-          ),
+-        ),
+-        repeat(token.immediate('$')),
++        repeat($._expandable_string_part),
+         token.immediate(/(\s*\#*)*\"/),
+       ),
+
+@@ -124,7 +167,11 @@ export default grammar({
              token.immediate(/[^\$\r\n`]+/),
              $.variable,
              $.sub_expression,
@@ -148,7 +174,7 @@ index 1f8b448..b9dcafa 100644
              token.immediate(/(\r?\n)+\"[^@]/),
              token.immediate('$'),
              token.immediate(/`.{1}|`\r?\n/),
-@@ -149,7 +195,10 @@ export default grammar({
+@@ -149,7 +196,10 @@ export default grammar({
      simple_name: ($) => /[a-zA-Z_][a-zA-Z0-9_]*/,
 
      // Type names
@@ -160,7 +186,7 @@ index 1f8b448..b9dcafa 100644
 
      type_name: ($) =>
        choice($.type_identifier, seq($.type_name, '.', $.type_identifier)),
-@@ -225,6 +274,11 @@ export default grammar({
+@@ -225,6 +275,11 @@ export default grammar({
          reservedWord('-ilike'),
          reservedWord('-ilt'),
          reservedWord('-imatch'),
@@ -172,7 +198,7 @@ index 1f8b448..b9dcafa 100644
          reservedWord('-in'),
          reservedWord('-ine'),
          reservedWord('-inotcontains'),
-@@ -306,19 +360,107 @@ export default grammar({
+@@ -306,19 +361,107 @@ export default grammar({
 
      // Commands
      generic_token: ($) =>
@@ -202,7 +228,7 @@ index 1f8b448..b9dcafa 100644
 +            // segment may follow the colon at once, as in `--:"warning text"`.
 +            new RegExp(
 +              /-+:/.source +
-+                '(' + /[^&\s\u00A0()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + WORD_ESC + ')' +
++                '(' + /[^&\s\u00A0()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + ARGUMENT_ESC + ')' +
 +                wordTail(/[^&,\s\u00A0()}|;"'`]/.source),
 +            ),
 +            // sloplint: bare escape sequence used as a word, as in
@@ -234,7 +260,7 @@ index 1f8b448..b9dcafa 100644
 +            new RegExp(
 +              '(' + WORD_SQ + '|' + WORD_DQ + ')' +
 +                '(' +
-+                  /[^&\s\u00A0()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + WORD_ESC +
++                  /[^&\s\u00A0()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + ARGUMENT_ESC +
 +                ')+',
 +            ),
 +          ),
@@ -249,7 +275,7 @@ index 1f8b448..b9dcafa 100644
 +        repeat(
 +          choice(
 +            token.immediate(/[^&\s\u00A0()}|;,"'`]+/),
-+            token.immediate(new RegExp(WORD_ESC)),
++            token.immediate(new RegExp(ARGUMENT_ESC)),
 +            token.immediate(new RegExp(WORD_SQ)),
 +            seq(token.immediate('"'), $._expandable_string_literal_immediate),
 +          ),
@@ -283,7 +309,7 @@ index 1f8b448..b9dcafa 100644
            ),
          ),
          // A bare `--` or `-` argument (see scanner.c).
-@@ -399,6 +541,13 @@ export default grammar({
+@@ -399,6 +542,13 @@ export default grammar({
            $.inlinescript_statement,
            $.parallel_statement,
            $.sequence_statement,
@@ -297,7 +323,7 @@ index 1f8b448..b9dcafa 100644
            seq($.pipeline, $._statement_terminator),
            // `npm run dev &` (PowerShell 7): runs the pipeline as a background job
            seq($.pipeline, $.background_operator),
-@@ -476,16 +625,18 @@ export default grammar({
+@@ -476,16 +626,18 @@ export default grammar({
 
      switch_clauses: ($) => repeat1($.switch_clause),
 
@@ -318,7 +344,7 @@ index 1f8b448..b9dcafa 100644
 
      foreach_statement: ($) =>
        seq(
-@@ -568,8 +719,11 @@ export default grammar({
+@@ -568,8 +720,11 @@ export default grammar({
          ')',
        ),
 
@@ -330,7 +356,7 @@ index 1f8b448..b9dcafa 100644
          choice(
            reservedWord('function'),
            reservedWord('filter'),
-@@ -578,10 +732,19 @@ export default grammar({
+@@ -578,10 +733,19 @@ export default grammar({
          $.function_name,
          optional($.function_parameter_declaration),
          '{',
@@ -351,7 +377,7 @@ index 1f8b448..b9dcafa 100644
      function_name: ($) => $._command_token,
 
      function_parameter_declaration: ($) =>
-@@ -598,7 +761,9 @@ export default grammar({
+@@ -598,7 +762,9 @@ export default grammar({
 
      label: ($) => token(seq(':', /[a-zA-Z_][a-zA-Z0-9_]*/)),
 
@@ -362,7 +388,28 @@ index 1f8b448..b9dcafa 100644
 
      trap_statement: ($) =>
        seq(reservedWord('trap'), optional($.type_literal), $.statement_block),
-@@ -733,7 +898,7 @@ export default grammar({
+@@ -710,18 +876,8 @@ export default grammar({
+
+     _expandable_string_literal_immediate: ($) =>
+       seq(
+-        repeat(
+-          choice(
+-            /[^\$"`]+/,
+-            $.variable,
+-            /\$`(.{1}|`\r?\n)/,
+-            /`.{1}|`\r?\n/,
+-            '""',
+-            $.sub_expression,
+-          ),
+-        ),
+-        repeat('$'),
+-        '"',
++        repeat($._expandable_string_part),
++        token.immediate('"'),
+       ),
+
+     _string_literal_immediate: ($) =>
+@@ -733,7 +889,7 @@ export default grammar({
      command_name: ($) =>
        seq(
          choice(
@@ -371,7 +418,7 @@ index 1f8b448..b9dcafa 100644
            // tree-sitter does not allow to control lexer
            // each start keyword into _statement rule must be present here
            // https://github.com/airbus-cert/tree-sitter-powershell/issues/24
-@@ -754,10 +919,23 @@ export default grammar({
+@@ -754,10 +910,23 @@ export default grammar({
            new RegExp(caseInsensitive('for-')),
            new RegExp(caseInsensitive('while-')),
            new RegExp(caseInsensitive('parallel-')),
@@ -396,7 +443,7 @@ index 1f8b448..b9dcafa 100644
              seq(token.immediate('"'), $._expandable_string_literal_immediate),
              seq(token.immediate('\''), $._string_literal_immediate),
              token.immediate('""'),
-@@ -766,7 +944,8 @@ export default grammar({
+@@ -766,7 +935,8 @@ export default grammar({
          ),
        ),
 
@@ -406,7 +453,7 @@ index 1f8b448..b9dcafa 100644
 
      // Use to parse command path
      path_command_name: ($) =>
-@@ -781,41 +960,86 @@ export default grammar({
+@@ -781,41 +951,86 @@ export default grammar({
        prec.right(
          choice(
            $.command_parameter,
@@ -506,7 +553,7 @@ index 1f8b448..b9dcafa 100644
      verbatim_command_argument: ($) =>
        seq('--%', $._verbatim_command_argument_chars),
 
-@@ -827,8 +1051,10 @@ export default grammar({
+@@ -827,8 +1042,10 @@ export default grammar({
          seq($.file_redirection_operator, $.redirected_file_name),
        ),
 
@@ -518,7 +565,7 @@ index 1f8b448..b9dcafa 100644
 
      // Class
      class_attribute: ($) =>
-@@ -857,13 +1083,26 @@ export default grammar({
+@@ -857,13 +1074,26 @@ export default grammar({
          '(',
          optional($.class_method_parameter_list),
          ')',
@@ -545,7 +592,7 @@ index 1f8b448..b9dcafa 100644
          token(reservedWord('class')),
          $.simple_name,
          optional(seq(':', $.simple_name, repeat(seq(',', $.simple_name)))),
-@@ -884,6 +1123,7 @@ export default grammar({
+@@ -884,6 +1114,7 @@ export default grammar({
      // Enums
      enum_statement: ($) =>
        seq(
@@ -553,7 +600,7 @@ index 1f8b448..b9dcafa 100644
          token(reservedWord('enum')),
          $.simple_name,
          '{',
-@@ -895,7 +1135,20 @@ export default grammar({
+@@ -895,7 +1126,20 @@ export default grammar({
        seq($.simple_name, optional(seq('=', $.integer_literal))),
 
      // Expressions
@@ -575,7 +622,7 @@ index 1f8b448..b9dcafa 100644
 
      logical_expression: ($) =>
        prec.left(
-@@ -1008,7 +1261,35 @@ export default grammar({
+@@ -1008,7 +1252,35 @@ export default grammar({
      pre_decrement_expression: ($) => seq('--', $.unary_expression),
 
      cast_expression: ($) =>
@@ -612,7 +659,7 @@ index 1f8b448..b9dcafa 100644
 
      attributed_variable: ($) => seq($.type_literal, $.variable),
 
-@@ -1042,8 +1323,12 @@ export default grammar({
+@@ -1042,8 +1314,12 @@ export default grammar({
      array_expression: ($) =>
        seq('@(', field('statements', optional($.statement_list)), ')'),
 
@@ -626,7 +673,7 @@ index 1f8b448..b9dcafa 100644
 
      hash_literal_expression: ($) =>
        seq('@{', optional($.hash_literal_body), '}'),
-@@ -1101,11 +1386,17 @@ export default grammar({
+@@ -1101,11 +1377,17 @@ export default grammar({
          $.invokation_foreach_expression,
        ),
 
@@ -646,7 +693,7 @@ index 1f8b448..b9dcafa 100644
          $.script_block_expression,
        ),
 
-@@ -1145,10 +1436,13 @@ export default grammar({
+@@ -1145,10 +1427,13 @@ export default grammar({
            $.comparison_argument_expression,
            seq(
              $.bitwise_argument_expression,
@@ -663,7 +710,7 @@ index 1f8b448..b9dcafa 100644
              ),
              $.comparison_argument_expression,
            ),
-@@ -1213,32 +1507,49 @@ export default grammar({
+@@ -1213,32 +1498,49 @@ export default grammar({
 
      type_literal: ($) => seq('[', $.type_spec, ']'),
 
@@ -1393,10 +1440,10 @@ index e91d0a4..6043257 100644
 +          (command_name))))))
 diff --git a/test/corpus/sloplint_word_boundaries.txt b/test/corpus/sloplint_word_boundaries.txt
 new file mode 100644
-index 0000000..8e901b0
+index 0000000..8ba60b5
 --- /dev/null
 +++ b/test/corpus/sloplint_word_boundaries.txt
-@@ -0,0 +1,78 @@
+@@ -0,0 +1,111 @@
 +====================
 +Variable path parses a balanced subexpression
 +====================
@@ -1475,3 +1522,36 @@ index 0000000..8e901b0
 +          command_name: (command_name))
 +        (command
 +          command_name: (command_name))))))
++
++================================================================================
++Literal dollar and hash in expandable path segments
++================================================================================
++Copy-Item $root/"file$.txt" $dest
++Copy-Item $root/"#1.zip" $dest
++
++--------------------------------------------------------------------------------
++
++(program
++  (statement_list
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name)
++          (command_elements
++            (command_argument_sep)
++            (generic_token)
++            (command_argument_sep)
++            (array_literal_expression
++              (unary_expression
++                (variable)))))))
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name)
++          (command_elements
++            (command_argument_sep)
++            (generic_token)
++            (command_argument_sep)
++            (array_literal_expression
++              (unary_expression
++                (variable)))))))))

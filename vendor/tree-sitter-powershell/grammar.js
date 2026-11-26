@@ -15,6 +15,7 @@ const PREC = {
 const WORD_SQ = /'[^']*'/.source;
 const WORD_DQ = /"([^"`]|`.)*"/.source;
 const WORD_ESC = /`[^\r\n]/.source;
+const ARGUMENT_ESC = /`[^\n]/.source;
 const PARAMETER_WORD = /-+/.source +
   '(' + /[a-zA-Z_?\-]/.source + '|' + WORD_ESC + ')' +
   '(' + /[a-zA-Z0-9_?\-]/.source + '|' + WORD_ESC + ')*';
@@ -25,7 +26,7 @@ const PARAMETER_WORD = /-+/.source +
  * @param {string} plain regex source of one plain character
  */
 function wordTail(plain) {
-  return '(' + [plain, WORD_SQ, WORD_DQ, WORD_ESC].join('|') + ')*';
+  return '(' + [plain, WORD_SQ, WORD_DQ, ARGUMENT_ESC].join('|') + ')*';
 }
 
 export default grammar({
@@ -137,24 +138,24 @@ export default grammar({
         $.verbatim_here_string_characters,
       ),
 
+    _expandable_string_part: ($) =>
+      choice(
+        // sloplint: lexical precedence keeps a text run that starts at
+        // white space or `#` after a variable or an escape ("`n## x",
+        // "$a ## y") from being read as a comment extra.
+        token.immediate(prec(1, /[^\$\"`]+/)),
+        $.variable,
+        $.sub_expression,
+        token.immediate(/\$(`.{1}|`\r?\n|[\s\\])/),
+        token.immediate(/`.{1}|`\r?\n/),
+        token.immediate('""'),
+        token.immediate('$'),
+      ),
+
     expandable_string_literal: ($) =>
       seq(
         /\"(\s*\#*)*/, // this is a trick to avoid tree-sitter allowing comment between tokens, as string should be tokenize but powershell allow subexpression inside it...
-        repeat(
-          choice(
-            // sloplint: lexical precedence keeps a text run that starts at
-            // white space or `#` after a variable or an escape ("`n## x",
-            // "$a ## y") from being read as a comment extra.
-            token.immediate(prec(1, /[^\$\"`]+/)),
-            $.variable,
-            $.sub_expression,
-            token.immediate(/\$(`.{1}|`\r?\n|[\s\\])/),
-            token.immediate(/`.{1}|`\r?\n/),
-            token.immediate('""'),
-            token.immediate('$'),
-          ),
-        ),
-        repeat(token.immediate('$')),
+        repeat($._expandable_string_part),
         token.immediate(/(\s*\#*)*\"/),
       ),
 
@@ -385,7 +386,7 @@ export default grammar({
             // segment may follow the colon at once, as in `--:"warning text"`.
             new RegExp(
               /-+:/.source +
-                '(' + /[^&\s\u00A0()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + WORD_ESC + ')' +
+                '(' + /[^&\s\u00A0()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + ARGUMENT_ESC + ')' +
                 wordTail(/[^&,\s\u00A0()}|;"'`]/.source),
             ),
             // sloplint: bare escape sequence used as a word, as in
@@ -417,7 +418,7 @@ export default grammar({
             new RegExp(
               '(' + WORD_SQ + '|' + WORD_DQ + ')' +
                 '(' +
-                  /[^&\s\u00A0()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + WORD_ESC +
+                  /[^&\s\u00A0()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + ARGUMENT_ESC +
                 ')+',
             ),
           ),
@@ -432,7 +433,7 @@ export default grammar({
         repeat(
           choice(
             token.immediate(/[^&\s\u00A0()}|;,"'`]+/),
-            token.immediate(new RegExp(WORD_ESC)),
+            token.immediate(new RegExp(ARGUMENT_ESC)),
             token.immediate(new RegExp(WORD_SQ)),
             seq(token.immediate('"'), $._expandable_string_literal_immediate),
           ),
@@ -875,18 +876,8 @@ export default grammar({
 
     _expandable_string_literal_immediate: ($) =>
       seq(
-        repeat(
-          choice(
-            /[^\$"`]+/,
-            $.variable,
-            /\$`(.{1}|`\r?\n)/,
-            /`.{1}|`\r?\n/,
-            '""',
-            $.sub_expression,
-          ),
-        ),
-        repeat('$'),
-        '"',
+        repeat($._expandable_string_part),
+        token.immediate('"'),
       ),
 
     _string_literal_immediate: ($) =>

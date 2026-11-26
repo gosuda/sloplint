@@ -76,3 +76,36 @@ Get-Date`
           command_name: (command_name))
         (command
           command_name: (command_name))))))
+
+================================================================================
+Literal dollar and hash in expandable path segments
+================================================================================
+Copy-Item $root/"file$.txt" $dest
+Copy-Item $root/"#1.zip" $dest
+
+--------------------------------------------------------------------------------
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (variable)))))))
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (variable)))))))))
