@@ -1,470 +1,3 @@
-diff --git a/cmd/spira/templates/engines/sqlite/main_test.lgo.tmpl b/cmd/spira/templates/engines/sqlite/main_test.lgo.tmpl
---- a/cmd/spira/templates/engines/sqlite/main_test.lgo.tmpl
-+++ b/cmd/spira/templates/engines/sqlite/main_test.lgo.tmpl
-@@ -1,230 +1,233 @@
--package main_test
--
--import (
--	"bytes"
--	"context"
--	"log/slog"
--	"net/http"
--	"net/http/httptest"
--	"net/url"
--	"strings"
--	"testing"
--	"time"
--
--	"github.com/gosuda/spira/auth"
--	"github.com/gosuda/spira/db"
--	"github.com/gosuda/spira/migrate"
--	"github.com/gosuda/spira/web"
--
--	app "{{MODULE}}"
--	appdb "{{MODULE}}/db"
--	"{{MODULE}}/db/store"
--	"{{MODULE}}/features/account"
--	_ "modernc.org/sqlite"
--)
--
--func TestSeedDemoUserFollowsTheEnvironment(t *testing.T) {
--	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
--	defer cancel()
--	t.Run("unset", func(t *testing.T) {
--		t.Setenv("SPIRA_SEED_DEMO_PASSWORD", "")
--		withMigratedPool(t, ctx, "file:seed-unset?mode=memory&cache=shared", func(pool *db.Pool) {
--			if err := app.SeedDemoUser(ctx, pool); err != nil {
--				t.Fatalf("seed: %v", err)
--				return
--			}
--			found, err := store.GetUserByName(ctx, pool, "demo")
--			if err != nil {
--				t.Fatalf("lookup: %v", err)
--				return
--			}
--			if found != nil {
--				t.Fatalf("seed created user demo while SPIRA_SEED_DEMO_PASSWORD is unset")
--			}
--		})
--	})
--	t.Run("set", func(t *testing.T) {
--		withMigratedPool(t, ctx, "file:seed-set?mode=memory&cache=shared", func(pool *db.Pool) {
--			for _, password := range []string{"first-test-password", "second-test-password"} {
--				t.Setenv("SPIRA_SEED_DEMO_PASSWORD", password)
--				if err := app.SeedDemoUser(ctx, pool); err != nil {
--					t.Fatalf("seed: %v", err)
--					return
--				}
--				assertDemoPassword(t, ctx, pool, password)
--			}
--		})
--	})
--}
--
--func assertDemoPassword(t *testing.T, ctx context.Context, pool *db.Pool, password string) {
--	t.Helper()
--	found, err := store.GetUserByName(ctx, pool, "demo")
--	if err != nil {
--		t.Fatalf("lookup: %v", err)
--		return
--	}
--	if found == nil {
--		t.Fatalf("seed left no user demo while SPIRA_SEED_DEMO_PASSWORD is set")
--		return
--	}
--	user := found ?? store.User{}
--	ok, err := auth.VerifyPassword(user.PasswordHash, password)
--	if err != nil {
--		t.Fatalf("verify: %v", err)
--		return
--	}
--	if !ok {
--		t.Fatalf("user demo does not accept the SPIRA_SEED_DEMO_PASSWORD value %q", password)
--	}
--}
--
--func withMigratedPool(t *testing.T, ctx context.Context, dsn string, run func(pool *db.Pool)) {
--	t.Helper()
--	pool, err := db.Open("sqlite", dsn)
--	if err != nil {
--		t.Fatalf("open: %v", err)
--		return
--	}
--	if pool == nil {
--		t.Fatalf("open left no pool")
--		return
--	}
--	defer func() {
--		stopCtx, stopCancel := context.WithTimeout(context.Background(), 5*time.Second)
--		defer stopCancel()
--		if serr := pool.Stop(stopCtx); serr != nil {
--			t.Errorf("stop: %v", serr)
--		}
--	}()
--	steps, err := migrate.Load(appdb.FS())
--	if err != nil {
--		t.Fatalf("load: %v", err)
--		return
--	}
--	if err := migrate.Apply(ctx, pool, steps); err != nil {
--		t.Fatalf("apply: %v", err)
--		return
--	}
--	run(pool)
--}
--
--func TestLoginLookupFailureCarriesAccountFault(t *testing.T) {
--	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
--	defer cancel()
--	pool, err := db.Open("sqlite", "file:bare-login-fault?mode=memory&cache=shared")
--	if err != nil {
--		t.Fatalf("open: %v", err)
--		return
--	}
--	if pool == nil {
--		t.Fatalf("open left no pool")
--		return
--	}
--	defer func() {
--		stopCtx, stopCancel := context.WithTimeout(context.Background(), 5*time.Second)
--		defer stopCancel()
--		if serr := pool.Stop(stopCtx); serr != nil {
--			t.Errorf("stop: %v", serr)
--		}
--	}()
--	if err := pool.Start(ctx); err != nil {
--		t.Fatalf("start: %v", err)
--		return
--	}
--	var buf bytes.Buffer
--	prev := slog.Default()
--	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{})))
--	defer slog.SetDefault(prev)
--	r := web.NewRouter()
--	sessions := &auth.Sessions{Store: &account.DBStore{DB: pool}}
--	(&account.Account{DB: pool, Sessions: sessions}).Mount(r)
--	form := url.Values{"username": []string{"demo"}, "password": []string{"secret"}}
--	req := httptest.NewRequest(http.MethodPost, "/account/login", strings.NewReader(form.Encode()))
--	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
--	rec := httptest.NewRecorder()
--	r.ServeHTTP(rec, req)
--	if rec.Code != http.StatusInternalServerError {
--		t.Fatalf("status %d want 500 body %s", rec.Code, rec.Body.String())
--		return
--	}
--	if !strings.Contains(buf.String(), "account.failed") {
--		t.Fatalf("handler log %q lacks the account fault", buf.String())
--		return
--	}
--	if strings.Contains(rec.Body.String(), "no such table") {
--		t.Fatalf("body %q leaks the driver error", rec.Body.String())
--		return
--	}
--}
--
--// seedExpiredSessions inserts two expired sessions so the sweep DELETE
--// matches rows and a planted failure actually fires. Without seeded
--// rows the delete matches nothing and the test passes even if login
--// propagates sweep errors.
--func seedExpiredSessions(t *testing.T, ctx context.Context, pool *db.Pool, name string) {
--	t.Helper()
--	found, err := store.GetUserByName(ctx, pool, name)
--	if err != nil {
--		t.Fatalf("lookup: %v", err)
--		return
--	}
--	if found == nil {
--		t.Fatal("seed left no user")
--		return
--	}
--	seed := found ?? store.User{}
--	for _, id := range []string{"expired-seed-a", "expired-seed-b"} {
--		if err := store.SaveSession(ctx, pool, store.SaveSessionArgs{
--			IDHash:    store.SessionID(id),
--			UserID:    seed.ID,
--			Roles:     "",
--			ExpiresAt: time.Now().Add(-time.Hour),
--		}); err != nil {
--			t.Fatalf("seed expired session: %v", err)
--			return
--		}
--	}
--}
--
--func TestLoginSurvivesFailedSessionSweep(t *testing.T) {
--	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
--	defer cancel()
--	// The sweep failure must reach the operator log even though login
--	// still succeeds.
--	var buf bytes.Buffer
--	prev := slog.Default()
--	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{})))
--	defer slog.SetDefault(prev)
--	withMigratedPool(t, ctx, "file:sweep-login?mode=memory&cache=shared", func(pool *db.Pool) {
--		hash, err := auth.HashPassword("secret")
--		if err != nil {
--			t.Fatalf("hash: %v", err)
--			return
--		}
--		if _, err := store.CreateUser(ctx, pool, "demo", hash); err != nil {
--			t.Fatalf("create user: %v", err)
--			return
--		}
--		seedExpiredSessions(t, ctx, pool, "demo")
--		if _, err := pool.ExecContext(ctx, `CREATE TRIGGER refuse_sweep BEFORE DELETE ON sessions BEGIN SELECT RAISE(ABORT, 'sweep refused'); END;`); err != nil {
--			t.Fatalf("plant sweep failure: %v", err)
--			return
--		}
--		r := web.NewRouter()
--		sessions := &auth.Sessions{Store: &account.DBStore{DB: pool}}
--		(&account.Account{DB: pool, Sessions: sessions}).Mount(r)
--		form := url.Values{"username": []string{"demo"}, "password": []string{"secret"}}
--		req := httptest.NewRequest(http.MethodPost, "/account/login", strings.NewReader(form.Encode()))
--		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
--		rec := httptest.NewRecorder()
--		r.ServeHTTP(rec, req)
--		if rec.Code != http.StatusSeeOther {
--			t.Fatalf("status %d want 303 body %s", rec.Code, rec.Body.String())
--			return
--		}
--		if !strings.Contains(buf.String(), "sweep expired sessions") {
--			t.Fatalf("operator log %q lacks the sweep failure: the delete never fired", buf.String())
--		}
--	})
--}
-+package main_test
-+
-+import (
-+	"bytes"
-+	"context"
-+	"log/slog"
-+	"net/http"
-+	"net/http/httptest"
-+	"net/url"
-+	"strings"
-+	"testing"
-+	"time"
-+
-+	"github.com/gosuda/spira/auth"
-+	"github.com/gosuda/spira/db"
-+	"github.com/gosuda/spira/migrate"
-+	"github.com/gosuda/spira/web"
-+
-+	app "{{MODULE}}"
-+	appdb "{{MODULE}}/db"
-+	"{{MODULE}}/db/store"
-+	"{{MODULE}}/features/account"
-+	_ "modernc.org/sqlite"
-+)
-+
-+func TestSeedDemoUserFollowsTheEnvironment(t *testing.T) {
-+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-+	defer cancel()
-+	t.Run("unset", func(t *testing.T) {
-+		t.Setenv("SPIRA_SEED_DEMO_PASSWORD", "")
-+		withMigratedPool(t, ctx, "file:seed-unset?mode=memory&cache=shared", func(pool *db.Pool) {
-+			if err := app.SeedDemoUser(ctx, pool); err != nil {
-+				t.Fatalf("seed: %v", err)
-+				return
-+			}
-+			found, err := store.GetUserByName(ctx, pool, "demo")
-+			if err != nil {
-+				t.Fatalf("lookup: %v", err)
-+				return
-+			}
-+			if found != nil {
-+				t.Fatalf("seed created user demo while SPIRA_SEED_DEMO_PASSWORD is unset")
-+			}
-+		})
-+	})
-+	t.Run("set", func(t *testing.T) {
-+		withMigratedPool(t, ctx, "file:seed-set?mode=memory&cache=shared", func(pool *db.Pool) {
-+			for _, password := range []string{"first-test-password", "second-test-password"} {
-+				t.Setenv("SPIRA_SEED_DEMO_PASSWORD", password)
-+				if err := app.SeedDemoUser(ctx, pool); err != nil {
-+					t.Fatalf("seed: %v", err)
-+					return
-+				}
-+				assertDemoPassword(t, ctx, pool, password)
-+			}
-+		})
-+	})
-+}
-+
-+func assertDemoPassword(t *testing.T, ctx context.Context, pool *db.Pool, password string) {
-+	t.Helper()
-+	found, err := store.GetUserByName(ctx, pool, "demo")
-+	if err != nil {
-+		t.Fatalf("lookup: %v", err)
-+		return
-+	}
-+	if found == nil {
-+		t.Fatalf("seed left no user demo while SPIRA_SEED_DEMO_PASSWORD is set")
-+		return
-+	}
-+	user := found ?? store.User{}
-+	ok, err := auth.VerifyPassword(user.PasswordHash, password)
-+	if err != nil {
-+		t.Fatalf("verify: %v", err)
-+		return
-+	}
-+	if !ok {
-+		t.Fatalf("user demo does not accept the SPIRA_SEED_DEMO_PASSWORD value %q", password)
-+	}
-+}
-+
-+func withMigratedPool(t *testing.T, ctx context.Context, dsn string, run func(pool *db.Pool)) {
-+	t.Helper()
-+	pool, err := db.Open("sqlite", dsn)
-+	if err != nil {
-+		t.Fatalf("open: %v", err)
-+		return
-+	}
-+	if pool == nil {
-+		t.Fatalf("open left no pool")
-+		return
-+	}
-+	defer func() {
-+		stopCtx, stopCancel := context.WithTimeout(context.Background(), 5*time.Second)
-+		defer stopCancel()
-+		if serr := pool.Stop(stopCtx); serr != nil {
-+			t.Errorf("stop: %v", serr)
-+		}
-+	}()
-+	steps, err := migrate.Load(appdb.FS())
-+	if err != nil {
-+		t.Fatalf("load: %v", err)
-+		return
-+	}
-+	if err := migrate.Apply(ctx, pool, steps); err != nil {
-+		t.Fatalf("apply: %v", err)
-+		return
-+	}
-+	run(pool)
-+}
-+
-+func TestLoginLookupFailureCarriesAccountFault(t *testing.T) {
-+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-+	defer cancel()
-+	pool, err := db.Open("sqlite", "file:bare-login-fault?mode=memory&cache=shared")
-+	if err != nil {
-+		t.Fatalf("open: %v", err)
-+		return
-+	}
-+	if pool == nil {
-+		t.Fatalf("open left no pool")
-+		return
-+	}
-+	defer func() {
-+		stopCtx, stopCancel := context.WithTimeout(context.Background(), 5*time.Second)
-+		defer stopCancel()
-+		if serr := pool.Stop(stopCtx); serr != nil {
-+			t.Errorf("stop: %v", serr)
-+		}
-+	}()
-+	if err := pool.Start(ctx); err != nil {
-+		t.Fatalf("start: %v", err)
-+		return
-+	}
-+	var buf bytes.Buffer
-+	prev := slog.Default()
-+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{})))
-+	defer slog.SetDefault(prev)
-+	r := web.NewRouter()
-+	sessions := &auth.Sessions{Store: &account.DBStore{DB: pool}}
-+	(&account.Account{DB: pool, Sessions: sessions}).Mount(r)
-+	form := url.Values{"username": []string{"demo"}, "password": []string{"secret"}}
-+	req := httptest.NewRequest(http.MethodPost, "/account/login", strings.NewReader(form.Encode()))
-+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-+	rec := httptest.NewRecorder()
-+	r.ServeHTTP(rec, req)
-+	if rec.Code != http.StatusInternalServerError {
-+		t.Fatalf("status %d want 500 body %s", rec.Code, rec.Body.String())
-+		return
-+	}
-+	if !strings.Contains(buf.String(), "account.failed") {
-+		t.Fatalf("handler log %q lacks the account fault", buf.String())
-+		return
-+	}
-+	if strings.Contains(rec.Body.String(), "no such table") {
-+		t.Fatalf("body %q leaks the driver error", rec.Body.String())
-+		return
-+	}
-+}
-+
-+// seedExpiredSessions inserts two expired sessions so the sweep DELETE
-+// matches rows and a planted failure actually fires. Without seeded
-+// rows the delete matches nothing and the test passes even if login
-+// propagates sweep errors.
-+func seedExpiredSessions(t *testing.T, ctx context.Context, pool *db.Pool, name string) {
-+	t.Helper()
-+	found, err := store.GetUserByName(ctx, pool, name)
-+	if err != nil {
-+		t.Fatalf("lookup: %v", err)
-+		return
-+	}
-+	if found == nil {
-+		t.Fatal("seed left no user")
-+		return
-+	}
-+	seed := found ?? store.User{}
-+	for _, id := range []string{"expired-seed-a", "expired-seed-b"} {
-+		if err := store.SaveSession(ctx, pool, store.SaveSessionArgs{
-+			IDHash:    store.SessionID(id),
-+			UserID:    seed.ID,
-+			Roles:     "",
-+			ExpiresAt: time.Now().Add(-time.Hour),
-+		}); err != nil {
-+			t.Fatalf("seed expired session: %v", err)
-+			return
-+		}
-+	}
-+}
-+
-+func TestLoginSurvivesFailedSessionSweep(t *testing.T) {
-+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-+	defer cancel()
-+	// The sweep failure must reach the operator log even though login
-+	// still succeeds.
-+	var buf bytes.Buffer
-+	prev := slog.Default()
-+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{})))
-+	defer slog.SetDefault(prev)
-+	withMigratedPool(t, ctx, "file:sweep-login?mode=memory&cache=shared", func(pool *db.Pool) {
-+		hash, err := auth.HashPassword("secret")
-+		if err != nil {
-+			t.Fatalf("hash: %v", err)
-+			return
-+		}
-+		if _, err := store.CreateUser(ctx, pool, "demo", hash); err != nil {
-+			t.Fatalf("create user: %v", err)
-+			return
-+		}
-+		seedExpiredSessions(t, ctx, pool, "demo")
-+		if _, err := pool.ExecContext(ctx, `CREATE TRIGGER refuse_sweep BEFORE DELETE ON sessions BEGIN SELECT RAISE(ABORT, 'sweep refused'); END;`); err != nil {
-+			t.Fatalf("plant sweep failure: %v", err)
-+			return
-+		}
-+		r := web.NewRouter()
-+		sessions := &auth.Sessions{Store: &account.DBStore{DB: pool}}
-+		(&account.Account{DB: pool, Sessions: sessions}).Mount(r)
-+		form := url.Values{"username": []string{"demo"}, "password": []string{"secret"}}
-+		req := httptest.NewRequest(http.MethodPost, "/account/login", strings.NewReader(form.Encode()))
-+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-+		rec := httptest.NewRecorder()
-+		r.ServeHTTP(rec, req)
-+		if rec.Code != http.StatusSeeOther {
-+			t.Fatalf("status %d want 303 body %s", rec.Code, rec.Body.String())
-+			return
-+		}
-+		if !strings.Contains(buf.String(), "sweep expired sessions") {
-+			t.Fatalf("operator log %q lacks the sweep failure", buf.String())
-+		}
-+		if !strings.Contains(buf.String(), "sweep refused") {
-+			t.Fatalf("operator log %q omits the planted sweep cause", buf.String())
-+		}
-+	})
-+}
 diff --git a/docs/specs/openapi.md b/docs/specs/openapi.md
 --- a/docs/specs/openapi.md
 +++ b/docs/specs/openapi.md
@@ -732,7 +265,7 @@ diff --git a/docs/specs/openapi.md b/docs/specs/openapi.md
 diff --git a/websocket/stream_test.lgo b/websocket/stream_test.lgo
 --- a/websocket/stream_test.lgo
 +++ b/websocket/stream_test.lgo
-@@ -1,1122 +1,1120 @@
+@@ -1,1136 +1,1126 @@
 -package websocket_test
 -
 -import (
@@ -1789,16 +1322,22 @@ diff --git a/websocket/stream_test.lgo b/websocket/stream_test.lgo
 -			reportStream(r, done, r.Context().Err())
 -			return
 -		}
--		// Keep reading: the ping below is answered from inside Next,
--		// so the pong proves this test performed a blocking stream
--		// read before the cancel arrives.
--		for {
--			_, _, err = c.Next(ctx)
--			if err != nil {
--				reportStream(r, done, err)
--				return
--			}
+-	// Keep reading: the ping below is answered from inside Next, so the
+-	// pong proves the loop is alive and reading again. The follow-up
+-	// Next proves the cancel landed in a blocking read: only that path
+-	// closes the connection, so the follow-up must be ErrClosed. A
+-	// cancel that lands between reads returns at the context check
+-	// without closing, and the follow-up times out instead.
+-	for {
+-		_, _, err = c.Next(ctx)
+-		if err != nil {
+-			break
 -		}
+-	}
+-	probeCtx, probeCancel := context.WithTimeout(context.Background(), 2*time.Second)
+-	defer probeCancel()
+-	_, _, perr := c.Next(probeCtx)
+-	reportStream(r, done, errors.Join(err, perr))
 -	}))
 -}
 -
@@ -1823,6 +1362,9 @@ diff --git a/websocket/stream_test.lgo b/websocket/stream_test.lgo
 -		return
 -	}
 -	awaitParkedStreamNext(t, h, id)
+-	// Let the server park in the next blocking read: re-entry takes
+-	// microseconds, so this margin makes the cancel land while blocked.
+-	time.Sleep(100 * time.Millisecond)
 -	cancel()
 -	select {
 -	case err := <-done:
@@ -1830,18 +1372,23 @@ diff --git a/websocket/stream_test.lgo b/websocket/stream_test.lgo
 -			t.Fatal("Next after cancel returned no error")
 -			return
 -		}
--		if !errors.Is(err, websocket.ErrClosed) && !errors.Is(err, context.Canceled) {
--			t.Fatalf("Next after cancel = %v, want ErrClosed or context canceled", err)
+-		if !errors.Is(err, context.Canceled) {
+-			t.Fatalf("Next after cancel = %v, want context canceled", err)
+-		}
+-		if !errors.Is(err, websocket.ErrClosed) {
+-			t.Fatalf("Next after cancel = %v, want a closed connection proving the cancel landed in a blocking read", err)
 -		}
 -	case <-time.After(15 * time.Second):
 -		t.Fatal("Next did not return after cancel")
 -	}
 -}
 -
--// awaitParkedStreamNext proves the server is parked in a blocking Next
--// call: the ping is answered from inside that call, so the pong only
--// arrives after the server performed a stream read. Cancelling first
--// would let Next return at its context check without ever blocking.
+-// awaitParkedStreamNext proves the server loop is alive: the ping is
+-// answered from inside a Next call, so the pong only arrives after the
+-// server performed a stream read and looped back for the next one. It
+-// cannot prove the next Next is already blocking, so the test also
+-// requires ErrClosed from a follow-up Next: only cancellation of a
+-// blocking read closes the connection.
 -func awaitParkedStreamNext(t *testing.T, h *h2client, id uint32) {
 -	t.Helper()
 -	h.writeFrame(t, h2frame{ftype: 0x0, flags: 0x0, id: id, payload: wsMasked(0x89, []byte("ping"))})
@@ -2929,7 +2476,10 @@ diff --git a/websocket/stream_test.lgo b/websocket/stream_test.lgo
 +			return
 +		}
 +		_, _, err = c.Next(ctx)
-+		reportStream(r, done, err)
++		probeCtx, probeCancel := context.WithTimeout(context.Background(), 2*time.Second)
++		defer probeCancel()
++		_, _, perr := c.Next(probeCtx)
++		reportStream(r, done, errors.Join(err, perr))
 +	}))
 +	h := openH2TLS(t, srv)
 +	if !h.advertised {
@@ -2950,8 +2500,11 @@ diff --git a/websocket/stream_test.lgo b/websocket/stream_test.lgo
 +			t.Fatal("Next after cancel returned no error")
 +			return
 +		}
-+		if !errors.Is(err, websocket.ErrClosed) && !errors.Is(err, context.Canceled) {
-+			t.Fatalf("Next after cancel = %v, want ErrClosed or context canceled", err)
++		if !errors.Is(err, context.Canceled) {
++			t.Fatalf("Next after cancel = %v, want context canceled", err)
++		}
++		if !errors.Is(err, websocket.ErrClosed) {
++			t.Fatalf("Next after cancel = %v, want a closed connection after canceling the pending read", err)
 +		}
 +	case <-time.After(15 * time.Second):
 +		t.Fatal("Next did not return after cancel")
@@ -6276,3 +5829,552 @@ diff --git a/http3/http3_test.lgo b/http3/http3_test.lgo
 +		t.Fatal("client connection stayed open after the shutdown deadline")
 +	}
 +}
+diff --git a/frontend/test/live.test.ts b/frontend/test/live.test.ts
+--- a/frontend/test/live.test.ts
++++ b/frontend/test/live.test.ts
+@@ -1,267 +1,278 @@
+-import { stubDomGlobals } from "./dom-stubs";
+-
+-stubDomGlobals();
+-
+-let installLiveUpdates: () => void;
+-
+-// htmx builds one XPathEvaluator at module top level, so the module
+-// under test loads after the stubs above through a dynamic import.
+-beforeAll(async () => {
+-	({ installLiveUpdates } = await import("../src/live"));
+-	installLiveUpdates();
+-});
+-
+-const stockUpdate =
+-	'<span id="stock-7" hx-swap-oob="outerHTML">Mug: $15.00, 4 in stock</span>';
+-const stockControl =
+-	'<button id="stock-toggle" type="button" data-live-toggle aria-pressed="false" hidden>Pause live stock updates</button>';
+-
+-beforeEach(() => {
+-	document.body.innerHTML = `
+-		<section data-live-region="stock" hx-ext="sse" sse-connect="/stock/events">
+-			<ul id="results"><li><span id="stock-7">Mug: $12.00, 7 in stock</span></li></ul>
+-			<span id="stock-sink" sse-swap="stock" hx-swap="none"></span>
+-			${stockControl}
+-		</section>
+-		<section data-live-region="admin">
+-			<button type="button" data-live-toggle aria-pressed="false" hidden>Pause live status updates</button>
+-			<span id="shop-status">up</span>
+-			<div id="admin-sink" sse-swap="instance" hx-swap="none"></div>
+-			<table><tbody><tr id="instance-shop"><td>shop</td><td>up</td></tr><tr id="instance-cart"><td>cart</td><td>up</td></tr></tbody></table>
+-		</section>
+-		<div id="outside-stock"></div>`;
+-	document.body.dispatchEvent(new CustomEvent("htmx:load", { bubbles: true }));
+-});
+-
+-function fixtureElement(id: string): HTMLElement {
+-	const element = document.getElementById(id);
+-	if (!element) {
+-		throw new Error(`Missing fixture element: ${id}`);
+-	}
+-	return element;
+-}
+-
+-function dispatchMessage(sink: string, name: string, data: string): boolean {
+-	return fixtureElement(sink).dispatchEvent(
+-		new CustomEvent("htmx:sseBeforeMessage", {
+-			bubbles: true,
+-			cancelable: true,
+-			composed: true,
+-			detail: new MessageEvent(name, { data }),
+-		}),
+-	);
+-}
+-
+-function stockToggle(): HTMLButtonElement {
+-	const toggle = document.getElementById("stock-toggle");
+-	if (!(toggle instanceof HTMLButtonElement)) {
+-		throw new Error("Expected the stock pause button");
+-	}
+-	return toggle;
+-}
+-
+-test("pause cancels stock messages until updates resume", () => {
+-	const toggle = stockToggle();
+-	expect(toggle.hidden).toBe(false);
+-	expect(toggle.getAttribute("aria-pressed")).toBe("false");
+-
+-	toggle.click();
+-	expect(toggle.getAttribute("aria-pressed")).toBe("true");
+-	expect(dispatchMessage("stock-sink", "stock", stockUpdate)).toBe(false);
+-
+-	expect(
+-		dispatchMessage(
+-			"admin-sink",
+-			"instance",
+-			'<span id="shop-status" hx-swap-oob="outerHTML">down</span>',
+-		),
+-	).toBe(true);
+-
+-	toggle.outerHTML = stockControl;
+-	const replacement = stockToggle();
+-	replacement.dispatchEvent(new CustomEvent("htmx:load", { bubbles: true }));
+-	expect(replacement.hidden).toBe(false);
+-	expect(replacement.getAttribute("aria-pressed")).toBe("true");
+-	replacement.click();
+-	expect(replacement.getAttribute("aria-pressed")).toBe("false");
+-	expect(dispatchMessage("stock-sink", "stock", stockUpdate)).toBe(true);
+-});
+-
+-test("a stock message needs a matching target in the current region", () => {
+-	fixtureElement("results").replaceChildren();
+-	expect(dispatchMessage("stock-sink", "stock", stockUpdate)).toBe(false);
+-
+-	const outside = document.createElement("span");
+-	outside.id = "stock-7";
+-	fixtureElement("outside-stock").append(outside);
+-	expect(dispatchMessage("stock-sink", "stock", stockUpdate)).toBe(false);
+-});
+-
+-test.each([
+-	'<span id="stock-invalid" hx-swap-oob="outerHTML">Mug</span>',
+-	'<span id="stock-8" hx-swap-oob="outerHTML">Mug</span><p>Other update</p>',
+-])("passes unexpected stock payloads through to htmx: %s", (data) => {
+-	expect(dispatchMessage("stock-sink", "stock", data)).toBe(true);
+-});
+-
+-test("pause state and sink survive a search swap of the results list", () => {
+-	const toggle = stockToggle();
+-	toggle.click();
+-	expect(toggle.getAttribute("aria-pressed")).toBe("true");
+-	expect(dispatchMessage("stock-sink", "stock", stockUpdate)).toBe(false);
+-
+-	const swapped = document.createElement("ul");
+-	swapped.id = "results";
+-	swapped.innerHTML =
+-		'<li><span id="stock-7">Mug: $12.00, 7 in stock</span></li>';
+-	fixtureElement("results").replaceWith(swapped);
+-	swapped.dispatchEvent(new CustomEvent("htmx:load", { bubbles: true }));
+-
+-	expect(stockToggle().getAttribute("aria-pressed")).toBe("true");
+-	expect(dispatchMessage("stock-sink", "stock", stockUpdate)).toBe(false);
+-
+-	stockToggle().click();
+-	expect(stockToggle().getAttribute("aria-pressed")).toBe("false");
+-	expect(dispatchMessage("stock-sink", "stock", stockUpdate)).toBe(true);
+-
+-	const filteredOut =
+-		'<span id="stock-9" hx-swap-oob="outerHTML">Kettle: $20.00, 1 in stock</span>';
+-	expect(dispatchMessage("stock-sink", "stock", filteredOut)).toBe(false);
+-});
+-
+-function adminToggle(): HTMLButtonElement {
+-	const toggle = document.querySelector(
+-		'section[data-live-region="admin"] button[data-live-toggle]',
+-	);
+-	if (!(toggle instanceof HTMLButtonElement)) {
+-		throw new Error("Expected the admin pause button");
+-	}
+-	return toggle;
+-}
+-
+-test("resume applies the instance updates paused in the region", () => {
+-	const toggle = adminToggle();
+-	toggle.click();
+-	expect(toggle.getAttribute("aria-pressed")).toBe("true");
+-	const down = '<span id="shop-status" hx-swap-oob="outerHTML">down</span>';
+-	expect(dispatchMessage("admin-sink", "instance", down)).toBe(false);
+-	expect(fixtureElement("shop-status").textContent).toBe("up");
+-	toggle.click();
+-	expect(toggle.getAttribute("aria-pressed")).toBe("false");
+-	expect(fixtureElement("shop-status").textContent).toBe("down");
+-});
+-
+-test("resume replays the bare dashboard row paused in the region", async () => {
+-	// The retained row payload must reach htmx.swap with the sink swap style
+-	// when the region resumes, and it must target the dashboard row with the
+-	// replayed content: the swap spy alone cannot tell a delivered payload
+-	// from a dropped one. happy-dom's DOMParser drops a bare tr, so htmx
+-	// cannot apply the oob swap in this environment; parse the payload in a
+-	// table context instead and require the target row to exist.
+-	const { default: htmx } = await import("htmx.org");
+-	const swapSpy = vi.spyOn(htmx, "swap");
+-	try {
+-		const toggle = adminToggle();
+-		toggle.click();
+-		expect(toggle.getAttribute("aria-pressed")).toBe("true");
+-		const down =
+-			'<tr id="instance-shop" hx-swap-oob="outerHTML"><td>shop</td><td>down</td></tr>';
+-		expect(dispatchMessage("admin-sink", "instance", down)).toBe(false);
+-		swapSpy.mockClear();
+-		toggle.click();
+-		expect(toggle.getAttribute("aria-pressed")).toBe("false");
+-		expect(swapSpy).toHaveBeenCalledExactlyOnceWith(
+-			fixtureElement("admin-sink"),
+-			down,
+-			{
+-				swapStyle: "none",
+-				swapDelay: htmx.config.defaultSwapDelay,
+-				settleDelay: htmx.config.defaultSettleDelay,
+-			},
+-		);
+-		const row = document.createElement("template");
+-		row.innerHTML = `<table><tbody>${down}</tbody></table>`;
+-		expect(row.content.textContent).toBe("shopdown");
+-		expect(fixtureElement("instance-shop").tagName).toBe("TR");
+-	} finally {
+-		swapSpy.mockRestore();
+-	}
+-});
+-
+-test("resume applies an instance update that a busier instance outlasts", () => {
+-	const cart = document.createElement("span");
+-	cart.id = "cart-status";
+-	cart.textContent = "up";
+-	fixtureElement("shop-status").after(cart);
+-	const toggle = adminToggle();
+-	toggle.click();
+-	dispatchMessage(
+-		"admin-sink",
+-		"instance",
+-		'<span id="shop-status" hx-swap-oob="outerHTML">down</span>',
+-	);
+-	for (let i = 0; i < 200; i++) {
+-		const status = i % 2 === 0 ? "up" : "down";
+-		dispatchMessage(
+-			"admin-sink",
+-			"instance",
+-			`<span id="cart-status" hx-swap-oob="outerHTML">${status}</span>`,
+-		);
+-	}
+-	toggle.click();
+-	expect(fixtureElement("shop-status").textContent).toBe("down");
+-	expect(fixtureElement("cart-status").textContent).toBe("down");
+-});
+-
+-test("resume keeps the quiet dashboard row when a busier row outlasts it", async () => {
+-	// The overflow case above sends spans, while rowNode in admin/admin.lgo
+-	// emits bare tr elements. Retention keeps every message when
+-	// soleOuterSwap returns null, so the one-row replay test passes even
+-	// without row recognition. This overflow case fails without per-id
+-	// coalescing and proves the row ids are recognized.
+-	const { default: htmx } = await import("htmx.org");
+-	const swapSpy = vi.spyOn(htmx, "swap");
+-	try {
+-		const toggle = adminToggle();
+-		toggle.click();
+-		expect(toggle.getAttribute("aria-pressed")).toBe("true");
+-		const shopDown =
+-			'<tr id="instance-shop" hx-swap-oob="outerHTML"><td>shop</td><td>down</td></tr>';
+-		expect(dispatchMessage("admin-sink", "instance", shopDown)).toBe(false);
+-		for (let i = 0; i < 200; i++) {
+-			const status = i % 2 === 0 ? "up" : "down";
+-			expect(
+-				dispatchMessage(
+-					"admin-sink",
+-					"instance",
+-					`<tr id="instance-cart" hx-swap-oob="outerHTML"><td>cart</td><td>${status}</td></tr>`,
+-				),
+-			).toBe(false);
+-		}
+-		swapSpy.mockClear();
+-		toggle.click();
+-		expect(toggle.getAttribute("aria-pressed")).toBe("false");
+-		expect(swapSpy).toHaveBeenCalledTimes(2);
+-		const payloads = swapSpy.mock.calls.map((call) => call[1]);
+-		expect(payloads[0]).toBe(shopDown);
+-		expect(payloads[1]).toBe(
+-			'<tr id="instance-cart" hx-swap-oob="outerHTML"><td>cart</td><td>down</td></tr>',
+-		);
+-		for (const call of swapSpy.mock.calls) {
+-			expect(call[0]).toBe(fixtureElement("admin-sink"));
+-		}
+-		// happy-dom's DOMParser drops a bare tr, so htmx cannot apply the oob
+-		// swap in this environment; parse each replayed payload in a table
+-		// context instead and require the target row to exist in the fixture.
+-		const shopRow = document.createElement("template");
+-		shopRow.innerHTML = `<table><tbody>${payloads[0]}</tbody></table>`;
+-		expect(shopRow.content.textContent).toBe("shopdown");
+-		expect(fixtureElement("instance-shop").tagName).toBe("TR");
+-		const cartRow = document.createElement("template");
+-		cartRow.innerHTML = `<table><tbody>${payloads[1]}</tbody></table>`;
+-		expect(cartRow.content.textContent).toBe("cartdown");
+-		expect(fixtureElement("instance-cart").tagName).toBe("TR");
+-	} finally {
+-		swapSpy.mockRestore();
+-	}
+-});
++import { stubDomGlobals } from "./dom-stubs";
++
++stubDomGlobals();
++
++let installLiveUpdates: () => void;
++
++// htmx builds one XPathEvaluator at module top level, so the module
++// under test loads after the stubs above through a dynamic import.
++beforeAll(async () => {
++	({ installLiveUpdates } = await import("../src/live"));
++	installLiveUpdates();
++});
++
++const stockUpdate =
++	'<span id="stock-7" hx-swap-oob="outerHTML">Mug: $15.00, 4 in stock</span>';
++const stockControl =
++	'<button id="stock-toggle" type="button" data-live-toggle aria-pressed="false" hidden>Pause live stock updates</button>';
++
++beforeEach(() => {
++	vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
++	document.body.innerHTML = `
++		<section data-live-region="stock" hx-ext="sse" sse-connect="/stock/events">
++			<ul id="results"><li><span id="stock-7">Mug: $12.00, 7 in stock</span></li></ul>
++			<span id="stock-sink" sse-swap="stock" hx-swap="none"></span>
++			${stockControl}
++		</section>
++		<section data-live-region="admin">
++			<button type="button" data-live-toggle aria-pressed="false" hidden>Pause live status updates</button>
++			<span id="shop-status">up</span>
++			<div id="admin-sink" sse-swap="instance" hx-swap="none"></div>
++			<table><tbody><tr id="instance-shop"><td>shop</td><td>up</td></tr><tr id="instance-cart"><td>cart</td><td>up</td></tr></tbody></table>
++		</section>
++		<div id="outside-stock"></div>`;
++	document.body.dispatchEvent(new CustomEvent("htmx:load", { bubbles: true }));
++});
++
++afterEach(async () => {
++	try {
++		await vi.runOnlyPendingTimersAsync();
++		expect(document.querySelector(".htmx-settling")).toBeNull();
++		expect(vi.getTimerCount()).toBe(0);
++	} finally {
++		vi.useRealTimers();
++	}
++});
++
++function fixtureElement(id: string): HTMLElement {
++	const element = document.getElementById(id);
++	if (!element) {
++		throw new Error(`Missing fixture element: ${id}`);
++	}
++	return element;
++}
++
++function dispatchMessage(sink: string, name: string, data: string): boolean {
++	return fixtureElement(sink).dispatchEvent(
++		new CustomEvent("htmx:sseBeforeMessage", {
++			bubbles: true,
++			cancelable: true,
++			composed: true,
++			detail: new MessageEvent(name, { data }),
++		}),
++	);
++}
++
++function stockToggle(): HTMLButtonElement {
++	const toggle = document.getElementById("stock-toggle");
++	if (!(toggle instanceof HTMLButtonElement)) {
++		throw new Error("Expected the stock pause button");
++	}
++	return toggle;
++}
++
++test("pause cancels stock messages until updates resume", () => {
++	const toggle = stockToggle();
++	expect(toggle.hidden).toBe(false);
++	expect(toggle.getAttribute("aria-pressed")).toBe("false");
++
++	toggle.click();
++	expect(toggle.getAttribute("aria-pressed")).toBe("true");
++	expect(dispatchMessage("stock-sink", "stock", stockUpdate)).toBe(false);
++
++	expect(
++		dispatchMessage(
++			"admin-sink",
++			"instance",
++			'<span id="shop-status" hx-swap-oob="outerHTML">down</span>',
++		),
++	).toBe(true);
++
++	toggle.outerHTML = stockControl;
++	const replacement = stockToggle();
++	replacement.dispatchEvent(new CustomEvent("htmx:load", { bubbles: true }));
++	expect(replacement.hidden).toBe(false);
++	expect(replacement.getAttribute("aria-pressed")).toBe("true");
++	replacement.click();
++	expect(replacement.getAttribute("aria-pressed")).toBe("false");
++	expect(dispatchMessage("stock-sink", "stock", stockUpdate)).toBe(true);
++});
++
++test("a stock message needs a matching target in the current region", () => {
++	fixtureElement("results").replaceChildren();
++	expect(dispatchMessage("stock-sink", "stock", stockUpdate)).toBe(false);
++
++	const outside = document.createElement("span");
++	outside.id = "stock-7";
++	fixtureElement("outside-stock").append(outside);
++	expect(dispatchMessage("stock-sink", "stock", stockUpdate)).toBe(false);
++});
++
++test.each([
++	'<span id="stock-invalid" hx-swap-oob="outerHTML">Mug</span>',
++	'<span id="stock-8" hx-swap-oob="outerHTML">Mug</span><p>Other update</p>',
++])("passes unexpected stock payloads through to htmx: %s", (data) => {
++	expect(dispatchMessage("stock-sink", "stock", data)).toBe(true);
++});
++
++test("pause state and sink survive a search swap of the results list", () => {
++	const toggle = stockToggle();
++	toggle.click();
++	expect(toggle.getAttribute("aria-pressed")).toBe("true");
++	expect(dispatchMessage("stock-sink", "stock", stockUpdate)).toBe(false);
++
++	const swapped = document.createElement("ul");
++	swapped.id = "results";
++	swapped.innerHTML =
++		'<li><span id="stock-7">Mug: $12.00, 7 in stock</span></li>';
++	fixtureElement("results").replaceWith(swapped);
++	swapped.dispatchEvent(new CustomEvent("htmx:load", { bubbles: true }));
++
++	expect(stockToggle().getAttribute("aria-pressed")).toBe("true");
++	expect(dispatchMessage("stock-sink", "stock", stockUpdate)).toBe(false);
++
++	stockToggle().click();
++	expect(stockToggle().getAttribute("aria-pressed")).toBe("false");
++	expect(dispatchMessage("stock-sink", "stock", stockUpdate)).toBe(true);
++
++	const filteredOut =
++		'<span id="stock-9" hx-swap-oob="outerHTML">Kettle: $20.00, 1 in stock</span>';
++	expect(dispatchMessage("stock-sink", "stock", filteredOut)).toBe(false);
++});
++
++function adminToggle(): HTMLButtonElement {
++	const toggle = document.querySelector(
++		'section[data-live-region="admin"] button[data-live-toggle]',
++	);
++	if (!(toggle instanceof HTMLButtonElement)) {
++		throw new Error("Expected the admin pause button");
++	}
++	return toggle;
++}
++
++test("resume applies the instance updates paused in the region", () => {
++	const toggle = adminToggle();
++	toggle.click();
++	expect(toggle.getAttribute("aria-pressed")).toBe("true");
++	const down = '<span id="shop-status" hx-swap-oob="outerHTML">down</span>';
++	expect(dispatchMessage("admin-sink", "instance", down)).toBe(false);
++	expect(fixtureElement("shop-status").textContent).toBe("up");
++	toggle.click();
++	expect(toggle.getAttribute("aria-pressed")).toBe("false");
++	expect(fixtureElement("shop-status").textContent).toBe("down");
++});
++
++test("resume replays the bare dashboard row paused in the region", async () => {
++	// The retained row payload must reach htmx.swap with the sink swap style
++	// when the region resumes, and it must target the dashboard row with the
++	// replayed content: the swap spy alone cannot tell a delivered payload
++	// from a dropped one. happy-dom's DOMParser drops a bare tr, so htmx
++	// cannot apply the oob swap in this environment; parse the payload in a
++	// table context instead and require the target row to exist.
++	const { default: htmx } = await import("htmx.org");
++	const swapSpy = vi.spyOn(htmx, "swap");
++	try {
++		const toggle = adminToggle();
++		toggle.click();
++		expect(toggle.getAttribute("aria-pressed")).toBe("true");
++		const down =
++			'<tr id="instance-shop" hx-swap-oob="outerHTML"><td>shop</td><td>down</td></tr>';
++		expect(dispatchMessage("admin-sink", "instance", down)).toBe(false);
++		swapSpy.mockClear();
++		toggle.click();
++		expect(toggle.getAttribute("aria-pressed")).toBe("false");
++		expect(swapSpy).toHaveBeenCalledExactlyOnceWith(
++			fixtureElement("admin-sink"),
++			down,
++			{
++				swapStyle: "none",
++				swapDelay: htmx.config.defaultSwapDelay,
++				settleDelay: htmx.config.defaultSettleDelay,
++			},
++		);
++		const row = document.createElement("template");
++		row.innerHTML = `<table><tbody>${down}</tbody></table>`;
++		expect(row.content.textContent).toBe("shopdown");
++		expect(fixtureElement("instance-shop").tagName).toBe("TR");
++	} finally {
++		swapSpy.mockRestore();
++	}
++});
++
++test("resume applies an instance update that a busier instance outlasts", () => {
++	const cart = document.createElement("span");
++	cart.id = "cart-status";
++	cart.textContent = "up";
++	fixtureElement("shop-status").after(cart);
++	const toggle = adminToggle();
++	toggle.click();
++	dispatchMessage(
++		"admin-sink",
++		"instance",
++		'<span id="shop-status" hx-swap-oob="outerHTML">down</span>',
++	);
++	for (let i = 0; i < 200; i++) {
++		const status = i % 2 === 0 ? "up" : "down";
++		dispatchMessage(
++			"admin-sink",
++			"instance",
++			`<span id="cart-status" hx-swap-oob="outerHTML">${status}</span>`,
++		);
++	}
++	toggle.click();
++	expect(fixtureElement("shop-status").textContent).toBe("down");
++	expect(fixtureElement("cart-status").textContent).toBe("down");
++});
++
++test("resume keeps the quiet dashboard row when a busier row outlasts it", async () => {
++	// The overflow case above sends spans, while rowNode in admin/admin.lgo
++	// emits bare tr elements. Retention keeps every message when
++	// soleOuterSwap returns null, so the one-row replay test passes even
++	// without row recognition. This overflow case fails without per-id
++	// coalescing and proves the row ids are recognized.
++	const { default: htmx } = await import("htmx.org");
++	const swapSpy = vi.spyOn(htmx, "swap");
++	try {
++		const toggle = adminToggle();
++		toggle.click();
++		expect(toggle.getAttribute("aria-pressed")).toBe("true");
++		const shopDown =
++			'<tr id="instance-shop" hx-swap-oob="outerHTML"><td>shop</td><td>down</td></tr>';
++		expect(dispatchMessage("admin-sink", "instance", shopDown)).toBe(false);
++		for (let i = 0; i < 200; i++) {
++			const status = i % 2 === 0 ? "up" : "down";
++			expect(
++				dispatchMessage(
++					"admin-sink",
++					"instance",
++					`<tr id="instance-cart" hx-swap-oob="outerHTML"><td>cart</td><td>${status}</td></tr>`,
++				),
++			).toBe(false);
++		}
++		swapSpy.mockClear();
++		toggle.click();
++		expect(toggle.getAttribute("aria-pressed")).toBe("false");
++		expect(swapSpy).toHaveBeenCalledTimes(2);
++		const payloads = swapSpy.mock.calls.map((call) => call[1]);
++		expect(payloads[0]).toBe(shopDown);
++		expect(payloads[1]).toBe(
++			'<tr id="instance-cart" hx-swap-oob="outerHTML"><td>cart</td><td>down</td></tr>',
++		);
++		for (const call of swapSpy.mock.calls) {
++			expect(call[0]).toBe(fixtureElement("admin-sink"));
++		}
++		// happy-dom's DOMParser drops a bare tr, so htmx cannot apply the oob
++		// swap in this environment; parse each replayed payload in a table
++		// context instead and require the target row to exist in the fixture.
++		const shopRow = document.createElement("template");
++		shopRow.innerHTML = `<table><tbody>${payloads[0]}</tbody></table>`;
++		expect(shopRow.content.textContent).toBe("shopdown");
++		expect(fixtureElement("instance-shop").tagName).toBe("TR");
++		const cartRow = document.createElement("template");
++		cartRow.innerHTML = `<table><tbody>${payloads[1]}</tbody></table>`;
++		expect(cartRow.content.textContent).toBe("cartdown");
++		expect(fixtureElement("instance-cart").tagName).toBe("TR");
++	} finally {
++		swapSpy.mockRestore();
++	}
++});
