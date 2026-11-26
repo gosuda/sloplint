@@ -1,0 +1,144 @@
+name: Remaining public runner gates
+
+on:
+  push:
+    branches: [ci/remaining-runner-gates-20261126]
+    paths:
+      - .github/workflows/remaining-runner-gates.yml
+      - ci-tools/remaining-*
+      - ci-tools/website-ci.patch
+
+permissions:
+  contents: read
+  actions: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  website:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: website-317
+            head: 902dceca784ef7f5635d37cab1215c4da2e7a999
+          - label: website-316
+            head: 01927a59f7641ffa82f8d092797625c25964a495
+          - label: website-315
+            head: b933b6580a6ce3650cb30572786c35e2ab070749
+          - label: website-314
+            head: 337aaa8194cd5e2a8078da597f283e61dd3578bb
+          - label: website-313
+            head: c7ae3e0f62a7e53b6cbc4750b26ec7ece419b978
+          - label: website-312
+            head: 6054a1d807a290eed2f041bc5788504b971a807d
+          - label: website-309
+            head: 8ff8eafe2dd63323d181ab5f54de3e9321eed3a0
+          - label: website-307
+            head: ca8e57755251f909f5cca86bf5fed4c49a75dd23
+    runs-on: depot-ubuntu-24.04-4
+    timeout-minutes: 35
+    env:
+      GOENV: 'off'
+      GOCACHEPROG: ''
+      GOTOOLCHAIN: local
+      GOMAXPROCS: '4'
+      GOFLAGS: '-p=4'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          path: probe
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/website
+          ref: ${{ matrix.head }}
+          persist-credentials: false
+          path: source
+      - run: mkdir -p evidence
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
+        with:
+          go-version: '1.27.4'
+          cache: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '26.13.1'
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: 1.4.5
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          enable-cache: false
+      - name: Verify exact candidate and run the repository gates
+        run: |
+          export GOENV=off GOCACHEPROG=''
+          test -z "$(go env GOCACHEPROG)"
+          uv run --no-project --python 3.13 probe/ci-tools/remaining-website-gates.py "${{ matrix.label }}"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: remaining-${{ matrix.label }}-${{ github.sha }}
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 14
+
+  oracle-prepare:
+    runs-on: depot-ubuntu-24.04-4
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          path: probe
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/elegant-mermaid
+          ref: 3d6bc75bf7f4c00f9a587727c1d8748894524520
+          persist-credentials: false
+          path: source
+      - run: mkdir -p evidence
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '26.13.1'
+      - run: npm install --global pnpm@12.23.0
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          enable-cache: false
+      - run: uv run --no-project --python 3.13 probe/ci-tools/remaining-prepare.py oracle
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: remaining-oracle-preparation-${{ github.sha }}
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 14
+
+  ssh-prepare:
+    runs-on: depot-ubuntu-24.04-4
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          path: probe
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: fatheradvisor/ssh-chat
+          ref: 1dd8ea93aad5a9a1543db75d05c3609ac0dcdc3e
+          fetch-depth: 0
+          persist-credentials: false
+          path: source
+      - run: mkdir -p evidence
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          enable-cache: false
+      - run: uv run --no-project --python 3.13 probe/ci-tools/remaining-prepare.py ssh
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: remaining-ssh-preparation-${{ github.sha }}
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 14

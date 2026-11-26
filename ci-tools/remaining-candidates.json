@@ -1,0 +1,194 @@
+[
+  {
+    "label": "website-317",
+    "repository": "gosuda/website",
+    "number": 317,
+    "head": "902dceca784ef7f5635d37cab1215c4da2e7a999",
+    "branch": "dependabot/go_modules/github.com/tdewolff/minify/v2-2.25.0",
+    "base_ref": "main",
+    "base_sha": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+    "tree": "1d7ff077682b2a44e5d74f0e90383e1eff4376e9",
+    "patch": "website-ci.patch",
+    "patch_sha256": "6a6dfb9a9841fd2c41eead51522f1d44527d5f7848032b037876d63f2c67163e",
+    "files": [
+      {
+        "path": ".github/workflows/pr-gate.yml",
+        "blob": "8a04f9e6d2033de322176e7f82472b4ac96e2fc1",
+        "sha256": "fe991850cf0ca2b4360c51b1838f73114dd9364405c1f872b99a1d70467dbdd5"
+      },
+      {
+        "path": ".github/workflows/update.yml",
+        "blob": "b75b36c012bb75b810fe99d4279819f40edc2576",
+        "sha256": "8a871ab1bf3c8ee31ca82e174a323f7be345928fa110b2901390f7853c134e52"
+      }
+    ]
+  },
+  {
+    "label": "website-316",
+    "repository": "gosuda/website",
+    "number": 316,
+    "head": "01927a59f7641ffa82f8d092797625c25964a495",
+    "branch": "dependabot/npm_and_yarn/npm_and_yarn-af3e3560b6",
+    "base_ref": "main",
+    "base_sha": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+    "tree": "cc65fb952e8a54d499145ff045de4aba7f5659dc",
+    "patch": "website-ci.patch",
+    "patch_sha256": "6a6dfb9a9841fd2c41eead51522f1d44527d5f7848032b037876d63f2c67163e",
+    "files": [
+      {
+        "path": ".github/workflows/pr-gate.yml",
+        "blob": "8a04f9e6d2033de322176e7f82472b4ac96e2fc1",
+        "sha256": "fe991850cf0ca2b4360c51b1838f73114dd9364405c1f872b99a1d70467dbdd5"
+      },
+      {
+        "path": ".github/workflows/update.yml",
+        "blob": "b75b36c012bb75b810fe99d4279819f40edc2576",
+        "sha256": "8a871ab1bf3c8ee31ca82e174a323f7be345928fa110b2901390f7853c134e52"
+      }
+    ]
+  },
+  {
+    "label": "website-315",
+    "repository": "gosuda/website",
+    "number": 315,
+    "head": "b933b6580a6ce3650cb30572786c35e2ab070749",
+    "branch": "dependabot/npm_and_yarn/markdownlint-cli2-0.24.1",
+    "base_ref": "main",
+    "base_sha": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+    "tree": "152e3ead07a35924abe7a99c4069ee0a8af89cd0",
+    "patch": "website-ci.patch",
+    "patch_sha256": "6a6dfb9a9841fd2c41eead51522f1d44527d5f7848032b037876d63f2c67163e",
+    "files": [
+      {
+        "path": ".github/workflows/pr-gate.yml",
+        "blob": "8a04f9e6d2033de322176e7f82472b4ac96e2fc1",
+        "sha256": "fe991850cf0ca2b4360c51b1838f73114dd9364405c1f872b99a1d70467dbdd5"
+      },
+      {
+        "path": ".github/workflows/update.yml",
+        "blob": "b75b36c012bb75b810fe99d4279819f40edc2576",
+        "sha256": "8a871ab1bf3c8ee31ca82e174a323f7be345928fa110b2901390f7853c134e52"
+      }
+    ]
+  },
+  {
+    "label": "website-314",
+    "repository": "gosuda/website",
+    "number": 314,
+    "head": "337aaa8194cd5e2a8078da597f283e61dd3578bb",
+    "branch": "dependabot/npm_and_yarn/caniuse-lite-1.0.30001826",
+    "base_ref": "main",
+    "base_sha": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+    "tree": "78c1910368bd0adff54c5665417be7bc08eaeb41",
+    "patch": "website-ci.patch",
+    "patch_sha256": "6a6dfb9a9841fd2c41eead51522f1d44527d5f7848032b037876d63f2c67163e",
+    "files": [
+      {
+        "path": ".github/workflows/pr-gate.yml",
+        "blob": "8a04f9e6d2033de322176e7f82472b4ac96e2fc1",
+        "sha256": "fe991850cf0ca2b4360c51b1838f73114dd9364405c1f872b99a1d70467dbdd5"
+      },
+      {
+        "path": ".github/workflows/update.yml",
+        "blob": "b75b36c012bb75b810fe99d4279819f40edc2576",
+        "sha256": "8a871ab1bf3c8ee31ca82e174a323f7be345928fa110b2901390f7853c134e52"
+      }
+    ]
+  },
+  {
+    "label": "website-313",
+    "repository": "gosuda/website",
+    "number": 313,
+    "head": "c7ae3e0f62a7e53b6cbc4750b26ec7ece419b978",
+    "branch": "dependabot/npm_and_yarn/prettier-3.10.1",
+    "base_ref": "main",
+    "base_sha": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+    "tree": "1ba02a161056b6dcd81922f718b41ba1ac47bdca",
+    "patch": "website-ci.patch",
+    "patch_sha256": "6a6dfb9a9841fd2c41eead51522f1d44527d5f7848032b037876d63f2c67163e",
+    "files": [
+      {
+        "path": ".github/workflows/pr-gate.yml",
+        "blob": "8a04f9e6d2033de322176e7f82472b4ac96e2fc1",
+        "sha256": "fe991850cf0ca2b4360c51b1838f73114dd9364405c1f872b99a1d70467dbdd5"
+      },
+      {
+        "path": ".github/workflows/update.yml",
+        "blob": "b75b36c012bb75b810fe99d4279819f40edc2576",
+        "sha256": "8a871ab1bf3c8ee31ca82e174a323f7be345928fa110b2901390f7853c134e52"
+      }
+    ]
+  },
+  {
+    "label": "website-312",
+    "repository": "gosuda/website",
+    "number": 312,
+    "head": "6054a1d807a290eed2f041bc5788504b971a807d",
+    "branch": "dependabot/go_modules/github.com/a-h/templ-0.3.1118",
+    "base_ref": "main",
+    "base_sha": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+    "tree": "5b270b6d189dac06030701a6010f9d6aa17ac713",
+    "patch": "website-ci.patch",
+    "patch_sha256": "6a6dfb9a9841fd2c41eead51522f1d44527d5f7848032b037876d63f2c67163e",
+    "files": [
+      {
+        "path": ".github/workflows/pr-gate.yml",
+        "blob": "8a04f9e6d2033de322176e7f82472b4ac96e2fc1",
+        "sha256": "fe991850cf0ca2b4360c51b1838f73114dd9364405c1f872b99a1d70467dbdd5"
+      },
+      {
+        "path": ".github/workflows/update.yml",
+        "blob": "b75b36c012bb75b810fe99d4279819f40edc2576",
+        "sha256": "8a871ab1bf3c8ee31ca82e174a323f7be345928fa110b2901390f7853c134e52"
+      }
+    ]
+  },
+  {
+    "label": "website-309",
+    "repository": "gosuda/website",
+    "number": 309,
+    "head": "8ff8eafe2dd63323d181ab5f54de3e9321eed3a0",
+    "branch": "dependabot/go_modules/golang.org/x/image-0.48.0",
+    "base_ref": "main",
+    "base_sha": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+    "tree": "50a2c0e1c61a73205dfbade4cca950b03ff2eb0d",
+    "patch": "website-ci.patch",
+    "patch_sha256": "6a6dfb9a9841fd2c41eead51522f1d44527d5f7848032b037876d63f2c67163e",
+    "files": [
+      {
+        "path": ".github/workflows/pr-gate.yml",
+        "blob": "8a04f9e6d2033de322176e7f82472b4ac96e2fc1",
+        "sha256": "fe991850cf0ca2b4360c51b1838f73114dd9364405c1f872b99a1d70467dbdd5"
+      },
+      {
+        "path": ".github/workflows/update.yml",
+        "blob": "b75b36c012bb75b810fe99d4279819f40edc2576",
+        "sha256": "8a871ab1bf3c8ee31ca82e174a323f7be345928fa110b2901390f7853c134e52"
+      }
+    ]
+  },
+  {
+    "label": "website-307",
+    "repository": "gosuda/website",
+    "number": 307,
+    "head": "ca8e57755251f909f5cca86bf5fed4c49a75dd23",
+    "branch": "dependabot/npm_and_yarn/tailwindcss/cli-4.3.5",
+    "base_ref": "main",
+    "base_sha": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+    "tree": "469141caec25331ec4b0d35bd4c2382a1f6baff5",
+    "patch": "website-ci.patch",
+    "patch_sha256": "6a6dfb9a9841fd2c41eead51522f1d44527d5f7848032b037876d63f2c67163e",
+    "files": [
+      {
+        "path": ".github/workflows/pr-gate.yml",
+        "blob": "8a04f9e6d2033de322176e7f82472b4ac96e2fc1",
+        "sha256": "fe991850cf0ca2b4360c51b1838f73114dd9364405c1f872b99a1d70467dbdd5"
+      },
+      {
+        "path": ".github/workflows/update.yml",
+        "blob": "b75b36c012bb75b810fe99d4279819f40edc2576",
+        "sha256": "8a871ab1bf3c8ee31ca82e174a323f7be345928fa110b2901390f7853c134e52"
+      }
+    ]
+  }
+]
