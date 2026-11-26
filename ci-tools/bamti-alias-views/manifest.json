@@ -1,0 +1,10 @@
+{
+  "repo": "gosuda/bamTiScript",
+  "head": "87be57b3bdee04bdc9606d0fadde7912b20a52a6",
+  "base": "a471de394b3f27408839ad8e0ec1642054c0aeee",
+  "base_tree": "297c6e935be36332f35fa5c0a53e23742a6d8f7c",
+  "original_relations_sha256": "3479aaa39ad13441b543153d340ad3a12b12e5b6c0303f11fe62911d194834d9",
+  "input_relations_sha256": "d3928ce2fa36170ca606e6254cb14bcae0546f076df2fbe3a589b6eca836bce7",
+  "prior_alias_red": "bbffcb342e1fa75ee04b81feffc20a42ce4e5cd4",
+  "prior_inference_candidate": "68578fe714e8993768b200e9c6b9925a26b43be8"
+}
