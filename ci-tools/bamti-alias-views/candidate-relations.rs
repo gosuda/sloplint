@@ -602,13 +602,15 @@ impl<'table> TypeRelations<'table> {
         } else {
             None
         };
-        // The table already contains a finite graph of shallow views. Visit
-        // every available view before approximating a changed-argument edge;
-        // a shared declaration alone cannot prove its materialized leaves.
+        // Prepared alias views form a finite graph. Inspect those views
+        // before approximating a changed-argument edge: a shared declaration
+        // alone cannot prove its materialized leaves. Class applications keep
+        // their existing recursion boundary.
         let expands_view = (source_view.is_some() || target_view.is_some())
             && (!source_alias || source_view.is_some())
             && (!target_alias || target_view.is_some());
-        let alias_shortcut = alias_assumption.filter(|_| !expands_view);
+        let alias_shortcut =
+            alias_assumption.filter(|_| !expands_view || source_class || target_class);
         if let Some(assumption) = alias_shortcut {
             let mut frames = self.dependency_stack.borrow_mut();
             let frame = frames
@@ -680,7 +682,9 @@ impl<'table> TypeRelations<'table> {
             frame.assumptions.clear();
         } else if let Some(parent) = self.dependency_stack.borrow_mut().last_mut() {
             parent.assumptions.extend(frame.assumptions.iter().copied());
-            parent.absent_aliases.extend(frame.absent_aliases.iter().copied());
+            parent
+                .absent_aliases
+                .extend(frame.absent_aliases.iter().copied());
             parent.inference_sensitive |= frame.inference_sensitive;
             parent.alias_sensitive |= frame.alias_sensitive;
             parent.env_sensitive |= frame.env_sensitive;
@@ -838,11 +842,10 @@ impl<'table> TypeRelations<'table> {
         // Effective parameter pairings do not retain a signature boundary.
         // Alias dispatch also reads the outer prefix and current arity, so
         // contextual proofs must distinguish those finite canonical facts.
-        let alias_scope =
-            (current_frame != 0 || !outer_aliases.is_empty()).then(|| AliasScope {
-                outer_aliases: outer_aliases.into_boxed_slice(),
-                local_arity: current_frame / 2,
-            });
+        let alias_scope = (current_frame != 0 || !outer_aliases.is_empty()).then(|| AliasScope {
+            outer_aliases: outer_aliases.into_boxed_slice(),
+            local_arity: current_frame / 2,
+        });
         let erasure_active = !self.erased_parameters.borrow().is_empty();
         self.active_context.set(self.intern_context(
             parameter_aliases,
@@ -6342,12 +6345,14 @@ mod tests {
             let source = table.object_type(vec![PropertyType::new("root", false, source_alias)]);
             let shallow = table.object_type(vec![PropertyType::new("next", false, nested_target)]);
             let (first, second) = if reversed {
-                let second = table.object_type(vec![PropertyType::new("root", false, target_alias)]);
+                let second =
+                    table.object_type(vec![PropertyType::new("root", false, target_alias)]);
                 let first = table.object_type(vec![PropertyType::new("root", false, shallow)]);
                 (first, second)
             } else {
                 let first = table.object_type(vec![PropertyType::new("root", false, shallow)]);
-                let second = table.object_type(vec![PropertyType::new("root", false, target_alias)]);
+                let second =
+                    table.object_type(vec![PropertyType::new("root", false, target_alias)]);
                 (first, second)
             };
             let target = if reversed {
@@ -6364,13 +6369,21 @@ mod tests {
             assert!(!primed.assignable(nested_source, nested_target));
             let after_refutation = primed.assignable(source_alias, target_alias);
             let verdict = TypeRelations::new(&table).assignable(source, target);
-            println!("ALIAS_ORDER reversed={reversed} direct={direct} primed={after_refutation} union={verdict}");
-            assert!(!direct, "available changed-argument leaf must refute the root");
+            println!(
+                "ALIAS_ORDER reversed={reversed} direct={direct} primed={after_refutation} union={verdict}"
+            );
+            assert!(
+                !direct,
+                "available changed-argument leaf must refute the root"
+            );
             assert!(!after_refutation);
             assert!(!verdict);
             verdicts.push(verdict);
         }
-        assert_eq!(verdicts[0], verdicts[1], "transformed alias union order changed compatibility");
+        assert_eq!(
+            verdicts[0], verdicts[1],
+            "transformed alias union order changed compatibility"
+        );
     }
 
     #[test]
@@ -6476,10 +6489,8 @@ mod tests {
         let missing_target = table.intern_applied_alias(right, vec![target_type]);
         let source = table.intern_applied_alias(left, vec![source_array]);
         let target = table.intern_applied_alias(right, vec![target_array]);
-        let source_view =
-            table.object_type(vec![PropertyType::new("next", false, missing_source)]);
-        let target_view =
-            table.object_type(vec![PropertyType::new("next", false, missing_target)]);
+        let source_view = table.object_type(vec![PropertyType::new("next", false, missing_source)]);
+        let target_view = table.object_type(vec![PropertyType::new("next", false, missing_target)]);
         table.set_applied_alias_view(source, source_view);
         table.set_applied_alias_view(target, target_view);
         let source_signature =

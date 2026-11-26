@@ -1,0 +1,51 @@
+{
+  "state": "diagnostic passed; final source gates pending",
+  "producer": "e851578185cdefb515afd8feb6a09559239b4fa2",
+  "run": 45855597174,
+  "job": 140032996353,
+  "published_head": "11e99ee0788613ff6a9fd7d5b0afddf819953850",
+  "temporary_test_sha256": "a133ff3b2fc48412f8083854cf8aba18bbd2e7601e7b9847ec0fdf7db1f8b99a",
+  "variants": [
+    {
+      "label": "published",
+      "sha256": "2065d40eabc613ffd30d094122dae6a84cf218edde33b559f3e8a2d7a02015a5",
+      "exit": 0,
+      "test_seconds": 6.18
+    },
+    {
+      "label": "rejected-all-views",
+      "sha256": "99de904efa506dd0f0991f314d3a25c301378b67c2f174e504ea3a8898fe4b55",
+      "exit": 101,
+      "test_seconds": 48.42,
+      "diagnostic": "BAMTS-C053"
+    },
+    {
+      "label": "class-scoped",
+      "sha256": "ba9b76bd93450b8ae28045c57f92d8127843fe0d189f229322f1de5ce2f98c13",
+      "exit": 0,
+      "test_seconds": 7.31
+    }
+  ],
+  "relation_tests": 79,
+  "source_restoration_exit": 0,
+  "artifact": {
+    "id": 15134859131,
+    "node_id": "MDg6QXJ0aWZhY3QxNTEzNDg1OTEzMQ==",
+    "name": "bamti-class-scope-evidence-e851578185cdefb515afd8feb6a09559239b4fa2",
+    "size_in_bytes": 6880,
+    "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15134859131",
+    "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15134859131/zip",
+    "expired": false,
+    "digest": "sha256:ba82ebf48de0e120e1ebae4f286290a74eb3f58e3f8fe11ca836b9d805856a50",
+    "created_at": "2026-11-26T16:12:19Z",
+    "updated_at": "2026-11-26T16:12:19Z",
+    "expires_at": "2026-12-03T16:12:19Z",
+    "workflow_run": {
+      "id": 45855597174,
+      "repository_id": 1424164147,
+      "head_repository_id": 1424164147,
+      "head_branch": "ci/bamti-alias-views-20261126-r17",
+      "head_sha": "e851578185cdefb515afd8feb6a09559239b4fa2"
+    }
+  }
+}

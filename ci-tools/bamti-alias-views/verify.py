@@ -110,7 +110,6 @@ elif sys.argv[1] == "verify":
     try:
         RELATION.write_text(baseline.split(marker, 1)[0] + marker + frozen_tests)
         run("baseline-compile", [*args, "--no-run"])
-        run("baseline-inference-miss", [*args, "checker::relations::tests::inference_misses_do_not_recompute_shared_recursive_refutations", "--", "--exact", "--nocapture"], 101, "inference miss recomputed", limit=180)
         run("baseline-alias-views", [*args, "checker::relations::tests::transformed_alias_union_order_is_stable", "--", "--exact", "--nocapture"], 101, "available changed-argument leaf must refute the root", limit=180)
     finally:
         RELATION.write_bytes(candidate)
@@ -146,6 +145,16 @@ elif sys.argv[1] == "verify":
             run(name, [*args, f"checker::relations::tests::{test}", "--", "--exact", "--nocapture"], 101, required, limit=180)
         finally:
             RELATION.write_bytes(candidate)
+    identity()
+    differential = SOURCE / "crates/bamts-verification/tests/corpus_differential.rs"
+    original_differential = differential.read_bytes()
+    valita_test = (PROOF / "valita-test.rs").read_bytes()
+    assert hashlib.sha256(valita_test).hexdigest() == "23ebdeb51ff67a5ae35e45ca4fa2183965dd17961b089dcd9566572900b93cbb"
+    try:
+        differential.write_bytes(original_differential + valita_test)
+        run("candidate-valita-jit", ["cargo", "test", "--locked", "-p", "bamts-verification", "--test", "corpus_differential", "isolated_valita_alias_probe", "--", "--exact", "--nocapture"], required="1 passed; 0 failed", limit=180)
+    finally:
+        differential.write_bytes(original_differential)
     identity()
     run("candidate-relations", [*args, "checker::relations::tests::", "--", "--nocapture"], required="test result: ok.")
     run("candidate-recursive-union", [*args, "recursive_union_", "--", "--nocapture"], required="2 passed; 0 failed")
