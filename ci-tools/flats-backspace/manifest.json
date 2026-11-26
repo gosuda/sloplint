@@ -1,19 +1,25 @@
 {
   "repo": "gosuda/flats",
-  "purpose": "Read-only native browser witness; no candidate source repair or stage acceptance",
+  "purpose": "Development-time native browser proof; temporary authored build-input correction, no maintained source publication or stage acceptance",
   "sources": [
     {
-      "name": "main",
+      "name": "old",
       "head": "72a25911d41dbe8d7e59d2e3694d4520a26e8e58",
       "tree": "9c5687b485e707cd9590a707f0e6fdc59e95b57d"
     },
     {
-      "name": "pr272",
-      "head": "ee49a47179b2df82a70015b0978468b1fbd69e28",
-      "tree": "cdaccf79235cd2ab6fb7e95d464551a65243fa8e"
+      "name": "baseline",
+      "head": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
+      "tree": "91efebe5baab56592f04481d3516dc3a2163d5e4"
+    },
+    {
+      "name": "candidate",
+      "head": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
+      "tree": "91efebe5baab56592f04481d3516dc3a2163d5e4"
     }
   ],
-  "driver_sha256": "e291d141a2bd4443e1d95d5a567d95f63624d0a85c925f34e2508c7d74ecb006",
+  "driver_sha256": "e3beee43f54b7450454edc5807fd0c5ac19c08202f93f62b09ac9e918cc88cc5",
+  "build_sha256": "52aaeda91f1e8cb3454a38bbe8d59c6648abb1de66daba295b5f294453ae3c7a",
   "go": "1.27.4",
   "node": "26.13.1",
   "playwright": "1.65.1"

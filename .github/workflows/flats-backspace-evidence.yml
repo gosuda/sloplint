@@ -1,4 +1,4 @@
-name: Inspect the pinned CodeMirror DOM reader sources
+name: Verify the DOM reader boundary repair on exact sources
 on:
   push:
     branches: [ci/flats-backspace-evidence-20261126-r13]
@@ -11,9 +11,9 @@ defaults:
   run:
     shell: bash
 jobs:
-  inspect:
-    runs-on: depot-ubuntu-24.04-4
-    timeout-minutes: 15
+  browser:
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -24,14 +24,24 @@ jobs:
         with:
           repository: gosuda/flats
           ref: 72a25911d41dbe8d7e59d2e3694d4520a26e8e58
-          path: main
+          path: old
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: gosuda/flats
-          ref: ee49a47179b2df82a70015b0978468b1fbd69e28
-          path: pr272
+          ref: c7cd9d07c9e841f4430772f1193b2c09e757411f
+          path: baseline
           persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/flats
+          ref: c7cd9d07c9e841f4430772f1193b2c09e757411f
+          path: candidate
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: 1.27.4
+          cache: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 26.13.1
@@ -40,12 +50,22 @@ jobs:
           version: 0.13.9
           python-version: "3.15"
           enable-cache: false
-      - name: Inspect exact locked package source and preserve clean trees
-        run: uv run --no-project --python 3.15 proof/ci-tools/flats-backspace/inspect.py
+      - name: Install the pinned native browser driver
+        run: |
+          set -euo pipefail
+          npm install --prefix "$RUNNER_TEMP/flats-browser-tools" --ignore-scripts --no-audit --no-fund --save-exact playwright@1.65.1
+          "$RUNNER_TEMP/flats-browser-tools/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Run frozen native input controls before and after the build-input repair
+        run: uv run --no-project --python 3.15 proof/ci-tools/flats-backspace/verify.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
-          name: flats-codemirror-source-${{ github.sha }}
-          path: ${{ runner.temp }}/flats-codemirror-source/*
+          name: flats-backspace-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/flats-backspace-evidence/results.json
+            ${{ runner.temp }}/flats-backspace-evidence/*/browser.log
+            ${{ runner.temp }}/flats-backspace-evidence/*/*.png
+            ${{ runner.temp }}/flats-backspace-evidence/*/candidate-source/**
+            ${{ runner.temp }}/flats-browser-tools/package-lock.json
           if-no-files-found: error
           retention-days: 7

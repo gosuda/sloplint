@@ -10,8 +10,17 @@ const browser = await chromium.launch({ headless: true });
 const contexts = [];
 const errors = [];
 const observations = [];
-const input = "alpha\nbeta";
-const expected = "alphabeta";
+const cases = [
+  { name: "last-line", input: "alpha\nbeta", caret: 6, expected: "alphabeta" },
+  { name: "middle-line", input: "alpha\nbeta\ngamma", caret: 6, expected: "alphabeta\ngamma" },
+  { name: "retained-final-newline", input: "alpha\nbeta\n", caret: 6, expected: "alphabeta\n" },
+  { name: "empty-first-line", input: "\nbeta", caret: 1, expected: "beta" },
+  { name: "empty-final-line", input: "alpha\n", caret: 6, expected: "alpha" },
+  { name: "empty-middle-line", input: "alpha\n\nbeta", caret: 7, expected: "alpha\nbeta" },
+  { name: "character-at-end", input: "alphabeta", caret: 9, expected: "alphabet" },
+  { name: "character-within-line", input: "alpha\nbeta", caret: 8, expected: "alpha\nbta" },
+  { name: "unicode-line", input: "alpha\nβeta", caret: 6, expected: "alphaβeta" },
+];
 
 async function wait(check, message) {
   const deadline = Date.now() + 15000;
@@ -42,13 +51,17 @@ async function open(name) {
 try {
   const a = await open("Backspace writer");
   const b = await open("Backspace observer");
+  for (const { name, input, caret, expected } of cases) {
   for (const operation of ["keyboard", "native-delete"]) {
     await a.locator(".cm-content").focus();
     await a.keyboard.press("ControlOrMeta+a");
     await a.keyboard.insertText(input);
     await wait(async () => await text(a) === input && await text(b) === input, "two-line seed did not converge");
-    await a.keyboard.press("ControlOrMeta+End");
-    await a.keyboard.press("Home");
+    await a.locator(".cm-content").evaluate((el, anchor) => {
+      const view = el.cmTile.root.view;
+      view.dispatch({ selection: { anchor } });
+      view.focus();
+    }, caret);
     const before = await a.locator(".cm-content").evaluate((el) => {
       const view = el.cmTile.root.view;
       const main = view.state.selection.main;
@@ -61,8 +74,8 @@ try {
       return { document: view.state.doc.toString(), anchor: main.anchor, head: main.head, html: el.innerHTML };
     });
     assert.equal(before.document, input);
-    assert.equal(before.anchor, 6);
-    assert.equal(before.head, 6);
+    assert.equal(before.anchor, caret);
+    assert.equal(before.head, caret);
     let executed = true;
     if (operation === "keyboard") {
       await a.keyboard.press("Backspace");
@@ -79,17 +92,18 @@ try {
       events: window.backspaceEvents,
     }));
     const remote = await text(b);
-    const record = { operation, browser: browser.version(), before, after, remote, expected,
+    const record = { name, operation, browser: browser.version(), before, after, remote, expected,
       passed: after.document === expected && remote === expected };
     observations.push(record);
     console.log("BACKSPACE_OBSERVATION " + JSON.stringify(record));
-    if (!record.passed) await a.screenshot({ path: path.join(evidence, operation + "-failure.png") });
+    if (!record.passed) await a.screenshot({ path: path.join(evidence, name + "-" + operation + "-failure.png") });
+  }
   }
   assert.deepEqual(errors, []);
-  assert.equal(observations.length, 2);
-  assert.ok(observations[1].after.events.some((event) =>
-    event.isTrusted && event.inputType === "deleteContentBackward"), "native delete did not emit trusted backward input");
-  console.log("BACKSPACE_PROBE_COMPLETE " + JSON.stringify(observations.map(({ operation, passed }) => ({ operation, passed }))));
+  assert.equal(observations.length, cases.length * 2);
+  assert.ok(observations.filter((record) => record.operation === "native-delete").every((record) => record.after.events.some((event) =>
+    event.isTrusted && event.inputType === "deleteContentBackward")), "native delete did not emit trusted backward input");
+  console.log("BACKSPACE_PROBE_COMPLETE " + JSON.stringify(observations.map(({ name, operation, passed }) => ({ name, operation, passed }))));
   assert.ok(observations.every((record) => record.passed), "a joined line retained an unexpected trailing newline");
 } finally {
   for (const context of contexts) await context.close();
