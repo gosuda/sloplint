@@ -111,11 +111,11 @@ jobs:
           bin="target/${{ matrix.target }}/release/sloplint"
           "$bin" check crates --format agent --strictness standard --mode threshold --fail-on minor
 
-  test-native:
-    # Native runners prove only what they alone can prove: per-target
-    # clippy (build scripts need the native C toolchain), the target
-    # links, the executable runs on the OS, and the platform-gated tests
-    # pass. Everything portable runs in `test` on Linux.
+  clippy-native:
+    # Per-target clippy stays on the native runners: dependency build
+    # scripts such as blake3's pass Apple-only cc flags to the host
+    # compiler, so cross-target clippy from Linux fails. Split from the
+    # test cells so every native job stays under 5 minutes execution.
     runs-on: ${{ matrix.runs_on }}
     timeout-minutes: 30
     strategy:
@@ -135,30 +135,71 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - run: rustup target add ${{ matrix.target }}
+      - name: Add target unless preinstalled
+        run: |
+          rustup target list --installed | grep -qx '${{ matrix.target }}' ||
+            rustup target add ${{ matrix.target }}
       - name: Preserve vendor dependency fingerprints
-        id: vendor
         run: TZ=UTC find vendor -exec touch -t 200001010000 {} +
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           shared-key: ${{ matrix.target }}
       - name: Clippy for the native target
         run: cargo clippy --workspace --all-targets --locked --target ${{ matrix.target }} -- -D warnings
-      - name: Build for the native target
-        run: cargo build --locked --target ${{ matrix.target }}
+
+  test-native:
+    # Native runners prove only what they alone can prove: the target
+    # links (the test harness builds the binary), the executable runs on
+    # the OS, and the platform-gated tests pass. Everything portable runs
+    # in `test` on Linux. Per-target clippy lives in `clippy-native` so
+    # each native job stays under 5 minutes execution.
+    runs-on: ${{ matrix.runs_on }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runs_on: macos-26-intel
+            target: x86_64-apple-darwin
+            tests: -p sloplint --lib --test invariants --test configuration --test colocation_paths --test discovery_boundaries --test io_and_cache --test pipeline
+          - runs_on: macos-26
+            target: aarch64-apple-darwin
+            tests: -p sloplint --lib --test invariants --test configuration --test colocation_paths --test discovery_boundaries --test io_and_cache --test pipeline
+          - runs_on: windows-2025
+            target: x86_64-pc-windows-msvc
+            tests: -p sloplint --test invariants --test pipeline
+          - runs_on: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            tests: -p sloplint --test invariants --test pipeline
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_DEV_DEBUG: line-tables-only
+      CARGO_PROFILE_TEST_DEBUG: line-tables-only
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Add target unless preinstalled
+        run: |
+          rustup target list --installed | grep -qx '${{ matrix.target }}' ||
+            rustup target add ${{ matrix.target }}
+      - name: Preserve vendor dependency fingerprints
+        id: vendor
+        run: TZ=UTC find vendor -exec touch -t 200001010000 {} +
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: ${{ matrix.target }}
+      - name: Run platform-specific tests
+        if: ${{ !cancelled() && steps.vendor.outcome == 'success' }}
+        run: >
+          cargo test --locked --no-fail-fast --target ${{ matrix.target }}
+          ${{ matrix.tests }}
+      - name: Run platform-sensitive syntax tests
+        if: ${{ runner.os == 'macOS' && !cancelled() && steps.vendor.outcome == 'success' }}
+        run: cargo test --locked --no-fail-fast --target ${{ matrix.target }} -p sloplint-syntax --test recursion_depth
       - name: Smoke-test the native executable
         run: |
           bin="target/${{ matrix.target }}/debug/sloplint"
           if [ "$RUNNER_OS" = Windows ]; then bin="$bin.exe"; fi
           "$bin" --version
-      - name: Run platform-specific tests
-        if: ${{ !cancelled() && steps.vendor.outcome == 'success' }}
-        run: >
-          cargo test --locked --no-fail-fast --target ${{ matrix.target }}
-          -p sloplint --lib
-          --test analysis_boundaries --test cli_output --test colocation_paths
-          --test configuration --test discovery_boundaries --test invariants
-          --test io_and_cache --test pipeline
-      - name: Run platform-sensitive syntax tests
-        if: ${{ !cancelled() && steps.vendor.outcome == 'success' }}
-        run: cargo test --locked --no-fail-fast --target ${{ matrix.target }} -p sloplint-syntax --test recursion_depth
