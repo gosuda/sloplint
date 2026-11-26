@@ -16,7 +16,7 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 HERE = Path(__file__).resolve().parent
 MANIFEST = json.loads((HERE / "manifest.json").read_text(encoding="utf-8"))
 SOURCE = Path(sys.argv[2]).resolve()
-EVIDENCE = Path(os.environ["PROOF_EVIDENCE"]).resolve()
+EVIDENCE = (Path(os.environ["RUNNER_TEMP"]) / "flats-unit-b-evidence").resolve()
 EVIDENCE.mkdir(parents=True, exist_ok=True)
 
 def now():

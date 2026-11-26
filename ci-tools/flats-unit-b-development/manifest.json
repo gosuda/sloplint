@@ -73,8 +73,17 @@
     "sha256": "a1236f5bbd7d1bb1c1c6151e2f4767dce1b1518ad431b0184e1567ed5cc61d5b"
   },
   "probe_base": "1f5abb94a5c5c4aae204d41b936eca4de9afa358",
-  "helper_sha256": "1edabe75199fb5ce9cb31dffa84274a18db9594e4c299599ed3ca908f41a5969",
+  "helper_sha256": "1e17109637b4e50fc195c3f50dc90ad0bcc6ba236f6f22075dc10931a32815b8",
   "plans_sha256": "b20a6ba1ba705c115484d70149ac03d54b760683b56632d78d167fb4d048035c",
-  "probe_workflow_sha256": "9177cf7ff77ac033e8e37554bdf421c54cb9f4e5180b5acacdffc072906d879c",
-  "checkout_eol": "core.autocrlf=false"
+  "probe_workflow_sha256": "e19e1819d90b5b7f6f746bd8c2faed389564de7c01aa273715568aa4d3f2126e",
+  "checkout_eol": "core.autocrlf=false",
+  "producer_corrections": [
+    {
+      "run": 45847769571,
+      "head": "e6b6fcc56774be50362ee89a99171a3022b72e32",
+      "result": "rejected before jobs; runner context unavailable in job-level env",
+      "fix": "derive artifact directory from RUNNER_TEMP inside Python; leave runner context only in permitted step inputs",
+      "source": "https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability"
+    }
+  ]
 }
