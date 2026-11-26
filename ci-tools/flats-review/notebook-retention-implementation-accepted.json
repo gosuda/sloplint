@@ -1,0 +1,351 @@
+{
+  "schema": 1,
+  "scope": "Flats PR 266 retained-heap test correction",
+  "stage": "implementation",
+  "execution_state": "completed",
+  "candidate_verdict": "accepted",
+  "original_request": "Resolve both open review findings without relaxing the 1 MiB memory limit or adding CI resource cost.",
+  "interpretation": {
+    "pick": "Measure net process Go heap after all three collected reads and keep the selected response out of the measurement.",
+    "rejected_alternative": "Do not subtract response capacity from a process-wide heap count; capacity is not an object-specific retained-heap measurement.",
+    "falsifier": "A third-read-only leak passes, a test-owned response buffer fails, any existing continuation assertion weakens, or a required gate fails."
+  },
+  "repository": "gosuda/flats",
+  "pr": 266,
+  "source": "86c7849c2f608fd751e9a478c2574c49e817f44d",
+  "source_tree": "11aa710adcb5e0f3bdcd609b1b57e7055d4f25ed",
+  "actual_main": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
+  "candidate_tree": "86fb795695e992b5835bdffe5f1fbaade7427b36",
+  "candidate_definition": "Exact source commit plus the three files in ci-tools/flats-retention/candidate-elements.json at the native producer. No other source changes.",
+  "candidate_files": [
+    {
+      "path": "docs/gates.md",
+      "sha256": "9d8ce0c4207424f59147292d4d4fc93fac8cf8a2a13e0e410348b9c096b742ef"
+    },
+    {
+      "path": "internal/notebook/markdown_read_memory_test.go",
+      "sha256": "ee700d676cbec44ec70b2a978f9be6adc99bdddfbccfc4d3b0d3ef2c35bb8104"
+    },
+    {
+      "path": "internal/notebook/reader_entry_test.go",
+      "sha256": "31bbd88c41ce29c15bdba851ae97326938c5060357436e403f319a8c19e6d1fb"
+    }
+  ],
+  "complete_pr_scope": [
+    {
+      "path": "docs/gates.md",
+      "sha256": "9d8ce0c4207424f59147292d4d4fc93fac8cf8a2a13e0e410348b9c096b742ef"
+    },
+    {
+      "path": "internal/notebook/markdown_read_capture_release_test.go",
+      "sha256": "03158b7df1e1d50895b6a59ae77ac3580b92339c9bda367a17cbc8d4142b484b"
+    },
+    {
+      "path": "internal/notebook/markdown_read_memory_test.go",
+      "sha256": "ee700d676cbec44ec70b2a978f9be6adc99bdddfbccfc4d3b0d3ef2c35bb8104"
+    },
+    {
+      "path": "internal/notebook/markdown_read_scaling_test.go",
+      "sha256": "6f4c062611e62194e6819973fa5928e6164144c9ba2cc3b71493e26e6f1bf15f"
+    },
+    {
+      "path": "internal/notebook/reader_entry_test.go",
+      "sha256": "31bbd88c41ce29c15bdba851ae97326938c5060357436e403f319a8c19e6d1fb"
+    }
+  ],
+  "excluded": "All probe workflows, fault adapters, log output, review reports, and generated binaries.",
+  "material_authors": [
+    {
+      "session": "/root/bitcoin_round7",
+      "model": "gpt-6.2-astra"
+    }
+  ],
+  "design": {
+    "source": "86c7849c2f608fd751e9a478c2574c49e817f44d",
+    "actual_main": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
+    "design_sha256": "7ca9ddc48b8a78b81f6b53a0e455763c68419cb62d90d73d0136c2a91a271835",
+    "files": [
+      {
+        "path": "docs/gates.md",
+        "sha256": "fb92548397e1f5f0dad33b882f6be9dec5b72e4653440e8730f798ce78ae0f8c"
+      },
+      {
+        "path": "internal/notebook/markdown_read_capture_release_test.go",
+        "sha256": "03158b7df1e1d50895b6a59ae77ac3580b92339c9bda367a17cbc8d4142b484b"
+      },
+      {
+        "path": "internal/notebook/markdown_read_memory_test.go",
+        "sha256": "1b010c165763eb293ec2ea513ddd3a2bd228150799262e33d941c443d820c811"
+      },
+      {
+        "path": "internal/notebook/markdown_read_scaling_test.go",
+        "sha256": "6f4c062611e62194e6819973fa5928e6164144c9ba2cc3b71493e26e6f1bf15f"
+      },
+      {
+        "path": "internal/notebook/reader_entry_test.go",
+        "sha256": "6c56a89fde4bf05ad42293fd273b876569b2ae95cda0706e78965d63548a87a3"
+      }
+    ],
+    "threads": [
+      "PRRT_kwDOU5_u3s68YJ66",
+      "PRRT_kwDOU5_u3s68YJ8h"
+    ],
+    "stage": "design",
+    "verdict": "accepted",
+    "budget_origin": "PR 266 published body, prior exact reviewer receipts unavailable",
+    "budgets": {
+      "design": {
+        "invocations_used": 3,
+        "invocation_limit": 3,
+        "corrections_used": 1,
+        "correction_limit": 2
+      },
+      "implementation": {
+        "invocations_used": 2,
+        "invocation_limit": 3,
+        "corrections_used": 1,
+        "correction_limit": 2
+      },
+      "testing": {
+        "invocations_used": 1,
+        "invocation_limit": 3,
+        "corrections_used": 0,
+        "correction_limit": 2
+      }
+    },
+    "review": {
+      "session": "/root/bitcoin_round7/flats_retention_design_review",
+      "requested_fixed_model": "gpt-6.2-sol",
+      "author_model": "gpt-6.2-astra",
+      "receipt_sha256": "a326a2d85d66adabc6fad2b281361a8f901686b4bb36166cf17d9c4cf3a794e0",
+      "receipt_path": "ci-tools/flats-review/notebook-retention-design-review.md",
+      "design_record": "2f779365b46eb8fae37b5c8a3974c034bdffd5e1"
+    }
+  },
+  "implementation_review": {
+    "requested_fixed_model": "gpt-6.2-sol",
+    "effective_model_evidence": "Collaboration spawn with fork_turns=none and fixed model override gpt-6.2-sol",
+    "author_model": "gpt-6.2-astra",
+    "session": "/root/bitcoin_round7/flats_retention_implementation_review",
+    "status": "completed",
+    "verdict": "ACCEPT",
+    "receipt_path": "ci-tools/flats-review/notebook-retention-implementation-review.md",
+    "receipt_sha256": "8b88b010c665c7aef1fed4fc17668dbdc1bfffc55850ea6b5fffd84d87015167"
+  },
+  "budgets": {
+    "design": {
+      "invocations_used": 3,
+      "invocation_limit": 3,
+      "corrections_used": 1,
+      "correction_limit": 2
+    },
+    "implementation": {
+      "invocations_used": 3,
+      "invocation_limit": 3,
+      "corrections_used": 1,
+      "correction_limit": 2
+    },
+    "testing": {
+      "invocations_used": 1,
+      "invocation_limit": 3,
+      "corrections_used": 0,
+      "correction_limit": 2
+    }
+  },
+  "cleanup": {
+    "code": "Read the complete five-file PR scope and the three-file correction against local style. The helper isolates response ownership; the shared settledReaderHeap preserves the existing double-collection baseline. No redundant guards, widening changes, or further cleanup were needed.",
+    "prose": "Reviewed the changed gate description against flats-unslop. It states the process-wide measurement and its limits without claiming object attribution."
+  },
+  "development_evidence": {
+    "producer": "082a7e89a55ea8feffc615b11eb0abeab05894bc",
+    "branch": "ci/flats-retention-proof-20261126-r15",
+    "run": 45861924362,
+    "job": 140054864954,
+    "url": "https://github.com/gosuda/sloplint/actions/runs/45861924362",
+    "conclusion": "success",
+    "runner": "depot-ubuntu-24.04",
+    "cpus": 2,
+    "go": "1.27.4",
+    "GOMAXPROCS": 2,
+    "GOFLAGS": "-p=2",
+    "GOENV": "off",
+    "GOCACHEPROG": "",
+    "recipe": {
+      "path": "ci-tools/flats-retention/verify.py",
+      "sha256": "944132812ca78f2afa4fd0b01e05e4098db652c55a6ba5c66430724e481f8a11"
+    },
+    "artifact": {
+      "id": 15140731708,
+      "name": "flats-retention-082a7e89a55ea8feffc615b11eb0abeab05894bc",
+      "size_in_bytes": 95537,
+      "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15140731708",
+      "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15140731708/zip",
+      "expired": false,
+      "created_at": "2026-11-26T17:14:06Z",
+      "expires_at": "2026-12-10T17:14:06Z",
+      "updated_at": "2026-11-26T17:14:06Z",
+      "digest": "sha256:ead5a0da6e17ba3649d4a81aae061a94a9927f27ff8839f27e329f8004d59f49",
+      "workflow_run": {
+        "id": 45861924362,
+        "repository_id": 1424164147,
+        "head_repository_id": 1424164147,
+        "head_branch": "ci/flats-retention-proof-20261126-r15",
+        "head_sha": "082a7e89a55ea8feffc615b11eb0abeab05894bc"
+      }
+    },
+    "log_sha256": "dd94ca505fa938586ee32f74478e60808da24f5af25d47babc4afa5e340b2adb",
+    "gates": [
+      {
+        "name": "load",
+        "exit_code": 0
+      },
+      {
+        "name": "go-version",
+        "exit_code": 0
+      },
+      {
+        "name": "baseline-clean-option-schema",
+        "exit_code": 0
+      },
+      {
+        "name": "original-fault-format",
+        "exit_code": 0
+      },
+      {
+        "name": "original-fault-build",
+        "exit_code": 0
+      },
+      {
+        "name": "format-candidate",
+        "exit_code": 0
+      },
+      {
+        "name": "candidate-fault-format",
+        "exit_code": 0
+      },
+      {
+        "name": "candidate-fault-build",
+        "exit_code": 0
+      },
+      {
+        "name": "original-last",
+        "exit_code": 0
+      },
+      {
+        "name": "candidate-last",
+        "exit_code": 1
+      },
+      {
+        "name": "original-per_read",
+        "exit_code": 0
+      },
+      {
+        "name": "candidate-per_read",
+        "exit_code": 1
+      },
+      {
+        "name": "original-first",
+        "exit_code": 1
+      },
+      {
+        "name": "candidate-first",
+        "exit_code": 1
+      },
+      {
+        "name": "original-middle",
+        "exit_code": 1
+      },
+      {
+        "name": "candidate-middle",
+        "exit_code": 1
+      },
+      {
+        "name": "original-response",
+        "exit_code": 1
+      },
+      {
+        "name": "candidate-response",
+        "exit_code": 0
+      },
+      {
+        "name": "candidate-clean-option-schema",
+        "exit_code": 0
+      },
+      {
+        "name": "vet",
+        "exit_code": 0
+      },
+      {
+        "name": "notebook",
+        "exit_code": 0
+      },
+      {
+        "name": "notebook-race-1",
+        "exit_code": 0
+      },
+      {
+        "name": "notebook-race-2",
+        "exit_code": 0
+      },
+      {
+        "name": "docs-audit",
+        "exit_code": 0
+      },
+      {
+        "name": "docs-verify",
+        "exit_code": 0
+      },
+      {
+        "name": "format-check",
+        "exit_code": 0
+      },
+      {
+        "name": "whitespace",
+        "exit_code": 0
+      }
+    ],
+    "causal_controls": [
+      {
+        "mode": "last",
+        "fault": "Retain 2 MiB only during the third actual application read.",
+        "original_exit": 0,
+        "candidate_exit": 1,
+        "candidate_retained_bytes": 2276352
+      },
+      {
+        "mode": "per_read",
+        "fault": "Retain 400 KiB during each of the three actual application reads.",
+        "original_exit": 0,
+        "candidate_exit": 1,
+        "candidate_retained_bytes": 1405264
+      },
+      {
+        "mode": "first",
+        "fault": "Retain 2 MiB only during the first read.",
+        "original_exit": 1,
+        "candidate_exit": 1
+      },
+      {
+        "mode": "middle",
+        "fault": "Retain 2 MiB only during the second read.",
+        "original_exit": 1,
+        "candidate_exit": 1
+      },
+      {
+        "mode": "response",
+        "fault": "Return identical valid response bytes in a test-owned 2 MiB backing allocation, with no global retained response root.",
+        "original_exit": 1,
+        "candidate_exit": 0
+      }
+    ],
+    "fault_assertions": "Each binary runs in a fresh process and must report all three read attempts. Intentional failures must come from TestMarkdownRetainedMemory/option_schema/1MiB_live and the actual post-GC retention assertion. Build, setup, or unrelated test failures are rejected.",
+    "restoration": "Original and candidate hashes were checked after each disposable adapter, and the final source tree matched the candidate exactly."
+  },
+  "limitations": [
+    "This measures net process Go heap, not attribution to a particular allocation; unrelated heap movement can affect it.",
+    "The selected minimum-sample response is reloaded only after the final sample and exercises the existing continuation assertions.",
+    "Native development checks do not substitute for implementation and testing reviews. No maintained PR source or review thread has been changed."
+  ],
+  "next": "Independent implementation review of the complete candidate, then final integrated testing and its independent review.",
+  "candidate_commit": "066c32dcf2e0d2a9d9ea0d41e7aacf68524c1518"
+}
