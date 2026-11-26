@@ -1,11 +1,12 @@
-name: Verify Spira pool review repairs
+name: Verify Spira review follow-ups
 
 on:
   push:
     branches: [ci/spira-required-gates-20261126-r7]
     paths:
       - .github/workflows/spira-required-gates.yml
-      - ci-tools/spira33.patch
+      - ci-tools/spira-round7.patch
+      - ci-tools/spira-regressions.py
 
 permissions:
   contents: read
@@ -33,13 +34,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: gosuda/spira
-          ref: 358d6ff0d509b25e6cb46d38d5c2a929122363b3
+          ref: 192c1b0b2f8ab195638bcebe0779c6b4f9a39b70
           persist-credentials: false
           path: spira
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: gosuda/LoGOs
-          ref: 9af493a1ff32889aa1f2a61357e06c3bb46132c7
+          ref: 05f2570fce079d467556979a3d599c3e892d6876
           persist-credentials: false
           path: logos
       - name: Verify and apply the exact candidate
@@ -47,13 +48,13 @@ jobs:
         working-directory: spira
         run: |
           mkdir -p "$GITHUB_WORKSPACE/evidence"
-          test "$(git rev-parse HEAD)" = 358d6ff0d509b25e6cb46d38d5c2a929122363b3
-          printf '%s  %s\n' 8b1600a502d4eee116a215f82821502fe703b2b59e65298475d3ead459fec0af ../probe/ci-tools/spira33.patch | sha256sum --check --strict
-          git apply --index --whitespace=error ../probe/ci-tools/spira33.patch
-          test "$(git write-tree)" = ec4560f6ebd166c55f95e73d2ee13f6c2b18285d
+          test "$(git rev-parse HEAD)" = 192c1b0b2f8ab195638bcebe0779c6b4f9a39b70
+          printf '%s  %s\n' ad98529e9d752c6509d03e743b6d63f4f9f5fea8e64e5a23606f2893a4d6d1a5 ../probe/ci-tools/spira-round7.patch | sha256sum --check --strict
+          git apply --index --whitespace=error ../probe/ci-tools/spira-round7.patch
+          test "$(git write-tree)" = c1238923b3409db5e9ab87b9a77e9be9b70df354
           git rev-parse HEAD > "$GITHUB_WORKSPACE/evidence/spira-source.txt"
           git write-tree >> "$GITHUB_WORKSPACE/evidence/spira-source.txt"
-          sha256sum db/db.lgo db/export_test.lgo db/pool_expiry_test.lgo db/tx_deadline_test.lgo docs/specs/db.md > "$GITHUB_WORKSPACE/evidence/candidate.sha256"
+          git diff --cached --name-only -z | xargs -0 sha256sum > "$GITHUB_WORKSPACE/evidence/candidate.sha256"
           git diff --exit-code
           git diff --cached --check
       - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
@@ -86,7 +87,7 @@ jobs:
         id: toolchain
         working-directory: logos
         run: |
-          test "$(git rev-parse HEAD)" = 9af493a1ff32889aa1f2a61357e06c3bb46132c7
+          test "$(git rev-parse HEAD)" = 05f2570fce079d467556979a3d599c3e892d6876
           git rev-parse HEAD > "$GITHUB_WORKSPACE/evidence/logos-source.txt"
           git rev-parse HEAD^{tree} >> "$GITHUB_WORKSPACE/evidence/logos-source.txt"
           export GOROOT_BOOTSTRAP="$(go env GOROOT)"
@@ -95,6 +96,9 @@ jobs:
           printf '%s/bin\n' "$PWD" >> "$GITHUB_PATH"
           printf 'LOGOS_ROOT=%s\n' "$PWD" >> "$GITHUB_ENV"
           bin/logos version > "$GITHUB_WORKSPACE/evidence/logos-version.txt"
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          enable-cache: false
       - name: Run the complete Spira gate
         working-directory: spira
         run: just gate 2>&1 | tee "$GITHUB_WORKSPACE/evidence/gate.log"
@@ -102,12 +106,15 @@ jobs:
         if: ${{ !cancelled() && steps.toolchain.outcome == 'success' && steps.candidate.outcome == 'success' }}
         working-directory: spira
         run: just eject 2>&1 | tee "$GITHUB_WORKSPACE/evidence/eject.log"
+      - name: Prove focused regressions fail before repair
+        working-directory: spira
+        run: GOROOT="$LOGOS_ROOT" uv run --no-project --python 3.13 ../probe/ci-tools/spira-regressions.py
       - name: Recheck candidate identity
         if: ${{ !cancelled() && steps.candidate.outcome == 'success' }}
         working-directory: spira
         run: |
           sha256sum --check --strict "$GITHUB_WORKSPACE/evidence/candidate.sha256"
-          test "$(git write-tree)" = ec4560f6ebd166c55f95e73d2ee13f6c2b18285d
+          test "$(git write-tree)" = c1238923b3409db5e9ab87b9a77e9be9b70df354
           git diff --check
           node --version > "$GITHUB_WORKSPACE/evidence/node-version.txt"
           pnpm --version > "$GITHUB_WORKSPACE/evidence/pnpm-version.txt"

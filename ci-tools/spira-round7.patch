@@ -1,0 +1,1077 @@
+diff --git a/cmd/spira/new_runs_engines_test.lgo b/cmd/spira/new_runs_engines_test.lgo
+index 5b6abd8..21f91d7 100644
+--- a/cmd/spira/new_runs_engines_test.lgo
++++ b/cmd/spira/new_runs_engines_test.lgo
+@@ -29,10 +29,6 @@ func runEngineApp(t *testing.T, engine string, env string) {
+ 		return
+ 	}
+ 	root := spiraRoot(t)
+-	if _, err := os.Stat(filepath.Join(root, "orm")); err != nil {
+-		t.Skipf("orm not in tree; generated store cannot build until it lands")
+-		return
+-	}
+ 	dir := filepath.Join(t.TempDir(), "app")
+ 	args := []string{"-engine", engine, "-spira-dir", root, dir, "example.com/demo"}
+ 	if err := spira.RunNew(args); err != nil {
+diff --git a/cmd/spira/new_runs_test.lgo b/cmd/spira/new_runs_test.lgo
+index 87ddc17..2c3e6f8 100644
+--- a/cmd/spira/new_runs_test.lgo
++++ b/cmd/spira/new_runs_test.lgo
+@@ -2,7 +2,6 @@ package main_test
+ 
+ import (
+ 	"context"
+-	"os"
+ 	"os/exec"
+ 	"path/filepath"
+ 	"testing"
+@@ -20,9 +19,6 @@ func TestNewGeneratedSQLiteAppRuns(t *testing.T) {
+ 		return
+ 	}
+ 	runIn(t, dir, []string{"just", "sql"})
+-	if _, err := os.Stat(filepath.Join(root, "orm")); err != nil {
+-		t.Skip("orm package not in this checkout")
+-	}
+ 	runIn(t, dir, []string{"logos", "build", "./..."})
+ 	runIn(t, dir, []string{"logos", "test", "-race", "-count=1", "./..."})
+ }
+diff --git a/cmd/spira/templates/account-store.lgo.tmpl b/cmd/spira/templates/account-store.lgo.tmpl
+index 8ab6d0e..35160e1 100644
+--- a/cmd/spira/templates/account-store.lgo.tmpl
++++ b/cmd/spira/templates/account-store.lgo.tmpl
+@@ -3,6 +3,7 @@ package account
+ import (
+ 	"context"
+ 	"fmt"
++	"log/slog"
+ 	"strconv"
+ 	"strings"
+ 	"time"
+@@ -33,6 +34,7 @@ func (s *DBStore) Save(ctx context.Context, id string, p auth.Principal, ttl tim
+ 		return ErrAccountFailed.Wrap(fmt.Errorf("account: save session: %w", err))
+ 	}
+ 	if err := s.DeleteExpired(ctx); err != nil {
++		slog.ErrorContext(ctx, "account: sweep expired sessions", "err", err)
+ 	}
+ 	return nil
+ }
+diff --git a/cmd/spira/templates/engines/sqlite/main_test.lgo.tmpl b/cmd/spira/templates/engines/sqlite/main_test.lgo.tmpl
+index 3e995e8..e1f6ca6 100644
+--- a/cmd/spira/templates/engines/sqlite/main_test.lgo.tmpl
++++ b/cmd/spira/templates/engines/sqlite/main_test.lgo.tmpl
+@@ -167,14 +167,23 @@ func TestLoginSurvivesFailedSessionSweep(t *testing.T) {
+ 			t.Fatalf("hash: %v", err)
+ 			return
+ 		}
+-		if _, err := store.CreateUser(ctx, pool, "demo", hash); err != nil {
++		uid, err := account.CreateUser(ctx, pool, "demo", hash)
++		if err != nil {
+ 			t.Fatalf("create user: %v", err)
+ 			return
+ 		}
++		if err := store.SaveSession(ctx, pool, store.SaveSessionArgs{IDHash: store.SessionID("expired-session"), UserID: uid, ExpiresAt: time.Now().Add(-time.Hour)}); err != nil {
++			t.Fatalf("seed expired session: %v", err)
++			return
++		}
+ 		if _, err := pool.ExecContext(ctx, `CREATE TRIGGER refuse_sweep BEFORE DELETE ON sessions BEGIN SELECT RAISE(ABORT, 'sweep refused'); END;`); err != nil {
+ 			t.Fatalf("plant sweep failure: %v", err)
+ 			return
+ 		}
++		var logs bytes.Buffer
++		previous := slog.Default()
++		slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
++		defer slog.SetDefault(previous)
+ 		r := web.NewRouter()
+ 		sessions := &auth.Sessions{Store: &account.DBStore{DB: pool}}
+ 		(&account.Account{DB: pool, Sessions: sessions}).Mount(r)
+@@ -187,5 +196,11 @@ func TestLoginSurvivesFailedSessionSweep(t *testing.T) {
+ 			t.Fatalf("status %d want 303 body %s", rec.Code, rec.Body.String())
+ 			return
+ 		}
++		if !strings.Contains(logs.String(), "sweep refused") {
++			t.Fatalf("operator log %q omits the failed session sweep", logs.String())
++		}
++		if strings.Contains(rec.Body.String(), "sweep refused") {
++			t.Fatalf("login body leaks the sweep error: %s", rec.Body.String())
++		}
+ 	})
+ }
+diff --git a/cmd/sqlc-gen-spira/main_test.lgo b/cmd/sqlc-gen-spira/main_test.lgo
+index 153df1f..017648c 100644
+--- a/cmd/sqlc-gen-spira/main_test.lgo
++++ b/cmd/sqlc-gen-spira/main_test.lgo
+@@ -1293,24 +1293,3 @@ func TestMissingEmbedTable(t *testing.T) {
+ 		t.Fatalf("error = %v, want it to name the query and the ghosts table", err)
+ 	}
+ }
+-
+-func TestPackageNameAcceptsUnicode(t *testing.T) {
+-	cases := []struct {
+-		pkg string
+-		out string
+-	}{
+-		{pkg: "données", out: "gen"},
+-		{out: "db/données"},
+-	}
+-	for _, tc := range cases {
+-		req := loadRequest(t, "sqlite")
+-		req.Settings.Codegen.Out = tc.out
+-		if tc.pkg != "" {
+-			req.PluginOptions = pluginOptions(t, map[string]any{"package": tc.pkg})
+-		}
+-		src := generateFile(t, req)
+-		if !strings.Contains(src, "package données\n") {
+-			t.Fatalf("package %q with out %q: models.sql.lgo begins %q, want the unicode package clause", tc.pkg, tc.out, strings.SplitN(src, "\n", 3)[0])
+-		}
+-	}
+-}
+diff --git a/cmd/sqlc-gen-spira/unicode_package_test.lgo b/cmd/sqlc-gen-spira/unicode_package_test.lgo
+new file mode 100644
+index 0000000..c1b7c55
+--- /dev/null
++++ b/cmd/sqlc-gen-spira/unicode_package_test.lgo
+@@ -0,0 +1,57 @@
++package main_test
++
++import (
++	"encoding/json/v2"
++	"os"
++	"strings"
++	"testing"
++
++	sqlcgen "github.com/gosuda/spira/cmd/sqlc-gen-spira"
++)
++
++func TestPackageNameAcceptsUnicode(t *testing.T) {
++	for _, tc := range []struct {
++		name string
++		pkg  string
++		out  string
++	}{
++		{name: "explicit package", pkg: "données", out: "gen"},
++		{name: "output directory", out: "db/données"},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			data, err := os.ReadFile("testdata/sqlite/request.json")
++			if err != nil {
++				t.Fatal(err)
++				return
++			}
++			var req sqlcgen.Request
++			if err := json.Unmarshal(data, &req); err != nil {
++				t.Fatal(err)
++				return
++			}
++			req.Settings.Codegen.Out = tc.out
++			if tc.pkg != "" {
++				options, err := json.Marshal(sqlcgen.PluginOptions{Package: tc.pkg})
++				if err != nil {
++					t.Fatal(err)
++					return
++				}
++				req.PluginOptions = options
++			}
++			_, files, err := sqlcgen.Generate(&req)
++			if err != nil {
++				t.Fatalf("Generate: %v", err)
++				return
++			}
++			for _, file := range files {
++				if file.Name == "models.sql.lgo" {
++					if !strings.Contains(string(file.Contents), "package données\n") {
++						t.Fatalf("generated models omit the Unicode package: %s", file.Contents)
++					}
++					return
++				}
++			}
++			t.Fatal("Generate returned no models.sql.lgo")
++		})
++	}
++}
+diff --git a/db/db.lgo b/db/db.lgo
+index cca2b9a..9f98752 100644
+--- a/db/db.lgo
++++ b/db/db.lgo
+@@ -83,9 +83,16 @@ type PoolOptions struct {
+ 	ConnMaxIdleTime time.Duration
+ }
+ 
+-func poolDefaults(d Dialect) PoolOptions {
++func poolDefaults(d Dialect, dsn string) PoolOptions {
+ 	switch d.(type) {
+ 	case SQLite:
++		memory, shared := sqliteMemoryDSN(dsn)
++		if memory {
++			if shared {
++				return PoolOptions{MaxOpenConns: 4, MaxIdleConns: 2}
++			}
++			return PoolOptions{MaxOpenConns: 1, MaxIdleConns: 1}
++		}
+ 		return PoolOptions{MaxOpenConns: 4, MaxIdleConns: 2, ConnMaxLifetime: 30 * time.Minute, ConnMaxIdleTime: 5 * time.Minute}
+ 	case Postgres, MySQL, MSSQL:
+ 		return PoolOptions{MaxOpenConns: 10, MaxIdleConns: 5, ConnMaxLifetime: 30 * time.Minute, ConnMaxIdleTime: 5 * time.Minute}
+@@ -94,23 +101,44 @@ func poolDefaults(d Dialect) PoolOptions {
+ 	panic("db: unknown dialect for pool defaults")
+ }
+ 
+-func resolvePoolOptions(d Dialect, opts []PoolOptions) PoolOptions {
+-	defaults := poolDefaults(d)
+-	if len(opts) == 0 {
+-		return defaults
++func sqliteMemoryDSN(dsn string) (bool, bool) {
++	name, _, _ := strings.Cut(dsn, "?")
++	if name == ":memory:" {
++		return true, false
+ 	}
+-	chosen := opts[0]
+-	if chosen.MaxOpenConns == 0 {
+-		chosen.MaxOpenConns = defaults.MaxOpenConns
++	uri, err := url.Parse(dsn)
++	if err != nil || uri.Scheme != "file" {
++		return false, false
+ 	}
+-	if chosen.MaxIdleConns == 0 {
+-		chosen.MaxIdleConns = defaults.MaxIdleConns
++	path := uri.Path
++	if uri.Opaque != "" {
++		path, err = url.PathUnescape(uri.Opaque)
++		if err != nil {
++			return false, false
++		}
+ 	}
+-	if chosen.ConnMaxLifetime == 0 {
+-		chosen.ConnMaxLifetime = defaults.ConnMaxLifetime
++	params, err := url.ParseQuery(uri.RawQuery)
++	if err != nil {
++		return false, false
+ 	}
+-	if chosen.ConnMaxIdleTime == 0 {
+-		chosen.ConnMaxIdleTime = defaults.ConnMaxIdleTime
++	return path == ":memory:" || params.Get("mode") == "memory", params.Get("cache") == "shared"
++}
++
++func resolvePoolOptions(d Dialect, dsn string, opts []PoolOptions) PoolOptions {
++	chosen := poolDefaults(d, dsn)
++	for _, opt := range opts {
++		if opt.MaxOpenConns != 0 {
++			chosen.MaxOpenConns = opt.MaxOpenConns
++		}
++		if opt.MaxIdleConns != 0 {
++			chosen.MaxIdleConns = opt.MaxIdleConns
++		}
++		if opt.ConnMaxLifetime != 0 {
++			chosen.ConnMaxLifetime = opt.ConnMaxLifetime
++		}
++		if opt.ConnMaxIdleTime != 0 {
++			chosen.ConnMaxIdleTime = opt.ConnMaxIdleTime
++		}
+ 	}
+ 	return chosen
+ }
+@@ -131,7 +159,7 @@ func Open(driver string, dsn string, opts ...PoolOptions) (*Pool?, error) {
+ 	if err != nil {
+ 		return nil, ClassifyDriverError(dialect, fmt.Errorf("db: open %s: %w", driver, err))
+ 	}
+-	applyPoolLimits(handle, resolvePoolOptions(dialect, opts))
++	applyPoolLimits(handle, resolvePoolOptions(dialect, dsn, opts))
+ 	return &Pool{handle: handle, dialect: dialect, stmts: &stmtCache{}}, nil
+ }
+ 
+@@ -494,7 +522,11 @@ func finishTx[T any](ctx context.Context, run *Tx, work func(tx *Tx) (T, error))
+ 		return zero, workErr
+ 	}
+ 	if err := ctx.Err(); err != nil {
+-		return zero, errors.Join(err, run.tx.Rollback())
++		rollbackErr := run.tx.Rollback()
++		if rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) {
++			return zero, errors.Join(err, fmt.Errorf("db: rollback canceled transaction: %w", rollbackErr))
++		}
++		return zero, err
+ 	}
+ 	if err := run.tx.Commit(); err != nil {
+ 		return zero, ClassifyDriverError(run.pool.dialect, fmt.Errorf("db: commit: %w", err))
+diff --git a/db/export_test.lgo b/db/export_test.lgo
+index 7078c07..c4c01cb 100644
+--- a/db/export_test.lgo
++++ b/db/export_test.lgo
+@@ -3,6 +3,7 @@ package db
+ import (
+ 	"context"
+ 	"database/sql"
++	"time"
+ )
+ 
+ func (p *Pool) HoldStatement(ctx context.Context, query string) (*sql.Stmt?, error) {
+@@ -30,3 +31,22 @@ func ParseMySQLPrefixForTest(text string) (int, bool) {
+ func ConstraintViolationForTest(d Dialect, err error) bool {
+ 	return isConstraintViolation(d, err)
+ }
++
++func PoolOptionsForTest(d Dialect, dsn string, opts ...PoolOptions) PoolOptions {
++	return resolvePoolOptions(d, dsn, opts)
++}
++
++func (p *Pool) AccelerateExpiryForTest(dsn string, expiry time.Duration) {
++	opts := resolvePoolOptions(p.dialect, dsn, nil)
++	if opts.ConnMaxLifetime > 0 {
++		opts.ConnMaxLifetime = expiry
++	}
++	if opts.ConnMaxIdleTime > 0 {
++		opts.ConnMaxIdleTime = expiry
++	}
++	applyPoolLimits(p.handle, opts)
++}
++
++func (p *Pool) HoldConnectionForTest(ctx context.Context) (*sql.Conn?, error) {
++	return p.handle.Conn(ctx)
++}
+diff --git a/db/faults_test.lgo b/db/faults_test.lgo
+index adb4384..e7d539c 100644
+--- a/db/faults_test.lgo
++++ b/db/faults_test.lgo
+@@ -172,6 +172,29 @@ type constraintProbe struct {
+ 	check func(dupErr error)
+ }
+ 
++func TestConstraintProbeDropsTableOnReturn(t *testing.T) {
++	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
++	defer cancel()
++	pool := openPool(t)
++	ran := false
++	withConstraintProbe(t, ctx, pool, constraintProbe{
++		table: "fault_cleanup_uniq", mark: "?",
++		check: func(err error) {
++			ran = true
++			if !errors.Is(err, db.ErrConstraintViolation) {
++				t.Errorf("duplicate insert = %v, want ErrConstraintViolation", err)
++			}
++		},
++	})
++	if !ran {
++		t.Fatal("constraint callback did not run")
++		return
++	}
++	if _, err := db.Exec(ctx, pool, "CREATE TABLE fault_cleanup_uniq (n integer not null unique)"); err != nil {
++		t.Fatalf("probe left its table behind: %v", err)
++	}
++}
++
+ func withConstraintProbe(t *testing.T, ctx context.Context, pool *db.Pool, p constraintProbe) {
+ 	t.Helper()
+ 	if _, err := db.Exec(ctx, pool, "CREATE TABLE "+p.table+" (n integer not null unique)"); err != nil {
+@@ -179,7 +202,9 @@ func withConstraintProbe(t *testing.T, ctx context.Context, pool *db.Pool, p con
+ 		return
+ 	}
+ 	defer func() {
+-		if _, derr := db.Exec(context.Background(), pool, "DROP TABLE "+p.table); derr != nil {
++		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Second)
++		defer cancel()
++		if _, derr := db.Exec(cleanup, pool, "DROP TABLE "+p.table); derr != nil {
+ 			t.Errorf("drop %s: %v", p.table, derr)
+ 		}
+ 	}()
+diff --git a/db/pool_expiry_test.lgo b/db/pool_expiry_test.lgo
+new file mode 100644
+index 0000000..362b5e1
+--- /dev/null
++++ b/db/pool_expiry_test.lgo
+@@ -0,0 +1,199 @@
++package db_test
++
++import (
++	"context"
++	"database/sql"
++	"errors"
++	"path/filepath"
++	"testing"
++	"time"
++
++	"github.com/gosuda/spira/db"
++)
++
++func openExpiryPool(t *testing.T, dsn string, opts ...db.PoolOptions) *db.Pool {
++	t.Helper()
++	pool, err := db.Open("sqlite", dsn, opts...)
++	if err != nil {
++		t.Fatalf("Open: %v", err)
++	}
++	if pool == nil {
++		panic("Open returned no pool")
++	}
++	t.Cleanup(func() {
++		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
++		defer cancel()
++		if err := pool.Stop(ctx); err != nil {
++			t.Errorf("Stop: %v", err)
++		}
++	})
++	return pool
++}
++
++func waitPoolDuration(t *testing.T, duration time.Duration) {
++	t.Helper()
++	timer := time.NewTimer(duration)
++	defer timer.Stop()
++	select {
++	case <-timer.C:
++	case <-t.Context().Done():
++		t.Fatal(t.Context().Err())
++	}
++}
++
++func TestMemoryPoolsKeepRowsAcrossDefaultExpiry(t *testing.T) {
++	for _, tc := range []struct {
++		name string
++		dsn  string
++		open int
++	}{
++		{"plain", ":memory:", 1},
++		{"plain_query", ":memory:?_pragma=foreign_keys(1)", 1},
++		{"uri_private", "file::memory:", 1},
++		{"uri_encoded", "file:%3Amemory%3A", 1},
++		{"uri_shared", "file::memory:?cache=shared", 4},
++		{"named_private", "file:" + txPoolKey(t) + "_private?mode=memory", 1},
++		{"named_shared", "file:" + txPoolKey(t) + "_shared?mode=memory&cache=shared", 4},
++		{"encoded_mode", "file:" + txPoolKey(t) + "_encoded?mode=%6demory&cache=shared", 4},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			pool := openExpiryPool(t, tc.dsn)
++			pool.AccelerateExpiryForTest(tc.dsn, 10*time.Millisecond)
++			createThings(t, pool)
++			insertThingRow(t, pool)
++			waitPoolDuration(t, 30*time.Millisecond)
++			ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
++			defer cancel()
++			rows, err := pool.QueryContext(ctx, "SELECT n FROM things")
++			if err != nil {
++				t.Fatalf("query after default expiry: %v", err)
++			}
++			if rows == nil {
++				t.Fatal("query returned no rows")
++				return
++			}
++			defer closeRows(t, rows)
++			var n int
++			if !rows.Next() {
++				t.Fatalf("row disappeared: %v", rows.Err())
++			}
++			if err := rows.Scan(&n); err != nil || n != 7 {
++				t.Fatalf("row = %d, error = %v, want 7", n, err)
++			}
++			if got := pool.Stats().MaxOpenConnections; got != tc.open {
++				t.Fatalf("open limit = %d, want %d", got, tc.open)
++			}
++		})
++	}
++}
++
++func TestPersistentPoolsKeepTimedEviction(t *testing.T) {
++	for _, d := range []db.Dialect{db.SQLite{}, db.Postgres{}, db.MySQL{}, db.MSSQL{}} {
++		opts := db.PoolOptionsForTest(d, filepath.Join(t.TempDir(), "data.db"))
++		if opts.ConnMaxLifetime != 30*time.Minute || opts.ConnMaxIdleTime != 5*time.Minute {
++			t.Fatalf("persistent defaults = %+v", opts)
++		}
++	}
++	dsn := filepath.Join(t.TempDir(), "data.db")
++	pool := openExpiryPool(t, dsn)
++	pool.AccelerateExpiryForTest(dsn, 10*time.Millisecond)
++	createThings(t, pool)
++	insertThingRow(t, pool)
++	waitPoolDuration(t, 30*time.Millisecond)
++	if got := countThings(t, pool); got != 1 {
++		t.Fatalf("persistent rows = %d, want 1", got)
++	}
++	if pool.Stats().MaxLifetimeClosed == 0 {
++		t.Fatal("persistent pool did not retire the expired connection")
++	}
++}
++
++func TestPoolOptionsFoldInOrder(t *testing.T) {
++	opts := []db.PoolOptions{
++		{MaxOpenConns: 2, MaxIdleConns: 1},
++		{MaxOpenConns: 3, ConnMaxLifetime: time.Minute},
++		{ConnMaxIdleTime: 30 * time.Second},
++		{},
++	}
++	dsn := filepath.Join(t.TempDir(), "options.db")
++	pool := openExpiryPool(t, dsn, opts...)
++	if pool.Stats().MaxOpenConnections != 3 {
++		t.Fatalf("later open limit ignored: %+v", pool.Stats())
++	}
++	want := db.PoolOptions{MaxOpenConns: 3, MaxIdleConns: 1, ConnMaxLifetime: time.Minute, ConnMaxIdleTime: 30 * time.Second}
++	if got := db.PoolOptionsForTest(db.SQLite{}, dsn, opts...); got != want {
++		t.Fatalf("resolved options = %+v, want %+v", got, want)
++	}
++	disabled := db.PoolOptions{MaxOpenConns: -1, MaxIdleConns: -1, ConnMaxLifetime: -1, ConnMaxIdleTime: -1}
++	if got := db.PoolOptionsForTest(db.SQLite{}, dsn, disabled); got != disabled {
++		t.Fatalf("negative overrides = %+v, want %+v", got, disabled)
++	}
++}
++
++func holdPoolConnection(t *testing.T, ctx context.Context, pool *db.Pool) *sql.Conn {
++	t.Helper()
++	conn, err := pool.HoldConnectionForTest(ctx)
++	if err != nil {
++		t.Fatalf("hold connection: %v", err)
++	}
++	if conn == nil {
++		panic("pool returned no connection")
++	}
++	t.Cleanup(func() {
++		if err := conn.Close(); err != nil && !errors.Is(err, sql.ErrConnDone) {
++			t.Errorf("close connection: %v", err)
++		}
++	})
++	return conn
++}
++
++func TestPoolIdleLimitClosesExtraConnection(t *testing.T) {
++	pool := openExpiryPool(t, filepath.Join(t.TempDir(), "idle.db"), db.PoolOptions{MaxOpenConns: 2, MaxIdleConns: 1})
++	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
++	defer cancel()
++	first := holdPoolConnection(t, ctx, pool)
++	second := holdPoolConnection(t, ctx, pool)
++	if err := first.Close(); err != nil {
++		t.Fatal(err)
++	}
++	if err := second.Close(); err != nil {
++		t.Fatal(err)
++	}
++	if stats := pool.Stats(); stats.Idle != 1 || stats.MaxIdleClosed != 1 {
++		t.Fatalf("idle limit was not applied: %+v", stats)
++	}
++}
++
++func TestPoolLifetimeClosesExpiredConnection(t *testing.T) {
++	pool := openExpiryPool(t, filepath.Join(t.TempDir(), "age.db"), db.PoolOptions{ConnMaxLifetime: 10 * time.Millisecond})
++	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
++	defer cancel()
++	if err := pool.Start(ctx); err != nil {
++		t.Fatal(err)
++	}
++	waitPoolDuration(t, 30*time.Millisecond)
++	if err := pool.Start(ctx); err != nil {
++		t.Fatal(err)
++	}
++	if stats := pool.Stats(); stats.MaxLifetimeClosed == 0 {
++		t.Fatalf("lifetime was not applied: %+v", stats)
++	}
++}
++
++func TestPoolIdleTimeClosesExpiredConnection(t *testing.T) {
++	pool := openExpiryPool(t, filepath.Join(t.TempDir(), "idle-time.db"), db.PoolOptions{ConnMaxIdleTime: 10 * time.Millisecond})
++	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
++	defer cancel()
++	if err := pool.Start(ctx); err != nil {
++		t.Fatal(err)
++	}
++	ticker := time.NewTicker(10 * time.Millisecond)
++	defer ticker.Stop()
++	for pool.Stats().MaxIdleTimeClosed == 0 {
++		select {
++		case <-ticker.C:
++		case <-ctx.Done():
++			t.Fatalf("idle timeout was not applied: %+v", pool.Stats())
++		}
++	}
++}
+diff --git a/db/tx_deadline_test.lgo b/db/tx_deadline_test.lgo
+index b34e947..fa4211b 100644
+--- a/db/tx_deadline_test.lgo
++++ b/db/tx_deadline_test.lgo
+@@ -2,7 +2,6 @@ package db_test
+ 
+ import (
+ 	"context"
+-	"errors"
+ 	"strings"
+ 	"testing"
+ 
+@@ -18,7 +17,7 @@ func TestInTxHonorsCallerCancellationBeforeCommit(t *testing.T) {
+ 		cancel()
+ 		return 7, nil
+ 	})
+-	if !errors.Is(err, context.Canceled) {
++	if err != context.Canceled {
+ 		t.Fatalf("InTx error = %v, want context.Canceled", err)
+ 	}
+ 	if strings.Contains(err.Error(), "db: commit:") {
+diff --git a/docs/specs/ai-rag.md b/docs/specs/ai-rag.md
+index af5be77..6be8fb7 100644
+--- a/docs/specs/ai-rag.md
++++ b/docs/specs/ai-rag.md
+@@ -396,7 +396,8 @@ func ReadJSON(r io.Reader, keys ...string) ([]Document, error)
+ - `TestRewriteSendsTheReferencePrompt`, `TestTranslateSendsTheReferencePrompt` and `TestCompressSendsHistoryAndTheFollowUpQuery` prove the exact prompt text of each transformer.
+ - `TestRewriteWithABlankAnswerKeepsTheQuery` proves the blank-answer rule.
+ - `TestExpandReturnsOneQueryPerLine`, `TestExpandWithFewerLinesKeepsTheQuery` and `TestExpandWithATrailingNewlineKeepsTheVariants` prove the line-count rule.
+-- `TestMemorySearchOrderEqualsABruteForceComputation`, `TestMemoryDefaultIsFourDocumentsAndNoThreshold` and `TestMemoryDeleteKeepsTheOtherDocumentsWhole` plus the `var _ rag.Store` assertions prove `Memory` satisfies `Store`.
++- The `var _ rag.Store` assertions in `ai/rag/pgvector_test.lgo` prove that `Memory` and `Pgvector` satisfy `Store` at compile time.
++- `TestMemorySearchOrderEqualsABruteForceComputation`, `TestMemoryDefaultIsFourDocumentsAndNoThreshold` and `TestMemoryDeleteKeepsTheOtherDocumentsWhole` prove the corresponding runtime behavior of `Memory`.
+ - `TestPgvectorRefusesBadTables` proves the table pattern and the constructor refusals.
+ - `TestPgvectorBlankIdSendsNoEmbedding` proves that a blank id costs no embedding request.
+ - `TestPgvectorVectorTextFormatsBrackets` proves the `[1,2.5,-3]` vector text form.
+diff --git a/docs/specs/db.md b/docs/specs/db.md
+index 5eec742..0c9b9c0 100644
+--- a/docs/specs/db.md
++++ b/docs/specs/db.md
+@@ -21,6 +21,7 @@ type Dialect interface {
+ 
+ func DialectOf(driver string, dsn string) (Dialect, error)
+ func Open(driver string, dsn string, opts ...PoolOptions) (*Pool?, error)
++func OpenSQLiteImmediate(dsn string, opts ...PoolOptions) (*Pool?, error)
+ 
+ type PoolOptions struct {
+ 	MaxOpenConns    int
+@@ -29,8 +30,6 @@ type PoolOptions struct {
+ 	ConnMaxIdleTime time.Duration
+ }
+ 
+-func OpenSQLiteImmediate(dsn string, opts ...PoolOptions) (*Pool?, error)
+-
+ type Pool struct {
+ 	// unexported fields
+ }
+@@ -105,8 +104,16 @@ func ClassifyDriverError(d Dialect, cause error) error
+ - If `parseTime` there is `true`, `1`, `t` or `T`, `DialectOf` MUST return `MySQL`. `true` matches in any letter case.
+ - `DialectOf` MUST return `MSSQL` for the driver name `sqlserver`.
+ - `Open` MUST record the dialect that `DialectOf` returns for that driver and DSN.
+-- `Open` MUST bound the pool: SQLite 4 open and 2 idle, network engines 10 open and 5 idle, each 30 minute lifetime and 5 minute idle time, unless `PoolOptions` overrides a field with a nonzero value.
+-- `Open` MUST keep a zero `PoolOptions` field on its dialect default.
++- File-backed and shared in-memory SQLite pools MUST default to four open connections and two idle connections.
++- Private in-memory SQLite pools MUST default to one open connection and one idle connection.
++- In-memory SQLite pools MUST disable lifetime and idle eviction by default.
++- `Open` MUST recognize plain, URI and named in-memory SQLite databases, including percent-encoded URI values.
++- Network pools MUST default to ten open connections and five idle connections.
++- Persistent pools MUST default to a 30-minute connection lifetime and five-minute idle timeout.
++- `Open` MUST apply option sets in order, with later nonzero fields overriding earlier values.
++- A zero option field MUST preserve the previous value, including its default.
++- Negative option fields MUST retain the disabling semantics of `database/sql`.
++- `OpenSQLiteImmediate` MUST apply the same pool options as `Open`.
+ - `Pool` MUST implement [app.Part](app.md).
+ - `Start` MUST ping the database.
+ - `Stop` MUST close each prepared statement before it closes the database handle.
+@@ -118,7 +125,10 @@ func ClassifyDriverError(d Dialect, cause error) error
+ 
+ - `InTx` MUST pass the transaction to `work` as the `tx` argument.
+ - `InTx` MUST commit when `work` returns a nil error and the caller context is still live.
+-- `InTx` MUST check the caller context before commit, roll back when it has ended, and return that context cause without a commit wrap.
++- `InTx` MUST check the caller context before commit.
++- `InTx` MUST roll back when that context has ended.
++- Successful or completed rollback MUST return the exact context error.
++- Other rollback failures MUST accompany the context error.
+ - `InTx` MUST call `Rollback` when `work` returns an error.
+ - `InTx` MUST call `Rollback` when `work` panics.
+ - `InTx` MUST let that panic continue after `Rollback`.
+@@ -225,6 +235,12 @@ func ClassifyDriverError(d Dialect, cause error) error
+ 
+ ## Proof
+ 
++- `TestMemoryPoolsKeepRowsAcrossDefaultExpiry` uses real SQLite databases and accelerates positive default expiry to 10 milliseconds. All eight memory DSN forms retain their rows after that boundary.
++- `TestPersistentPoolsKeepTimedEviction` verifies finite persistent defaults and row survival after a real connection expires.
++- `TestPoolOptionsFoldInOrder` checks later overrides, zero fields and negative fields.
++- `TestPoolIdleLimitClosesExtraConnection`, `TestPoolLifetimeClosesExpiredConnection` and `TestPoolIdleTimeClosesExpiredConnection` observe each setting through physical connection statistics.
++- `TestInTxHonorsCallerCancellationBeforeCommit` checks the exact context error and verifies rollback leaves no inserted row.
++
+ - `TestDialectOfMatchesEachDriverName` proves the four driver names.
+ - `TestOpenRejectsUnknownDriver` and `TestOpenRejectsMysqlWithoutParseTime` prove the two open refusals.
+ - `TestDialectOfRejectsParseTimeInThePassword` proves that `parseTime=true` outside the query part does not count.
+diff --git a/docs/specs/gateway.md b/docs/specs/gateway.md
+index 1b20390..ca8336c 100644
+--- a/docs/specs/gateway.md
++++ b/docs/specs/gateway.md
+@@ -98,7 +98,7 @@ func Faults() []*fault.Error
+ - A byte MUST count as a body, and the gateway MUST push it back.
+ - A wait that yields no byte and no end of stream MUST answer 502 without trying an upstream.
+ - A first read failure MUST answer the same way.
+-- Neither case MUST send request headers to any upstream.
++- Both cases MUST NOT forward headers or contact an upstream.
+ - When that wait ends without a byte, the gateway MUST end the blocked body read.
+ - It MUST end that read through `http.ResponseController.SetReadDeadline`.
+ - That end MUST let the 502 reach the client while the client still holds the request body open.
+diff --git a/docs/specs/http3.md b/docs/specs/http3.md
+index 3a4b5e8..a53a2b9 100644
+--- a/docs/specs/http3.md
++++ b/docs/specs/http3.md
+@@ -2,7 +2,7 @@
+ 
+ `http3.Server` serves HTTP/3 through `logos/net/http.H3Server`. `Start` opens one UDP listener on the same port as the TCP listener. The router answers HTTP/3 requests with the same stages and replies as other versions.
+ 
+-`H3Server` runs over the `github.com/quic-go/quic-go` transport. It clones the TLS configuration for UDP, requires TLS 1.3, and sets ALPN to `h3`.
++`H3Server` runs over the `golang.org/x/net/quic` transport in LoGOs. It clones the TLS configuration for UDP, requires TLS 1.3, and sets ALPN to `h3`.
+ 
+ ## Interface
+ 
+@@ -101,7 +101,7 @@ These limits and timeouts apply to the LoGOs backend that `http3.Server` uses.
+ - The server MUST refuse 0-RTT early data, because early data replays and a replayed request could run twice.
+ - When a client attempts TLS session resumption, the QUIC layer MUST clear the early data flag on the session. The server MUST accept no 0-RTT data and MUST keep no 0-RTT replay window.
+ - The QUIC backend MUST issue no session tickets. The server MAY resume with a ticket from another issuer if the TLS configuration accepts it.
+-- A restart MUST NOT drop the ability to resume a session established before the restart.
++- A restart MUST preserve resumption eligibility for unexpired tickets accepted by the effective TLS configuration.
+ - The TLS configuration MUST retain a valid ticket key for such a session, or recover its state with `UnwrapSession`.
+ - `http3.Server` MUST NOT manage ticket key storage or rotation.
+ - `SessionTicketsDisabled` on the effective TLS configuration MUST disable resumption.
+@@ -137,6 +137,8 @@ These limits and timeouts apply to the LoGOs backend that `http3.Server` uses.
+ 
+ ## Proof
+ 
++- `Server.Start` and `Server.Serve` use LoGOs `logos/net/http.H3Server`. Its `beginServe` sets `MaxBidiRemoteStreams` and `MaxUniRemoteStreams` to 100 in [the verified backend](https://github.com/gosuda/LoGOs/blob/05f2570fce079d467556979a3d599c3e892d6876/src/logos/net/http/h3_server.go).
++
+ - `TestH3NeedsTLSFailsStart` proves that H3 without TLS fails to start and opens no listener.
+ - `TestH3SharesRouterWithTCP` proves that the same route answers over both listeners.
+ - `TestH3AltSvcOnHTTPSOnly` proves the header value on HTTPS and its absence on cleartext and when `H3` is false.
+@@ -153,12 +155,13 @@ These limits and timeouts apply to the LoGOs backend that `http3.Server` uses.
+ - `TestFaultsMatchSpecCodeTable` proves `Faults` matches the code table without duplicates.
+ - `TestFaultPublicHidesSecrets` proves public views hide secrets and hostile text.
+ - `TestH3ServeWithoutH3OpensNoUDP` proves that `Serve` with `H3` false serves TCP from the caller listener without TLS and binds no UDP.
+-- `TestH3RejectsNonH3ALPNOnUDP` proves that the UDP listener negotiates only ALPN `h3`, including for `GetConfigForClient` configs, without mutating the caller configs.
++- `TestH3RejectsNonH3ALPNOnUDP` proves that UDP negotiates only `h3`, including callback configurations, and preserves both caller `NextProtos` slices.
+ - `TestH3ServeUsesCallerSocketsAndKeepsThemOnFailure` proves that `Serve` answers on both caller sockets and leaves them usable after a missing router, missing TLS, or a busy server.
+-- `TestH3StartSucceedsAfterTransientUDPConflict` proves that `Start` releases both sockets and retries a bounded number of times until a transient UDP conflict clears.
++- `TestH3StartSucceedsAfterTransientUDPConflict` proves that `Start` recovers after a transient UDP bind conflict clears.
+ - `TestH3RunsStagesAndRepliesLikeTCP` proves that one router runs the same stages and writes the same data, page, and problem replies over UDP and TCP.
+ - `TestH3AltSvcEdgeCases` proves that `Start` installs no stage, that disabled `H3` binds no UDP, and that a stopped server advertises nothing.
+-- `TestH3StopSendsGOAWAYBeforeDrain` proves that `Stop` sends one GOAWAY frame on the control stream before the in-flight request drains.
++- `TestH3StopSendsGOAWAYBeforeDrain` proves that the client receives GOAWAY before the in-flight request drains.
++- `TestH3RequestStreamDispatchesFullDuplex` proves that the request-stream test seam retains production field-size defaults when given only a handler.
+ - `TestH3StopClosesClientConnectionOnTimeout` proves that a timed-out `Stop` maps to `http3.h3_shutdown` with the deadline cause and that the client connection closes.
+ - `TestH3StopBeforeStartReturnsNil` proves that `Stop` before `Start` returns nil.
+ - `TestH3ServeAndShutdownFaultsMap` proves that serve failures map to `http3.h3_serve` and shutdown failures to `http3.h3_shutdown`, each keeping its cause, and that the UDP cause names the address.
+diff --git a/docs/specs/openapi.md b/docs/specs/openapi.md
+index e1c46f7..32b8f57 100644
+--- a/docs/specs/openapi.md
++++ b/docs/specs/openapi.md
+@@ -74,10 +74,12 @@ func Mount(r *web.Router, info Info)
+ 
+ ## Requirements
+ 
+-- `Document` MUST build one path item per distinct path of `Routes`.
++- `Document` MUST build one path item per distinct path of visible `Routes`.
++- `Document` MUST skip every route whose `Hidden` field is true.
+ - `Document` MUST skip a route whose method has no item field.
+ - `Document` MUST strip a host prefix from the pattern before it builds the path.
+-- `Document` MUST skip the route that `Mount` serves, under whatever prefix the router carries, and keep every other method and path.
++- `Mount` MUST hide its document route under the router's prefix.
++- `Document` MUST preserve all other visible methods and paths.
+ - `Document` MUST rewrite a `{name...}` segment to `{name}` and drop a trailing `{$}` segment, keeping the slash, before it builds the path. When two routes collapse to one path, `Document` MUST document the operation the mux serves: host patterns over hostless ones, fewer `...` wildcards first, and exact paths over subtree paths; a later registration that is no more specific MUST NOT replace the kept operation.
+ - `Document` MUST take each path parameter from a `{name}` segment of the path.
+ - `Document` MUST mark every path parameter as required.
+@@ -120,6 +122,8 @@ func Mount(r *web.Router, info Info)
+ - `TestDocumentKeepsCallerMarshalOptions` proves that a caller marshaler for `DocInfo` reaches the document.
+ - `TestDocumentBytesStayStableWithCallerOptions` proves byte equality across calls under caller options.
+ - `TestDocEndpointExcludedUnderGroupPrefix` proves that the served endpoint stays out of the document under a group prefix.
++- `TestDocEndpointStaysHiddenAfterReDescribe` proves that changing the endpoint summary preserves its exclusion.
++- `TestDocEndpointExclusionIgnoresSummaryText` proves that a different route remains visible when it reuses the endpoint summary.
+ - `TestCollapsedWildcardKeepsTheMuxServedOperation` proves that the document follows the mux for a `{name}` and `{name...}` pair in both registration orders.
+ 
+ ## Not in scope
+diff --git a/docs/specs/spira-command.md b/docs/specs/spira-command.md
+index 5b7dd38..16359ba 100644
+--- a/docs/specs/spira-command.md
++++ b/docs/specs/spira-command.md
+@@ -63,6 +63,9 @@ The subcommand `spira new` writes a minimal application into `<dir>` from files
+ - The templates MUST NOT hold a password for the user `demo`.
+ - For `sqlite`, `spira new` MUST write `main_test.lgo` and `export_test.lgo`, which test the seed.
+ - The generated session store MUST delete the expired session rows when it saves a session.
++- A failed session sweep MUST leave a successfully saved session usable.
++- The session store MUST log a failed sweep with its cause for operators.
++- A successful login response MUST NOT expose the sweep failure.
+ - The generated router MUST install `auth.CrossOrigin()` before `auth.Authenticate`.
+ - `spira new` MUST refuse a non-empty `<dir>`.
+ - `spira new` MUST accept only `sqlite`, `postgresql`, `mysql` and `mssql` for `-engine`.
+@@ -139,6 +142,8 @@ The subcommand `spira new` writes a minimal application into `<dir>` from files
+ - `TestNewRejectsBadModulePath` proves bad module paths are refused without writing.
+ - `TestNewUsageShapes` proves every other argument shape prints the `spira new` usage.
+ - `TestNewPseudoVersion` proves the pseudo-version shape, its error paths, and the `v0.0.0` version for a `-spira-dir` build.
++- `TestNewGeneratedSQLiteAppRuns` builds and race-tests the generated SQLite application without a package-presence skip.
++- The generated `TestLoginSurvivesFailedSessionSweep` plants a failing SQLite trigger and checks login success, operator diagnostics and response redaction.
+ - Generation plus `just sql`, `logos build ./...` and `logos test ./...` MUST pass for every engine.
+ - The three server engines MUST run with their DSN exported.
+ - `TestWatchRestartsServerOnlyOnLgoChange` proves a restart on an `.lgo` change, and no restart for a `.txt` file or for `node_modules`.
+diff --git a/docs/specs/web.md b/docs/specs/web.md
+index 6ec9758..1df20e0 100644
+--- a/docs/specs/web.md
++++ b/docs/specs/web.md
+@@ -62,6 +62,7 @@ type RouteInfo struct {
+ 	Pattern string
+ 	In      schema.Schema
+ 	Doc     Doc?
++	Hidden  bool
+ }
+ 
+ type Router struct {
+@@ -75,6 +76,7 @@ func NewRouter() *Router
+ func (r *Router) Use(stages ...Stage)
+ func (r *Router) Group(prefix string, build func(g *Router))
+ func (r *Router) Handle(method string, pattern string, h Handler)
++func (r *Router) Hide(method string, pattern string)
+ func (r *Router) Routes() []RouteInfo
+ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request)
+ 
+@@ -331,6 +333,10 @@ func TrackConn(ctx context.Context, conn net.Conn) (net.Conn, error)
+ - `Describe` MUST attach the `Doc` to the named route.
+ - `Describe` MUST resolve the pattern against the calling router's group prefix.
+ - `Describe` MUST panic when the route is unknown.
++- `Hide` MUST mark the named route's `RouteInfo.Hidden` field without changing request dispatch.
++- `Hide` MUST resolve the pattern against the calling router's group prefix.
++- `Hide` MUST panic when the route is unknown.
++- `Describe` MUST preserve a route's `Hidden` field.
+ - A field failure message MUST name only the field and the rule.
+ - An unknown JSON member MUST fail with rule `unknown`.
+ 
+@@ -479,6 +485,7 @@ func TrackConn(ctx context.Context, conn net.Conn) (net.Conn, error)
+ - `web: bind <name> is not a known field` with rule `unknown` and the member name as the field.
+ - `web: bind needs a struct input` when `In` is not a struct.
+ - `web: describe <method> <pattern>: no such route` panics when `Describe` names no route.
++- `web: hide <method> <pattern>: no such route` panics when `Hide` names no route.
+ 
+ ## Proof
+ 
+diff --git a/example/shop/catalog/fault_test.lgo b/example/shop/catalog/fault_test.lgo
+new file mode 100644
+index 0000000..b66c7a0
+--- /dev/null
++++ b/example/shop/catalog/fault_test.lgo
+@@ -0,0 +1,22 @@
++package catalog_test
++
++import (
++	"errors"
++	"strings"
++	"testing"
++
++	"github.com/gosuda/spira/example/shop/catalog"
++	"github.com/gosuda/spira/fault/faulttest"
++)
++
++func TestCatalogUnknownProductStaysClientSafe(t *testing.T) {
++	const secret = "SECRET-CATALOG-73019<script>alert('private')</script>"
++	raw := faulttest.PublicJSON(t, catalog.ErrUnknownProduct.Wrap(errors.New(secret)))
++	faulttest.RefuseLeak(t, raw, secret, "SECRET-CATALOG-73019", "<script>")
++	if !strings.Contains(string(raw), `"catalog.unknown_product"`) {
++		t.Fatalf("public view %s lacks the fault code", raw)
++	}
++	if !strings.Contains(string(raw), "The product was not found.") {
++		t.Fatalf("public view %s lacks the constant message", raw)
++	}
++}
+diff --git a/frontend/test/dom-stubs.ts b/frontend/test/dom-stubs.ts
+index 3683299..1046999 100644
+--- a/frontend/test/dom-stubs.ts
++++ b/frontend/test/dom-stubs.ts
+@@ -20,6 +20,28 @@ class FakeXPathEvaluator {
+ 	}
+ }
+ 
++// happy-dom drops table rows while DOMParser reads template contents.
++// Use its fragment parser for htmx's own template wrapper, as browsers do.
++class TemplateDOMParser extends DOMParser {
++	override parseFromString(input: string, type: DOMParserSupportedType): Document {
++		const parsed = super.parseFromString(input, type);
++		const prefix = '<body><template class="internal-htmx-wrapper">';
++		const suffix = "</template></body>";
++		if (
++			type === "text/html" &&
++			input.startsWith(prefix) &&
++			input.endsWith(suffix)
++		) {
++			const template = parsed.querySelector("template");
++			if (!template) {
++				throw new Error("htmx fragment wrapper is missing");
++			}
++			template.innerHTML = input.slice(prefix.length, -suffix.length);
++		}
++		return parsed;
++	}
++}
++
+ function realmBase(node: object, base: string): object {
+ 	let current: unknown = (node as { constructor: unknown }).constructor;
+ 	while (
+@@ -35,6 +57,7 @@ function realmBase(node: object, base: string): object {
+ }
+ 
+ export function stubDomGlobals(): void {
++	vi.stubGlobal("DOMParser", TemplateDOMParser);
+ 	vi.stubGlobal("XPathEvaluator", FakeXPathEvaluator);
+ 	vi.stubGlobal("XPathResult", {});
+ 	vi.stubGlobal("Document", realmBase(document, "Document"));
+diff --git a/frontend/test/live.test.ts b/frontend/test/live.test.ts
+index 4ded556..f909c6f 100644
+--- a/frontend/test/live.test.ts
++++ b/frontend/test/live.test.ts
+@@ -152,12 +152,6 @@ test("resume applies the instance updates paused in the region", () => {
+ });
+ 
+ test("resume replays the bare dashboard row paused in the region", async () => {
+-	// The retained row payload must reach htmx.swap with the sink swap style
+-	// when the region resumes, and it must target the dashboard row with the
+-	// replayed content: the swap spy alone cannot tell a delivered payload
+-	// from a dropped one. happy-dom's DOMParser drops a bare tr, so htmx
+-	// cannot apply the oob swap in this environment; parse the payload in a
+-	// table context instead and require the target row to exist.
+ 	const { default: htmx } = await import("htmx.org");
+ 	const swapSpy = vi.spyOn(htmx, "swap");
+ 	try {
+@@ -179,10 +173,8 @@ test("resume replays the bare dashboard row paused in the region", async () => {
+ 				settleDelay: htmx.config.defaultSettleDelay,
+ 			},
+ 		);
+-		const row = document.createElement("template");
+-		row.innerHTML = `<table><tbody>${down}</tbody></table>`;
+-		expect(row.content.textContent).toBe("shopdown");
+ 		expect(fixtureElement("instance-shop").tagName).toBe("TR");
++		expect(fixtureElement("instance-shop").textContent).toBe("shopdown");
+ 	} finally {
+ 		swapSpy.mockRestore();
+ 	}
+@@ -250,17 +242,8 @@ test("resume keeps the quiet dashboard row when a busier row outlasts it", async
+ 		for (const call of swapSpy.mock.calls) {
+ 			expect(call[0]).toBe(fixtureElement("admin-sink"));
+ 		}
+-		// happy-dom's DOMParser drops a bare tr, so htmx cannot apply the oob
+-		// swap in this environment; parse each replayed payload in a table
+-		// context instead and require the target row to exist in the fixture.
+-		const shopRow = document.createElement("template");
+-		shopRow.innerHTML = `<table><tbody>${payloads[0]}</tbody></table>`;
+-		expect(shopRow.content.textContent).toBe("shopdown");
+-		expect(fixtureElement("instance-shop").tagName).toBe("TR");
+-		const cartRow = document.createElement("template");
+-		cartRow.innerHTML = `<table><tbody>${payloads[1]}</tbody></table>`;
+-		expect(cartRow.content.textContent).toBe("cartdown");
+-		expect(fixtureElement("instance-cart").tagName).toBe("TR");
++		expect(fixtureElement("instance-shop").textContent).toBe("shopdown");
++		expect(fixtureElement("instance-cart").textContent).toBe("cartdown");
+ 	} finally {
+ 		swapSpy.mockRestore();
+ 	}
+diff --git a/gateway/gateway_test.lgo b/gateway/gateway_test.lgo
+index fd30d95..046ec9c 100644
+--- a/gateway/gateway_test.lgo
++++ b/gateway/gateway_test.lgo
+@@ -171,7 +171,7 @@ func (grd *requestGuard) httpClient(t *testing.T) *http.Client {
+ 	t.Cleanup(func() {
+ 		fresh.CloseIdleConnections()
+ 	})
+-	return &http.Client{Transport: &markedTransport{want: grd.want, base: fresh}}
++	return &http.Client{Transport: &markedTransport{want: grd.want, base: fresh}, Timeout: 5 * time.Second}
+ }
+ 
+ func (m *markedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+diff --git a/http3/export_test.lgo b/http3/export_test.lgo
+index 1ac0792..2be126f 100644
+--- a/http3/export_test.lgo
++++ b/http3/export_test.lgo
+@@ -151,7 +151,11 @@ type H3RequestStreamConfigForTest struct {
+ }
+ 
+ func ServeH3RequestStreamForTest(ctx context.Context, conn *quic.Conn, stream *quic.Stream, cfg H3RequestStreamConfigForTest) {
+-	serveH3RequestStream(ctx, conn, stream, h3RequestStreamConfig{handler: cfg.Handler, maxFieldSectionSize: cfg.MaxFieldSectionSize})
++	config := h3RequestStreamConfig{handler: cfg.Handler}
++	if cfg.MaxFieldSectionSize != 0 {
++		config.maxFieldSectionSize = cfg.MaxFieldSectionSize
++	}
++	serveH3RequestStream(ctx, conn, stream, config)
+ }
+ 
+ type H3ResponseWriterForTest interface {
+diff --git a/http3/http3_test.lgo b/http3/http3_test.lgo
+index 2d4082e..523acde 100644
+--- a/http3/http3_test.lgo
++++ b/http3/http3_test.lgo
+@@ -182,26 +182,12 @@ func assertH3ALPN(t *testing.T, udpAddr string, pool *x509.CertPool) {
+ func TestH3NeedsTLSFailsStart(t *testing.T) {
+ 	r := web.NewRouter()
+ 	r.Handle("GET", "/hello", h3Hello)
+-	held, herr := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1")})
+-	if herr != nil {
+-		t.Fatalf("hold udp port: %v", herr)
++	heldTCP, held := bindH3CallerSockets(t)
++	if heldTCP == nil || held == nil {
++		t.Fatal("held socket pair missing")
+ 		return
+ 	}
+-	defer func() {
+-		if cerr := held.Close(); cerr != nil {
+-			t.Errorf("close held udp port: %v", cerr)
+-		}
+-	}()
+-	heldTCP, terr := net.Listen("tcp", held.LocalAddr().String())
+-	if terr != nil {
+-		t.Fatalf("hold tcp port: %v", terr)
+-		return
+-	}
+-	defer func() {
+-		if cerr := heldTCP.Close(); cerr != nil {
+-			t.Errorf("close held tcp port: %v", cerr)
+-		}
+-	}()
++	defer closeH3CallerSockets(t, heldTCP, held)
+ 	s := &http3.Server{Addr: held.LocalAddr().String(), Router: r, H3: true}
+ 	err := s.Start(context.Background())
+ 	if err == nil {
+diff --git a/http3/request_stream_test.lgo b/http3/request_stream_test.lgo
+index 0a5170f..d5279f0 100644
+--- a/http3/request_stream_test.lgo
++++ b/http3/request_stream_test.lgo
+@@ -133,7 +133,7 @@ func TestH3RequestStreamDispatchesFullDuplex(t *testing.T) {
+ 			t.Errorf("exchange full-duplex bytes: %v", err)
+ 		}
+ 	})
+-	http3.ServeH3RequestStreamForTest(pair.server.Context(), pair.server, pair.serverSide, http3.H3RequestStreamConfigForTest{Handler: handler, MaxFieldSectionSize: http.DefaultMaxHeaderBytes})
++	http3.ServeH3RequestStreamForTest(pair.server.Context(), pair.server, pair.serverSide, http3.H3RequestStreamConfigForTest{Handler: handler})
+ 	if handlerCtx == nil || !errors.Is(handlerCtx.Err(), context.Canceled) {
+ 		t.Fatal("handler context not canceled after return")
+ 	}
+diff --git a/websocket/stream_test.lgo b/websocket/stream_test.lgo
+index 149fd0b..da340e6 100644
+--- a/websocket/stream_test.lgo
++++ b/websocket/stream_test.lgo
+@@ -1030,10 +1030,25 @@ var hpackStaticValue = [61]string{
+ 	"",
+ }
+ 
++type readEntryBody struct {
++	io.ReadCloser
++	entered chan<- struct{}
++}
++
++func (b *readEntryBody) Read(p []byte) (int, error) {
++	select {
++	case b.entered <- struct{}{}:
++	default:
++	}
++	return b.ReadCloser.Read(p)
++}
++
+ func TestStreamCancelUnblocksPendingNext(t *testing.T) {
+ 	pending := make(chan context.CancelFunc, 1)
++	reading := make(chan struct{}, 1)
+ 	done := make(chan error, 1)
+ 	srv := serveStreamTLS(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		r.Body = &readEntryBody{ReadCloser: r.Body, entered: reading}
+ 		c, err := websocket.ServeStream(w, r, websocket.Config{})
+ 		if err != nil {
+ 			reportStream(r, done, err)
+@@ -1049,6 +1064,7 @@ func TestStreamCancelUnblocksPendingNext(t *testing.T) {
+ 			}
+ 		}()
+ 		ctx, cancel := context.WithCancel(r.Context())
++		defer cancel()
+ 		select {
+ 		case pending <- cancel:
+ 		case <-r.Context().Done():
+@@ -1071,7 +1087,13 @@ func TestStreamCancelUnblocksPendingNext(t *testing.T) {
+ 	select {
+ 	case cancel = <-pending:
+ 	case <-time.After(10 * time.Second):
+-		t.Fatal("session did not reach Next")
++		t.Fatal("session did not provide its cancel function")
++		return
++	}
++	select {
++	case <-reading:
++	case <-time.After(10 * time.Second):
++		t.Fatal("Next did not enter the request body read")
+ 		return
+ 	}
+ 	cancel()
