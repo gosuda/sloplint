@@ -1,4 +1,5 @@
 src/a.cpp:2 info complexity/mutable-span
+src/goto-macro-local.cpp:5 info complexity/mutable-span
 # macro-braced-local.cpp: an `#ifdef`-guarded `ON_SCOPE_EXIT {` and an unguarded `ON_SCOPE_EXIT() {` take the member read, so `retries` parses as a field_declaration; it still binds as a local, writes lines 7 and 22, then 31 and 46 (span 15 >= strict minor_at 15).
 src/macro-braced-local.cpp:6 info complexity/mutable-span
 src/macro-braced-local.cpp:30 info complexity/mutable-span

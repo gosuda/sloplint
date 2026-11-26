@@ -217,7 +217,7 @@ impl LangHooks for CppHooks {
     }
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
         if n.kind() == "identifier" || n.kind() == "field_identifier" {
-            scope::push_cpp_piece_name(n, cx, out);
+            push_cpp_piece_name(n, cx, out);
         }
     }
     fn decl_visible_in_initializer(&self) -> bool {

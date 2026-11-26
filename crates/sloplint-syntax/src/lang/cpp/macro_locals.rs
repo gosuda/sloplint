@@ -72,22 +72,25 @@ pub(crate) fn is_macro_local_from_cx(decl: Node<'_>, cx: &Cx<'_, '_>) -> bool {
         return false;
     }
     let body = body.unwrap();
-    let jumped = goto_target_names(body, cx);
-    !named_children(body).into_iter().any(|child| {
-        match child.kind() {
-            "access_specifier" | "qt_section_label" => true,
-            "macro_access_label" => {
-                // A label that a `goto_statement` in the same body jumps to
-                // is a statement label, not class evidence: the grammar
-                // reads a statement-style macro body as a member list.
-                let name = child_by_field(child, "name").map(|n| text(cx, n));
-                match name {
-                    Some(name) => !jumped.contains(&name),
-                    None => true,
+    cx.members.macro_body_is_local(body, || {
+        let mut labels = Vec::new();
+        for child in named_children(body) {
+            match child.kind() {
+                "access_specifier" | "qt_section_label" => return false,
+                "macro_access_label" => {
+                    let Some(name) = child_by_field(child, "name") else {
+                        return false;
+                    };
+                    labels.push(text(cx, name));
                 }
+                _ => {}
             }
-            _ => false,
         }
+        if labels.is_empty() {
+            return true;
+        }
+        let jumped = goto_target_names(body, cx);
+        labels.into_iter().all(|label| jumped.contains(&label))
     })
 }
 
