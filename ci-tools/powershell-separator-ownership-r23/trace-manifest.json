@@ -1,0 +1,22 @@
+{
+  "mode": "Read-only CLI0.27.1 lexer/reduction traces on both frozen source heads; existing public Query observations use Sloplint's actual runtime.",
+  "snapshots": [
+    {
+      "id": "previous",
+      "path": "pre_source",
+      "head": "83f73f04e7f20bf405dbf4c2de3bd5467c8010bb",
+      "tree": "703b3a5a445883598bfb7ef05c263a76d6629235"
+    },
+    {
+      "id": "current",
+      "path": "source",
+      "head": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
+      "tree": "f518b3943c6b86af53c334175309303c3d79f38b"
+    }
+  ],
+  "proof_sha256": {
+    "trace.py": "495d0e2fa9a19bec04afb44e4bc51f23537ec875f5683a57dfdb3a009b558d64",
+    "trace-cases.json": "53bbe95a8b0796468309656f9d785b2751130666cf86fc5a8b892f78be46ca68",
+    "experiment2-receipt.json": "7506d4340fa198339619fc4e938c75999f96def25cbbb59a1dace78a0a1363f7"
+  }
+}

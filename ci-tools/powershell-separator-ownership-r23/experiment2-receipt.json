@@ -1,0 +1,77 @@
+{
+  "producer": "7c2fab7be0bd47773d2a450dcc16b353d38c51e6",
+  "run": 45903461334,
+  "job": 140194521255,
+  "artifact": 15157795117,
+  "zip_sha256": "62b557e64899daa25e0b3ebbab6e0821bf1c1d8d7062e72fad6e783f8d7f816d",
+  "packed": {
+    "payload_sha256": "f23f3a44684a071e786effcc0625ddc4a0969d94b3ffd58fe6c9d3884d5ee8f6",
+    "gzip_sha256": "bf68265d35a0aed4ef188fb753616a60f6a1664547a139fba42a44e2475fb0a0",
+    "payload_bytes": 6941253,
+    "gzip_bytes": 381591,
+    "base64_bytes": 508788
+  },
+  "outcomes": [
+    {
+      "id": "leading-format-word",
+      "source": {
+        "base": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
+        "tree": "1f3f0f1bd5788896ad13dd4ee44b28ab3a58e663",
+        "tracked_blobs": 4906,
+        "index_sha256": "ad3cef41a4c78682450e9482cc4ecde4eee4499b7c304047a69b350e56b54082",
+        "files": {
+          "vendor/tree-sitter-powershell/grammar.js": "6c21d8a35aab11b1e48c9c2566e6c1250dbca1b36d1c9a4320dc4211679470cf",
+          "vendor/tree-sitter-powershell/src/grammar.json": "f58ea3200e9edb9b8c6a9271456bbf343cfffb4a979e3753a59e1a3131c62e7e",
+          "vendor/tree-sitter-powershell/src/parser.c": "21361944955a0da063a1baf34148557b83b105e25034903922d8469b44516486",
+          "vendor/tree-sitter-powershell/src/node-types.json": "cc0ca0ff480d8278d54719e0dc7a5213018e4a39333e7f1986481972bec64404"
+        }
+      },
+      "node_types_unchanged": true,
+      "focused_exit": 101,
+      "corpus_exit": 0,
+      "eligible": false,
+      "failure_count": 165,
+      "failure_kinds": {
+        "old-comment-query:direct-comment": 54,
+        "old-comment-query:separator-comment": 57,
+        "old-comment-query:element-separator": 54
+      }
+    },
+    {
+      "id": "separator-context-conflict",
+      "source": {
+        "base": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
+        "tree": "a0810924b8fc44e5abc5d72bb7d28cb8402ace42",
+        "tracked_blobs": 4906,
+        "index_sha256": "4c2d5bca125dc445c9bbdfdd08b5572a461ffa25b32886a1719c93328da0e31e",
+        "files": {
+          "vendor/tree-sitter-powershell/grammar.js": "8a907812bdfc48e794e6307f779d99d8d151479ca594d92efd095ec5961a9d80",
+          "vendor/tree-sitter-powershell/src/grammar.json": "22d715487b46c538face9b62024fe537b1806282993f58333ae6d3dd9c4ee8ec",
+          "vendor/tree-sitter-powershell/src/parser.c": "d3f8a693009b1b594a444ccf99a916f98296ae5671eeb98bb8837a691b1ee90c",
+          "vendor/tree-sitter-powershell/src/node-types.json": "cc0ca0ff480d8278d54719e0dc7a5213018e4a39333e7f1986481972bec64404"
+        }
+      },
+      "node_types_unchanged": true,
+      "focused_exit": 101,
+      "corpus_exit": 0,
+      "eligible": false,
+      "failure_count": 513,
+      "failure_kinds": {
+        "native-acceptance": 42,
+        "native-command-extents": 24,
+        "old-comment-query:direct-comment": 78,
+        "old-comment-query:separator-comment": 78,
+        "old-comment-query:element-separator": 78,
+        "unchanged-comment-tree": 21,
+        "current-public-query": 96,
+        "current-parser-tree": 96
+      }
+    }
+  ],
+  "source_restored": {
+    "head": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
+    "tree": "f518b3943c6b86af53c334175309303c3d79f38b",
+    "tracked_blobs": 4906,
+    "index_sha256": "73b2ffef65c2b6087de35a3fcc1ef31b3e32968bf1696b4ce519537a9f54ed5f"
+  }
+}

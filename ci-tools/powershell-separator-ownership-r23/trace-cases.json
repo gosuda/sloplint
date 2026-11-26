@@ -1,0 +1,95 @@
+[
+  {
+    "id": "comment-single-parameter-space",
+    "kind": "comment",
+    "source": "Write-Output hi <# note #> -NoEnumerate\n",
+    "source_sha256": "177201901cd49f823279c71d6af42125dc560601d27bdf615af672f6dab96ea5",
+    "accepted": true,
+    "comment_sources": [
+      "<# note #>"
+    ]
+  },
+  {
+    "id": "comment-single-parameter-mixed",
+    "kind": "comment",
+    "source": "Write-Output hi \t  <# note #> \t  -NoEnumerate\n",
+    "source_sha256": "c1b5b822113e02923e2492baa96334d1f29afe8aeee62418eda1331adeb4c7c3",
+    "accepted": null,
+    "comment_sources": [
+      "<# note #>"
+    ]
+  },
+  {
+    "id": "comment-single-plain-space",
+    "kind": "comment",
+    "source": "Write-Output hi <# note #> after\n",
+    "source_sha256": "8a1b56b29406b8977025e7dd4e7881b6cfdaf958e16f075cdeedb91a184c6095",
+    "accepted": null,
+    "comment_sources": [
+      "<# note #>"
+    ]
+  },
+  {
+    "id": "comment-single-bare-space",
+    "kind": "comment",
+    "source": "Write-Output hi <# note #> --\n",
+    "source_sha256": "0b5e274d4d0d05bbb0906848fbbb782625932c0660ed31d8c05b02ba50ad45f4",
+    "accepted": null,
+    "comment_sources": [
+      "<# note #>"
+    ]
+  },
+  {
+    "id": "comment-single-attached-space",
+    "kind": "comment",
+    "source": "Write-Output hi <# note #> --format=csv,noheader\n",
+    "source_sha256": "98552790cacda1f42560e3b51a9cef7eed3a46175af5f1d113dd977a14712ddc",
+    "accepted": null,
+    "comment_sources": [
+      "<# note #>"
+    ]
+  },
+  {
+    "id": "comment-single-format-word-space",
+    "kind": "comment",
+    "source": "Write-Output hi <# note #> -​value\n",
+    "source_sha256": "a83005e5e5ea3a461f8c3f8459cd1aa1d2c6f182e4267c86bc97f93c19894603",
+    "accepted": null,
+    "comment_sources": [
+      "<# note #>"
+    ]
+  },
+  {
+    "id": "comment-repeated-parameter-space",
+    "kind": "comment",
+    "source": "Write-Output hi <# one #><# two #> -NoEnumerate\n",
+    "source_sha256": "e9d08e19e28c92e45ba62a2dc43397351b6fed8f96d2efef3e130bb0e8a10b86",
+    "accepted": null,
+    "comment_sources": [
+      "<# one #>",
+      "<# two #>"
+    ]
+  },
+  {
+    "id": "comment-multiline-parameter-space",
+    "kind": "comment",
+    "source": "Write-Output hi <# one\n two #> -NoEnumerate\n",
+    "source_sha256": "d77c9e555a2b81f832ea6f18f1076d649ef90bba1c95052695d304cefc547c3d",
+    "accepted": null,
+    "comment_sources": [
+      "<# one\n two #>"
+    ]
+  },
+  {
+    "id": "compat-parameter-first-4",
+    "source": "Capture-Native \t  -Name\n",
+    "source_sha256": "3176c3336b777c9a0728e136fbf044e3e20ea1b70368f2982943105f81592bba",
+    "kind": "compatibility"
+  },
+  {
+    "id": "compat-continued-lf-space-spaces-2",
+    "source": "Capture-Native before `\n  -- after\n",
+    "source_sha256": "ae3c161a95235723a3ab8a32e75636142c2028fcb26150742c6b187f46fdcf6c",
+    "kind": "compatibility"
+  }
+]
