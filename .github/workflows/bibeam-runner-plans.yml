@@ -1,10 +1,11 @@
-name: Verify BiBeam generated actions and required gates
+name: Compare BiBeam pre-existing gate failures
 on:
   push:
     branches: [ci/bibeam-runner-plan-20261126-r8]
     paths: [.github/workflows/bibeam-runner-plans.yml, ci-tools/bibeam-plans/**]
 permissions:
   contents: read
+  actions: read
 jobs:
   gates:
     runs-on: depot-ubuntu-24.04-8
@@ -55,14 +56,21 @@ jobs:
           tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
           install "$RUNNER_TEMP/actionlint" "$HOME/.cargo/bin/actionlint"
           actionlint --version
-      - name: Regenerate and verify each exact source tree
+      - name: Read the immutable prior gate evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          uv run --no-project --python 3.15 probe/ci-tools/bibeam-plans/actions.py
+          mkdir -p evidence
+          curl --fail --silent --show-error --location --retry 3 -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" --output evidence/previous-gates.zip https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15114138998/zip
+      - name: Compare exact original heads with the verified candidate evidence
+        run: |
+          set -euo pipefail
+          uv run --no-project --python 3.15 probe/ci-tools/bibeam-plans/baseline.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: ${{ !cancelled() }}
         with:
-          name: bibeam-action-gates-${{ github.sha }}
+          name: bibeam-baseline-comparison-${{ github.sha }}
           path: evidence/
           if-no-files-found: error
           retention-days: 7
