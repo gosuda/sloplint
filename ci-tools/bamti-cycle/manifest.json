@@ -1,11 +1,13 @@
 {
   "repo": "gosuda/bamTiScript",
-  "head": "3997bdda7b98cf16e2872e5331a3ddcc86475ea1",
+  "head": "2c56f2165c237c591a684164d934ab67a1f2de4b",
   "base": "a471de394b3f27408839ad8e0ec1642054c0aeee",
-  "tree": "8d0c179639a7a4b4e91ab32d5512019c9d2c27db",
-  "patch_sha256": "a9fbc890c20576a17215405f31beb34f24c3acb7332e6a27efc3ad4c73d8169a",
-  "files": {
-    "crates/bamts-compiler/src/checker/relations.rs": "84b355e31c5c9be95b5304407f0124f3739d5a2e3716ea87d61b7da25e15fa51"
-  },
-  "control_patch_sha256": "cdfe927e482b38cafbdcd3885ee9453ac20131705e37290d46fad0c8b8a734d5"
+  "base_tree": "288aee8e82289ff70b2e5230b91c06d584f22910",
+  "original_relations_sha256": "9b01db3bbca0c5a3845ae9af3a395c1006afe224f210bd43b85008c7bbc35519",
+  "input_relations_sha256": "019f8ebced14387d8cee6141cabd450881d56f6dbd4d2002fdef61038fc3b938",
+  "historical_candidates": {
+    "rejected_tree": "8d0c179639a7a4b4e91ab32d5512019c9d2c27db",
+    "current_head_diagnostic": "a1b06337a37679d0e60b011e284e13143b793118",
+    "hot_trace": "20c10b109bb723bc19a76cb2ef4e3c0d729ec0aa"
+  }
 }

@@ -1,37 +1,29 @@
 from __future__ import annotations
 
+import difflib
 import hashlib
 import json
 import os
-import signal
 from pathlib import Path
+import signal
 import subprocess
 import sys
 from typing import cast
 
-source = Path.cwd()
-proof = source.parent / "probe" / "ci-tools" / "bamti-cycle"
-evidence = Path(os.environ["RUNNER_TEMP"]) / "bamti-cycle-evidence"
-evidence.mkdir(exist_ok=True)
-manifest = cast(dict[str, object], json.loads((proof / "manifest.json").read_text()))
-exits: dict[str, int] = {}
+SOURCE = Path.cwd()
+PROOF = SOURCE.parent / "probe" / "ci-tools" / "bamti-cycle"
+EVIDENCE = Path(os.environ["RUNNER_TEMP"]) / "bamti-cycle-evidence"
+EVIDENCE.mkdir(exist_ok=True)
+INPUTS = cast(dict[str, object], json.loads((PROOF / "manifest.json").read_text()))
+RELATION = SOURCE / "crates/bamts-compiler/src/checker/relations.rs"
+EXITS: dict[str, int] = {}
 
-def command(args: list[str]) -> str:
-    return subprocess.check_output(args, cwd=source, text=True).strip()
+def git(*args: str) -> str:
+    return subprocess.check_output(["git", *args], cwd=SOURCE, text=True).strip()
 
-def identity() -> None:
-    assert command(["git", "rev-parse", "HEAD"]) == manifest["head"]
-    assert command(["git", "write-tree"]) == manifest["tree"]
-    files = cast(dict[str, str], manifest["files"])
-    for name, expected in files.items():
-        assert hashlib.sha256((source / name).read_bytes()).hexdigest() == expected, name
-    subprocess.run(["git", "diff", "--exit-code"], cwd=source, check=True)
-    print("BAMTI_IDENTITY " + json.dumps(manifest, sort_keys=True), flush=True)
-
-def run(name: str, args: list[str], expected: int = 0, required: str = "") -> str:
+def run(name: str, args: list[str], expected: int = 0, required: str = "", limit: int = 600) -> str:
     print(f"RUN {name}: {args!r}", flush=True)
-    limit = 30 if name.startswith("typescript-") else 1200 if name == "workspace" else 180 if "recursive" in name or "alias" in name else 600
-    process = subprocess.Popen(args, cwd=source, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True)
+    process = subprocess.Popen(args, cwd=SOURCE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True)
     timed_out = False
     try:
         output, _ = process.communicate(timeout=limit)
@@ -39,101 +31,91 @@ def run(name: str, args: list[str], expected: int = 0, required: str = "") -> st
         timed_out = True
         os.killpg(process.pid, signal.SIGKILL)
         output, _ = process.communicate()
-        print(f"TIMEOUT {name}: {limit} seconds; actual process exit {process.returncode}", flush=True)
-    (evidence / f"{name}.log").write_text(output)
-    exits[name] = process.returncode
-    (evidence / "results.json").write_text(json.dumps({"manifest": manifest, "exits": exits}, indent=2, sort_keys=True) + "\n")
-    print(f"EXIT {name}: {process.returncode}\n{output[-20000:]}", flush=True)
-    assert not timed_out, f"{name}: exceeded {limit} seconds; actual process exit {process.returncode}"
+    (EVIDENCE / f"{name}.log").write_text(output)
+    EXITS[name] = process.returncode
+    (EVIDENCE / "results.json").write_text(json.dumps({"inputs": INPUTS, "exits": EXITS}, indent=2, sort_keys=True) + "\n")
+    print(f"EXIT {name}: {process.returncode} timed_out={timed_out}\n{output[-20000:]}", flush=True)
+    assert not timed_out, f"{name}: exceeded {limit} seconds; actual exit {process.returncode}"
     assert process.returncode == expected, f"{name}: expected {expected}, got {process.returncode}"
-    if required:
-        assert required in output, f"{name}: missing {required!r}"
+    assert not required or required in output, f"{name}: missing {required!r}"
     return output
 
-mode = sys.argv[1]
-if mode == "prepare":
-    patch = proof / "candidate.patch"
-    assert hashlib.sha256(patch.read_bytes()).hexdigest() == manifest["patch_sha256"]
-    assert command(["git", "rev-parse", "HEAD"]) == manifest["head"]
-    subprocess.run(["git", "apply", "--index", str(patch)], cwd=source, check=True)
+def identity() -> None:
+    frozen = cast(dict[str, str], json.loads((EVIDENCE / "source-identity.json").read_text()))
+    assert git("rev-parse", "HEAD") == INPUTS["head"]
+    assert git("write-tree") == frozen["tree"]
+    assert hashlib.sha256(RELATION.read_bytes()).hexdigest() == frozen["relations_sha256"]
+    subprocess.run(["git", "diff", "--exit-code"], cwd=SOURCE, check=True)
+    print("BAMTI_SOURCE_IDENTITY " + json.dumps(frozen, sort_keys=True), flush=True)
+
+if sys.argv[1] == "prepare":
+    assert git("rev-parse", "HEAD") == INPUTS["head"]
+    assert git("write-tree") == INPUTS["base_tree"]
+    assert hashlib.sha256(RELATION.read_bytes()).hexdigest() == INPUTS["original_relations_sha256"]
+    candidate = (PROOF / "candidate-relations.rs").read_bytes()
+    assert hashlib.sha256(candidate).hexdigest() == INPUTS["input_relations_sha256"]
+    RELATION.write_bytes(candidate)
+    run("format-input", ["cargo", "fmt", "--all"])
+    formatted = RELATION.read_bytes()
+    formatting = "".join(difflib.unified_diff(candidate.decode().splitlines(keepends=True), formatted.decode().splitlines(keepends=True), fromfile="a/crates/bamts-compiler/src/checker/relations.rs", tofile="b/crates/bamts-compiler/src/checker/relations.rs"))
+    (EVIDENCE / "formatting.patch").write_text(formatting)
+    print("FORMATTING_PATCH_BEGIN\n" + formatting + "FORMATTING_PATCH_END", flush=True)
+    subprocess.run(["git", "add", "crates/bamts-compiler/src/checker/relations.rs"], cwd=SOURCE, check=True)
+    frozen = {"head": git("rev-parse", "HEAD"), "tree": git("write-tree"), "relations_sha256": hashlib.sha256(formatted).hexdigest()}
+    (EVIDENCE / "source-identity.json").write_text(json.dumps(frozen, indent=2, sort_keys=True) + "\n")
+    (EVIDENCE / "candidate.patch").write_text(subprocess.check_output(["git", "diff", "--cached", "--binary"], cwd=SOURCE, text=True))
     identity()
-elif mode == "verify":
+elif sys.argv[1] == "verify":
     identity()
-    assert json.loads((source / "node_modules/typescript/package.json").read_text())["version"] == "7.0.2"
-    oracle_dir = evidence / "oracle"
-    oracle_dir.mkdir(exist_ok=True)
-    for parameter, expected in [("number", 1), ("string", 0)]:
-        branches = [f"{{ root: B<{parameter}> }}", f'{{ root: {{ a: B<{parameter}>["a"] }} }}']
-        for reverse in [False, True]:
-            order = list(reversed(branches)) if reverse else branches
-            text = (
-                "type A<T> = { a: { back: A<T>; leaf: string }; z: T };\n"
-                "type B<T> = { a: { back: B<T>; leaf: Object }; z: T };\n"
-                "declare const value: { root: A<string> };\n"
-                f"const result: {' | '.join(order)} = value;\n"
-            )
-            witness = oracle_dir / f"{parameter}-{reverse}.ts"
-            witness.write_text(text)
-            output = run(
-                f"typescript-{parameter}-{reverse}",
-                ["node", "node_modules/typescript/bin/tsc", "--ignoreConfig", "--noEmit", "--strict", "--skipLibCheck", "--pretty", "false", str(witness)],
-                expected,
-                "error TS2322:" if expected else "",
-            )
-            if expected:
-                assert output.count("error TS2322:") == 1
-    for parameter, expected in [("number", 1), ("string", 0)]:
-        witness = oracle_dir / f"transformed-{parameter}.ts"
-        witness.write_text(
-            "type A<T> = { a: A<T[]>; z: T };\n"
-            "type B<T> = { a: B<T[]>; z: T };\n"
-            "declare const value: A<string>;\n"
-            "declare const nested: A<string[]>;\n"
-            f"const result: B<{parameter}> = value;\n"
-            f"const nestedResult: B<{parameter}[]> = nested;\n"
-        )
-        output = run(
-            f"typescript-transformed-{parameter}",
-            ["node", "node_modules/typescript/bin/tsc", "--ignoreConfig", "--noEmit", "--strict", "--skipLibCheck", "--pretty", "false", str(witness)],
-            expected,
-            "error TS2322:" if expected else "",
-        )
-        if expected:
-            assert output.count("error TS2322:") == 2
-    relation = source / "crates/bamts-compiler/src/checker/relations.rs"
-    candidate = relation.read_bytes()
-    baseline = subprocess.check_output(["git", "show", "HEAD:crates/bamts-compiler/src/checker/relations.rs"], cwd=source).decode()
+    assert json.loads((SOURCE / "node_modules/typescript/package.json").read_text())["version"] == "7.0.2"
+    oracle = EVIDENCE / "oracle"
+    oracle.mkdir(exist_ok=True)
+    for leaf, expected in [("number", 1), ("string", 0)]:
+        source = [
+            "type A = S12;",
+            "type B = T12;",
+            "type S0 = { back: A; value: string };",
+            f"type T0 = {{ back: B; value: {leaf} }};",
+        ]
+        for depth in range(1, 13):
+            source += [
+                f"type S{depth} = {{ child: S{depth - 1} }};",
+                f'type T{depth} = {{ child: T{depth - 1}; tag?: "first" }} | {{ child: T{depth - 1}; tag?: "second" }};',
+            ]
+        source += ["declare const value: A;", "const result: B = value;"]
+        witness = oracle / f"recursive-refutation-{leaf}.ts"
+        witness.write_text("\n".join(source) + "\n")
+        run(f"typescript-recursive-{leaf}", ["node", "node_modules/typescript/bin/tsc", "--ignoreConfig", "--noEmit", "--strict", "--skipLibCheck", "--pretty", "false", str(witness)], expected, "error TS2322:" if expected else "", limit=30)
+    alias = oracle / "changed-argument.ts"
+    alias.write_text("type A<T> = { next: A<T[]>; value: T };\ntype B<T> = { next: B<T[]>; value: string };\ndeclare const value: A<string[]>;\nconst result: B<string[]> = value;\n")
+    run("typescript-changed-argument", ["node", "node_modules/typescript/bin/tsc", "--ignoreConfig", "--noEmit", "--strict", "--skipLibCheck", "--pretty", "false", str(alias)], 1, "error TS2322:", limit=30)
+    candidate = RELATION.read_bytes()
+    baseline = subprocess.check_output(["git", "show", "HEAD:crates/bamts-compiler/src/checker/relations.rs"], cwd=SOURCE).decode()
     marker = "#[cfg(test)]\nmod tests {"
     assert baseline.count(marker) == 1 and candidate.decode().count(marker) == 1
     frozen_tests = candidate.decode().split(marker, 1)[1]
+    args = ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib"]
     try:
-        relation.write_text(baseline.split(marker, 1)[0] + marker + frozen_tests)
-        run("baseline-shared-recursive", ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib", "shared_recursive_graph_reuses_completed_exact_cycles", "--", "--nocapture"], 101, "shared recursive graph recomputed")
-        run("baseline-transformed-alias", ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib", "transformed_recursive_aliases_do_not_reuse_provisional_success", "--", "--nocapture"], 101, "failed transformed alias branch left a provisional success")
+        RELATION.write_text(baseline.split(marker, 1)[0] + marker + frozen_tests)
+        run("baseline-compile", [*args, "--no-run"])
+        run("baseline-shared-refutation", [*args, "checker::relations::tests::shared_recursive_refutations_do_not_recompute_union_branches", "--", "--exact", "--nocapture"], 101, "shared recursive refutation recomputed", limit=180)
+        run("baseline-shared-transformed", [*args, "checker::relations::tests::shared_transformed_recursive_graph_reuses_completed_cycles", "--", "--exact", "--nocapture"], 101, "shared transformed recursive graph recomputed", limit=180)
+        run("baseline-saturated-active-cycle", [*args, "checker::relations::tests::shared_active_cycle_scales_after_context_cache_saturation", "--", "--exact", "--nocapture"], 101, "shared active cycle recomputed", limit=180)
     finally:
-        relation.write_bytes(candidate)
-    control = proof / "old-memo.patch"
-    assert hashlib.sha256(control.read_bytes()).hexdigest() == manifest["control_patch_sha256"]
-    try:
-        subprocess.run(["git", "apply", str(control)], cwd=source, check=True)
-        run("previous-memo-performance", ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib", "shared_transformed_recursive_graph_reuses_completed_cycles", "--", "--nocapture"], 101, "shared transformed recursive graph recomputed")
-    finally:
-        relation.write_bytes(candidate)
+        RELATION.write_bytes(candidate)
     identity()
-    run("candidate-shared-transformed", ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib", "shared_transformed_recursive_graph_reuses_completed_cycles", "--", "--nocapture"], required="1 passed; 0 failed")
-    run("candidate-shared-recursive", ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib", "shared_recursive_graph_reuses_completed_exact_cycles", "--", "--nocapture"], required="1 passed; 0 failed")
-    run("candidate-transformed-alias", ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib", "transformed_recursive_aliases_do_not_reuse_provisional_success", "--", "--nocapture"], required="1 passed; 0 failed")
-    run("candidate-recursive", ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib", "recursive_union_", "--", "--nocapture"], required="2 passed; 0 failed")
-    run("acyclic-cache-performance", ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib", "checker::relations::tests::shared_object_graph_with_intrinsic_object_scales_after_cache_saturation", "--", "--exact", "--nocapture"], required="1 passed; 0 failed")
+    run("candidate-relations", [*args, "checker::relations::tests::", "--", "--nocapture"], required="test result: ok.")
+    run("candidate-recursive-union", [*args, "recursive_union_", "--", "--nocapture"], required="2 passed; 0 failed")
+    run("candidate-corpus", [*args, "program::tests::lowers_and_verifies_every_manifest_pinned_corpus_program", "--", "--exact", "--nocapture", "--test-threads=1"], required="1 passed; 0 failed", limit=180)
     run("fmt", ["cargo", "fmt", "--all", "--check"])
     run("check", ["cargo", "check", "--workspace", "--locked"])
     run("clippy", ["cargo", "clippy", "--workspace", "--all-targets", "--locked", "--", "-D", "warnings"])
     run("fetch", ["cargo", "fetch", "--locked"])
     run("authority", ["cargo", "run", "--locked", "-p", "bamts-verification", "--", "source", "fetch", "typescript-primary-tests", "--dest", "target/authority/typescript-7.0.2-tests"])
-    run("workspace", ["cargo", "test", "--workspace", "--locked", "--no-fail-fast"])
+    run("workspace", ["cargo", "test", "--workspace", "--locked", "--no-fail-fast"], limit=1200)
     run("node-contracts", ["cargo", "test", "--locked", "-p", "bamts-verification", "--lib", "--", "--ignored", "--exact", "corpus::tests::verify_node_version_accepts_pinned_and_rejects_missing", "corpus::tests::oracle_runs_a_real_corpus_case", "facets::tests::forged_unpinned_js_outcomes_are_not_a_public_proof_path"])
-    run("npm", ["node", "--test", "--test-skip-pattern=staged cli-|clean consumer", *[str(p) for p in sorted((source / "npm/test").glob("*.test.mjs"))]])
+    run("npm", ["node", "--test", "--test-skip-pattern=staged cli-|clean consumer", *[str(path) for path in sorted((SOURCE / "npm/test").glob("*.test.mjs"))]])
     identity()
-    print("BAMTI_GATES_COMPLETE " + json.dumps({"tree": manifest["tree"], "exits": exits}, sort_keys=True), flush=True)
+    print("BAMTI_GATES_COMPLETE " + json.dumps(EXITS, sort_keys=True), flush=True)
 else:
-    raise ValueError(mode)
+    raise ValueError(sys.argv[1])

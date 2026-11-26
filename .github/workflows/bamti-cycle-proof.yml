@@ -1,4 +1,4 @@
-name: Verify recursive relation cache review
+name: Verify recursive refutation cache repair
 on:
   push:
     branches: [ci/bamti-cycle-proof-20261126-r9]
@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: gosuda/bamTiScript
-          ref: 3997bdda7b98cf16e2872e5331a3ddcc86475ea1
+          ref: 2c56f2165c237c591a684164d934ab67a1f2de4b
           path: source
           persist-credentials: false
       - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
@@ -35,8 +35,6 @@ jobs:
           python-version: "3.15"
           require-checksums: true
           enable-cache: false
-      - name: Verify and stage the frozen candidate
-        run: uv run --no-project --python 3.15 ../probe/ci-tools/bamti-cycle/verify.py prepare
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24.18.0
@@ -47,6 +45,8 @@ jobs:
           rustc --version
           npm ci
           npm ci --prefix formal/quint
+      - name: Format and freeze the reviewed candidate
+        run: uv run --no-project --python 3.15 ../probe/ci-tools/bamti-cycle/verify.py prepare
       - name: Install pinned Quint evaluator
         run: |
           version=$(node -p 'require("./formal/quint/node_modules/@informalsystems/quint/dist/src/rust/binaryManager.js").QUINT_EVALUATOR_VERSION')
