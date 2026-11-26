@@ -15,5 +15,6 @@
   "candidate_relations_sha256": "84b355e31c5c9be95b5304407f0124f3739d5a2e3716ea87d61b7da25e15fa51",
   "patch_sha256": "a9fbc890c20576a17215405f31beb34f24c3acb7332e6a27efc3ad4c73d8169a",
   "saturation_test_sha256": "8c37c3295b0cdc537a080f6dc3a54f8b67e10ae82f0babc936adbb0781f05648",
-  "count_instrumentation_sha256": "bda9c69f6e307ab80c15404fc763051617585357fe1bef1a14053f9fd23d5445"
+  "count_instrumentation_sha256": "bda9c69f6e307ab80c15404fc763051617585357fe1bef1a14053f9fd23d5445",
+  "expired_eviction_sha256": "f5fa18c53c5f5ed2b4e3811aaac24da207273ec7f4905041b2394bae8cc0f249"
 }

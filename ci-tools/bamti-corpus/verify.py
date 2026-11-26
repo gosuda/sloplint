@@ -77,9 +77,14 @@ try:
     cache_limit = "const RELATION_CACHE_CAPACITY: usize = 4096;"
     assert candidate.count(cache_limit) == 1
     test_args = ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib"]
+    entry_marker = "                let entries = cache.entry(relation).or_default();\n"
+    assert candidate.count(entry_marker) == 1
+    eviction = (PROOF / "expired-eviction.rs").read_bytes()
+    assert hashlib.sha256(eviction).hexdigest() == MANIFEST["expired_eviction_sha256"]
+    recycled = candidate.replace(entry_marker, entry_marker + eviction.decode())
     for name, content in [
-        ("bounded", candidate),
-        ("unbounded-diagnostic", candidate.replace(cache_limit, "const RELATION_CACHE_CAPACITY: usize = usize::MAX;")),
+        ("recycle-bounded", recycled),
+        ("recycle-unbounded-diagnostic", recycled.replace(cache_limit, "const RELATION_CACHE_CAPACITY: usize = usize::MAX;")),
     ]:
         relation.write_text(content)
         print(f"DIAGNOSTIC_VARIANT {name} sha256=" + hashlib.sha256(relation.read_bytes()).hexdigest(), flush=True)
