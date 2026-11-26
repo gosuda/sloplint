@@ -265,7 +265,7 @@ diff --git a/docs/specs/openapi.md b/docs/specs/openapi.md
 diff --git a/websocket/stream_test.lgo b/websocket/stream_test.lgo
 --- a/websocket/stream_test.lgo
 +++ b/websocket/stream_test.lgo
-@@ -1,1136 +1,1126 @@
+@@ -1,1136 +1,1122 @@
 -package websocket_test
 -
 -import (
@@ -2496,10 +2496,6 @@ diff --git a/websocket/stream_test.lgo b/websocket/stream_test.lgo
 +	cancelAfterStreamRead(t, pending, reading)
 +	select {
 +	case err := <-done:
-+		if err == nil {
-+			t.Fatal("Next after cancel returned no error")
-+			return
-+		}
 +		if !errors.Is(err, context.Canceled) {
 +			t.Fatalf("Next after cancel = %v, want context canceled", err)
 +		}
