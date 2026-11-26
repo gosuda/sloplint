@@ -148,11 +148,14 @@ jobs:
         run: cargo clippy --workspace --all-targets --locked --target ${{ matrix.target }} -- -D warnings
 
   test-native:
-    # Native runners prove only what they alone can prove: the target
-    # links (the test harness builds the binary), the executable runs on
-    # the OS, and the platform-gated tests pass. Everything portable runs
-    # in `test` on Linux. Per-target clippy lives in `clippy-native` so
-    # each native job stays under 5 minutes execution.
+    # Native runners prove only what they alone can prove: the platform
+    # tests pass and the built executables run on the OS (every test
+    # binary executes there, and the integration tests spawn the sloplint
+    # binary itself). Everything portable runs in `test` on Linux.
+    # Per-target clippy lives in `clippy-native` so each native job stays
+    # under 5 minutes execution. The only target_arch-dependent code in
+    # the workspace is the recursion ratio asserted on Intel macs, so
+    # that cell runs just the recursion suite.
     runs-on: ${{ matrix.runs_on }}
     timeout-minutes: 30
     strategy:
@@ -161,7 +164,7 @@ jobs:
         include:
           - runs_on: macos-26-intel
             target: x86_64-apple-darwin
-            tests: -p sloplint --lib --test invariants --test configuration --test colocation_paths --test discovery_boundaries --test io_and_cache --test pipeline
+            tests: -p sloplint-syntax --test recursion_depth
           - runs_on: macos-26
             target: aarch64-apple-darwin
             tests: -p sloplint --lib --test invariants --test configuration --test colocation_paths --test discovery_boundaries --test io_and_cache --test pipeline
@@ -195,11 +198,3 @@ jobs:
         run: >
           cargo test --locked --no-fail-fast --target ${{ matrix.target }}
           ${{ matrix.tests }}
-      - name: Run platform-sensitive syntax tests
-        if: ${{ runner.os == 'macOS' && !cancelled() && steps.vendor.outcome == 'success' }}
-        run: cargo test --locked --no-fail-fast --target ${{ matrix.target }} -p sloplint-syntax --test recursion_depth
-      - name: Smoke-test the native executable
-        run: |
-          bin="target/${{ matrix.target }}/debug/sloplint"
-          if [ "$RUNNER_OS" = Windows ]; then bin="$bin.exe"; fi
-          "$bin" --version
