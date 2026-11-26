@@ -1,4 +1,4 @@
-name: Freeze the latest PowerShell review witnesses
+name: Verify the current PowerShell review candidate
 on:
   push:
     branches: [ci/powershell-round14-20261126]
@@ -10,7 +10,7 @@ permissions:
 jobs:
   baseline:
     runs-on: depot-ubuntu-24.04-8
-    timeout-minutes: 35
+    timeout-minutes: 70
     env:
       CARGO_INCREMENTAL: "0"
       CARGO_BUILD_JOBS: "8"
@@ -33,14 +33,14 @@ jobs:
           version: 0.13.9
           python-version: "3.15"
           enable-cache: false
-      - name: Run frozen baseline controls
+      - name: Generate and verify the isolated candidate
         run: uv run --no-project --python 3.15 proof/ci-tools/powershell-round14/verify.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: powershell-round14-${{ github.sha }}
           path: |
-            ${{ runner.temp }}/powershell-round14/*.log
-            ${{ runner.temp }}/powershell-round14/*.json
+            ${{ runner.temp }}/powershell-round14-candidate/*.log
+            ${{ runner.temp }}/powershell-round14-candidate/*.json
           if-no-files-found: error
           retention-days: 7

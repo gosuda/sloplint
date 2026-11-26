@@ -240,5 +240,10 @@
     "name": "nested_expression_is_not_literal",
     "source": "Write-Host VersionSuffix=\"$((Get-Date))\"\n",
     "expected": "VersionSuffix=__DATE__"
+  },
+  {
+    "name": "short_computed_property_prefix",
+    "source": "Write-Host v=\"$($manifest.PrivateData.PSData.Prerelease)\"\n",
+    "expected": "v=__PRE__"
   }
 ]
