@@ -1,0 +1,104 @@
+diff --git a/crates/bamts-compiler/src/checker/relations.rs b/crates/bamts-compiler/src/checker/relations.rs
+--- a/crates/bamts-compiler/src/checker/relations.rs
++++ b/crates/bamts-compiler/src/checker/relations.rs
+@@ -163,6 +163,7 @@
+     assumptions: HashSet<RelationKey>,
+     erasure_requirements: HashMap<SymbolId, bool>,
+     erased_base: usize,
++    approximate_alias: bool,
+     /// Set when the comparison consults environment facts the memo keys
+     /// cannot see (parameter pairings, inferred arguments, known or erased
+     /// parameters). Withheld results stay out of the clean memo only; the
+@@ -176,6 +177,7 @@
+             assumptions: HashSet::new(),
+             erasure_requirements: HashMap::new(),
+             erased_base,
++            approximate_alias: false,
+             env_sensitive: false,
+         }
+     }
+@@ -210,9 +212,8 @@
+     cache: RefCell<HashMap<RelationKey, Vec<CachedRelation>>>,
+     /// Pairs currently being compared, to break recursive structural types.
+     visiting: RefCell<HashSet<RelationKey>>,
+-    /// Semantic alias pairs and the exact active comparisons that justify
+-    /// their provisional recursive answers.
+-    active_alias_relations: RefCell<HashMap<AliasRelationKey, RelationKey>>,
++    /// Semantic alias pairs active on the current structural path.
++    active_alias_relations: RefCell<HashSet<AliasRelationKey>>,
+     /// Coinductive assumptions and erased-membership predicates consumed by
+     /// each active relation frame.
+     dependency_stack: RefCell<Vec<DependencyFrame>>,
+@@ -267,7 +268,7 @@
+             cache: RefCell::new(HashMap::new()),
+             clean: RefCell::new(HashMap::new()),
+             visiting: RefCell::new(HashSet::new()),
+-            active_alias_relations: RefCell::new(HashMap::new()),
++            active_alias_relations: RefCell::new(HashSet::new()),
+             dependency_stack: RefCell::new(Vec::new()),
+             contexts: RefCell::new(HashMap::new()),
+             template_capture_reachability: RefCell::new(HashMap::new()),
+@@ -535,24 +536,16 @@
+             strictness,
+             context: self.alias_relation_context(source, target),
+         });
+-        let alias_assumption = alias_relation.and_then(|key| {
+-            let mut active = self.active_alias_relations.borrow_mut();
+-            if let Some(assumption) = active.get(&key) {
+-                Some(*assumption)
+-            } else {
+-                active.insert(key, relation);
+-                None
+-            }
+-        });
+-        if let Some(assumption) = alias_assumption {
++        let alias_relation_inserted =
++            alias_relation.is_none_or(|key| self.active_alias_relations.borrow_mut().insert(key));
++        if !alias_relation_inserted {
+             self.dependency_stack
+                 .borrow_mut()
+                 .last_mut()
+                 .expect("active relation owns a dependency frame")
+-                .assumptions
+-                .insert(assumption);
++                .approximate_alias = true;
+         }
+-        let result = if alias_assumption.is_some() || identical_application {
++        let result = if !alias_relation_inserted || identical_application {
+             true
+         } else if target_class
+             && let Some(compatible) = self.array_relates_to_concat_array(source, target, strictness)
+@@ -587,7 +580,7 @@
+         } else {
+             self.relates_uncached(source, target, strictness)
+         };
+-        if alias_assumption.is_none() && let Some(key) = alias_relation {
++        if alias_relation_inserted && let Some(key) = alias_relation {
+             self.active_alias_relations.borrow_mut().remove(&key);
+         }
+ 
+@@ -604,6 +597,7 @@
+             frame.assumptions.clear();
+         } else if let Some(parent) = self.dependency_stack.borrow_mut().last_mut() {
+             parent.assumptions.extend(frame.assumptions.iter().copied());
++            parent.approximate_alias |= frame.approximate_alias;
+             parent.env_sensitive |= frame.env_sensitive;
+             for (&symbol, &erased) in &frame.erasure_requirements {
+                 self.record_erasure_requirement(parent, ErasureRequirement { symbol, erased });
+@@ -614,6 +608,7 @@
+         // dependencies on other active comparisons stay contextual.
+         if cacheable
+             && !frame.env_sensitive
++            && !frame.approximate_alias
+             && frame.erasure_requirements.is_empty()
+             && frame.assumptions.is_empty()
+         {
+@@ -621,7 +616,7 @@
+                 .borrow_mut()
+                 .insert((source, target, strictness), result);
+         }
+-        if cacheable && (result || frame.assumptions.is_empty()) {
++        if cacheable && !frame.approximate_alias && (result || frame.assumptions.is_empty()) {
+             let env_sensitive = frame.env_sensitive;
+             let mut assumptions: Vec<_> = frame.assumptions.into_iter().collect();
+             assumptions.sort_unstable();

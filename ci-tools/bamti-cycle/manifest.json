@@ -2,9 +2,10 @@
   "repo": "gosuda/bamTiScript",
   "head": "3997bdda7b98cf16e2872e5331a3ddcc86475ea1",
   "base": "a471de394b3f27408839ad8e0ec1642054c0aeee",
-  "tree": "7aea53fc236dcc10f5a2e6397a0b9c07e3002f34",
-  "patch_sha256": "f7ce56d3ab1f5315b7842867eceeb5dd5f8bcce456844a0fbd5f564d99d842f1",
+  "tree": "21ca65a8ca8f42264ca91cf74004c80039e10d94",
+  "patch_sha256": "19fdf89ce621c498bfa6391ef0e7e5150a6261cf344c61a5c9b6eb1e768d9662",
   "files": {
-    "crates/bamts-compiler/src/checker/relations.rs": "31d6a09223214020fcdfeb0011090055f649244d0a337a821247dc68a657465c"
-  }
+    "crates/bamts-compiler/src/checker/relations.rs": "da422705014784093fb16b5a25ea43f197d6152c444f00098e2c32c4bc9cb9bf"
+  },
+  "control_patch_sha256": "4cf173b094ede875e902f21dd073c6ea48cfc3401e15c199f47baa0bd2b2d559"
 }

@@ -112,7 +112,15 @@ elif mode == "verify":
         run("baseline-transformed-alias", ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib", "transformed_recursive_aliases_do_not_reuse_provisional_success", "--", "--nocapture"], 101, "failed transformed alias branch left a provisional success")
     finally:
         relation.write_bytes(candidate)
+    control = proof / "old-memo.patch"
+    assert hashlib.sha256(control.read_bytes()).hexdigest() == manifest["control_patch_sha256"]
+    try:
+        subprocess.run(["git", "apply", str(control)], cwd=source, check=True)
+        run("previous-memo-performance", ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib", "shared_transformed_recursive_graph_reuses_completed_cycles", "--", "--nocapture"], 101, "shared transformed recursive graph recomputed")
+    finally:
+        relation.write_bytes(candidate)
     identity()
+    run("candidate-shared-transformed", ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib", "shared_transformed_recursive_graph_reuses_completed_cycles", "--", "--nocapture"], required="1 passed; 0 failed")
     run("candidate-shared-recursive", ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib", "shared_recursive_graph_reuses_completed_exact_cycles", "--", "--nocapture"], required="1 passed; 0 failed")
     run("candidate-transformed-alias", ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib", "transformed_recursive_aliases_do_not_reuse_provisional_success", "--", "--nocapture"], required="1 passed; 0 failed")
     run("candidate-recursive", ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib", "recursive_union_", "--", "--nocapture"], required="2 passed; 0 failed")
