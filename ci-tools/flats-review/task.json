@@ -1,14 +1,14 @@
 {
   "task": "gosuda/flats remaining runner migration and review repairs",
   "stage": "design",
-  "state": "awaiting re-review",
+  "state": "accepted",
   "candidate": "D2",
   "material_author_model": "gpt-6.2-astra",
   "reviewer_model": "gpt-6.2-sol",
   "reviewer_binding": "Fixed canonical model selection in collaboration.spawn_agent, fresh session /root/bitcoin_round7/flats_design_review",
   "invocations": {
-    "attempts": 2,
-    "completed": 1,
+    "attempts": 3,
+    "completed": 2,
     "retry_used": 1,
     "retry_limit": 2
   },
@@ -20,7 +20,10 @@
     "D1.md": "232c1be52690c7f826c87cd86e2abcc53615c94b4e7f7955eec6f6f96b960e4f",
     "D1-review.md": "38845f9afc076f995a702144db1ee660d00e2aca7d4ec1b6cf6726464796fb0d",
     "D1-dispositions.md": "643364e6e483b5da7a67865387fffe30dc1a5e180f1c633ecb4afc81056978c1",
-    "D2.md": "9c6b81ac08581ceff96254731ad158ca7d362d6d0ecbf6a8d525eecdf84d4162"
+    "D2.md": "9c6b81ac08581ceff96254731ad158ca7d362d6d0ecbf6a8d525eecdf84d4162",
+    "D2-review.md": "54425521213a66fb4b54fe80aea8711dd8919648f8ee4a66a224b078392de657"
   },
-  "production_source_changed": false
+  "production_source_changed": false,
+  "next_stage": "implementation",
+  "implementation_state": "not started"
 }
