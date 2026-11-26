@@ -1,6 +1,6 @@
 {
-  "schema_version": 2,
-  "as_of": "2026-11-26 13:52:53 UTC",
+  "schema_version": 3,
+  "as_of": "2026-11-26 14:20:23 UTC",
   "scope": "Independent public website, SSH, elegant-mermaid, and PowerShell grammar repair slice; Flats design handed to coordinator",
   "publication_policy": "Additive feature-branch updates only. No force, amend, PR merge, auto-merge, or direct main update. Native proofs run on Depot; failures stay failures.",
   "website": {
@@ -441,7 +441,105 @@
         "unresolved": []
       }
     ],
-    "snapshot_pending_refresh": true
+    "snapshot_pending_refresh": false,
+    "current_snapshot": [
+      {
+        "repository": "gosuda/website",
+        "pr": 317,
+        "head": "8e302f18ba68523b976453c3abaab00f39034fcc",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "thread_count": 0,
+        "unresolved_thread_ids": []
+      },
+      {
+        "repository": "gosuda/website",
+        "pr": 316,
+        "head": "f913edd243936c090285a9ed6cc116f0fb73d57f",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "thread_count": 0,
+        "unresolved_thread_ids": []
+      },
+      {
+        "repository": "gosuda/website",
+        "pr": 315,
+        "head": "cc3430f0e0c4c0f07ad1464dd6d56164aebe91f9",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "thread_count": 0,
+        "unresolved_thread_ids": []
+      },
+      {
+        "repository": "gosuda/website",
+        "pr": 314,
+        "head": "c8752a22082d9e03b33baf0a56752457aa4f2a0f",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "thread_count": 0,
+        "unresolved_thread_ids": []
+      },
+      {
+        "repository": "gosuda/website",
+        "pr": 313,
+        "head": "2d3c12ef4ab2c366b85081dce899c3ac3c212349",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "thread_count": 0,
+        "unresolved_thread_ids": []
+      },
+      {
+        "repository": "gosuda/website",
+        "pr": 312,
+        "head": "115b24b203ed85c446c59c1cd249a381e7bf127f",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "thread_count": 0,
+        "unresolved_thread_ids": []
+      },
+      {
+        "repository": "gosuda/website",
+        "pr": 309,
+        "head": "181b29e7d7cdb0297374b3bda20e17a6598f1131",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "thread_count": 0,
+        "unresolved_thread_ids": []
+      },
+      {
+        "repository": "gosuda/website",
+        "pr": 307,
+        "head": "872b69af82a4908ddb31915d6eac4a51a3cf46a5",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "thread_count": 0,
+        "unresolved_thread_ids": []
+      }
+    ]
   },
   "ssh": {
     "label": "ssh-chat-9-empty-snapshot",
@@ -627,11 +725,11 @@
       ]
     },
     "final_tree": "4edb92f8213003450e3b12838498fd776cb6591e",
-    "published": false,
+    "published": true,
     "feature_paths_preserved": 387,
     "full_run": 45828040968,
     "full_job": 139937199163,
-    "full_status": "in_progress",
+    "full_status": "completed",
     "house_job": 139937199231,
     "house_result": "success",
     "playground_job": 139937199226,
@@ -680,7 +778,103 @@
     "guard_artifact": 15120784176,
     "guard_artifact_sha256": "a4b09330404110746991c49852ce7029193e47d8369ea72e4939f63e365c9bd6",
     "fully_verified": false,
-    "pending_action": "Read final native verifier result, compare any failure with unchanged feature source, then publish additive actual-base integration after fresh head/base checks. Final workflow correction is already verified separately."
+    "pending_action": null,
+    "published_head": "d3aa285e05da5bc212cedea77572713657011245",
+    "full_result": "failure",
+    "full_failed_command": "just verify",
+    "full_exit_codes": {
+      "build": 0,
+      "candidate-tree": 0,
+      "gen-check": 0,
+      "go-check": 0,
+      "layered-random": 0,
+      "markdown-parity": 0,
+      "markdown-paths": 0,
+      "oracle": 0,
+      "parity": 0,
+      "rust-check": 0,
+      "verify": 1,
+      "workflow-lint": 0,
+      "worktree-clean": 0
+    },
+    "full_failure": "quality: four aggregate gates and computed exception-list mismatch; candidate and unchanged-head metrics identical",
+    "full_artifact": 15126980669,
+    "full_artifact_sha256": "072c598deb2be9742eeeba7850eed7e6d162f8eb33ee0aefe8f5364fdca125f1",
+    "preservation": {
+      "source_head": "801d75e266e0f827817238286171c517fe84b5b2",
+      "actual_base": "afa5a631ec41cb1e9aa0634b2d547d084bd27e33",
+      "candidate_tree": "4edb92f8213003450e3b12838498fd776cb6591e",
+      "feature_paths_preserved": 387,
+      "page_blob": "c6777ee954cf109ea556fad1b43fb6dcc57f3b4f",
+      "changed": [
+        {
+          "path": ".github/workflows/ci.yml",
+          "before": "d42504dcf5655cfe4b0274d97adbc57213537c87",
+          "after": "e58236adef77da8749bf0a9b4fc42961d1d38336"
+        },
+        {
+          "path": ".github/workflows/pages.yml",
+          "before": "1a035bfc05e55bb719ecda6a3c172f22d7d6219a",
+          "after": "b88556b34e1af7f4916b3e39ac52594db5461d74"
+        },
+        {
+          "path": ".github/workflows/verify.yml",
+          "before": "0423e02b3daeaf4743b48ca3a3a3f1634093f430",
+          "after": "06818911cb70051f273bb6d92a5686c3d3bf544a"
+        },
+        {
+          "path": "AGENTS.md",
+          "before": "43fe3bad09adf291aeacd95223fbf65fa09b3c9f",
+          "after": "fe705e7dac4083126b3d28a2ef9dcbdbdeb85874"
+        },
+        {
+          "path": "Cargo.lock",
+          "before": "68010abea126709b24f13cf4b229c67a5e0233a4",
+          "after": "59b61bb23adf7f4a47f6a163d2656078747da665"
+        },
+        {
+          "path": "Justfile",
+          "before": "5cf8297bada2d32bc010e023c42a0ff48b5bbc02",
+          "after": "2c028998ed49a9d4c256796b301aec0a52dc9b9e"
+        },
+        {
+          "path": "go.mod",
+          "before": "11959a07fb424f6c47b4ab83c8a102850e1b3ec9",
+          "after": "ac4dd6d9e6325a60182f27a996fe0c2b1306d29f"
+        },
+        {
+          "path": "go.sum",
+          "before": "b53c57fba348df5a212531472e3a1c08921c7880",
+          "after": "20085c42a958a0ef8d2b9648435e2955312d7b5f"
+        },
+        {
+          "path": "playground/package.json",
+          "before": "eaccfbe2d9ee63e1d5515fba08a141c5d9219c8b",
+          "after": "53c28ba4b524f226dfeee60a04aa5e4dd330e2fb"
+        },
+        {
+          "path": "playground/pnpm-lock.yaml",
+          "before": "85c2a500c4035cb41352f243672f83c246f1d55d",
+          "after": "33d07e1174af30ab328d5379ed397cff1e062b9c"
+        },
+        {
+          "path": "tools/upstream-oracle/package.json",
+          "before": "2ba7520b4a26b3cfba4f810c392cce87f2cba1fd",
+          "after": "56441c17ff42cf12b7e445d698d91b284429157d"
+        },
+        {
+          "path": "tools/upstream-oracle/pnpm-lock.yaml",
+          "before": "5999718def650e0570f4c29bdf010f4275983b1c",
+          "after": "08bab79475a1133fdd584aed14a9edf0e5f7a242"
+        },
+        {
+          "path": ".depot/workflows/ci.yml",
+          "before": null,
+          "after": "ae4caec2749e1e93d6eb134c3dda32c96f398cb6"
+        }
+      ],
+      "checked_at": "2026-11-26 14:17:31 UTC"
+    }
   },
   "sloplint137_grammar": {
     "source_commit": "39c584db3d6bbdbe92c0ae82a248806bfa4ce235",
@@ -800,13 +994,991 @@
     "conflict_pr": 248,
     "platform_rejection_historical": true,
     "later_update_source": "Coordinator message at this checkpoint: real different-model D1 review rejected five gaps, D2 then independently accepted. This worker has not received the exact D2/source assignment and has made no Flats edits.",
-    "changed_by_this_worker": false
+    "changed_by_this_worker": false,
+    "current_read_only_reconciliation": {
+      "schema_version": 1,
+      "as_of": "2026-11-26 14:20:23 UTC",
+      "observed_ref_read_started_at": "2026-11-26 14:13:46 UTC",
+      "scope": "Read-only reconciliation of the six D2 Flats PRs after external updates",
+      "source_objects_created": 0,
+      "mutations": [],
+      "main": {
+        "sha": "72a25911d41dbe8d7e59d2e3694d4520a26e8e58",
+        "tree": "9c5687b485e707cd9590a707f0e6fdc59e95b57d"
+      },
+      "pull_requests": [
+        {
+          "number": 236,
+          "state": "closed",
+          "merged": true,
+          "head": "bc89bb1912422cb7d73b6864fdf4570978fd4438",
+          "head_ref": "docs/sheet-s1-design",
+          "recorded_base": "e8529a5f54374dc7ade9303dd3ec7df9fa459355",
+          "base_ref": "main",
+          "mergeable": null,
+          "mergeable_state": "unknown",
+          "url": "https://github.com/gosuda/flats/pull/236"
+        },
+        {
+          "number": 242,
+          "state": "closed",
+          "merged": true,
+          "head": "aa3370c5b52c9dce0525638b53208b0525de4a27",
+          "head_ref": "docs/sheet-backup-coverage",
+          "recorded_base": "e1b4bffd4d9033e5cbf5814af277fce4ca72cc40",
+          "base_ref": "main",
+          "mergeable": null,
+          "mergeable_state": "unknown",
+          "url": "https://github.com/gosuda/flats/pull/242"
+        },
+        {
+          "number": 243,
+          "state": "closed",
+          "merged": true,
+          "head": "8feb3efe61630e6971a9d3c31bf417d9dbc22906",
+          "head_ref": "docs/sheet-excel-alignment",
+          "recorded_base": "ea3c70bf53a79c63374db1dd54d8ef83020d079a",
+          "base_ref": "main",
+          "mergeable": null,
+          "mergeable_state": "unknown",
+          "url": "https://github.com/gosuda/flats/pull/243"
+        },
+        {
+          "number": 248,
+          "state": "open",
+          "merged": false,
+          "head": "863801718fce4cb188b072cd29e0e170a3096af2",
+          "head_ref": "feat/spreadsheet",
+          "recorded_base": "58815a85c5fd34f290e45528e7597f62dec3975a",
+          "base_ref": "main",
+          "mergeable": false,
+          "mergeable_state": "dirty",
+          "url": "https://github.com/gosuda/flats/pull/248"
+        },
+        {
+          "number": 265,
+          "state": "open",
+          "merged": false,
+          "head": "f8badac07f5745bcd71b55de30778c0585408336",
+          "head_ref": "dependabot/go_modules/netbird/go_modules-607a02e571",
+          "recorded_base": "58815a85c5fd34f290e45528e7597f62dec3975a",
+          "base_ref": "main",
+          "mergeable": true,
+          "mergeable_state": "unstable",
+          "url": "https://github.com/gosuda/flats/pull/265"
+        },
+        {
+          "number": 272,
+          "state": "open",
+          "merged": false,
+          "head": "ee49a47179b2df82a70015b0978468b1fbd69e28",
+          "head_ref": "deps/upgrade-2026-11-26",
+          "recorded_base": "e1b4bffd4d9033e5cbf5814af277fce4ca72cc40",
+          "base_ref": "main",
+          "mergeable": true,
+          "mergeable_state": "unstable",
+          "url": "https://github.com/gosuda/flats/pull/272"
+        }
+      ],
+      "open_source_trees": [
+        {
+          "pr": 248,
+          "head": "863801718fce4cb188b072cd29e0e170a3096af2",
+          "tree": "694cdc915dd69701b80e911b5faa55c2e5d5f1a7"
+        },
+        {
+          "pr": 265,
+          "head": "f8badac07f5745bcd71b55de30778c0585408336",
+          "tree": "cd5a57af2dc7738346799df5527935e97b134261"
+        },
+        {
+          "pr": 272,
+          "head": "ee49a47179b2df82a70015b0978468b1fbd69e28",
+          "tree": "cdaccf79235cd2ab6fb7e95d464551a65243fa8e"
+        }
+      ],
+      "ci_blob_deltas_from_current_main": {
+        "248": [
+          {
+            "path": ".github/actions/setup-go/action.yml",
+            "current": "103aa3d9bc6e10cce1c889497072591215d0a249",
+            "main": "cb4ce6e3f43c913159dc139a3cc1149ac1531177"
+          },
+          {
+            "path": ".github/workflows/ci.yml",
+            "current": "879204fb16102cbddbdcb25f5ea794286d801acd",
+            "main": "4cc4a016d45c6e6ef6481385af677f65e022c265"
+          },
+          {
+            "path": ".github/workflows/commit-images.yml",
+            "current": "6182e4da84807c0607eebf98360b1f38df981a52",
+            "main": "72437a7f6b25f943dcbbdceba8ffa65314179192"
+          },
+          {
+            "path": ".github/workflows/lifecycle-gate.yml",
+            "current": "c7f2a571b3e4ba6df2f518ab3ed63681a740bf28",
+            "main": "fa00a667f6a452dee3620a64b7ae5ade0b50a04d"
+          },
+          {
+            "path": ".github/workflows/notebook-memory-race.yml",
+            "current": "bb9c0c5b18fe00d1cac557e57ed9a4bfc2c22c3e",
+            "main": "fca595ce760221b18ea0540667298561735a947e"
+          },
+          {
+            "path": ".github/workflows/release.yml",
+            "current": "ed5d4d54f5321a50928091d9ea842abbd53fe560",
+            "main": "bfa4bfcfaff1ad556485f46d3b4ead3ea0ba9279"
+          },
+          {
+            "path": "docs/gates.md",
+            "current": "c597d4f985ba3a7414f055c23a4cd3e2e887de10",
+            "main": "0eff59d16b0c904ec133da4bf24021f7d0db428d"
+          },
+          {
+            "path": "scripts/build-commit-image.sh",
+            "current": "ee498f0d2385e6443604236825c80a5317a2e5ab",
+            "main": "f182687861edd66c06405d0b44fa80d92e2d356d"
+          },
+          {
+            "path": "scripts/ci-lifecycle-gate.py",
+            "current": "05cebf20eadbd2fc0129c5e90ad779a638044c80",
+            "main": "d9f18178bf765c17f889df3918398360f9fc75e6"
+          },
+          {
+            "path": "scripts/ci-race.sh",
+            "current": "3864c2e3093727c4dd3345ec08428b3f1737214d",
+            "main": "2110528c59448b65e67bd10237f75147f1b039af"
+          },
+          {
+            "path": "scripts/ci-test.sh",
+            "current": "3fda3fbffb10c9676d9c000631746de0ee51f419",
+            "main": "6a7c991753dfa74405c419d4a09b6970d08f1bcb"
+          },
+          {
+            "path": "scripts/test_ci_cache.py",
+            "current": "69773d5b655c110b32151e00ba961e2f4bc046b1",
+            "main": "50bdbcdc931511b893ef70dea984190181c0c14e"
+          },
+          {
+            "path": "scripts/test_ci_changes.py",
+            "current": "b9490283f933dd93bedcdd7168f9f65225758ea7",
+            "main": "a51595f2c4a7a7021054c24caf89672578697c9c"
+          },
+          {
+            "path": "scripts/test_ci_lifecycle_workflows.py",
+            "current": "3b2ec827af45ca120f4579093730bfdb4e51268d",
+            "main": "aead3cce43c383264741c0d9066f163cc3948438"
+          },
+          {
+            "path": "scripts/test_ci_shards.py",
+            "current": "986e2ca0a694f6094e5c213685033bc1bd763dba",
+            "main": "53163db2e5aa186eb1e7b09ad759012aa02322a1"
+          }
+        ],
+        "265": [
+          {
+            "path": ".github/actions/setup-go/action.yml",
+            "current": "103aa3d9bc6e10cce1c889497072591215d0a249",
+            "main": "cb4ce6e3f43c913159dc139a3cc1149ac1531177"
+          },
+          {
+            "path": ".github/workflows/ci.yml",
+            "current": "788b2bbcd20ce8fdf30c355195b45bae1c065f73",
+            "main": "4cc4a016d45c6e6ef6481385af677f65e022c265"
+          },
+          {
+            "path": ".github/workflows/commit-images.yml",
+            "current": "6182e4da84807c0607eebf98360b1f38df981a52",
+            "main": "72437a7f6b25f943dcbbdceba8ffa65314179192"
+          },
+          {
+            "path": ".github/workflows/lifecycle-gate.yml",
+            "current": "c7f2a571b3e4ba6df2f518ab3ed63681a740bf28",
+            "main": "fa00a667f6a452dee3620a64b7ae5ade0b50a04d"
+          },
+          {
+            "path": ".github/workflows/notebook-memory-race.yml",
+            "current": "bb9c0c5b18fe00d1cac557e57ed9a4bfc2c22c3e",
+            "main": "fca595ce760221b18ea0540667298561735a947e"
+          },
+          {
+            "path": ".github/workflows/release.yml",
+            "current": "13c0cbc83716f1bcc63b008964957b80719eeda0",
+            "main": "bfa4bfcfaff1ad556485f46d3b4ead3ea0ba9279"
+          },
+          {
+            "path": "docs/gates.md",
+            "current": "e4b1563199b2a095e95245a248985602d3c98e49",
+            "main": "0eff59d16b0c904ec133da4bf24021f7d0db428d"
+          },
+          {
+            "path": "scripts/ci-lifecycle-gate.py",
+            "current": "05cebf20eadbd2fc0129c5e90ad779a638044c80",
+            "main": "d9f18178bf765c17f889df3918398360f9fc75e6"
+          },
+          {
+            "path": "scripts/test_ci_cache.py",
+            "current": "69773d5b655c110b32151e00ba961e2f4bc046b1",
+            "main": "50bdbcdc931511b893ef70dea984190181c0c14e"
+          },
+          {
+            "path": "scripts/test_ci_changes.py",
+            "current": "4b4fc2904207372a09a06357cf8720888704c31c",
+            "main": "a51595f2c4a7a7021054c24caf89672578697c9c"
+          },
+          {
+            "path": "scripts/test_ci_lifecycle_workflows.py",
+            "current": "3b2ec827af45ca120f4579093730bfdb4e51268d",
+            "main": "aead3cce43c383264741c0d9066f163cc3948438"
+          },
+          {
+            "path": "scripts/test_ci_shards.py",
+            "current": "b14b69daa24703e0c4e8b46d74b12b63ebdabdb9",
+            "main": "53163db2e5aa186eb1e7b09ad759012aa02322a1"
+          }
+        ],
+        "272": []
+      },
+      "workflow_instances": [
+        {
+          "label": "main",
+          "head": "72a25911d41dbe8d7e59d2e3694d4520a26e8e58",
+          "workflows": [
+            {
+              "path": ".github/workflows/ci.yml",
+              "blob": "4cc4a016d45c6e6ef6481385af677f65e022c265",
+              "runs_on": [
+                {
+                  "line": 20,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 50,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 91,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 107,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 145,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 191,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 233,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 252,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 273,
+                  "value": "depot-windows-2025"
+                },
+                {
+                  "line": 328,
+                  "value": "depot-macos-latest"
+                },
+                {
+                  "line": 358,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": [
+                "uses: ./.github/workflows/commit-images.yml"
+              ]
+            },
+            {
+              "path": ".github/workflows/commit-images-dispatch.yml",
+              "blob": "e52c471c5a78d7f957bbbd4806f3f5a4bb2e9d5b",
+              "runs_on": [],
+              "local_reusable": [
+                "uses: ./.github/workflows/commit-images.yml"
+              ]
+            },
+            {
+              "path": ".github/workflows/commit-images.yml",
+              "blob": "72437a7f6b25f943dcbbdceba8ffa65314179192",
+              "runs_on": [
+                {
+                  "line": 32,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 59,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": []
+            },
+            {
+              "path": ".github/workflows/lifecycle-gate.yml",
+              "blob": "fa00a667f6a452dee3620a64b7ae5ade0b50a04d",
+              "runs_on": [
+                {
+                  "line": 22,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": []
+            },
+            {
+              "path": ".github/workflows/notebook-memory-race.yml",
+              "blob": "fca595ce760221b18ea0540667298561735a947e",
+              "runs_on": [
+                {
+                  "line": 22,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": []
+            },
+            {
+              "path": ".github/workflows/release.yml",
+              "blob": "bfa4bfcfaff1ad556485f46d3b4ead3ea0ba9279",
+              "runs_on": [
+                {
+                  "line": 31,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 72,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 124,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 197,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 240,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": []
+            }
+          ]
+        },
+        {
+          "label": "272",
+          "head": "ee49a47179b2df82a70015b0978468b1fbd69e28",
+          "workflows": [
+            {
+              "path": ".github/workflows/ci.yml",
+              "blob": "4cc4a016d45c6e6ef6481385af677f65e022c265",
+              "runs_on": [
+                {
+                  "line": 20,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 50,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 91,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 107,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 145,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 191,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 233,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 252,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 273,
+                  "value": "depot-windows-2025"
+                },
+                {
+                  "line": 328,
+                  "value": "depot-macos-latest"
+                },
+                {
+                  "line": 358,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": [
+                "uses: ./.github/workflows/commit-images.yml"
+              ]
+            },
+            {
+              "path": ".github/workflows/commit-images-dispatch.yml",
+              "blob": "e52c471c5a78d7f957bbbd4806f3f5a4bb2e9d5b",
+              "runs_on": [],
+              "local_reusable": [
+                "uses: ./.github/workflows/commit-images.yml"
+              ]
+            },
+            {
+              "path": ".github/workflows/commit-images.yml",
+              "blob": "72437a7f6b25f943dcbbdceba8ffa65314179192",
+              "runs_on": [
+                {
+                  "line": 32,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 59,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": []
+            },
+            {
+              "path": ".github/workflows/lifecycle-gate.yml",
+              "blob": "fa00a667f6a452dee3620a64b7ae5ade0b50a04d",
+              "runs_on": [
+                {
+                  "line": 22,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": []
+            },
+            {
+              "path": ".github/workflows/notebook-memory-race.yml",
+              "blob": "fca595ce760221b18ea0540667298561735a947e",
+              "runs_on": [
+                {
+                  "line": 22,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": []
+            },
+            {
+              "path": ".github/workflows/release.yml",
+              "blob": "bfa4bfcfaff1ad556485f46d3b4ead3ea0ba9279",
+              "runs_on": [
+                {
+                  "line": 31,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 72,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 124,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 197,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 240,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": []
+            }
+          ]
+        },
+        {
+          "label": "265",
+          "head": "f8badac07f5745bcd71b55de30778c0585408336",
+          "workflows": [
+            {
+              "path": ".github/workflows/ci.yml",
+              "blob": "788b2bbcd20ce8fdf30c355195b45bae1c065f73",
+              "runs_on": [
+                {
+                  "line": 19,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 41,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 82,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 98,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 136,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 182,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 239,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 255,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 279,
+                  "value": "windows-latest"
+                },
+                {
+                  "line": 331,
+                  "value": "macos-latest"
+                },
+                {
+                  "line": 361,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": [
+                "uses: ./.github/workflows/commit-images.yml"
+              ]
+            },
+            {
+              "path": ".github/workflows/commit-images-dispatch.yml",
+              "blob": "e52c471c5a78d7f957bbbd4806f3f5a4bb2e9d5b",
+              "runs_on": [],
+              "local_reusable": [
+                "uses: ./.github/workflows/commit-images.yml"
+              ]
+            },
+            {
+              "path": ".github/workflows/commit-images.yml",
+              "blob": "6182e4da84807c0607eebf98360b1f38df981a52",
+              "runs_on": [
+                {
+                  "line": 32,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 59,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": []
+            },
+            {
+              "path": ".github/workflows/lifecycle-gate.yml",
+              "blob": "c7f2a571b3e4ba6df2f518ab3ed63681a740bf28",
+              "runs_on": [
+                {
+                  "line": 22,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": []
+            },
+            {
+              "path": ".github/workflows/notebook-memory-race.yml",
+              "blob": "bb9c0c5b18fe00d1cac557e57ed9a4bfc2c22c3e",
+              "runs_on": [
+                {
+                  "line": 26,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": []
+            },
+            {
+              "path": ".github/workflows/release.yml",
+              "blob": "13c0cbc83716f1bcc63b008964957b80719eeda0",
+              "runs_on": [
+                {
+                  "line": 31,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 72,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 124,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 197,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 240,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": []
+            }
+          ]
+        },
+        {
+          "label": "248",
+          "head": "863801718fce4cb188b072cd29e0e170a3096af2",
+          "workflows": [
+            {
+              "path": ".github/workflows/ci.yml",
+              "blob": "879204fb16102cbddbdcb25f5ea794286d801acd",
+              "runs_on": [
+                {
+                  "line": 19,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 41,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 82,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 98,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 143,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 189,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 251,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 271,
+                  "value": "ubuntu-latest"
+                },
+                {
+                  "line": 288,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 312,
+                  "value": "windows-latest"
+                },
+                {
+                  "line": 364,
+                  "value": "macos-latest"
+                },
+                {
+                  "line": 394,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": [
+                "uses: ./.github/workflows/commit-images.yml"
+              ]
+            },
+            {
+              "path": ".github/workflows/commit-images-dispatch.yml",
+              "blob": "e52c471c5a78d7f957bbbd4806f3f5a4bb2e9d5b",
+              "runs_on": [],
+              "local_reusable": [
+                "uses: ./.github/workflows/commit-images.yml"
+              ]
+            },
+            {
+              "path": ".github/workflows/commit-images.yml",
+              "blob": "6182e4da84807c0607eebf98360b1f38df981a52",
+              "runs_on": [
+                {
+                  "line": 32,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 59,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": []
+            },
+            {
+              "path": ".github/workflows/lifecycle-gate.yml",
+              "blob": "c7f2a571b3e4ba6df2f518ab3ed63681a740bf28",
+              "runs_on": [
+                {
+                  "line": 22,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": []
+            },
+            {
+              "path": ".github/workflows/notebook-memory-race.yml",
+              "blob": "bb9c0c5b18fe00d1cac557e57ed9a4bfc2c22c3e",
+              "runs_on": [
+                {
+                  "line": 26,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": []
+            },
+            {
+              "path": ".github/workflows/release.yml",
+              "blob": "ed5d4d54f5321a50928091d9ea842abbd53fe560",
+              "runs_on": [
+                {
+                  "line": 31,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 72,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 124,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 197,
+                  "value": "depot-ubuntu-24.04"
+                },
+                {
+                  "line": 240,
+                  "value": "depot-ubuntu-24.04"
+                }
+              ],
+              "local_reusable": []
+            }
+          ]
+        }
+      ],
+      "remaining_scope": [
+        {
+          "pr": 272,
+          "ci_source_delta": "none",
+          "reason": "All six workflows, setup-go action/metadata, ci-* helpers, test_ci_* files, build-commit helpers and docs/gates.md are byte-identical to current main. Existing static runners are Depot Ubuntu 24.04, depot-windows-2025 and depot-macos-latest; manual/fail-full selector, sequential main/manual races and targeted Windows checks already exist.",
+          "other_work": "The separate Backspace discussion/witness remains coordinator-owned. This read establishes source identity, not cold native test success."
+        },
+        {
+          "pr": 265,
+          "ci_source_delta": "Port the current main CI schedule/guards/native checks plus matching setup/cache/workflow tests/docs. The identity delta table lists 12 affected current-vs-main files; ci-test.sh, ci-race.sh, ci-memory.sh and ci-changes.py are already identical and need no blanket rewrite.",
+          "violations": [
+            {
+              "path": ".github/workflows/ci.yml",
+              "line": 279,
+              "label": "windows-latest"
+            },
+            {
+              "path": ".github/workflows/ci.yml",
+              "line": 331,
+              "label": "macos-latest"
+            }
+          ],
+          "schedule": "Missing workflow_dispatch, old selector failure conditions, old concurrency grouping, root race matrix and large memory still on full PRs; Windows uses repeated broad shards instead of main's targeted checks."
+        },
+        {
+          "pr": 248,
+          "ci_source_delta": "Integrate current main CI behavior while retaining Sheet-specific shards/browser/races/native packages, release and image-fallback coverage, test selectors and gate-documentation sections. Identity table lists 15 differing files; some differences are feature additions to retain, not replace with main.",
+          "violations": [
+            {
+              "path": ".github/workflows/ci.yml",
+              "line": 271,
+              "label": "ubuntu-latest"
+            },
+            {
+              "path": ".github/workflows/ci.yml",
+              "line": 312,
+              "label": "windows-latest"
+            },
+            {
+              "path": ".github/workflows/ci.yml",
+              "line": 364,
+              "label": "macos-latest"
+            }
+          ],
+          "schedule": "Same missing manual/fail-full/race-memory cuts as PR265; retain 12 main/manual race lanes with the D2 210-minute bound, native internal/sheet/... checks with 75-minute bound, and real Chrome browser execution. The existing Sheet release/fallback shard additions must survive.",
+          "coordinator_boundary": "Await integrated actual-main base and coordinator-owned first-commit/lifecycle changes before CI candidate objects."
+        },
+        {
+          "prs": [
+            236,
+            242,
+            243
+          ],
+          "ci_source_delta": "none; remove closed PRs from implementation/publication scope",
+          "reason": "All three are externally merged. The planned child stack no longer exists; do not recreate or update it."
+        }
+      ],
+      "dynamic_runner_expressions": [],
+      "runtime_checks_executed_for_this_reconciliation": [],
+      "design_status": "D2 and first main-drift acceptance do not yet cover this later scope/ref movement. Updated scope impact review is pending.",
+      "next_action": "Eligible different-model acceptance of the new scope and current identities; then implement only remaining authorized open-PR changes."
+    },
+    "source_objects_created": 0,
+    "implementation_started": false,
+    "current_blocker": "Later external main/head/closed-PR changes require updated scope-impact acceptance; the first drift was accepted."
   },
   "probe": {
     "repository": "gosuda/sloplint",
     "branch": "ci/remaining-runner-gates-20261126",
-    "head": "d7eab1f7a16e18c56c4617aa2d143dd67bb40253",
-    "retired": false,
-    "pending_job": 139937199163
+    "previous_head": "f66049d86d3151665cd8594d8dcc28817a1ef091",
+    "retired": true,
+    "retired_workflow": ".github/workflows/remaining-runner-gates.yml",
+    "pending_job": null,
+    "retirement_note": "This report and the deletion of the owned completed probe workflow are committed atomically; see the containing commit for its identity. All proof inputs remain in immutable producer commits."
+  },
+  "final_metadata_snapshot": {
+    "as_of": "2026-11-26 14:19:09 UTC",
+    "pull_requests": [
+      {
+        "repository": "gosuda/website",
+        "pr": 317,
+        "head": "8e302f18ba68523b976453c3abaab00f39034fcc",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "thread_count": 0,
+        "unresolved_thread_ids": []
+      },
+      {
+        "repository": "gosuda/website",
+        "pr": 316,
+        "head": "f913edd243936c090285a9ed6cc116f0fb73d57f",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "thread_count": 0,
+        "unresolved_thread_ids": []
+      },
+      {
+        "repository": "gosuda/website",
+        "pr": 315,
+        "head": "cc3430f0e0c4c0f07ad1464dd6d56164aebe91f9",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "thread_count": 0,
+        "unresolved_thread_ids": []
+      },
+      {
+        "repository": "gosuda/website",
+        "pr": 314,
+        "head": "c8752a22082d9e03b33baf0a56752457aa4f2a0f",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "thread_count": 0,
+        "unresolved_thread_ids": []
+      },
+      {
+        "repository": "gosuda/website",
+        "pr": 313,
+        "head": "2d3c12ef4ab2c366b85081dce899c3ac3c212349",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "thread_count": 0,
+        "unresolved_thread_ids": []
+      },
+      {
+        "repository": "gosuda/website",
+        "pr": 312,
+        "head": "115b24b203ed85c446c59c1cd249a381e7bf127f",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "thread_count": 0,
+        "unresolved_thread_ids": []
+      },
+      {
+        "repository": "gosuda/website",
+        "pr": 309,
+        "head": "181b29e7d7cdb0297374b3bda20e17a6598f1131",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "thread_count": 0,
+        "unresolved_thread_ids": []
+      },
+      {
+        "repository": "gosuda/website",
+        "pr": 307,
+        "head": "872b69af82a4908ddb31915d6eac4a51a3cf46a5",
+        "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "thread_count": 0,
+        "unresolved_thread_ids": []
+      },
+      {
+        "repository": "gosuda/ssh-chat",
+        "pr": 9,
+        "head": "cdc11f9505ea291d72d23d286c28cb88be1eb540",
+        "base": "179d41e6e32c79fe2619b1f718d560edb2a8c33a",
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "thread_count": 15,
+        "unresolved_thread_ids": []
+      },
+      {
+        "repository": "gosuda/elegant-mermaid",
+        "pr": 24,
+        "head": "d3aa285e05da5bc212cedea77572713657011245",
+        "base": "afa5a631ec41cb1e9aa0634b2d547d084bd27e33",
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "mergeable_state": "unstable",
+        "thread_count": 0,
+        "unresolved_thread_ids": []
+      },
+      {
+        "repository": "gosuda/elegant-mermaid",
+        "pr": 27,
+        "head": "d7352dc5f8fc406b345631b322dbd27d438b6938",
+        "base": "afa5a631ec41cb1e9aa0634b2d547d084bd27e33",
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "mergeable_state": "clean",
+        "thread_count": 2,
+        "unresolved_thread_ids": []
+      }
+    ]
   }
 }
