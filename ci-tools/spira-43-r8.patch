@@ -732,7 +732,7 @@ diff --git a/docs/specs/openapi.md b/docs/specs/openapi.md
 diff --git a/websocket/stream_test.lgo b/websocket/stream_test.lgo
 --- a/websocket/stream_test.lgo
 +++ b/websocket/stream_test.lgo
-@@ -1,1122 +1,1121 @@
+@@ -1,1122 +1,1120 @@
 -package websocket_test
 -
 -import (
@@ -1999,7 +1999,7 @@ diff --git a/websocket/stream_test.lgo b/websocket/stream_test.lgo
 +func requireExtendedConnect(t *testing.T, h *h2client) {
 +	t.Helper()
 +	if !h.advertised {
-+		t.Skip("server did not advertise SETTINGS_ENABLE_CONNECT_PROTOCOL; rerun with GODEBUG=http2xconnect=1")
++		t.Fatal("server did not advertise SETTINGS_ENABLE_CONNECT_PROTOCOL")
 +	}
 +}
 +
@@ -2668,7 +2668,6 @@ diff --git a/websocket/stream_test.lgo b/websocket/stream_test.lgo
 +func getFields(addr string) []h2field {
 +	return []h2field{
 +		{name: ":method", value: "GET"},
-+		{name: ":protocol", value: "websocket"},
 +		{name: ":scheme", value: "https"},
 +		{name: ":path", value: "/chat"},
 +		{name: ":authority", value: addr},
