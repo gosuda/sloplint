@@ -1,0 +1,476 @@
+{
+  "source_run": {
+    "id": 45883465823,
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 140128247995,
+        "name": "prepare",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 140129483648,
+        "name": "lint",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 140129483737,
+        "name": "arm64",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 140129483740,
+        "name": "x64",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "id": 15148767534,
+      "name": "powershell-assignment-followup-lint-7d0ce6a2ed4c22e43985e241b6c8d78040536675",
+      "zip_sha256": "c54bd9e8709f3a42aa2e33d6bb9e75fb8f086f3ae3a446fad2be6ca22f841298",
+      "size_bytes": 10258,
+      "producer": "7d0ce6a2ed4c22e43985e241b6c8d78040536675",
+      "run": 45883465823
+    },
+    {
+      "id": 15148621955,
+      "name": "powershell-assignment-followup-candidate-7d0ce6a2ed4c22e43985e241b6c8d78040536675",
+      "zip_sha256": "824551d41d705fa028521e5158f85fe1065be25eb56bff1405bb080e3e8b64c4",
+      "size_bytes": 792147,
+      "producer": "7d0ce6a2ed4c22e43985e241b6c8d78040536675",
+      "run": 45883465823
+    },
+    {
+      "id": 15148118585,
+      "name": "powershell-assignment-followup-arm64-7d0ce6a2ed4c22e43985e241b6c8d78040536675",
+      "zip_sha256": "384151c08380ef3b692d1838f14aa4e7c60ff8d71328a0ebf2a9d401ef7338b8",
+      "size_bytes": 63775,
+      "producer": "7d0ce6a2ed4c22e43985e241b6c8d78040536675",
+      "run": 45883465823
+    },
+    {
+      "id": 15147644535,
+      "name": "powershell-assignment-followup-x64-7d0ce6a2ed4c22e43985e241b6c8d78040536675",
+      "zip_sha256": "e7f1d038a2857995e23f2be6669f261cc90aab0e05dc5c8ffe73cab5d92fc07e",
+      "size_bytes": 63542,
+      "producer": "7d0ce6a2ed4c22e43985e241b6c8d78040536675",
+      "run": 45883465823
+    }
+  ],
+  "gates": {
+    "x64": {
+      "mode": "x64",
+      "results": [
+        {
+          "args": [
+            "rustup",
+            "toolchain",
+            "install",
+            "1.100.0",
+            "--profile",
+            "minimal",
+            "--component",
+            "rustfmt,clippy"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "5c4a350545b58a7cd7623d96848abeb542cb3374b1e2fd7fa37219ad787a6f5c",
+          "name": "rust-toolchain",
+          "seconds": 6.07827163799999,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "cargo",
+            "clippy",
+            "--workspace",
+            "--all-targets",
+            "--locked",
+            "--target",
+            "x86_64-unknown-linux-gnu",
+            "--",
+            "-D",
+            "warnings"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "ff1f2157b56205cf4d9e3ec89dd272108c1056495ba4c5ae88d18ac16e9b6507",
+          "name": "clippy",
+          "seconds": 21.877570914999993,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "cargo",
+            "test",
+            "--workspace",
+            "--locked",
+            "--no-fail-fast",
+            "--target",
+            "x86_64-unknown-linux-gnu"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "9ccff45426bfe55074384a23929120c92a85041f7c503d7333ee1dee9a64a6d5",
+          "name": "workspace",
+          "seconds": 95.956583212,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "cargo",
+            "build",
+            "--release",
+            "--locked",
+            "--target",
+            "x86_64-unknown-linux-gnu"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "523f0e6fe1f367712bba1ed1fc9848e7eec6ccffbd24aa9f98b8c8316e51bd59",
+          "name": "release",
+          "seconds": 56.90065320900001,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "/home/runner/work/sloplint/sloplint/source/target/x86_64-unknown-linux-gnu/release/sloplint",
+            "check",
+            "crates",
+            "--format",
+            "agent",
+            "--strictness",
+            "standard",
+            "--mode",
+            "threshold",
+            "--fail-on",
+            "minor"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "79e72dd3a2aaa852a0125eeab57d870e23d73dc08ac25b85b5955dc305ac9620",
+          "name": "self-lint",
+          "seconds": 0.15702567400001044,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "git",
+            "diff",
+            "--check"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "name": "whitespace",
+          "seconds": 0.10883355200002143,
+          "timed_out": false
+        }
+      ],
+      "source": {
+        "base": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+        "index_sha256": "6d1356e9a95311d7f8447e4b31e41b60047cd08580cf9a966c99c4d1a3a983eb",
+        "tracked_blobs": 4905,
+        "tree": "703b3a5a445883598bfb7ef05c263a76d6629235"
+      },
+      "stages_sha256": "756df645923e75e7625c0e04ef8b4a2f81aed4f22f4b57d4eeb6919898f049bf"
+    },
+    "arm64": {
+      "mode": "arm64",
+      "results": [
+        {
+          "args": [
+            "rustup",
+            "toolchain",
+            "install",
+            "1.100.0",
+            "--profile",
+            "minimal",
+            "--component",
+            "rustfmt,clippy"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "4e4ff096b0fe8dc822c90f2ea08b0fa7ed49658359f628842486c8d8be81a8fa",
+          "name": "rust-toolchain",
+          "seconds": 5.719101898999995,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "cargo",
+            "clippy",
+            "--workspace",
+            "--all-targets",
+            "--locked",
+            "--target",
+            "aarch64-unknown-linux-gnu",
+            "--",
+            "-D",
+            "warnings"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "da5f6ff15af2e10c4ce4379526cda301eb15494772ab1b53ec0e84736ede5033",
+          "name": "clippy",
+          "seconds": 30.578604385000006,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "cargo",
+            "test",
+            "--workspace",
+            "--locked",
+            "--no-fail-fast",
+            "--target",
+            "aarch64-unknown-linux-gnu"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "475772015bcbd2fdc18a1de243160689f44894a9ecaa052776799ebfa353f11a",
+          "name": "workspace",
+          "seconds": 242.831664397,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "cargo",
+            "build",
+            "--release",
+            "--locked",
+            "--target",
+            "aarch64-unknown-linux-gnu"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "d0ec1e2aae986ca922c452adb1c00c6e394bcb05301493b0df2661cdb2c31e89",
+          "name": "release",
+          "seconds": 72.94956768200001,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "git",
+            "diff",
+            "--check"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "name": "whitespace",
+          "seconds": 0.13506409199999325,
+          "timed_out": false
+        }
+      ],
+      "source": {
+        "base": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+        "index_sha256": "6d1356e9a95311d7f8447e4b31e41b60047cd08580cf9a966c99c4d1a3a983eb",
+        "tracked_blobs": 4905,
+        "tree": "703b3a5a445883598bfb7ef05c263a76d6629235"
+      },
+      "stages_sha256": "756df645923e75e7625c0e04ef8b4a2f81aed4f22f4b57d4eeb6919898f049bf"
+    },
+    "lint": {
+      "mode": "lint",
+      "results": [
+        {
+          "args": [
+            "rustup",
+            "toolchain",
+            "install",
+            "1.100.0",
+            "--profile",
+            "minimal",
+            "--component",
+            "rustfmt,clippy"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "5c4a350545b58a7cd7623d96848abeb542cb3374b1e2fd7fa37219ad787a6f5c",
+          "name": "rust-toolchain",
+          "seconds": 6.4195294510000025,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "cargo",
+            "fmt",
+            "--all",
+            "--check"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "name": "fmt",
+          "seconds": 0.8562100460000011,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "bash",
+            "scripts/grammars.sh",
+            "check"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "name": "grammar-manifest",
+          "seconds": 0.030765017999996758,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "bash",
+            "scripts/selftest-release-scripts.sh"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "f5c3b2e52b11f1cf56a28fd995f44b18a4eaacbfbcf4610161e2136f0dd0b8a4",
+          "name": "release-script-selftests",
+          "seconds": 1.6374354399999902,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "tar",
+            "-xzf",
+            "/home/runner/work/_temp/powershell-assignment-followup-r21/cargo-deny.tar.gz",
+            "-C",
+            "/home/runner/work/_temp/powershell-assignment-followup-r21",
+            "cargo-deny-0.20.2-x86_64-unknown-linux-musl/cargo-deny"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "name": "extract-cargo-deny",
+          "seconds": 0.04260691300000019,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "cargo",
+            "deny",
+            "check"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "f1a0fca39d4280363937aabd77783990ea6480bd9ca257816de3b68fc8efa845",
+          "name": "cargo-deny",
+          "seconds": 0.9450722880000058,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "bash",
+            "scripts/grammars.sh",
+            "verify",
+            "tree-sitter-powershell"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "93bc6be910dec10365d0d1a41803046b3cac2f83c996c29ae93e38beb979780c",
+          "name": "authoritative-grammar-verify",
+          "seconds": 0.6412907109999963,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "/home/runner/work/_temp/powershell-assignment-followup-r21/tree-sitter",
+            "test"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "a8f4cf732a49b8bce1236ea3f24cd52c11b0d737d59b46c230c23a3856d4cfc3",
+          "name": "grammar-corpus",
+          "seconds": 1.4516683089999987,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "/home/runner/work/_temp/powershell-assignment-followup-r21/tree-sitter",
+            "generate"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "28abfc9d180779f1ccb3a72ca0e1cc9502b76bafcda8d207cedd9f498d036cdc",
+          "name": "fresh-generation",
+          "seconds": 0.2715346430000096,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "git",
+            "diff",
+            "--check"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "name": "whitespace",
+          "seconds": 0.1090152719999935,
+          "timed_out": false
+        }
+      ],
+      "source": {
+        "base": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+        "index_sha256": "6d1356e9a95311d7f8447e4b31e41b60047cd08580cf9a966c99c4d1a3a983eb",
+        "tracked_blobs": 4905,
+        "tree": "703b3a5a445883598bfb7ef05c263a76d6629235"
+      },
+      "stages_sha256": "756df645923e75e7625c0e04ef8b4a2f81aed4f22f4b57d4eeb6919898f049bf"
+    }
+  },
+  "prepare_exits": [
+    "PROBE_EXIT rust-toolchain 0 timed_out=False",
+    "PROBE_EXIT extract-powershell 0 timed_out=False",
+    "PROBE_EXIT preserved-native-grammar 0 timed_out=False",
+    "PROBE_EXIT preserved-native-literals 0 timed_out=False",
+    "PROBE_EXIT native-new-cases 0 timed_out=False",
+    "PROBE_EXIT native-token-boundaries 0 timed_out=False",
+    "PROBE_EXIT native-followup-cases 0 timed_out=False",
+    "PROBE_EXIT native-near-controls 0 timed_out=False",
+    "PROBE_EXIT original-near-attached-csv 0 timed_out=False",
+    "PROBE_EXIT original-near-attached-quoted-csv 0 timed_out=False",
+    "PROBE_EXIT original-near-attached-include 0 timed_out=False",
+    "PROBE_EXIT original-near-ordinary-parameter 0 timed_out=False",
+    "PROBE_EXIT original-near-ordinary-double-parameter 0 timed_out=False",
+    "PROBE_EXIT original-near-negative-number 0 timed_out=False",
+    "PROBE_EXIT upstream-init 0 timed_out=False",
+    "PROBE_EXIT upstream-origin 0 timed_out=False",
+    "PROBE_EXIT upstream-fetch 0 timed_out=False",
+    "PROBE_EXIT upstream-checkout 0 timed_out=False",
+    "PROBE_EXIT upstream-patch 0 timed_out=False",
+    "PROBE_EXIT conditional-ownership-scanner-syntax 0 timed_out=False",
+    "PROBE_EXIT conditional-ownership-generate 0 timed_out=False",
+    "PROBE_EXIT conditional-ownership-corpus 0 timed_out=False",
+    "PROBE_EXIT conditional-ownership-format 0 timed_out=False",
+    "PROBE_EXIT conditional-ownership-whitespace 0 timed_out=False",
+    "PROBE_EXIT conditional-ownership-powershell-regressions 0 timed_out=False",
+    "PROBE_EXIT format-mark-words-scanner-syntax 0 timed_out=False",
+    "PROBE_EXIT format-mark-words-generate 0 timed_out=False",
+    "PROBE_EXIT format-mark-words-corpus 0 timed_out=False",
+    "PROBE_EXIT format-mark-words-format 0 timed_out=False",
+    "PROBE_EXIT format-mark-words-whitespace 0 timed_out=False",
+    "PROBE_EXIT format-mark-words-powershell-regressions 0 timed_out=False",
+    "PROBE_EXIT legacy-query-tokens-scanner-syntax 0 timed_out=False",
+    "PROBE_EXIT legacy-query-tokens-generate 0 timed_out=False",
+    "PROBE_EXIT legacy-query-tokens-corpus 0 timed_out=False",
+    "PROBE_EXIT legacy-query-tokens-format 0 timed_out=False",
+    "PROBE_EXIT legacy-query-tokens-whitespace 0 timed_out=False",
+    "PROBE_EXIT legacy-query-tokens-powershell-regressions 0 timed_out=False",
+    "PROBE_EXIT candidate-near-attached-csv 0 timed_out=False",
+    "PROBE_EXIT candidate-near-attached-quoted-csv 0 timed_out=False",
+    "PROBE_EXIT candidate-near-attached-include 0 timed_out=False",
+    "PROBE_EXIT candidate-near-ordinary-parameter 0 timed_out=False",
+    "PROBE_EXIT candidate-near-ordinary-double-parameter 0 timed_out=False",
+    "PROBE_EXIT candidate-near-negative-number 0 timed_out=False"
+  ]
+}

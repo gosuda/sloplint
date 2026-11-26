@@ -1,0 +1,68 @@
+[
+  {
+    "path": "crates/sloplint-syntax/tests/grammar_gaps.rs",
+    "sha256": "fc2e82af4061611fff690848a1585918d75fbee064c0efb6d9ac1f75a66c20b7",
+    "bytes": 3182,
+    "lines": 103
+  },
+  {
+    "path": "crates/sloplint-syntax/tests/grammar_gaps/powershell_assignment_escapes.rs",
+    "sha256": "865a96ea0eb1baf4507edd9d1cf156e18952bd9bf9cb2f49a6f2e02b7880a9dc",
+    "bytes": 3542,
+    "lines": 92
+  },
+  {
+    "path": "vendor/tree-sitter-powershell/SLOPLINT.md",
+    "sha256": "d4b2d669def4acce89f5faf1826a07779b023a17cc84d8b42a469c2d6b646d3c",
+    "bytes": 30894,
+    "lines": 517
+  },
+  {
+    "path": "vendor/tree-sitter-powershell/sloplint-grammar.patch",
+    "sha256": "d95cc1747b896e0c0ad8e1d2333b43bd3a8992cfaee1059e55d25b6c8e285f86",
+    "bytes": 73908,
+    "lines": 2422
+  },
+  {
+    "path": "vendor/tree-sitter-powershell/src/scanner.c",
+    "sha256": "7380f4e0789f18f873e1eb776426f0e4e1f015cd4499d6caa65d62c1dbb755dd",
+    "bytes": 9656,
+    "lines": 267
+  },
+  {
+    "path": "crates/sloplint-syntax/tests/grammar_gaps/powershell_format_dash_words.rs",
+    "sha256": "02e1070b265182fb551481aa9f556bb6b14f36f56f5333b126e11838aadac129",
+    "bytes": 4709,
+    "lines": 121
+  },
+  {
+    "path": "vendor/tree-sitter-powershell/grammar.js",
+    "sha256": "dffb886898b64ef9f6309211e38e99a2df77159f27a72eca156aabb2a4c53dcb",
+    "bytes": 48930,
+    "lines": 1610
+  },
+  {
+    "path": "vendor/tree-sitter-powershell/src/grammar.json",
+    "sha256": "996dd8c54488e192ef14f95407afc57bfe409df3be40ccc1def439fd5e66a3ee",
+    "bytes": 177202,
+    "lines": 7387
+  },
+  {
+    "path": "vendor/tree-sitter-powershell/src/parser.c",
+    "sha256": "cdb17d6c28b6f593274b1e42fa5b72fcedfdc811970462fe8a3d822117003c30",
+    "bytes": 5229688,
+    "lines": 137903
+  },
+  {
+    "path": "crates/sloplint-syntax/tests/grammar_gaps/powershell_separator_queries.rs",
+    "sha256": "44bd8bd764cec420d7fcf3d9d2024d47d9442dea9a38001a58cf2647601ccfa3",
+    "bytes": 3123,
+    "lines": 85
+  },
+  {
+    "path": "vendor/tree-sitter-powershell/src/node-types.json",
+    "sha256": "cc0ca0ff480d8278d54719e0dc7a5213018e4a39333e7f1986481972bec64404",
+    "bytes": 75097,
+    "lines": 4255
+  }
+]

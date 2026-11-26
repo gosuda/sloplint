@@ -1,0 +1,805 @@
+{
+  "repository": "gosuda/sloplint",
+  "pull_request": 137,
+  "branch": "fix/powershell-review-boundaries-20261126",
+  "state": "Published additively; all native source gates passed; three targeted review threads resolved; ordinary PR workflow is being monitored.",
+  "source_base": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+  "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+  "candidate": {
+    "base": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+    "tree": "703b3a5a445883598bfb7ef05c263a76d6629235",
+    "tracked_blobs": 4905,
+    "index_sha256": "6d1356e9a95311d7f8447e4b31e41b60047cd08580cf9a966c99c4d1a3a983eb"
+  },
+  "source_stages": [
+    {
+      "id": "conditional-ownership",
+      "message": "Preserve conditional branches after escaped lines",
+      "base_tree": "171bbe1c7137faf98fb7981f69288120cd18bdf6",
+      "tree": "4b86019a988337e9d06d6752cdc85654a36947c5",
+      "identity": {
+        "base": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+        "tree": "4b86019a988337e9d06d6752cdc85654a36947c5",
+        "tracked_blobs": 4903,
+        "index_sha256": "537d7805adfbc52ccdfacf0f0442f73cd6b1b0405f477714323552f5b1967195"
+      },
+      "paths": [
+        "crates/sloplint-syntax/tests/grammar_gaps.rs",
+        "crates/sloplint-syntax/tests/grammar_gaps/powershell_assignment_escapes.rs",
+        "vendor/tree-sitter-powershell/SLOPLINT.md",
+        "vendor/tree-sitter-powershell/sloplint-grammar.patch",
+        "vendor/tree-sitter-powershell/src/scanner.c"
+      ]
+    },
+    {
+      "id": "format-mark-words",
+      "message": "Preserve complete format-mark dash arguments",
+      "base_tree": "4b86019a988337e9d06d6752cdc85654a36947c5",
+      "tree": "7cea26720aae4dd26b178465641073261b739fb7",
+      "identity": {
+        "base": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+        "tree": "7cea26720aae4dd26b178465641073261b739fb7",
+        "tracked_blobs": 4904,
+        "index_sha256": "2e9ba62269544b445365994c0bcabe20ebcfb9947ec5039237f35e068d048f3b"
+      },
+      "paths": [
+        "crates/sloplint-syntax/tests/grammar_gaps.rs",
+        "crates/sloplint-syntax/tests/grammar_gaps/powershell_assignment_escapes.rs",
+        "crates/sloplint-syntax/tests/grammar_gaps/powershell_format_dash_words.rs",
+        "vendor/tree-sitter-powershell/SLOPLINT.md",
+        "vendor/tree-sitter-powershell/grammar.js",
+        "vendor/tree-sitter-powershell/sloplint-grammar.patch",
+        "vendor/tree-sitter-powershell/src/grammar.json",
+        "vendor/tree-sitter-powershell/src/parser.c",
+        "vendor/tree-sitter-powershell/src/scanner.c"
+      ]
+    },
+    {
+      "id": "legacy-query-tokens",
+      "message": "Preserve legacy PowerShell separator queries",
+      "base_tree": "7cea26720aae4dd26b178465641073261b739fb7",
+      "tree": "703b3a5a445883598bfb7ef05c263a76d6629235",
+      "identity": {
+        "base": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+        "tree": "703b3a5a445883598bfb7ef05c263a76d6629235",
+        "tracked_blobs": 4905,
+        "index_sha256": "6d1356e9a95311d7f8447e4b31e41b60047cd08580cf9a966c99c4d1a3a983eb"
+      },
+      "paths": [
+        "crates/sloplint-syntax/tests/grammar_gaps.rs",
+        "crates/sloplint-syntax/tests/grammar_gaps/powershell_assignment_escapes.rs",
+        "crates/sloplint-syntax/tests/grammar_gaps/powershell_format_dash_words.rs",
+        "crates/sloplint-syntax/tests/grammar_gaps/powershell_separator_queries.rs",
+        "vendor/tree-sitter-powershell/SLOPLINT.md",
+        "vendor/tree-sitter-powershell/grammar.js",
+        "vendor/tree-sitter-powershell/sloplint-grammar.patch",
+        "vendor/tree-sitter-powershell/src/grammar.json",
+        "vendor/tree-sitter-powershell/src/node-types.json",
+        "vendor/tree-sitter-powershell/src/parser.c",
+        "vendor/tree-sitter-powershell/src/scanner.c"
+      ]
+    }
+  ],
+  "changed_file_manifest": [
+    {
+      "path": "crates/sloplint-syntax/tests/grammar_gaps.rs",
+      "sha256": "fc2e82af4061611fff690848a1585918d75fbee064c0efb6d9ac1f75a66c20b7",
+      "bytes": 3182,
+      "lines": 103
+    },
+    {
+      "path": "crates/sloplint-syntax/tests/grammar_gaps/powershell_assignment_escapes.rs",
+      "sha256": "865a96ea0eb1baf4507edd9d1cf156e18952bd9bf9cb2f49a6f2e02b7880a9dc",
+      "bytes": 3542,
+      "lines": 92
+    },
+    {
+      "path": "vendor/tree-sitter-powershell/SLOPLINT.md",
+      "sha256": "d4b2d669def4acce89f5faf1826a07779b023a17cc84d8b42a469c2d6b646d3c",
+      "bytes": 30894,
+      "lines": 517
+    },
+    {
+      "path": "vendor/tree-sitter-powershell/sloplint-grammar.patch",
+      "sha256": "d95cc1747b896e0c0ad8e1d2333b43bd3a8992cfaee1059e55d25b6c8e285f86",
+      "bytes": 73908,
+      "lines": 2422
+    },
+    {
+      "path": "vendor/tree-sitter-powershell/src/scanner.c",
+      "sha256": "7380f4e0789f18f873e1eb776426f0e4e1f015cd4499d6caa65d62c1dbb755dd",
+      "bytes": 9656,
+      "lines": 267
+    },
+    {
+      "path": "crates/sloplint-syntax/tests/grammar_gaps/powershell_format_dash_words.rs",
+      "sha256": "02e1070b265182fb551481aa9f556bb6b14f36f56f5333b126e11838aadac129",
+      "bytes": 4709,
+      "lines": 121
+    },
+    {
+      "path": "vendor/tree-sitter-powershell/grammar.js",
+      "sha256": "dffb886898b64ef9f6309211e38e99a2df77159f27a72eca156aabb2a4c53dcb",
+      "bytes": 48930,
+      "lines": 1610
+    },
+    {
+      "path": "vendor/tree-sitter-powershell/src/grammar.json",
+      "sha256": "996dd8c54488e192ef14f95407afc57bfe409df3be40ccc1def439fd5e66a3ee",
+      "bytes": 177202,
+      "lines": 7387
+    },
+    {
+      "path": "vendor/tree-sitter-powershell/src/parser.c",
+      "sha256": "cdb17d6c28b6f593274b1e42fa5b72fcedfdc811970462fe8a3d822117003c30",
+      "bytes": 5229688,
+      "lines": 137903
+    },
+    {
+      "path": "crates/sloplint-syntax/tests/grammar_gaps/powershell_separator_queries.rs",
+      "sha256": "44bd8bd764cec420d7fcf3d9d2024d47d9442dea9a38001a58cf2647601ccfa3",
+      "bytes": 3123,
+      "lines": 85
+    },
+    {
+      "path": "vendor/tree-sitter-powershell/src/node-types.json",
+      "sha256": "cc0ca0ff480d8278d54719e0dc7a5213018e4a39333e7f1986481972bec64404",
+      "bytes": 75097,
+      "lines": 4255
+    }
+  ],
+  "independent_github_tree_reconstruction": [
+    {
+      "id": "conditional-ownership",
+      "tree": "4b86019a988337e9d06d6752cdc85654a36947c5",
+      "base_tree": "171bbe1c7137faf98fb7981f69288120cd18bdf6"
+    },
+    {
+      "id": "format-mark-words",
+      "tree": "7cea26720aae4dd26b178465641073261b739fb7",
+      "base_tree": "4b86019a988337e9d06d6752cdc85654a36947c5"
+    },
+    {
+      "id": "legacy-query-tokens",
+      "tree": "703b3a5a445883598bfb7ef05c263a76d6629235",
+      "base_tree": "7cea26720aae4dd26b178465641073261b739fb7"
+    }
+  ],
+  "producer": {
+    "branch": "ci/powershell-assignment-followup-20261126-r21",
+    "head": "7d0ce6a2ed4c22e43985e241b6c8d78040536675",
+    "tree": "1fb481957edce9dc2ec55eecc6067afd538dfbae",
+    "run": 45883465823,
+    "prepare_job": 140128247995
+  },
+  "transport": {
+    "artifact": 15148621955,
+    "zip_sha256": "824551d41d705fa028521e5158f85fe1065be25eb56bff1405bb080e3e8b64c4",
+    "payload_sha256": "756df645923e75e7625c0e04ef8b4a2f81aed4f22f4b57d4eeb6919898f049bf",
+    "gzip_sha256": "6fed94d4540cf64470849a2852cd1fc4404e9b8b6f9c5c59a5f9bf5c2a135ada",
+    "gzip_bytes": 670942,
+    "payload_bytes": 11668076,
+    "base64_bytes": 894592,
+    "chunks": 38
+  },
+  "baseline": {
+    "producer": "7b437bd9ec7ea9703a1a35d7eaa9a7cf2b3449fe",
+    "run": 45881856636,
+    "job": 140122879205,
+    "artifact": 15147946239,
+    "zip_sha256": "17ea292495ac45658a820c7944ccf0a7923ca26b10383ff1e9841114ff7e402a",
+    "source_current": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+    "source_previous": "61c88ec4d492dd1ab72f76b15b84fa9434cccfaa",
+    "outcome": "Native176 pass. Current conditional/dash/query regressions exit101; pre conditional/query/protected controls exit0, pre dash exits101. All tracked source blobs restored and verified on both snapshots.",
+    "original_query_capture_lines": 24
+  },
+  "initial_harness_failure": {
+    "producer": "1de4c392fa38571ff054962abed235395351985c",
+    "run": 45881064468,
+    "job": 140120224934,
+    "artifact": 15147900558,
+    "artifact_zip_sha256": "5c5c3918ffd62efc903f444003d15c38209140d56f5dcef6117b27b3cf40583b",
+    "phase": "pre-legacy-query",
+    "exit": 101,
+    "reason": "The old grammar captures repeated spaces as one span; initial per-character expectation was false. Native oracle176 and pre conditional ownership passed. Dash extent was already RED on pre-r20."
+  },
+  "native": {
+    "preserved_parser_comparisons": 485,
+    "new_conditional_cases": 96,
+    "new_argument_cases": 54,
+    "new_comma_cases": 18,
+    "required_parser_comparisons": 653,
+    "near_controls": 6,
+    "known_prior_observations": 8,
+    "preserved_literal_outputs": 52,
+    "new_actual_argv": 72
+  },
+  "old_limit_observations": [
+    {
+      "id": "ordinary-escape-lf-standalone",
+      "native_accepted": true,
+      "pre_r20_accepted": false,
+      "published_r20_accepted": false,
+      "candidate_accepted": false,
+      "actual_exit": 1,
+      "classification": "Native-valid leading escaped command name rejected on both historical snapshots; outside this source repair."
+    },
+    {
+      "id": "ordinary-escape-lf-assignment",
+      "native_accepted": true,
+      "pre_r20_accepted": false,
+      "published_r20_accepted": false,
+      "candidate_accepted": false,
+      "actual_exit": 1,
+      "classification": "Native-valid leading escaped command name rejected on both historical snapshots; outside this source repair."
+    },
+    {
+      "id": "ordinary-escape-lf-subexpression",
+      "native_accepted": true,
+      "pre_r20_accepted": false,
+      "published_r20_accepted": false,
+      "candidate_accepted": false,
+      "actual_exit": 1,
+      "classification": "Native-valid leading escaped command name rejected on both historical snapshots; outside this source repair."
+    },
+    {
+      "id": "ordinary-escape-lf-script-block",
+      "native_accepted": true,
+      "pre_r20_accepted": false,
+      "published_r20_accepted": false,
+      "candidate_accepted": false,
+      "actual_exit": 1,
+      "classification": "Native-valid leading escaped command name rejected on both historical snapshots; outside this source repair."
+    },
+    {
+      "id": "ordinary-escape-crlf-standalone",
+      "native_accepted": true,
+      "pre_r20_accepted": false,
+      "published_r20_accepted": false,
+      "candidate_accepted": false,
+      "actual_exit": 1,
+      "classification": "Native-valid leading escaped command name rejected on both historical snapshots; outside this source repair."
+    },
+    {
+      "id": "ordinary-escape-crlf-assignment",
+      "native_accepted": true,
+      "pre_r20_accepted": false,
+      "published_r20_accepted": false,
+      "candidate_accepted": false,
+      "actual_exit": 1,
+      "classification": "Native-valid leading escaped command name rejected on both historical snapshots; outside this source repair."
+    },
+    {
+      "id": "ordinary-escape-crlf-subexpression",
+      "native_accepted": true,
+      "pre_r20_accepted": false,
+      "published_r20_accepted": false,
+      "candidate_accepted": false,
+      "actual_exit": 1,
+      "classification": "Native-valid leading escaped command name rejected on both historical snapshots; outside this source repair."
+    },
+    {
+      "id": "ordinary-escape-crlf-script-block",
+      "native_accepted": true,
+      "pre_r20_accepted": false,
+      "published_r20_accepted": false,
+      "candidate_accepted": false,
+      "actual_exit": 1,
+      "classification": "Native-valid leading escaped command name rejected on both historical snapshots; outside this source repair."
+    }
+  ],
+  "review_threads": [
+    "PRRT_kwDOVOMFM868heFN",
+    "PRRT_kwDOVOMFM868heGc",
+    "PRRT_kwDOVOMFM868heHT"
+  ],
+  "review_reconciliation": {
+    "reviewer": "/root/bitcoin_round7/ci_followups/charamel_console_review",
+    "outcome": "Expanded actual AST ownership assertions, native full-word/comma extents, whole-gap legacy Query captures, and unchanged named-option/numeric trees satisfy the review concerns. Ordinary-character escaped command names were already unsupported on both historical snapshots and are recorded separately.",
+    "no_additional_jobs": true
+  },
+  "prior_published_source": {
+    "head": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+    "tree": "171bbe1c7137faf98fb7981f69288120cd18bdf6",
+    "ordinary_run": 45877442939,
+    "ordinary_conclusion": "success",
+    "retired_probe": "3a2ede51f89777df54121ca9e65d572bb497826f"
+  },
+  "recorded_utc": "2026-11-26 19:39:00 UTC",
+  "publication": {
+    "head": "83f73f04e7f20bf405dbf4c2de3bd5467c8010bb",
+    "tree": "703b3a5a445883598bfb7ef05c263a76d6629235",
+    "commits": [
+      {
+        "id": "conditional-ownership",
+        "sha": "0ef12ac28a807a2607606e669c85bf1d403eb602",
+        "tree": "4b86019a988337e9d06d6752cdc85654a36947c5",
+        "parent": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+        "message": "Preserve conditional branches after escaped lines"
+      },
+      {
+        "id": "format-mark-words",
+        "sha": "23b5b13e23e70ba519ed054f1703be06ca29c490",
+        "tree": "7cea26720aae4dd26b178465641073261b739fb7",
+        "parent": "0ef12ac28a807a2607606e669c85bf1d403eb602",
+        "message": "Preserve complete format-mark dash arguments"
+      },
+      {
+        "id": "legacy-query-tokens",
+        "sha": "83f73f04e7f20bf405dbf4c2de3bd5467c8010bb",
+        "tree": "703b3a5a445883598bfb7ef05c263a76d6629235",
+        "parent": "23b5b13e23e70ba519ed054f1703be06ca29c490",
+        "message": "Preserve legacy PowerShell separator queries"
+      }
+    ],
+    "force_push": false,
+    "amend": false,
+    "merge": false
+  },
+  "gates": {
+    "x64": {
+      "mode": "x64",
+      "results": [
+        {
+          "args": [
+            "rustup",
+            "toolchain",
+            "install",
+            "1.100.0",
+            "--profile",
+            "minimal",
+            "--component",
+            "rustfmt,clippy"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "5c4a350545b58a7cd7623d96848abeb542cb3374b1e2fd7fa37219ad787a6f5c",
+          "name": "rust-toolchain",
+          "seconds": 6.07827163799999,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "cargo",
+            "clippy",
+            "--workspace",
+            "--all-targets",
+            "--locked",
+            "--target",
+            "x86_64-unknown-linux-gnu",
+            "--",
+            "-D",
+            "warnings"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "ff1f2157b56205cf4d9e3ec89dd272108c1056495ba4c5ae88d18ac16e9b6507",
+          "name": "clippy",
+          "seconds": 21.877570914999993,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "cargo",
+            "test",
+            "--workspace",
+            "--locked",
+            "--no-fail-fast",
+            "--target",
+            "x86_64-unknown-linux-gnu"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "9ccff45426bfe55074384a23929120c92a85041f7c503d7333ee1dee9a64a6d5",
+          "name": "workspace",
+          "seconds": 95.956583212,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "cargo",
+            "build",
+            "--release",
+            "--locked",
+            "--target",
+            "x86_64-unknown-linux-gnu"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "523f0e6fe1f367712bba1ed1fc9848e7eec6ccffbd24aa9f98b8c8316e51bd59",
+          "name": "release",
+          "seconds": 56.90065320900001,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "/home/runner/work/sloplint/sloplint/source/target/x86_64-unknown-linux-gnu/release/sloplint",
+            "check",
+            "crates",
+            "--format",
+            "agent",
+            "--strictness",
+            "standard",
+            "--mode",
+            "threshold",
+            "--fail-on",
+            "minor"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "79e72dd3a2aaa852a0125eeab57d870e23d73dc08ac25b85b5955dc305ac9620",
+          "name": "self-lint",
+          "seconds": 0.15702567400001044,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "git",
+            "diff",
+            "--check"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "name": "whitespace",
+          "seconds": 0.10883355200002143,
+          "timed_out": false
+        }
+      ],
+      "source": {
+        "base": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+        "index_sha256": "6d1356e9a95311d7f8447e4b31e41b60047cd08580cf9a966c99c4d1a3a983eb",
+        "tracked_blobs": 4905,
+        "tree": "703b3a5a445883598bfb7ef05c263a76d6629235"
+      },
+      "stages_sha256": "756df645923e75e7625c0e04ef8b4a2f81aed4f22f4b57d4eeb6919898f049bf"
+    },
+    "arm64": {
+      "mode": "arm64",
+      "results": [
+        {
+          "args": [
+            "rustup",
+            "toolchain",
+            "install",
+            "1.100.0",
+            "--profile",
+            "minimal",
+            "--component",
+            "rustfmt,clippy"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "4e4ff096b0fe8dc822c90f2ea08b0fa7ed49658359f628842486c8d8be81a8fa",
+          "name": "rust-toolchain",
+          "seconds": 5.719101898999995,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "cargo",
+            "clippy",
+            "--workspace",
+            "--all-targets",
+            "--locked",
+            "--target",
+            "aarch64-unknown-linux-gnu",
+            "--",
+            "-D",
+            "warnings"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "da5f6ff15af2e10c4ce4379526cda301eb15494772ab1b53ec0e84736ede5033",
+          "name": "clippy",
+          "seconds": 30.578604385000006,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "cargo",
+            "test",
+            "--workspace",
+            "--locked",
+            "--no-fail-fast",
+            "--target",
+            "aarch64-unknown-linux-gnu"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "475772015bcbd2fdc18a1de243160689f44894a9ecaa052776799ebfa353f11a",
+          "name": "workspace",
+          "seconds": 242.831664397,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "cargo",
+            "build",
+            "--release",
+            "--locked",
+            "--target",
+            "aarch64-unknown-linux-gnu"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "d0ec1e2aae986ca922c452adb1c00c6e394bcb05301493b0df2661cdb2c31e89",
+          "name": "release",
+          "seconds": 72.94956768200001,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "git",
+            "diff",
+            "--check"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "name": "whitespace",
+          "seconds": 0.13506409199999325,
+          "timed_out": false
+        }
+      ],
+      "source": {
+        "base": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+        "index_sha256": "6d1356e9a95311d7f8447e4b31e41b60047cd08580cf9a966c99c4d1a3a983eb",
+        "tracked_blobs": 4905,
+        "tree": "703b3a5a445883598bfb7ef05c263a76d6629235"
+      },
+      "stages_sha256": "756df645923e75e7625c0e04ef8b4a2f81aed4f22f4b57d4eeb6919898f049bf"
+    },
+    "lint": {
+      "mode": "lint",
+      "results": [
+        {
+          "args": [
+            "rustup",
+            "toolchain",
+            "install",
+            "1.100.0",
+            "--profile",
+            "minimal",
+            "--component",
+            "rustfmt,clippy"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "5c4a350545b58a7cd7623d96848abeb542cb3374b1e2fd7fa37219ad787a6f5c",
+          "name": "rust-toolchain",
+          "seconds": 6.4195294510000025,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "cargo",
+            "fmt",
+            "--all",
+            "--check"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "name": "fmt",
+          "seconds": 0.8562100460000011,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "bash",
+            "scripts/grammars.sh",
+            "check"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "name": "grammar-manifest",
+          "seconds": 0.030765017999996758,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "bash",
+            "scripts/selftest-release-scripts.sh"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "f5c3b2e52b11f1cf56a28fd995f44b18a4eaacbfbcf4610161e2136f0dd0b8a4",
+          "name": "release-script-selftests",
+          "seconds": 1.6374354399999902,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "tar",
+            "-xzf",
+            "/home/runner/work/_temp/powershell-assignment-followup-r21/cargo-deny.tar.gz",
+            "-C",
+            "/home/runner/work/_temp/powershell-assignment-followup-r21",
+            "cargo-deny-0.20.2-x86_64-unknown-linux-musl/cargo-deny"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "name": "extract-cargo-deny",
+          "seconds": 0.04260691300000019,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "cargo",
+            "deny",
+            "check"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "f1a0fca39d4280363937aabd77783990ea6480bd9ca257816de3b68fc8efa845",
+          "name": "cargo-deny",
+          "seconds": 0.9450722880000058,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "bash",
+            "scripts/grammars.sh",
+            "verify",
+            "tree-sitter-powershell"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "93bc6be910dec10365d0d1a41803046b3cac2f83c996c29ae93e38beb979780c",
+          "name": "authoritative-grammar-verify",
+          "seconds": 0.6412907109999963,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "/home/runner/work/_temp/powershell-assignment-followup-r21/tree-sitter",
+            "test"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "a8f4cf732a49b8bce1236ea3f24cd52c11b0d737d59b46c230c23a3856d4cfc3",
+          "name": "grammar-corpus",
+          "seconds": 1.4516683089999987,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "/home/runner/work/_temp/powershell-assignment-followup-r21/tree-sitter",
+            "generate"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "28abfc9d180779f1ccb3a72ca0e1cc9502b76bafcda8d207cedd9f498d036cdc",
+          "name": "fresh-generation",
+          "seconds": 0.2715346430000096,
+          "timed_out": false
+        },
+        {
+          "args": [
+            "git",
+            "diff",
+            "--check"
+          ],
+          "exit": 0,
+          "expected": 0,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "name": "whitespace",
+          "seconds": 0.1090152719999935,
+          "timed_out": false
+        }
+      ],
+      "source": {
+        "base": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+        "index_sha256": "6d1356e9a95311d7f8447e4b31e41b60047cd08580cf9a966c99c4d1a3a983eb",
+        "tracked_blobs": 4905,
+        "tree": "703b3a5a445883598bfb7ef05c263a76d6629235"
+      },
+      "stages_sha256": "756df645923e75e7625c0e04ef8b4a2f81aed4f22f4b57d4eeb6919898f049bf"
+    }
+  },
+  "source_run": {
+    "id": 45883465823,
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 140128247995,
+        "name": "prepare",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 140129483648,
+        "name": "lint",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 140129483737,
+        "name": "arm64",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 140129483740,
+        "name": "x64",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "id": 15148767534,
+      "name": "powershell-assignment-followup-lint-7d0ce6a2ed4c22e43985e241b6c8d78040536675",
+      "zip_sha256": "c54bd9e8709f3a42aa2e33d6bb9e75fb8f086f3ae3a446fad2be6ca22f841298",
+      "size_bytes": 10258,
+      "producer": "7d0ce6a2ed4c22e43985e241b6c8d78040536675",
+      "run": 45883465823
+    },
+    {
+      "id": 15148621955,
+      "name": "powershell-assignment-followup-candidate-7d0ce6a2ed4c22e43985e241b6c8d78040536675",
+      "zip_sha256": "824551d41d705fa028521e5158f85fe1065be25eb56bff1405bb080e3e8b64c4",
+      "size_bytes": 792147,
+      "producer": "7d0ce6a2ed4c22e43985e241b6c8d78040536675",
+      "run": 45883465823
+    },
+    {
+      "id": 15148118585,
+      "name": "powershell-assignment-followup-arm64-7d0ce6a2ed4c22e43985e241b6c8d78040536675",
+      "zip_sha256": "384151c08380ef3b692d1838f14aa4e7c60ff8d71328a0ebf2a9d401ef7338b8",
+      "size_bytes": 63775,
+      "producer": "7d0ce6a2ed4c22e43985e241b6c8d78040536675",
+      "run": 45883465823
+    },
+    {
+      "id": 15147644535,
+      "name": "powershell-assignment-followup-x64-7d0ce6a2ed4c22e43985e241b6c8d78040536675",
+      "zip_sha256": "e7f1d038a2857995e23f2be6669f261cc90aab0e05dc5c8ffe73cab5d92fc07e",
+      "size_bytes": 63542,
+      "producer": "7d0ce6a2ed4c22e43985e241b6c8d78040536675",
+      "run": 45883465823
+    }
+  ],
+  "review_resolution": [
+    {
+      "thread": "PRRT_kwDOVOMFM868heFN",
+      "top_comment": 4712319698,
+      "reply": 4712740514,
+      "is_resolved": true
+    },
+    {
+      "thread": "PRRT_kwDOVOMFM868heGc",
+      "top_comment": 4712319843,
+      "reply": 4712741085,
+      "is_resolved": true
+    },
+    {
+      "thread": "PRRT_kwDOVOMFM868heHT",
+      "top_comment": 4712319943,
+      "reply": 4712741602,
+      "is_resolved": true
+    }
+  ],
+  "thread_snapshot": {
+    "total": 18,
+    "unresolved": []
+  },
+  "ordinary_ci": {
+    "id": 45884920364,
+    "head": "83f73f04e7f20bf405dbf4c2de3bd5467c8010bb",
+    "status": "in_progress",
+    "conclusion": null,
+    "html_url": "https://github.com/gosuda/sloplint/actions/runs/45884920364"
+  },
+  "retirement": {
+    "branch": "ci/powershell-assignment-followup-20261126-r21",
+    "parent": "7d0ce6a2ed4c22e43985e241b6c8d78040536675",
+    "removed_workflow": ".github/workflows/powershell-assignment-followup-r21.yml",
+    "method": "Additive commit; no ref deletion or force update."
+  }
+}
