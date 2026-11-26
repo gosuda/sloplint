@@ -35,7 +35,7 @@ jobs:
           components: rustfmt, clippy
       - uses: taiki-e/install-action@893d6ee8d714b6c7dfe2bcd94e5759e9a7958a7e
         with:
-          tool: cargo-nextest,taplo-cli,typos-cli,cargo-deny,cargo-machete,cocogitto,actionlint
+          tool: cargo-nextest,taplo-cli,typos-cli,cargo-deny,cargo-machete,cocogitto
       - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
         with:
           version: "0.13.9"
@@ -50,6 +50,11 @@ jobs:
           tar -xJf "$RUNNER_TEMP/dist.tar.xz" -C "$RUNNER_TEMP"
           install "$RUNNER_TEMP/cargo-dist-x86_64-unknown-linux-gnu/dist" "$HOME/.cargo/bin/dist"
           dist --version
+          curl --fail --silent --show-error --location --retry 3 --output "$RUNNER_TEMP/actionlint.tar.gz" https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          printf '%s  %s\n' 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8 "$RUNNER_TEMP/actionlint.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+          install "$RUNNER_TEMP/actionlint" "$HOME/.cargo/bin/actionlint"
+          actionlint --version
       - name: Regenerate and verify each exact source tree
         run: |
           set -euo pipefail
