@@ -1,0 +1,162 @@
+{
+  "schema": 1,
+  "scope": "Retire completed temporary Flats development verification",
+  "branch": "ci/remaining-runner-gates-20261126",
+  "source_head": "e77f433f0d1e47f3cb49ddab7bd117685154693e",
+  "producer": "97c6a6a92c02304f62d6e4aa4c2080ba76bde3e7",
+  "run": 45848678520,
+  "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520",
+  "status": "completed",
+  "conclusion": "failure",
+  "jobs": [
+    {
+      "id": 140008967018,
+      "name": "fast",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 140008967356,
+      "name": "sheet-browser",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 140008967428,
+      "name": "notebook-memory",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 140008967484,
+      "name": "tests (docs)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 140008967497,
+      "name": "macos",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 140008967557,
+      "name": "race",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 140008967563,
+      "name": "windows",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 140008967572,
+      "name": "netbird",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 140008967613,
+      "name": "docs-contracts",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 140008967650,
+      "name": "large-memory-race (source)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 140008967694,
+      "name": "large-memory-race (reader)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 140008967699,
+      "name": "docs-web",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 140008967737,
+      "name": "legacy-build",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 140008967774,
+      "name": "container",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 140008967847,
+      "name": "tests (docs-budget)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 140008967864,
+      "name": "large-memory-race (markdown)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 140008967977,
+      "name": "tests (sheet)",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 140008967978,
+      "name": "tests (board)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 140008968001,
+      "name": "tests (runtime-soak)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 140008968075,
+      "name": "tests (other)",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 140008968088,
+      "name": "tests (sheet-undo-2)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 140008968116,
+      "name": "tests (runtime)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 140008968165,
+      "name": "tests (sheet-undo-1)",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "removed": [
+    ".github/workflows/flats-unit-b-development.yml",
+    "ci-tools/flats-unit-b-development/actionlint.yaml",
+    "ci-tools/flats-unit-b-development/candidate.patch",
+    "ci-tools/flats-unit-b-development/manifest.json",
+    "ci-tools/flats-unit-b-development/plans.json",
+    "ci-tools/flats-unit-b-development/verify.py"
+  ],
+  "source_publication": "No maintained Flats branch was updated by this retirement.",
+  "limits": "The old spreadsheet candidate did not pass all mandatory gates and was not published. Its design correction budget remains exhausted. The maintained PR was subsequently integrated with main by an external actor; these historical probes do not prove that new head.",
+  "retired_at": "2026-11-26T17:25:08.644Z"
+}
