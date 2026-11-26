@@ -87,6 +87,9 @@ jobs:
       - name: Preserve vendor dependency fingerprints
         id: vendor
         run: TZ=UTC find vendor -exec touch -t 200001010000 {} +
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: ${{ matrix.target }}
       - run: cargo clippy --workspace --all-targets --locked --target ${{ matrix.target }} -- -D warnings
       - run: cargo test --workspace --locked --no-fail-fast --target ${{ matrix.target }}
         if: ${{ !cancelled() && steps.vendor.outcome == 'success' }}

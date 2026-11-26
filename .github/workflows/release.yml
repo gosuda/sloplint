@@ -70,6 +70,9 @@ jobs:
       - run: rustup target add ${{ matrix.target }}
       - name: Preserve vendor dependency fingerprints
         run: TZ=UTC find vendor -exec touch -t 200001010000 {} +
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: ${{ matrix.target }}
       - run: cargo build --release --locked --target ${{ matrix.target }}
       - name: Smoke-test binary
         run: |
