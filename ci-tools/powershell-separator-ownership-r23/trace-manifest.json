@@ -15,8 +15,9 @@
     }
   ],
   "proof_sha256": {
-    "trace.py": "495d0e2fa9a19bec04afb44e4bc51f23537ec875f5683a57dfdb3a009b558d64",
-    "trace-cases.json": "53bbe95a8b0796468309656f9d785b2751130666cf86fc5a8b892f78be46ca68",
-    "experiment2-receipt.json": "7506d4340fa198339619fc4e938c75999f96def25cbbb59a1dace78a0a1363f7"
+    "trace.py": "09b1934461afba28d501558e7795042c225da48ad81459a5d0472ad6eeaf29fb",
+    "trace-cases.json": "a5f5649884b43cedd43aaef540eee766cdc959103a91a053da604b942e78c981",
+    "experiment2-receipt.json": "7506d4340fa198339619fc4e938c75999f96def25cbbb59a1dace78a0a1363f7",
+    "trace-initial-failure.json": "bbbcada729d488a008b30f2ae42285317d404731c2c8705781e336dd9aa1dccf"
   }
 }

@@ -1,0 +1,12 @@
+{
+  "producer": "44ff1d9eb920462d466d33f9f74a31dff82c3bb9",
+  "run": 45904668232,
+  "job": 140198418154,
+  "artifact": 15157381909,
+  "zip_sha256": "24cf7416935d2b8961df3dbdc8f7719c3245d126fae3cf7e761ec2c2c26510f8",
+  "phase": "previous-compat-continued-lf-space-spaces-2-normal",
+  "actual_exit": 1,
+  "incorrect_expected_exit": 0,
+  "reason": "The trace harness incorrectly required a historical r22 regression to succeed. Nine preceding historical normal/debug pairs succeeded; current-source trace had not begun. Correct the per-snapshot expected result and compare only the balanced parser tree, without timing/footer text.",
+  "source_mutations": []
+}

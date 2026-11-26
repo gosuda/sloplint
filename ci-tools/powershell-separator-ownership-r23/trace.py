@@ -102,7 +102,13 @@ records: list[dict[str, object]] = []
 identities: list[dict[str, object]] = []
 
 def parse_tree(text: str) -> str:
-    return text[text.index("(program"):text.rindex(")") + 1]
+    start = text.index("(program")
+    depth = 0
+    for index in range(start, len(text)):
+        depth += int(text[index] == "(") - int(text[index] == ")")
+        if depth == 0:
+            return text[start:index + 1]
+    raise AssertionError("unbalanced parser tree")
 
 for snapshot in MANIFEST["snapshots"]:
     source = WORKSPACE / snapshot["path"]
@@ -116,10 +122,12 @@ for snapshot in MANIFEST["snapshots"]:
         path = root / f"case-{index}.ps1"
         path.write_text(case["source"])
         name = snapshot["id"] + "-" + case["id"]
-        normal = run(name + "-normal", [str(binary), "parse", str(path)], cwd=source / "vendor/tree-sitter-powershell")
-        traced = run(name + "-trace", [str(binary), "parse", "--debug=normal", str(path)], cwd=source / "vendor/tree-sitter-powershell")
+        expected = case["expected_exits"][snapshot["id"]]
+        normal = run(name + "-normal", [str(binary), "parse", str(path)], expected=expected, cwd=source / "vendor/tree-sitter-powershell")
+        traced = run(name + "-trace", [str(binary), "parse", "--debug=normal", str(path)], expected=expected, cwd=source / "vendor/tree-sitter-powershell")
         assert parse_tree(normal) == parse_tree(traced), name
         record = {"snapshot": snapshot["id"], "source": identity, "id": case["id"],
+                  "expected_exit": expected, "normal_exit": RESULTS[-2]["exit"], "trace_exit": RESULTS[-1]["exit"],
                   "tree_sha256": hashlib.sha256(parse_tree(normal).encode()).hexdigest(),
                   "normal": normal, "trace": traced}
         records.append(record)

@@ -7,7 +7,11 @@
     "accepted": true,
     "comment_sources": [
       "<# note #>"
-    ]
+    ],
+    "expected_exits": {
+      "previous": 0,
+      "current": 0
+    }
   },
   {
     "id": "comment-single-parameter-mixed",
@@ -17,7 +21,11 @@
     "accepted": null,
     "comment_sources": [
       "<# note #>"
-    ]
+    ],
+    "expected_exits": {
+      "previous": 0,
+      "current": 0
+    }
   },
   {
     "id": "comment-single-plain-space",
@@ -27,7 +35,11 @@
     "accepted": null,
     "comment_sources": [
       "<# note #>"
-    ]
+    ],
+    "expected_exits": {
+      "previous": 0,
+      "current": 0
+    }
   },
   {
     "id": "comment-single-bare-space",
@@ -37,7 +49,11 @@
     "accepted": null,
     "comment_sources": [
       "<# note #>"
-    ]
+    ],
+    "expected_exits": {
+      "previous": 0,
+      "current": 0
+    }
   },
   {
     "id": "comment-single-attached-space",
@@ -47,7 +63,11 @@
     "accepted": null,
     "comment_sources": [
       "<# note #>"
-    ]
+    ],
+    "expected_exits": {
+      "previous": 0,
+      "current": 0
+    }
   },
   {
     "id": "comment-single-format-word-space",
@@ -57,7 +77,11 @@
     "accepted": null,
     "comment_sources": [
       "<# note #>"
-    ]
+    ],
+    "expected_exits": {
+      "previous": 0,
+      "current": 0
+    }
   },
   {
     "id": "comment-repeated-parameter-space",
@@ -68,7 +92,11 @@
     "comment_sources": [
       "<# one #>",
       "<# two #>"
-    ]
+    ],
+    "expected_exits": {
+      "previous": 0,
+      "current": 0
+    }
   },
   {
     "id": "comment-multiline-parameter-space",
@@ -78,18 +106,30 @@
     "accepted": null,
     "comment_sources": [
       "<# one\n two #>"
-    ]
+    ],
+    "expected_exits": {
+      "previous": 0,
+      "current": 0
+    }
   },
   {
     "id": "compat-parameter-first-4",
     "source": "Capture-Native \t  -Name\n",
     "source_sha256": "3176c3336b777c9a0728e136fbf044e3e20ea1b70368f2982943105f81592bba",
-    "kind": "compatibility"
+    "kind": "compatibility",
+    "expected_exits": {
+      "previous": 0,
+      "current": 0
+    }
   },
   {
     "id": "compat-continued-lf-space-spaces-2",
     "source": "Capture-Native before `\n  -- after\n",
     "source_sha256": "ae3c161a95235723a3ab8a32e75636142c2028fcb26150742c6b187f46fdcf6c",
-    "kind": "compatibility"
+    "kind": "compatibility",
+    "expected_exits": {
+      "previous": 1,
+      "current": 0
+    }
   }
 ]
