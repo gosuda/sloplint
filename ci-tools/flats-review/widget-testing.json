@@ -1,0 +1,282 @@
+{
+  "scope": "Flats PR273 test-only trailing diagram widget coverage",
+  "state": "Implementation carry-forward accepted; final testing review pending",
+  "verdict": "not assessed for final testing",
+  "author": {
+    "model": "gpt-6.2-astra",
+    "session": "/root/bitcoin_round7/ci_followups/charamel_console_review",
+    "other_material_author": "Original accepted C implementation and browser test by gpt-6.2-astra in /root/bitcoin_round7"
+  },
+  "requested_reviewer": "Existing eligible fixed gpt-6.2-sol C implementation reviewer, coordinated by root",
+  "requirements": {
+    "scope": "Test-only trailing diagram widget coverage for PR273",
+    "base": "4c3e0652b6d1a93c4d4a8cac93b79beaf315f2cc",
+    "tree": "6eec14666cf6b71d56f686a7f7709b0527d53b8f",
+    "actual_main": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
+    "path": "internal/apps/docs/testdata/browser_test.mjs",
+    "author_model": "gpt-6.2-astra",
+    "design": "63f8d62557caea32a07c077f432c4f0e1f85d18a/ci-tools/flats-review/D3.md",
+    "design_review": "28143b7a1a3549a61a0b1ca6837c13e69b764af9/ci-tools/flats-review/D3-review.md",
+    "implementation_review": "b490f862eda77ff7cf4052d86b6489096f09b603/ci-tools/flats-review/editor-implementation-review.md",
+    "testing_review": "b2b60fdd08e54acac19f8f09aaeb83f278a10218/ci-tools/flats-review/editor-testing-review.md",
+    "budgets": {
+      "design_correction_impact": "3/3",
+      "invocation_retries": "1/2",
+      "implementation_corrections": "0/3",
+      "testing_corrections": "1/3"
+    },
+    "mandatory_boundaries": [
+      "No production, bundle, dependency or specification changes",
+      "All18 existing keyboard/native cases retain exact fixtures and assertions",
+      "New fixture renders an active block widget after the final source line",
+      "Trusted native deleteContentBackward and exact resulting text on two independent clients",
+      "Saved convergence and original fixture restoration remain",
+      "Earlier implementation approval requires eligible carry-forward review; exact corrected candidate needs testing re-review",
+      "No maintained PR write or thread resolution before coordinator stage acceptance"
+    ],
+    "native_plan": [
+      "Pinned public source and source identity checks",
+      "Locked install/build and unchanged production/bundle bytes",
+      "Actual repository TestBrowserCollaboration with new widget fixture",
+      "Existing18 plus two new mode cases",
+      "Affected syntax and TestBuildInputs",
+      "Source cleanup/identity and recorded exits"
+    ],
+    "state": "Proposed test-only delta; no new source or probe objects"
+  },
+  "snapshot": {
+    "base_head": "4c3e0652b6d1a93c4d4a8cac93b79beaf315f2cc",
+    "base_tree": "6eec14666cf6b71d56f686a7f7709b0527d53b8f",
+    "actual_main": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
+    "candidate_tree": "a69d8921b76864c72c9062f3651d8cc605400242",
+    "membership": "Complete immutable base tree plus the single digest-verified browser_test.mjs replacement. Native git apply --index and git write-tree matched the candidate tree. No untracked or ignored material source inputs were introduced.",
+    "changed": [
+      {
+        "path": "internal/apps/docs/testdata/browser_test.mjs",
+        "base_blob": "08bc69aa0f99b96ef466a07abba3166f79f3b7c9",
+        "base_sha256": "8dd918a536ff12d248db6c44c02c0957f8625d379fb316f8c3184488030ce22b",
+        "candidate_sha256": "ac0db385af24e1a44292ecb8e61aa59a37eb21cfea571f4079016620a419da6f"
+      }
+    ],
+    "patch_sha256": "92f5696705f2568ec1b13be1222ab0190b43818e4dae82f8ba9436c8022f833b",
+    "excluded": [
+      "Review records",
+      "Native logs and screenshots",
+      "Probe helper/workflow files"
+    ],
+    "material_build_inputs": {
+      "candidate_source": "All tracked source is bound by the complete candidate tree.",
+      "dependencies": [
+        {
+          "path": "go.mod",
+          "blob": "19a928556e6eab8bcf329fe20254f4bedc73cab0"
+        },
+        {
+          "path": "go.sum",
+          "blob": "b7566b5aab344dd5dbf3be3bba73cb8b8f5e963a"
+        },
+        {
+          "path": "internal/apps/docs/_web/package-lock.json",
+          "blob": "a0d21a59c2234ad47f8d23bcfa4703a565fe7071"
+        },
+        {
+          "path": "internal/apps/docs/_web/package.json",
+          "blob": "cddd489f9c367368e2a57c203a0cbf42422bac12"
+        }
+      ],
+      "ignored_build_inputs": "node_modules is installed from the exact locked dependency graph; Playwright's pinned install lockfile is retained in the native artifact. No ignored authored source files are added."
+    },
+    "candidate_commit": "17b44ec73e9826c8d09ccc438f81fd543cb9701f"
+  },
+  "artifact_source": {
+    "repository": "gosuda/sloplint",
+    "producer": "8d528a703fabe7562ff372578edae298036d753a",
+    "producer_tree": "4d3f4fce00a10ce4c64f70db469cf29a4fe14f02",
+    "branch": "ci/flats-widget-evidence-20261126-r15",
+    "payload": "ci-tools/flats-widget/browser_test.mjs",
+    "patch": "ci-tools/flats-widget/candidate.patch",
+    "manifest": "ci-tools/flats-widget/manifest.json",
+    "verifier": "ci-tools/flats-widget/verify.py"
+  },
+  "finding": {
+    "thread": "PRRT_kwDOU5_u3s68eO3f",
+    "comment": 4710911911,
+    "disposition": "Accepted coverage gap. The one-file delta adds a real rendered block widget as the immediate sibling after the final source line and invokes both keyboard and trusted native backward deletion there. The thread remains open until required reviews and authorized publication."
+  },
+  "criteria_to_evidence": [
+    {
+      "criterion": "Production and generated bundle unchanged",
+      "evidence": "Native identity checks preserve all tracked paths except browser_test.mjs; locked rebuild leaves the exact candidate tree unchanged. Build input, server bundle and BUILD-INPUTS hashes match the accepted C snapshot."
+    },
+    {
+      "criterion": "Trailing widget is real and active",
+      "evidence": "Before each new input case, the permanent test finds the top-level source line by its document position, requires exact line text, and waits for its immediate sibling to be a cm-diagram-widget with data-active=true and a rendered SVG."
+    },
+    {
+      "criterion": "Real native deletion",
+      "evidence": "The unchanged native action invokes document.execCommand('delete'), requires true, then requires inputType deleteContentBackward and isTrusted true. The new native case passed."
+    },
+    {
+      "criterion": "Exact collaborative result, saved acknowledgement and original persistence coverage",
+      "evidence": "Both independent editor contexts converge to the literal three-backtick expected document and Saved state. The original fixture is restored exactly before the unchanged collaboration suite, including its existing reload/persistence assertion."
+    },
+    {
+      "criterion": "Existing coverage retained",
+      "evidence": "All18 original input cases plus both new cases and the complete existing collaboration suite passed."
+    }
+  ],
+  "development": {
+    "run": 45865269020,
+    "job": 140066361299,
+    "url": "https://github.com/gosuda/sloplint/actions/runs/45865269020",
+    "conclusion": "success",
+    "started_at": "2026-11-26T17:09:34Z",
+    "completed_at": "2026-11-26T17:10:33Z",
+    "runner_labels": [
+      "depot-ubuntu-24.04-8"
+    ],
+    "runner_name": "depot-ljtb1j882z",
+    "versions": {
+      "go": "1.27.4",
+      "node": "26.13.1",
+      "playwright": "1.65.1",
+      "chromium": "159.0.8154.6"
+    },
+    "artifact": {
+      "id": 15139458091,
+      "sha256": "41718d3b7fd4bbf0d7ee0e2da5204c6e7f98301b5789054e78e991d3c79d391a",
+      "size_in_bytes": 165319,
+      "expires_at": "2026-12-10T17:10:30Z"
+    },
+    "job_log_sha256": "4d30c9a35d62906c603c992c86e3520b5e7348f76df865cbd2f6956d17c6a028",
+    "exits": [
+      {
+        "name": "apply-test-only-patch",
+        "raw_exit": 0
+      },
+      {
+        "name": "syntax",
+        "raw_exit": 0
+      },
+      {
+        "name": "locked-install",
+        "raw_exit": 0
+      },
+      {
+        "name": "locked-rebuild",
+        "raw_exit": 0
+      },
+      {
+        "name": "docs-web-tests",
+        "raw_exit": 0
+      },
+      {
+        "name": "affected-vet",
+        "raw_exit": 0
+      },
+      {
+        "name": "build-inputs",
+        "raw_exit": 0
+      },
+      {
+        "name": "complete-browser",
+        "raw_exit": 0
+      },
+      {
+        "name": "whitespace",
+        "raw_exit": 0
+      },
+      {
+        "name": "restore-test-source",
+        "raw_exit": 0
+      }
+    ],
+    "browser_cases": [
+      "PASS: backward deletion last line keyboard",
+      "PASS: backward deletion last line native",
+      "PASS: backward deletion middle line keyboard",
+      "PASS: backward deletion middle line native",
+      "PASS: backward deletion retained final newline keyboard",
+      "PASS: backward deletion retained final newline native",
+      "PASS: backward deletion empty first line keyboard",
+      "PASS: backward deletion empty first line native",
+      "PASS: backward deletion empty final line keyboard",
+      "PASS: backward deletion empty final line native",
+      "PASS: backward deletion empty middle line keyboard",
+      "PASS: backward deletion empty middle line native",
+      "PASS: backward deletion character at end keyboard",
+      "PASS: backward deletion character at end native",
+      "PASS: backward deletion character within line keyboard",
+      "PASS: backward deletion character within line native",
+      "PASS: backward deletion Unicode line keyboard",
+      "PASS: backward deletion Unicode line native",
+      "PASS: backward deletion trailing diagram widget keyboard",
+      "PASS: backward deletion trailing diagram widget native"
+    ],
+    "widget_witnesses": [
+      "2026-11-26T17:10:30.1481574Z         PASS: trailing diagram widget keyboard",
+      "2026-11-26T17:10:30.1482142Z         PASS: trailing diagram widget native"
+    ],
+    "source_identity_records": [
+      {
+        "base_head": "4c3e0652b6d1a93c4d4a8cac93b79beaf315f2cc",
+        "tree": "6eec14666cf6b71d56f686a7f7709b0527d53b8f",
+        "patched": false
+      },
+      {
+        "base_head": "4c3e0652b6d1a93c4d4a8cac93b79beaf315f2cc",
+        "tree": "a69d8921b76864c72c9062f3651d8cc605400242",
+        "patched": true
+      },
+      {
+        "base_head": "4c3e0652b6d1a93c4d4a8cac93b79beaf315f2cc",
+        "tree": "a69d8921b76864c72c9062f3651d8cc605400242",
+        "patched": true
+      },
+      {
+        "base_head": "4c3e0652b6d1a93c4d4a8cac93b79beaf315f2cc",
+        "tree": "a69d8921b76864c72c9062f3651d8cc605400242",
+        "patched": true
+      },
+      {
+        "base_head": "4c3e0652b6d1a93c4d4a8cac93b79beaf315f2cc",
+        "tree": "6eec14666cf6b71d56f686a7f7709b0527d53b8f",
+        "patched": false
+      }
+    ],
+    "source_restored": true
+  },
+  "cleanup": "Deslop review kept the diff to one fixture and its DOM precondition. Existing input, collaboration and restoration logic is reused unchanged. No new production or generated-code edits.",
+  "review": {
+    "implementation_carry_forward": {
+      "state": "completed",
+      "verdict": "ACCEPT",
+      "session": "/root/bitcoin_round7/flats_implementation_review",
+      "fixed_model": "gpt-6.2-sol",
+      "receipt_path": "ci-tools/flats-review/widget-implementation-review.md",
+      "receipt_sha256": "56552f1eca10f0d569474a965e6fb5ae71078c17db125ff0fbddd154ae31913d"
+    },
+    "testing": "pending",
+    "design": "Accepted D3 contract unchanged",
+    "budgets": {
+      "design_correction_impact": "3/3",
+      "invocation_retries": "1/2",
+      "implementation_corrections": "0/3",
+      "testing_corrections": "1/3"
+    },
+    "next_action": "Root coordinates eligible implementation carry-forward for this exact one-file delta, followed by final testing and eligible testing re-review."
+  },
+  "limitations": [
+    "Chromium on Depot Linux is the observed browser; physical mobile keyboards and other engines were not tested.",
+    "The completed run is development evidence for the changed test. It does not by itself extend earlier implementation or testing approval.",
+    "Artifact digest is corroborated by GitHub metadata and upload log; an independently downloaded ZIP-byte hash was not available.",
+    "No maintained Flats branch, PR metadata or review-thread state was changed by this unit."
+  ],
+  "final_testing": {
+    "state": "awaiting review",
+    "candidate_verdict": "not assessed",
+    "evidence_reuse": "The exact one-file candidate and complete unchanged production/dependency tree were exercised in the native development job. Independent implementation carry-forward subsequently accepted that same immutable tree. No code or test changed between execution and this final testing assessment. No new post-review native execution is claimed; final review must assess verified reuse and identify any concrete missing check.",
+    "source_drift": false,
+    "production_or_dependency_delta": false
+  }
+}
