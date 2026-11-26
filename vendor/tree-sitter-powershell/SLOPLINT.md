@@ -48,7 +48,11 @@ regressions assert those argument counts and the protected-space controls.
 ## Backticks after ordinary newlines
 
 Leading-pipe lookahead stops at a backtick after an ordinary newline.
-An escape on the following line cannot reconnect the preceding statement.
+An escape on the following line cannot reconnect the preceding pipeline.
+The scanner records that boundary while continuing lookahead for an `else`
+or `elseif` branch. Assignment-valued conditionals, including hashtable values,
+keep their branches after escaped lines. An escape of an ordinary character
+starts the next statement when a newline has already occurred.
 Attached command fragments retain an escaped CR, so the remaining LF is
 visible to that lookahead. Whitespace-separated LF and CRLF continuations
 remain valid. Native parser and tokenizer controls cover top-level and

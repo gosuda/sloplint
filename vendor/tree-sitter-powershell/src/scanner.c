@@ -64,13 +64,13 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool 
     // The token is empty; comments and whitespace are only lookahead.
     lexer->mark_end(lexer);
     bool saw_newline = false;
-    bool saw_blank_line = false;
+    bool pipe_continuation_blocked = false;
     bool line_has_comment = false;
     for (;;) {
         int32_t c = lexer->lookahead;
         if (c == 0 || c == '}' || c == ';' || c == ')') return true;
         if (c == '\r' || c == '\n') {
-            saw_blank_line = saw_blank_line || (saw_newline && !line_has_comment);
+            pipe_continuation_blocked = pipe_continuation_blocked || (saw_newline && !line_has_comment);
             saw_newline = true;
             line_has_comment = false;
             skip(lexer);
@@ -107,8 +107,8 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool 
             continue;
         }
         if (c == '`') {
-            // Native leading-pipe lookahead stops at a backtick after a newline.
-            if (saw_newline) return true;
+            // A later escape blocks a leading pipe; else still belongs to its if.
+            pipe_continuation_blocked = pipe_continuation_blocked || saw_newline;
             skip(lexer);
             if (lexer->lookahead == '\r') {
                 skip(lexer);
@@ -116,12 +116,12 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool 
             } else if (lexer->lookahead == '\n') {
                 skip(lexer);
             } else {
-                return false;
+                return saw_newline;
             }
             continue;
         }
         if (!saw_newline) return false;
-        if (c == '|' && !saw_blank_line) return false;
+        if (c == '|' && !pipe_continuation_blocked) return false;
         return !at_else_keyword(lexer);
     }
 }

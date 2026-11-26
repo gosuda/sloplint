@@ -56,6 +56,8 @@ mod odin;
 mod php;
 #[path = "grammar_gaps/powershell.rs"]
 mod powershell;
+#[path = "grammar_gaps/powershell_assignment_escapes.rs"]
+mod powershell_assignment_escapes;
 #[path = "grammar_gaps/powershell_continuations.rs"]
 mod powershell_continuations;
 #[path = "grammar_gaps/powershell_escaped_lines.rs"]
