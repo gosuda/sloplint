@@ -1,0 +1,121 @@
+name: Verify Spira pool review repairs
+
+on:
+  push:
+    branches: [ci/spira-required-gates-20261126-r7]
+    paths:
+      - .github/workflows/spira-required-gates.yml
+      - ci-tools/spira33.patch
+
+permissions:
+  contents: read
+  actions: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  gates:
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 75
+    env:
+      GOENV: 'off'
+      GOCACHEPROG: ''
+      GOTOOLCHAIN: local
+      GOMAXPROCS: '4'
+      GOFLAGS: '-p=4'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          path: probe
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/spira
+          ref: 358d6ff0d509b25e6cb46d38d5c2a929122363b3
+          persist-credentials: false
+          path: spira
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/LoGOs
+          ref: 9af493a1ff32889aa1f2a61357e06c3bb46132c7
+          persist-credentials: false
+          path: logos
+      - name: Verify and apply the exact candidate
+        id: candidate
+        working-directory: spira
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/evidence"
+          test "$(git rev-parse HEAD)" = 358d6ff0d509b25e6cb46d38d5c2a929122363b3
+          printf '%s  %s\n' 8b1600a502d4eee116a215f82821502fe703b2b59e65298475d3ead459fec0af ../probe/ci-tools/spira33.patch | sha256sum --check --strict
+          git apply --index --whitespace=error ../probe/ci-tools/spira33.patch
+          test "$(git write-tree)" = ec4560f6ebd166c55f95e73d2ee13f6c2b18285d
+          git rev-parse HEAD > "$GITHUB_WORKSPACE/evidence/spira-source.txt"
+          git write-tree >> "$GITHUB_WORKSPACE/evidence/spira-source.txt"
+          sha256sum db/db.lgo db/export_test.lgo db/pool_expiry_test.lgo db/tx_deadline_test.lgo docs/specs/db.md > "$GITHUB_WORKSPACE/evidence/candidate.sha256"
+          git diff --exit-code
+          git diff --cached --check
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
+        with:
+          go-version: '1.27.4'
+          cache: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: '24'
+      - uses: extractions/setup-just@f8a3cce218d9f83db3a2ecd90e41ac3de6cdfd9b
+        with:
+          just-version: '1.59.0'
+      - name: Install the locked frontend package manager
+        run: npm install --global pnpm@12.21.0
+      - name: Verify the existing native sloplint CLI
+        id: cli
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          archive="$RUNNER_TEMP/sloplint-cli.zip"
+          gh api /repos/gosuda/sloplint/actions/artifacts/15091303567/zip > "$archive"
+          printf '%s  %s\n' e362f672d39498374a637a68ded7f57205b415e68006a4dc4a4a882405f5af33 "$archive" | sha256sum --check --strict
+          unzip -q "$archive" sloplint logs/SOURCE_COMMIT -d "$RUNNER_TEMP/sloplint-cli"
+          test "$(cat "$RUNNER_TEMP/sloplint-cli/logs/SOURCE_COMMIT")" = bc2067d1ec888789e6584dc6a24e8c67d1b0b506
+          printf '%s  %s\n' a04c9c3e53c8aae18e2d5f89faaf3ad68b89980218ca9d1fc4af5ce487401024 "$RUNNER_TEMP/sloplint-cli/sloplint" | sha256sum --check --strict
+          chmod +x "$RUNNER_TEMP/sloplint-cli/sloplint"
+          printf '%s\n' "$RUNNER_TEMP/sloplint-cli" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/sloplint-cli/sloplint" --version > evidence/sloplint-version.txt
+      - name: Build the exact validated LoGOs source
+        id: toolchain
+        working-directory: logos
+        run: |
+          test "$(git rev-parse HEAD)" = 9af493a1ff32889aa1f2a61357e06c3bb46132c7
+          git rev-parse HEAD > "$GITHUB_WORKSPACE/evidence/logos-source.txt"
+          git rev-parse HEAD^{tree} >> "$GITHUB_WORKSPACE/evidence/logos-source.txt"
+          export GOROOT_BOOTSTRAP="$(go env GOROOT)"
+          printf 'UPSTREAM_GO=%s/bin/go\n' "$GOROOT_BOOTSTRAP" >> "$GITHUB_ENV"
+          (cd src && ./make.bash) 2>&1 | tee "$GITHUB_WORKSPACE/evidence/toolchain.log"
+          printf '%s/bin\n' "$PWD" >> "$GITHUB_PATH"
+          printf 'LOGOS_ROOT=%s\n' "$PWD" >> "$GITHUB_ENV"
+          bin/logos version > "$GITHUB_WORKSPACE/evidence/logos-version.txt"
+      - name: Run the complete Spira gate
+        working-directory: spira
+        run: just gate 2>&1 | tee "$GITHUB_WORKSPACE/evidence/gate.log"
+      - name: Eject and build with upstream Go
+        if: ${{ !cancelled() && steps.toolchain.outcome == 'success' && steps.candidate.outcome == 'success' }}
+        working-directory: spira
+        run: just eject 2>&1 | tee "$GITHUB_WORKSPACE/evidence/eject.log"
+      - name: Recheck candidate identity
+        if: ${{ !cancelled() && steps.candidate.outcome == 'success' }}
+        working-directory: spira
+        run: |
+          sha256sum --check --strict "$GITHUB_WORKSPACE/evidence/candidate.sha256"
+          test "$(git write-tree)" = ec4560f6ebd166c55f95e73d2ee13f6c2b18285d
+          git diff --check
+          node --version > "$GITHUB_WORKSPACE/evidence/node-version.txt"
+          pnpm --version > "$GITHUB_WORKSPACE/evidence/pnpm-version.txt"
+          just --version > "$GITHUB_WORKSPACE/evidence/just-version.txt"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: ${{ !cancelled() }}
+        with:
+          name: spira-required-gates-${{ github.sha }}
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 7
