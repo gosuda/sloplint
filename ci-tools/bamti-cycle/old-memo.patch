@@ -68,16 +68,18 @@ diff --git a/crates/bamts-compiler/src/checker/relations.rs b/crates/bamts-compi
              true
          } else if target_class
              && let Some(compatible) = self.array_relates_to_concat_array(source, target, strictness)
-@@ -587,7 +580,7 @@
+@@ -587,9 +580,7 @@
          } else {
              self.relates_uncached(source, target, strictness)
          };
--        if alias_assumption.is_none() && let Some(key) = alias_relation {
+-        if alias_assumption.is_none()
+-            && let Some(key) = alias_relation
+-        {
 +        if alias_relation_inserted && let Some(key) = alias_relation {
              self.active_alias_relations.borrow_mut().remove(&key);
          }
  
-@@ -604,6 +597,7 @@
+@@ -606,6 +597,7 @@
              frame.assumptions.clear();
          } else if let Some(parent) = self.dependency_stack.borrow_mut().last_mut() {
              parent.assumptions.extend(frame.assumptions.iter().copied());
@@ -85,7 +87,7 @@ diff --git a/crates/bamts-compiler/src/checker/relations.rs b/crates/bamts-compi
              parent.env_sensitive |= frame.env_sensitive;
              for (&symbol, &erased) in &frame.erasure_requirements {
                  self.record_erasure_requirement(parent, ErasureRequirement { symbol, erased });
-@@ -614,6 +608,7 @@
+@@ -616,6 +608,7 @@
          // dependencies on other active comparisons stay contextual.
          if cacheable
              && !frame.env_sensitive
@@ -93,7 +95,7 @@ diff --git a/crates/bamts-compiler/src/checker/relations.rs b/crates/bamts-compi
              && frame.erasure_requirements.is_empty()
              && frame.assumptions.is_empty()
          {
-@@ -621,7 +616,7 @@
+@@ -623,7 +616,7 @@
                  .borrow_mut()
                  .insert((source, target, strictness), result);
          }

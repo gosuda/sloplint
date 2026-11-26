@@ -68,16 +68,18 @@ diff --git a/crates/bamts-compiler/src/checker/relations.rs b/crates/bamts-compi
              true
          } else if target_class
              && let Some(compatible) = self.array_relates_to_concat_array(source, target, strictness)
-@@ -580,7 +587,7 @@
+@@ -580,7 +587,9 @@
          } else {
              self.relates_uncached(source, target, strictness)
          };
 -        if alias_relation_inserted && let Some(key) = alias_relation {
-+        if alias_assumption.is_none() && let Some(key) = alias_relation {
++        if alias_assumption.is_none()
++            && let Some(key) = alias_relation
++        {
              self.active_alias_relations.borrow_mut().remove(&key);
          }
  
-@@ -590,19 +597,21 @@
+@@ -590,19 +599,21 @@
              .pop()
              .expect("active relation owns a dependency frame");
          self.visiting.borrow_mut().remove(&relation);
@@ -102,7 +104,7 @@ diff --git a/crates/bamts-compiler/src/checker/relations.rs b/crates/bamts-compi
          if cacheable
              && !frame.env_sensitive
              && frame.erasure_requirements.is_empty()
-@@ -612,7 +621,7 @@
+@@ -612,7 +623,7 @@
                  .borrow_mut()
                  .insert((source, target, strictness), result);
          }
@@ -111,7 +113,7 @@ diff --git a/crates/bamts-compiler/src/checker/relations.rs b/crates/bamts-compi
              let env_sensitive = frame.env_sensitive;
              let mut assumptions: Vec<_> = frame.assumptions.into_iter().collect();
              assumptions.sort_unstable();
-@@ -5598,6 +5607,120 @@
+@@ -5598,6 +5609,120 @@
              "number-leaf 4-ary depth-4 graph recomputed {delta} pairs; expected the same clean-memo scaling"
          );
      }
