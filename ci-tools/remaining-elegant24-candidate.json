@@ -1,0 +1,72 @@
+{
+  "label": "elegant-mermaid24-actual-base-integration",
+  "repository": "gosuda/elegant-mermaid",
+  "source_pr": 24,
+  "head": "801d75e266e0f827817238286171c517fe84b5b2",
+  "source_tree": "e17fcb5bd5f915494889511c6c2de2b7a06a6081",
+  "branch": "fix/layered-proof-closure",
+  "base_ref": "main",
+  "base_sha": "afa5a631ec41cb1e9aa0634b2d547d084bd27e33",
+  "merge_base": "277e83b2e3d80c14f75334869b86a607c7ab3ffd",
+  "integration_tree": "7c7facd2f3f91f630e54eb93d0a548fd36e653cc",
+  "tree": "cd966185163456e24a30eae268ec52a8804543df",
+  "patch": "remaining-elegant24.patch",
+  "patch_sha256": "9cf96eab10a225157c048bf27b6a76d43d66b0b188dbfee483e5a5cfc23cb1ab",
+  "feature_paths_preserved": 387,
+  "page_blob": "c6777ee954cf109ea556fad1b43fb6dcc57f3b4f",
+  "ci_followup_commit": "6aeb314c6196c3a21c0a2f4c1406ff52915e72ec",
+  "files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "598402782eb0042b29a8fc07374b4cf3fd85ec4dd8f94cb84e61a082904cb52a"
+    },
+    {
+      "path": ".github/workflows/pages.yml",
+      "sha256": "919a121ab33d1e1029b6717c55903c2c64ca8e071bb939c5c67c85e5979eef7a"
+    },
+    {
+      "path": ".github/workflows/verify.yml",
+      "sha256": "dbe8a4a478706a505bed30da4384c741de5f236348c0c58de76947abed8f4591"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "1b71ec70c23bd6252f491e008adf62b8d4642159eb7f31b5d761841f36c88269"
+    },
+    {
+      "path": "Cargo.lock",
+      "sha256": "241755972b070b23125c689dc81c5dcd7a1bfe4f7da1b2697c10dc7c7fb813c6"
+    },
+    {
+      "path": "Justfile",
+      "sha256": "dbe1798f40064cc2f503d6f7fe17e6e594c6b5272072d0d9e60780a7d81dc681"
+    },
+    {
+      "path": "go.mod",
+      "sha256": "755bfcad76194dc6b9c7758963c2700a771103b0bab750f9ea9934dedf50d4c2"
+    },
+    {
+      "path": "go.sum",
+      "sha256": "69c2c5e89ac4cd2b03f647b3f65c7b2d502450b51b75988062439cce4068a7e1"
+    },
+    {
+      "path": "playground/package.json",
+      "sha256": "44c0351adebd8d478765aa8ffe557113a957184574f24d179a23c3ae454e6ae5"
+    },
+    {
+      "path": "playground/pnpm-lock.yaml",
+      "sha256": "f0500adc79b900fb23579396d0ff1aa7f80903f5a91b3d5c05b503ec3cbfa5b7"
+    },
+    {
+      "path": "tools/upstream-oracle/package.json",
+      "sha256": "b670dbcc795515ff5ed24b8301c9bdac0a539eea7e7171f5f7d58426b3557fa5"
+    },
+    {
+      "path": "tools/upstream-oracle/pnpm-lock.yaml",
+      "sha256": "f68a71acf5642257fc93b93fbd2de766ba51a2d136dbb49d4bf5a30b7e076252"
+    },
+    {
+      "path": ".depot/workflows/ci.yml",
+      "sha256": "b380249666756334b584823a668d06d2770db7ec18f4b32e0d9c20e568fe7661"
+    }
+  ]
+}
