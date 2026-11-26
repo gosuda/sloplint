@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "as_of": "2026-11-26 14:20:23 UTC",
+  "as_of": "2026-11-26 14:22:44 UTC",
   "scope": "Independent public website, SSH, elegant-mermaid, and PowerShell grammar repair slice; Flats design handed to coordinator",
   "publication_policy": "Additive feature-branch updates only. No force, amend, PR merge, auto-merge, or direct main update. Native proofs run on Depot; failures stay failures.",
   "website": {
@@ -1003,8 +1003,8 @@
       "source_objects_created": 0,
       "mutations": [],
       "main": {
-        "sha": "72a25911d41dbe8d7e59d2e3694d4520a26e8e58",
-        "tree": "9c5687b485e707cd9590a707f0e6fdc59e95b57d"
+        "sha": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
+        "tree": "91efebe5baab56592f04481d3516dc3a2163d5e4"
       },
       "pull_requests": [
         {
@@ -1051,8 +1051,8 @@
           "head_ref": "feat/spreadsheet",
           "recorded_base": "58815a85c5fd34f290e45528e7597f62dec3975a",
           "base_ref": "main",
-          "mergeable": false,
-          "mergeable_state": "dirty",
+          "mergeable": null,
+          "mergeable_state": "unknown",
           "url": "https://github.com/gosuda/flats/pull/248"
         },
         {
@@ -1069,14 +1069,14 @@
         },
         {
           "number": 272,
-          "state": "open",
-          "merged": false,
+          "state": "closed",
+          "merged": true,
           "head": "ee49a47179b2df82a70015b0978468b1fbd69e28",
           "head_ref": "deps/upgrade-2026-11-26",
           "recorded_base": "e1b4bffd4d9033e5cbf5814af277fce4ca72cc40",
           "base_ref": "main",
-          "mergeable": true,
-          "mergeable_state": "unstable",
+          "mergeable": null,
+          "mergeable_state": "unknown",
           "url": "https://github.com/gosuda/flats/pull/272"
         }
       ],
@@ -1090,11 +1090,6 @@
           "pr": 265,
           "head": "f8badac07f5745bcd71b55de30778c0585408336",
           "tree": "cd5a57af2dc7738346799df5527935e97b134261"
-        },
-        {
-          "pr": 272,
-          "head": "ee49a47179b2df82a70015b0978468b1fbd69e28",
-          "tree": "cdaccf79235cd2ab6fb7e95d464551a65243fa8e"
         }
       ],
       "ci_blob_deltas_from_current_main": {
@@ -1242,7 +1237,7 @@
       "workflow_instances": [
         {
           "label": "main",
-          "head": "72a25911d41dbe8d7e59d2e3694d4520a26e8e58",
+          "head": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
           "workflows": [
             {
               "path": ".github/workflows/ci.yml",
@@ -1500,7 +1495,8 @@
               ],
               "local_reusable": []
             }
-          ]
+          ],
+          "state": "closed; externally merged"
         },
         {
           "label": "265",
@@ -1771,12 +1767,6 @@
       ],
       "remaining_scope": [
         {
-          "pr": 272,
-          "ci_source_delta": "none",
-          "reason": "All six workflows, setup-go action/metadata, ci-* helpers, test_ci_* files, build-commit helpers and docs/gates.md are byte-identical to current main. Existing static runners are Depot Ubuntu 24.04, depot-windows-2025 and depot-macos-latest; manual/fail-full selector, sequential main/manual races and targeted Windows checks already exist.",
-          "other_work": "The separate Backspace discussion/witness remains coordinator-owned. This read establishes source identity, not cold native test success."
-        },
-        {
           "pr": 265,
           "ci_source_delta": "Port the current main CI schedule/guards/native checks plus matching setup/cache/workflow tests/docs. The identity delta table lists 12 affected current-vs-main files; ci-test.sh, ci-race.sh, ci-memory.sh and ci-changes.py are already identical and need no blanket rewrite.",
           "violations": [
@@ -1820,16 +1810,70 @@
           "prs": [
             236,
             242,
-            243
+            243,
+            272
           ],
           "ci_source_delta": "none; remove closed PRs from implementation/publication scope",
-          "reason": "All three are externally merged. The planned child stack no longer exists; do not recreate or update it."
+          "reason": "All four are externally merged. The planned child stack no longer exists. PR272's CI was already byte-identical to main before merging; do not recreate or update closed PRs."
         }
       ],
       "dynamic_runner_expressions": [],
       "runtime_checks_executed_for_this_reconciliation": [],
-      "design_status": "D2 and first main-drift acceptance do not yet cover this later scope/ref movement. Updated scope impact review is pending.",
-      "next_action": "Eligible different-model acceptance of the new scope and current identities; then implement only remaining authorized open-PR changes."
+      "design_status": "D2 and first main-drift acceptance do not yet cover the later scope/ref movement, including external merges of 236/242/243/272. Updated scope impact review is pending.",
+      "next_action": "Eligible different-model acceptance of the new scope and current identities; then implement only remaining authorized open-PR changes.",
+      "final_recheck_at": "2026-11-26 14:22:44 UTC",
+      "previous_main": {
+        "sha": "72a25911d41dbe8d7e59d2e3694d4520a26e8e58",
+        "tree": "9c5687b485e707cd9590a707f0e6fdc59e95b57d"
+      },
+      "external_main_delta": [
+        {
+          "path": "go.mod",
+          "status": "modified",
+          "blob": "19a928556e6eab8bcf329fe20254f4bedc73cab0"
+        },
+        {
+          "path": "go.sum",
+          "status": "modified",
+          "blob": "b7566b5aab344dd5dbf3be3bba73cb8b8f5e963a"
+        },
+        {
+          "path": "internal/apps/docs/_web/package-lock.json",
+          "status": "modified",
+          "blob": "a0d21a59c2234ad47f8d23bcfa4703a565fe7071"
+        },
+        {
+          "path": "internal/apps/docs/_web/package.json",
+          "status": "modified",
+          "blob": "cddd489f9c367368e2a57c203a0cbf42422bac12"
+        },
+        {
+          "path": "internal/apps/docs/dist/BUILD-INPUTS.sha256",
+          "status": "modified",
+          "blob": "a26c0d7f86289d63a48755a4ded1cdcbba378b3b"
+        },
+        {
+          "path": "internal/apps/docs/dist/THIRD_PARTY_LICENSES.txt",
+          "status": "modified",
+          "blob": "cbd1338bfeabc2469445293df88cb0936018886f"
+        },
+        {
+          "path": "internal/apps/docs/dist/server.js",
+          "status": "modified",
+          "blob": "6e1db9ca385d887b71d73f02d020e20e314077e5"
+        },
+        {
+          "path": "netbird/go.mod",
+          "status": "modified",
+          "blob": "5ebe4b482d4f1c2f1cb8a4cbd1a39432653b956c"
+        },
+        {
+          "path": "netbird/go.sum",
+          "status": "modified",
+          "blob": "d696b16c6143260f0b9f1e211ad66db3453e97cb"
+        }
+      ],
+      "ci_identity_carry_forward_evidence": "Exact comparison 72a25911d41dbe8d7e59d2e3694d4520a26e8e58...c7cd9d07c9e841f4430772f1193b2c09e757411f has one commit and only nine dependency/bundle files; all recorded CI/helper/test/gate-documentation blobs are unchanged."
     },
     "source_objects_created": 0,
     "implementation_started": false,
@@ -1842,7 +1886,9 @@
     "retired": true,
     "retired_workflow": ".github/workflows/remaining-runner-gates.yml",
     "pending_job": null,
-    "retirement_note": "This report and the deletion of the owned completed probe workflow are committed atomically; see the containing commit for its identity. All proof inputs remain in immutable producer commits."
+    "retirement_note": "Owned workflow removal was verified in additive commit 147ac7d123f7653dbc0e2be810de33cef725277e; its only other changes were the two public evidence records. This later report update records an external Flats merge only and restores no workflow.",
+    "retirement_commit": "147ac7d123f7653dbc0e2be810de33cef725277e",
+    "retirement_tree": "c591ec3f12e567338b52cae757f2b5242be607ea"
   },
   "final_metadata_snapshot": {
     "as_of": "2026-11-26 14:19:09 UTC",
