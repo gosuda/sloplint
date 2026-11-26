@@ -1,12 +1,1016 @@
+diff --git a/http3/http3_stop_test.lgo b/http3/http3_stop_test.lgo
+--- a/http3/http3_stop_test.lgo
++++ b/http3/http3_stop_test.lgo
+@@ -1,515 +1,485 @@
+-package http3_test
+-
+-import (
+-	"context"
+-	"crypto/tls"
+-	"errors"
+-	"fmt"
+-	"io"
+-	"net"
+-	"net/http"
+-	"strconv"
+-	"syscall"
+-	"testing"
+-	"time"
+-
+-	"logos/rt"
+-	"logos/sync"
+-
+-	"github.com/gosuda/spira/http3"
+-	"github.com/gosuda/spira/internal/http3peer"
+-	"github.com/gosuda/spira/web"
+-)
+-
+-func TestH3StopClosesUDPListener(t *testing.T) {
+-	r := web.NewRouter()
+-	r.Handle("GET", "/hello", h3Hello)
+-	cert, _ := testCert(t)
+-	s := startH3Server(t, r, cert, 5*time.Second)
+-	if s == nil {
+-		t.Fatal("server did not start")
+-		return
+-	}
+-	udpAddr := s.BoundUDPAddrForTest()
+-	if udpAddr == "" {
+-		t.Fatal("no UDP bound address")
+-		return
+-	}
+-	stopCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+-	defer cancel()
+-	if err := s.Stop(stopCtx); err != nil {
+-		t.Fatalf("Stop: %v", err)
+-		return
+-	}
+-	if got := s.BoundUDPAddrForTest(); got != "" {
+-		t.Fatalf("UDP bound address %q survives Stop", got)
+-		return
+-	}
+-	_, portStr, serr := net.SplitHostPort(udpAddr)
+-	if serr != nil {
+-		t.Fatalf("split %s: %v", udpAddr, serr)
+-		return
+-	}
+-	port64, perr := strconv.ParseUint(portStr, 10, 16)
+-	if perr != nil {
+-		t.Fatalf("port %s: %v", portStr, perr)
+-		return
+-	}
+-	// Bind without SO_REUSEADDR: Go's ListenUDP sets reuse, which would
+-	// succeed even with the old socket still open and hide the leak.
+-	fd, ferr := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, 0)
+-	if ferr != nil {
+-		t.Fatalf("socket: %v", ferr)
+-		return
+-	}
+-	defer func() {
+-		if cerr := syscall.Close(fd); cerr != nil {
+-			return
+-		}
+-	}()
+-	if berr := syscall.Bind(fd, &syscall.SockaddrInet4{Port: int(port64)}); berr != nil {
+-		t.Fatalf("bind %s without reuse after Stop: %v", udpAddr, berr)
+-		return
+-	}
+-}
+-
+-type drainProbe struct {
+-	entered chan struct{}
+-	release chan struct{}
+-	tr      http.RoundTripper
+-	url     string
+-	tcpAddr string
+-	srv     *http3.Server
+-	refused sync.Locked[bool]
+-	stopErr sync.Locked[error]
+-}
+-
+-func drainHandler(entered chan struct{}, release chan struct{}) web.Handler {
+-	return func(ctx *web.Context) (web.Reply, error) {
+-		close(entered)
+-		select {
+-		case <-release:
+-			return web.Empty{}, nil
+-		case <-ctx.Ctx().Done():
+-			return nil, ctx.Ctx().Err()
+-		}
+-	}
+-}
+-
+-func fetchDrain(ctx context.Context, p *drainProbe) error {
+-	req, rerr := http.NewRequestWithContext(ctx, http.MethodGet, p.url, nil)
+-	if rerr != nil {
+-		return nil
+-	}
+-	resp, err := p.tr.RoundTrip(req)
+-	if err != nil {
+-		return nil
+-	}
+-	defer func() {
+-		if cerr := resp.Body.Close(); cerr != nil {
+-			return
+-		}
+-	}()
+-	return nil
+-}
+-
+-func stopDrainAfterEntered(ctx context.Context, p *drainProbe) error {
+-	if err := waitH3Entered(ctx, p.entered); err != nil {
+-		p.stopErr.WithLock(func(e *error) { *e = err })
+-		return nil
+-	}
+-	p.stopErr.WithLock(func(e *error) { *e = p.srv.Stop(context.Background()) })
+-	return nil
+-}
+-
+-func pollTCPRefused(addr string, timeout time.Duration) bool {
+-	end := time.Now().Add(timeout)
+-	for time.Now().Before(end) {
+-		conn, err := net.DialTimeout("tcp", addr, 200*time.Millisecond)
+-		if err != nil {
+-			return true
+-		}
+-		if cerr := conn.Close(); cerr != nil {
+-			return false
+-		}
+-		time.Sleep(20 * time.Millisecond)
+-	}
+-	return false
+-}
+-
+-func pollAndRelease(ctx context.Context, p *drainProbe) error {
+-	refused := pollTCPRefused(p.tcpAddr, 3*time.Second)
+-	p.refused.WithLock(func(b *bool) { *b = refused })
+-	close(p.release)
+-	return nil
+-}
+-
+-func driveDrain(ctx context.Context, p *drainProbe) error {
+-	go group (ctx) {
+-		go fetchDrain(ctx, p)
+-		go stopDrainAfterEntered(ctx, p)
+-		go pollAndRelease(ctx, p)
+-	}
+-	return nil
+-}
+-
+-func TestH3StopShutsTCPWhileH3Drains(t *testing.T) {
+-	entered := make(chan struct{})
+-	release := make(chan struct{})
+-	r := web.NewRouter()
+-	r.Handle("GET", "/slow", drainHandler(entered, release))
+-	cert, pool := testCert(t)
+-	if pool == nil {
+-		t.Fatal("cert pool missing")
+-		return
+-	}
+-	s := startH3Server(t, r, cert, 10*time.Second)
+-	if s == nil {
+-		t.Fatal("server did not start")
+-		return
+-	}
+-	udpAddr := s.BoundUDPAddrForTest()
+-	tcpAddr := s.BoundTCPAddrForTest()
+-	if udpAddr == "" || tcpAddr == "" {
+-		t.Fatal("server bound no address")
+-		return
+-	}
+-	tr := http3peer.NewTransport(&tls.Config{RootCAs: pool})
+-	defer closeH3Transport(t, tr)
+-	p := &drainProbe{entered: entered, release: release, tr: tr, url: "https://" + udpAddr + "/slow", tcpAddr: tcpAddr, srv: s}
+-	bctx, bcancel := context.WithTimeout(context.Background(), 30*time.Second)
+-	defer bcancel()
+-	if err := driveDrain(bctx, p); err != nil {
+-		t.Fatalf("drive: %v", err)
+-		return
+-	}
+-	var refused bool
+-	p.refused.WithLock(func(b *bool) { refused = *b })
+-	if !refused {
+-		t.Fatalf("TCP %s still accepts while the HTTP/3 request drains", tcpAddr)
+-		return
+-	}
+-	var serr error
+-	p.stopErr.WithLock(func(e *error) { serr = *e })
+-	if serr != nil {
+-		t.Fatalf("Stop during the drain: %v", serr)
+-		return
+-	}
+-}
+-
+-type deadlineProbe struct {
+-	entered chan struct{}
+-	tr      http.RoundTripper
+-	url     string
+-	srv     *http3.Server
+-	stopErr sync.Locked[error]
+-	stopDur sync.Locked[time.Duration]
+-}
+-
+-func syncHandler(entered chan struct{}) web.Handler {
+-	return func(ctx *web.Context) (web.Reply, error) {
+-		close(entered)
+-		time.Sleep(2 * time.Second)
+-		return web.Empty{}, nil
+-	}
+-}
+-
+-func fetchSyncDeadline(ctx context.Context, p *deadlineProbe) error {
+-	req, rerr := http.NewRequestWithContext(ctx, http.MethodGet, p.url, nil)
+-	if rerr != nil {
+-		return nil
+-	}
+-	resp, err := p.tr.RoundTrip(req)
+-	if err != nil {
+-		return nil
+-	}
+-	defer func() {
+-		if cerr := resp.Body.Close(); cerr != nil {
+-			return
+-		}
+-	}()
+-	return nil
+-}
+-
+-func stopSyncAfterEntered(ctx context.Context, p *deadlineProbe, endFetch context.CancelFunc) error {
+-	defer endFetch()
+-	if err := waitH3Entered(ctx, p.entered); err != nil {
+-		p.stopErr.WithLock(func(e *error) { *e = err })
+-		return nil
+-	}
+-	stopCtx, cancel := context.WithTimeout(ctx, 300*time.Millisecond)
+-	defer cancel()
+-	start := time.Now()
+-	p.stopErr.WithLock(func(e *error) { *e = p.srv.Stop(stopCtx) })
+-	p.stopDur.WithLock(func(d *time.Duration) { *d = time.Since(start) })
+-	return nil
+-}
+-
+-func driveSyncDeadline(ctx context.Context, p *deadlineProbe) error {
+-	fetchCtx, endFetch := context.WithCancel(ctx)
+-	defer endFetch()
+-	go group (ctx) {
+-		go fetchSyncDeadline(fetchCtx, p)
+-		go stopSyncAfterEntered(ctx, p, endFetch)
+-	}
+-	return nil
+-}
+-
+-func TestH3StopMeetsCallerDeadline(t *testing.T) {
+-	entered := make(chan struct{})
+-	r := web.NewRouter()
+-	r.Handle("GET", "/sync", syncHandler(entered))
+-	cert, pool := testCert(t)
+-	if pool == nil {
+-		t.Fatal("cert pool missing")
+-		return
+-	}
+-	s := startH3Server(t, r, cert, 5*time.Second)
+-	if s == nil {
+-		t.Fatal("server did not start")
+-		return
+-	}
+-	udpAddr := s.BoundUDPAddrForTest()
+-	if udpAddr == "" {
+-		t.Fatal("no UDP bound address")
+-		return
+-	}
+-	tr := http3peer.NewTransport(&tls.Config{RootCAs: pool})
+-	defer closeH3Transport(t, tr)
+-	p := &deadlineProbe{entered: entered, tr: tr, url: "https://" + udpAddr + "/sync", srv: s}
+-	bctx, bcancel := context.WithTimeout(context.Background(), 30*time.Second)
+-	defer bcancel()
+-	if err := driveSyncDeadline(bctx, p); err != nil {
+-		t.Fatalf("drive: %v", err)
+-		return
+-	}
+-	var dur time.Duration
+-	p.stopDur.WithLock(func(d *time.Duration) { dur = *d })
+-	var serr error
+-	p.stopErr.WithLock(func(e *error) { serr = *e })
+-	t.Logf("Stop with sync handler returned after %v with error %v", dur, serr)
+-	if serr == nil {
+-		t.Fatalf("Stop past the caller deadline reported success")
+-		return
+-	}
+-	if dur > 1500*time.Millisecond {
+-		t.Fatalf("Stop blocked %v past the 300ms caller deadline", dur)
+-		return
+-	}
+-}
+-
+-func TestH3StopCallerDeadlineClosesUDPWithCallerError(t *testing.T) {
+-	entered := make(chan struct{})
+-	r := web.NewRouter()
+-	r.Handle("GET", "/sync", syncHandler(entered))
+-	cert, pool := testCert(t)
+-	if pool == nil {
+-		t.Fatal("cert pool missing")
+-		return
+-	}
+-	s := startH3Server(t, r, cert, 5*time.Second)
+-	if s == nil {
+-		t.Fatal("server did not start")
+-		return
+-	}
+-	udpAddr := s.BoundUDPAddrForTest()
+-	if udpAddr == "" {
+-		t.Fatal("no UDP bound address")
+-		return
+-	}
+-	tr := http3peer.NewTransport(&tls.Config{RootCAs: pool})
+-	defer closeH3Transport(t, tr)
+-	bctx, bcancel := context.WithTimeout(context.Background(), 30*time.Second)
+-	defer bcancel()
+-	fetchCtx, endFetch := context.WithCancel(bctx)
+-	defer endFetch()
+-	finished := make(chan struct{})
+-	if ferr := fetchSyncPage(fetchCtx, tr, "https://"+udpAddr+"/sync", finished); ferr != nil {
+-		t.Fatalf("start sync fetch: %v", ferr)
+-		return
+-	}
+-	select {
+-	case <-entered:
+-	case <-time.After(10 * time.Second):
+-		t.Fatal("handler did not start")
+-		return
+-	}
+-	stopCtx, cancel := context.WithTimeout(bctx, 300*time.Millisecond)
+-	defer cancel()
+-	start := time.Now()
+-	serr := s.Stop(stopCtx)
+-	elapsed := time.Since(start)
+-	if !errors.Is(serr, context.DeadlineExceeded) {
+-		t.Fatalf("Stop past the caller deadline = %v, want the caller deadline", serr)
+-		return
+-	}
+-	if errors.Is(serr, http3.ErrH3Shutdown) {
+-		t.Fatalf("Stop past the caller deadline joined the shutdown fault: %v", serr)
+-		return
+-	}
+-	if elapsed > 1500*time.Millisecond {
+-		t.Fatalf("Stop blocked %v past the 300ms caller deadline", elapsed)
+-		return
+-	}
+-	requireUDPRebound(t, udpAddr)
+-	<-finished
+-}
+-
+-func fetchSyncPage(ctx context.Context, tr http.RoundTripper, url string, finished chan struct{}) error {
+-	fetchers, _ := rt.NewGroup(context.WithoutCancel(ctx), 0)
+-	fetchers.Go(func(_ context.Context) error {
+-		defer close(finished)
+-		req, rerr := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+-		if rerr != nil {
+-			return nil
+-		}
+-		resp, err := tr.RoundTrip(req)
+-		if err != nil {
+-			return nil
+-		}
+-		if _, cerr := io.Copy(io.Discard, resp.Body); cerr != nil {
+-			return nil
+-		}
+-		if cerr := resp.Body.Close(); cerr != nil {
+-			return nil
+-		}
+-		return nil
+-	})
+-	return nil
+-}
+-
+-func requireUDPRebound(t *testing.T, addr string) {
+-	t.Helper()
+-	rebound, berr := net.ListenPacket("udp", addr)
+-	if berr != nil {
+-		t.Fatalf("UDP port %s stayed bound after caller-deadline Stop: %v", addr, berr)
+-		return
+-	}
+-	if cerr := rebound.Close(); cerr != nil {
+-		t.Errorf("close rebound UDP port: %v", cerr)
+-	}
+-}
+-
+-type h3GraceProbe struct {
+-	entered chan struct{}
+-	release chan struct{}
+-	exited  chan struct{}
+-	stopped chan struct{}
+-}
+-
+-func stopH3AtGrace(ctx context.Context, s *http3.Server, p *h3GraceProbe) error {
+-	defer close(p.stopped)
+-	if err := waitH3Entered(ctx, p.entered); err != nil {
+-		return fmt.Errorf("HTTP/3 handler did not enter: %w", err)
+-	}
+-	stopCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+-	defer cancel()
+-	started := time.Now()
+-	err := s.Stop(stopCtx)
+-	if elapsed := time.Since(started); elapsed < s.ShutdownGrace {
+-		if err != nil {
+-			return fmt.Errorf("Stop returned in %v before ShutdownGrace %v: %w", elapsed, s.ShutdownGrace, err)
+-		}
+-		return fmt.Errorf("Stop reported success in %v before ShutdownGrace %v", elapsed, s.ShutdownGrace)
+-	}
+-	if stopCtx.Err() != nil {
+-		return fmt.Errorf("Stop reached the caller deadline: %w", stopCtx.Err())
+-	}
+-	if err == nil {
+-		return fmt.Errorf("Stop reported success after ShutdownGrace %v with an active HTTP/3 request", s.ShutdownGrace)
+-	}
+-	return nil
+-}
+-
+-func releaseH3AfterGraceStop(ctx context.Context, p *h3GraceProbe) error {
+-	if err := waitH3Entered(ctx, p.entered); err != nil {
+-		close(p.release)
+-		return fmt.Errorf("HTTP/3 handler did not enter: %w", err)
+-	}
+-	const fallback = 5 * time.Second
+-	waitCtx, cancel := context.WithTimeout(ctx, fallback)
+-	defer cancel()
+-	stopErr := waitH3Entered(waitCtx, p.stopped)
+-	close(p.release)
+-	exitErr := waitH3Entered(ctx, p.exited)
+-	if stopErr != nil {
+-		return fmt.Errorf("Stop still waiting after %v with the HTTP/3 handler held: %w", fallback, stopErr)
+-	}
+-	if exitErr != nil {
+-		return fmt.Errorf("HTTP/3 handler did not exit after release: %w", exitErr)
+-	}
+-	return nil
+-}
+-
+-func TestH3StopMeetsShutdownGrace(t *testing.T) {
+-	p := &h3GraceProbe{
+-		entered: make(chan struct{}),
+-		release: make(chan struct{}),
+-		exited:  make(chan struct{}),
+-		stopped: make(chan struct{}),
+-	}
+-	r := web.NewRouter()
+-	r.Handle("GET", "/stuck", func(_ *web.Context) (web.Reply, error) {
+-		releaseCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+-		defer cancel()
+-		close(p.entered)
+-		defer close(p.exited)
+-		select {
+-		case <-p.release:
+-		case <-releaseCtx.Done():
+-			return nil, releaseCtx.Err()
+-		}
+-		return web.Empty{}, nil
+-	})
+-	cert, pool := testCert(t)
+-	if pool == nil {
+-		t.Fatal("cert pool missing")
+-		return
+-	}
+-	s := startH3Server(t, r, cert, 250*time.Millisecond)
+-	if s == nil {
+-		t.Fatal("server did not start")
+-		return
+-	}
+-	addr := s.BoundUDPAddrForTest()
+-	if addr == "" {
+-		t.Fatal("no UDP bound address")
+-		return
+-	}
+-	tr := http3peer.NewTransport(&tls.Config{RootCAs: pool})
+-	defer closeH3Transport(t, tr)
+-	url := "https://" + addr + "/stuck"
+-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+-	defer cancel()
+-	if err := func() error {
+-		go group (ctx) {
+-			go fetchH3Stuck(ctx, tr, url)
+-			go stopH3AtGrace(ctx, s, p)
+-			go releaseH3AfterGraceStop(ctx, p)
+-		}
+-		return nil
+-	}(); err != nil {
+-		t.Fatal(err)
+-		return
+-	}
+-}
+-
+-func TestH3StopBeforeStartReturnsNil(t *testing.T) {
+-	r := web.NewRouter()
+-	r.Handle("GET", "/hello", h3Hello)
+-	s := &http3.Server{Addr: "127.0.0.1:0", Router: r, H3: true}
+-	stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+-	defer cancel()
+-	if err := s.Stop(stopCtx); err != nil {
+-		t.Fatalf("Stop before Start: %v", err)
+-		return
+-	}
+-	if got := s.BoundTCPAddrForTest(); got != "" {
+-		t.Fatalf("TCP listener %q present after Stop before Start", got)
+-		return
+-	}
+-	if got := s.BoundUDPAddrForTest(); got != "" {
+-		t.Fatalf("UDP listener %q present after Stop before Start", got)
+-		return
+-	}
+-}
++package http3_test
++
++import (
++	"context"
++	"crypto/tls"
++	"errors"
++	"fmt"
++	"net"
++	"net/http"
++	"strconv"
++	"syscall"
++	"testing"
++	"time"
++
++	"logos/sync"
++
++	"github.com/gosuda/spira/http3"
++	"github.com/gosuda/spira/internal/http3peer"
++	"github.com/gosuda/spira/web"
++)
++
++func TestH3StopClosesUDPListener(t *testing.T) {
++	r := web.NewRouter()
++	r.Handle("GET", "/hello", h3Hello)
++	cert, _ := testCert(t)
++	s := startH3Server(t, r, cert, 5*time.Second)
++	if s == nil {
++		t.Fatal("server did not start")
++		return
++	}
++	udpAddr := s.BoundUDPAddrForTest()
++	if udpAddr == "" {
++		t.Fatal("no UDP bound address")
++		return
++	}
++	stopCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++	if err := s.Stop(stopCtx); err != nil {
++		t.Fatalf("Stop: %v", err)
++		return
++	}
++	if got := s.BoundUDPAddrForTest(); got != "" {
++		t.Fatalf("UDP bound address %q survives Stop", got)
++		return
++	}
++	_, portStr, serr := net.SplitHostPort(udpAddr)
++	if serr != nil {
++		t.Fatalf("split %s: %v", udpAddr, serr)
++		return
++	}
++	port64, perr := strconv.ParseUint(portStr, 10, 16)
++	if perr != nil {
++		t.Fatalf("port %s: %v", portStr, perr)
++		return
++	}
++	// Bind without SO_REUSEADDR: Go's ListenUDP sets reuse, which would
++	// succeed even with the old socket still open and hide the leak.
++	fd, ferr := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, 0)
++	if ferr != nil {
++		t.Fatalf("socket: %v", ferr)
++		return
++	}
++	defer func() {
++		if cerr := syscall.Close(fd); cerr != nil {
++			return
++		}
++	}()
++	if berr := syscall.Bind(fd, &syscall.SockaddrInet4{Port: int(port64)}); berr != nil {
++		t.Fatalf("bind %s without reuse after Stop: %v", udpAddr, berr)
++		return
++	}
++}
++
++type drainProbe struct {
++	entered chan struct{}
++	release chan struct{}
++	tr      http.RoundTripper
++	url     string
++	tcpAddr string
++	srv     *http3.Server
++	refused sync.Locked[bool]
++	stopErr sync.Locked[error]
++}
++
++func drainHandler(entered chan struct{}, release chan struct{}) web.Handler {
++	return func(ctx *web.Context) (web.Reply, error) {
++		close(entered)
++		select {
++		case <-release:
++			return web.Empty{}, nil
++		case <-ctx.Ctx().Done():
++			return nil, ctx.Ctx().Err()
++		}
++	}
++}
++
++func fetchDrain(ctx context.Context, p *drainProbe) error {
++	req, rerr := http.NewRequestWithContext(ctx, http.MethodGet, p.url, nil)
++	if rerr != nil {
++		return nil
++	}
++	resp, err := p.tr.RoundTrip(req)
++	if err != nil {
++		return nil
++	}
++	defer func() {
++		if cerr := resp.Body.Close(); cerr != nil {
++			return
++		}
++	}()
++	return nil
++}
++
++func stopDrainAfterEntered(ctx context.Context, p *drainProbe) error {
++	if err := waitH3Entered(ctx, p.entered); err != nil {
++		p.stopErr.WithLock(func(e *error) { *e = err })
++		return nil
++	}
++	p.stopErr.WithLock(func(e *error) { *e = p.srv.Stop(context.Background()) })
++	return nil
++}
++
++func pollTCPRefused(addr string, timeout time.Duration) bool {
++	end := time.Now().Add(timeout)
++	for time.Now().Before(end) {
++		conn, err := net.DialTimeout("tcp", addr, 200*time.Millisecond)
++		if err != nil {
++			return true
++		}
++		if cerr := conn.Close(); cerr != nil {
++			return false
++		}
++		time.Sleep(20 * time.Millisecond)
++	}
++	return false
++}
++
++func pollAndRelease(ctx context.Context, p *drainProbe) error {
++	refused := pollTCPRefused(p.tcpAddr, 3*time.Second)
++	p.refused.WithLock(func(b *bool) { *b = refused })
++	close(p.release)
++	return nil
++}
++
++func driveDrain(ctx context.Context, p *drainProbe) error {
++	go group (ctx) {
++		go fetchDrain(ctx, p)
++		go stopDrainAfterEntered(ctx, p)
++		go pollAndRelease(ctx, p)
++	}
++	return nil
++}
++
++func TestH3StopShutsTCPWhileH3Drains(t *testing.T) {
++	entered := make(chan struct{})
++	release := make(chan struct{})
++	r := web.NewRouter()
++	r.Handle("GET", "/slow", drainHandler(entered, release))
++	cert, pool := testCert(t)
++	if pool == nil {
++		t.Fatal("cert pool missing")
++		return
++	}
++	s := startH3Server(t, r, cert, 10*time.Second)
++	if s == nil {
++		t.Fatal("server did not start")
++		return
++	}
++	udpAddr := s.BoundUDPAddrForTest()
++	tcpAddr := s.BoundTCPAddrForTest()
++	if udpAddr == "" || tcpAddr == "" {
++		t.Fatal("server bound no address")
++		return
++	}
++	tr := http3peer.NewTransport(&tls.Config{RootCAs: pool})
++	defer closeH3Transport(t, tr)
++	p := &drainProbe{entered: entered, release: release, tr: tr, url: "https://" + udpAddr + "/slow", tcpAddr: tcpAddr, srv: s}
++	bctx, bcancel := context.WithTimeout(context.Background(), 30*time.Second)
++	defer bcancel()
++	if err := driveDrain(bctx, p); err != nil {
++		t.Fatalf("drive: %v", err)
++		return
++	}
++	var refused bool
++	p.refused.WithLock(func(b *bool) { refused = *b })
++	if !refused {
++		t.Fatalf("TCP %s still accepts while the HTTP/3 request drains", tcpAddr)
++		return
++	}
++	var serr error
++	p.stopErr.WithLock(func(e *error) { serr = *e })
++	if serr != nil {
++		t.Fatalf("Stop during the drain: %v", serr)
++		return
++	}
++}
++
++type deadlineProbe struct {
++	entered chan struct{}
++	tr      http.RoundTripper
++	url     string
++	srv     *http3.Server
++	stopErr sync.Locked[error]
++	stopDur sync.Locked[time.Duration]
++}
++
++func syncHandler(entered chan struct{}) web.Handler {
++	return func(ctx *web.Context) (web.Reply, error) {
++		close(entered)
++		time.Sleep(2 * time.Second)
++		return web.Empty{}, nil
++	}
++}
++
++func fetchSyncDeadline(ctx context.Context, p *deadlineProbe) error {
++	req, rerr := http.NewRequestWithContext(ctx, http.MethodGet, p.url, nil)
++	if rerr != nil {
++		return nil
++	}
++	resp, err := p.tr.RoundTrip(req)
++	if err != nil {
++		return nil
++	}
++	defer func() {
++		if cerr := resp.Body.Close(); cerr != nil {
++			return
++		}
++	}()
++	return nil
++}
++
++func stopSyncAfterEntered(ctx context.Context, p *deadlineProbe, endFetch context.CancelFunc) error {
++	defer endFetch()
++	if err := waitH3Entered(ctx, p.entered); err != nil {
++		p.stopErr.WithLock(func(e *error) { *e = err })
++		return nil
++	}
++	stopCtx, cancel := context.WithTimeout(ctx, 300*time.Millisecond)
++	defer cancel()
++	start := time.Now()
++	p.stopErr.WithLock(func(e *error) { *e = p.srv.Stop(stopCtx) })
++	p.stopDur.WithLock(func(d *time.Duration) { *d = time.Since(start) })
++	return nil
++}
++
++func driveSyncDeadline(ctx context.Context, p *deadlineProbe) error {
++	fetchCtx, endFetch := context.WithCancel(ctx)
++	defer endFetch()
++	go group (ctx) {
++		go fetchSyncDeadline(fetchCtx, p)
++		go stopSyncAfterEntered(ctx, p, endFetch)
++	}
++	return nil
++}
++
++func TestH3StopMeetsCallerDeadline(t *testing.T) {
++	entered := make(chan struct{})
++	r := web.NewRouter()
++	r.Handle("GET", "/sync", syncHandler(entered))
++	cert, pool := testCert(t)
++	if pool == nil {
++		t.Fatal("cert pool missing")
++		return
++	}
++	s := startH3Server(t, r, cert, 5*time.Second)
++	if s == nil {
++		t.Fatal("server did not start")
++		return
++	}
++	udpAddr := s.BoundUDPAddrForTest()
++	if udpAddr == "" {
++		t.Fatal("no UDP bound address")
++		return
++	}
++	tr := http3peer.NewTransport(&tls.Config{RootCAs: pool})
++	defer closeH3Transport(t, tr)
++	p := &deadlineProbe{entered: entered, tr: tr, url: "https://" + udpAddr + "/sync", srv: s}
++	bctx, bcancel := context.WithTimeout(context.Background(), 30*time.Second)
++	defer bcancel()
++	if err := driveSyncDeadline(bctx, p); err != nil {
++		t.Fatalf("drive: %v", err)
++		return
++	}
++	var dur time.Duration
++	p.stopDur.WithLock(func(d *time.Duration) { dur = *d })
++	var serr error
++	p.stopErr.WithLock(func(e *error) { serr = *e })
++	t.Logf("Stop with sync handler returned after %v with error %v", dur, serr)
++	if serr == nil {
++		t.Fatalf("Stop past the caller deadline reported success")
++		return
++	}
++	if dur > 1500*time.Millisecond {
++		t.Fatalf("Stop blocked %v past the 300ms caller deadline", dur)
++		return
++	}
++}
++
++func TestH3StopCallerDeadlineClosesUDPWithCallerError(t *testing.T) {
++	entered := make(chan struct{})
++	r := web.NewRouter()
++	r.Handle("GET", "/sync", syncHandler(entered))
++	cert, pool := testCert(t)
++	if pool == nil {
++		t.Fatal("cert pool missing")
++		return
++	}
++	s := startH3Server(t, r, cert, 5*time.Second)
++	if s == nil {
++		t.Fatal("server did not start")
++		return
++	}
++	udpAddr := s.BoundUDPAddrForTest()
++	if udpAddr == "" {
++		t.Fatal("no UDP bound address")
++		return
++	}
++	tr := http3peer.NewTransport(&tls.Config{RootCAs: pool})
++	defer closeH3Transport(t, tr)
++	p := &deadlineProbe{entered: entered, tr: tr, url: "https://" + udpAddr + "/sync", srv: s}
++	bctx, bcancel := context.WithTimeout(context.Background(), 30*time.Second)
++	defer bcancel()
++	fetchCtx, endFetch := context.WithCancel(bctx)
++	defer endFetch()
++	if err := func() error {
++		go group (bctx) {
++			go fetchSyncDeadline(fetchCtx, p)
++			go stopCallerDeadlineAndRebind(bctx, p, endFetch)
++		}
++		return nil
++	}(); err != nil {
++		t.Fatal(err)
++	}
++}
++
++func stopCallerDeadlineAndRebind(ctx context.Context, p *deadlineProbe, endFetch context.CancelFunc) error {
++	defer endFetch()
++	if err := waitH3Entered(ctx, p.entered); err != nil {
++		return fmt.Errorf("http3: wait for caller-deadline request: %w", err)
++	}
++	addr := p.srv.BoundUDPAddrForTest()
++	stopCtx, cancel := context.WithTimeout(ctx, 300*time.Millisecond)
++	defer cancel()
++	started := time.Now()
++	err := p.srv.Stop(stopCtx)
++	elapsed := time.Since(started)
++	if !errors.Is(err, context.DeadlineExceeded) {
++		return fmt.Errorf("http3: Stop past the caller deadline = %v, want the caller deadline", err)
++	}
++	if elapsed > 1500*time.Millisecond {
++		return fmt.Errorf("http3: Stop blocked %v past the 300ms caller deadline", elapsed)
++	}
++	rebound, berr := net.ListenPacket("udp", addr)
++	if berr != nil {
++		return fmt.Errorf("http3: UDP port %s stayed bound after caller-deadline Stop: %w", addr, berr)
++	}
++	if cerr := rebound.Close(); cerr != nil {
++		return fmt.Errorf("http3: close rebound UDP port: %w", cerr)
++	}
++	return nil
++}
++
++type h3GraceProbe struct {
++	entered chan struct{}
++	release chan struct{}
++	exited  chan struct{}
++	stopped chan struct{}
++}
++
++func stopH3AtGrace(ctx context.Context, s *http3.Server, p *h3GraceProbe) error {
++	defer close(p.stopped)
++	if err := waitH3Entered(ctx, p.entered); err != nil {
++		return fmt.Errorf("HTTP/3 handler did not enter: %w", err)
++	}
++	stopCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
++	defer cancel()
++	started := time.Now()
++	err := s.Stop(stopCtx)
++	if elapsed := time.Since(started); elapsed < s.ShutdownGrace {
++		if err != nil {
++			return fmt.Errorf("Stop returned in %v before ShutdownGrace %v: %w", elapsed, s.ShutdownGrace, err)
++		}
++		return fmt.Errorf("Stop reported success in %v before ShutdownGrace %v", elapsed, s.ShutdownGrace)
++	}
++	if stopCtx.Err() != nil {
++		return fmt.Errorf("Stop reached the caller deadline: %w", stopCtx.Err())
++	}
++	if err == nil {
++		return fmt.Errorf("Stop reported success after ShutdownGrace %v with an active HTTP/3 request", s.ShutdownGrace)
++	}
++	return nil
++}
++
++func releaseH3AfterGraceStop(ctx context.Context, p *h3GraceProbe) error {
++	if err := waitH3Entered(ctx, p.entered); err != nil {
++		close(p.release)
++		return fmt.Errorf("HTTP/3 handler did not enter: %w", err)
++	}
++	const fallback = 5 * time.Second
++	waitCtx, cancel := context.WithTimeout(ctx, fallback)
++	defer cancel()
++	stopErr := waitH3Entered(waitCtx, p.stopped)
++	close(p.release)
++	exitErr := waitH3Entered(ctx, p.exited)
++	if stopErr != nil {
++		return fmt.Errorf("Stop still waiting after %v with the HTTP/3 handler held: %w", fallback, stopErr)
++	}
++	if exitErr != nil {
++		return fmt.Errorf("HTTP/3 handler did not exit after release: %w", exitErr)
++	}
++	return nil
++}
++
++func TestH3StopMeetsShutdownGrace(t *testing.T) {
++	p := &h3GraceProbe{
++		entered: make(chan struct{}),
++		release: make(chan struct{}),
++		exited:  make(chan struct{}),
++		stopped: make(chan struct{}),
++	}
++	r := web.NewRouter()
++	r.Handle("GET", "/stuck", func(_ *web.Context) (web.Reply, error) {
++		releaseCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
++		defer cancel()
++		close(p.entered)
++		defer close(p.exited)
++		select {
++		case <-p.release:
++		case <-releaseCtx.Done():
++			return nil, releaseCtx.Err()
++		}
++		return web.Empty{}, nil
++	})
++	cert, pool := testCert(t)
++	if pool == nil {
++		t.Fatal("cert pool missing")
++		return
++	}
++	s := startH3Server(t, r, cert, 250*time.Millisecond)
++	if s == nil {
++		t.Fatal("server did not start")
++		return
++	}
++	addr := s.BoundUDPAddrForTest()
++	if addr == "" {
++		t.Fatal("no UDP bound address")
++		return
++	}
++	tr := http3peer.NewTransport(&tls.Config{RootCAs: pool})
++	defer closeH3Transport(t, tr)
++	url := "https://" + addr + "/stuck"
++	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
++	defer cancel()
++	if err := func() error {
++		go group (ctx) {
++			go fetchH3Stuck(ctx, tr, url)
++			go stopH3AtGrace(ctx, s, p)
++			go releaseH3AfterGraceStop(ctx, p)
++		}
++		return nil
++	}(); err != nil {
++		t.Fatal(err)
++		return
++	}
++}
++
++func TestH3StopBeforeStartReturnsNil(t *testing.T) {
++	r := web.NewRouter()
++	r.Handle("GET", "/hello", h3Hello)
++	s := &http3.Server{Addr: "127.0.0.1:0", Router: r, H3: true}
++	stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
++	defer cancel()
++	if err := s.Stop(stopCtx); err != nil {
++		t.Fatalf("Stop before Start: %v", err)
++		return
++	}
++	if got := s.BoundTCPAddrForTest(); got != "" {
++		t.Fatalf("TCP listener %q present after Stop before Start", got)
++		return
++	}
++	if got := s.BoundUDPAddrForTest(); got != "" {
++		t.Fatalf("UDP listener %q present after Stop before Start", got)
++		return
++	}
++}
 diff --git a/docs/specs/http3.md b/docs/specs/http3.md
 --- a/docs/specs/http3.md
 +++ b/docs/specs/http3.md
-@@ -1,182 +1,185 @@
+@@ -1,184 +1,186 @@
 -# http3
 -
 -`http3.Server` serves HTTP/3 through `logos/net/http.H3Server`. `Start` opens one UDP listener on the same port as the TCP listener. The router answers HTTP/3 requests with the same stages and replies as other versions.
 -
--`H3Server` runs over the `golang.org/x/net/quic` transport in the LoGOs toolchain. It clones the TLS configuration for UDP, requires TLS 1.3, and sets ALPN to `h3`.
+-`H3Server` runs over the `github.com/quic-go/quic-go` transport. It clones the TLS configuration for UDP, requires TLS 1.3, and sets ALPN to `h3`.
 -
 -## Interface
 -
@@ -101,6 +1105,7 @@ diff --git a/docs/specs/http3.md b/docs/specs/http3.md
 -- `Stop` MUST close the UDP listener before it returns, after the drain or the timeout ends it.
 -- `Stop` MUST send GOAWAY on HTTP/3 connections, then wait for open requests until `ShutdownGrace` ends (RFC 9114).
 -- `Stop` MUST return at the caller deadline when that deadline is sooner.
+-- When the caller deadline wins, `Stop` MUST still close the UDP listener and MUST return the caller error without waiting for backend cleanup, so the shutdown fault and any backend close error are not joined.
 -- `Stop` MUST close HTTP/3 connections when shutdown times out.
 -- `Stop` of a server that is not started MUST return a nil error.
 -- On each connection with an open HTTP/3 control stream, a graceful drain MUST send one GOAWAY frame.
@@ -156,6 +1161,7 @@ diff --git a/docs/specs/http3.md b/docs/specs/http3.md
 -- `TestH3StopShutsTCPWhileH3Drains` proves that TCP stops accepting while an HTTP/3 request drains.
 -- `TestH3RefusesExtendedConnect` proves that an extended CONNECT request answers 501 without reaching the router while plain H3 traffic still passes.
 -- `TestH3StopMeetsCallerDeadline` proves that `Stop` returns at the caller deadline with a stuck handler.
+-- `TestH3StopCallerDeadlineClosesUDPWithCallerError` proves that a caller-deadline `Stop` closes the UDP listener and returns the caller error without the shutdown fault.
 -- `TestH3RefusesEarlyData` sends QUIC 0-RTT data and checks that the server resumes the TLS session without accepting that data.
 -- `TestH3StopClosesOnTimeout` proves that a timed-out shutdown ends the HTTP/3 request.
 -- `TestH3AltSvcAbsentWhenH3False` proves no header without `H3`.
@@ -188,7 +1194,7 @@ diff --git a/docs/specs/http3.md b/docs/specs/http3.md
 +
 +`http3.Server` serves HTTP/3 through `logos/net/http.H3Server`. `Start` opens one UDP listener on the same port as the TCP listener. The router answers HTTP/3 requests with the same stages and replies as other versions.
 +
-+`H3Server` runs over the `golang.org/x/net/quic` transport in the LoGOs toolchain. It clones the TLS configuration for UDP, requires TLS 1.3, and sets ALPN to `h3`.
++`H3Server` runs over the `github.com/quic-go/quic-go` transport. It clones the TLS configuration for UDP, requires TLS 1.3, and sets ALPN to `h3`.
 +
 +## Interface
 +
@@ -283,6 +1289,8 @@ diff --git a/docs/specs/http3.md b/docs/specs/http3.md
 +- `Stop` MUST close the UDP listener before it returns, after the drain or the timeout ends it.
 +- `Stop` MUST send GOAWAY on HTTP/3 connections, then wait for open requests until `ShutdownGrace` ends (RFC 9114).
 +- `Stop` MUST return at the caller deadline when that deadline is sooner.
++- If `Stop` returns through the caller-cancellation path, it MUST close the UDP listener and join any listener close error with the caller error. That path MUST NOT wait for or include the backend cleanup result.
++- If backend cleanup and caller cancellation are both ready, `Stop` MAY select either path. A completed cleanup result MAY therefore include the shutdown fault even after the caller deadline.
 +- `Stop` MUST close HTTP/3 connections when shutdown times out.
 +- `Stop` of a server that is not started MUST return a nil error.
 +- On each connection with an open HTTP/3 control stream, a graceful drain MUST send one GOAWAY frame.
@@ -315,10 +1323,8 @@ diff --git a/docs/specs/http3.md b/docs/specs/http3.md
 +- A UDP listen failure MUST map to `http3.listen_udp` with the address in the cause.
 +- An HTTP/3 serve failure MUST map to `http3.h3_serve` with the cause.
 +- An HTTP/3 shutdown failure MUST map to `http3.h3_shutdown` with the cause.
-+- After HTTP/3 shutdown fails, background cleanup MUST close the backend and join its error with `http3.h3_shutdown`.
-+- If `Stop` observes cleanup completion, it MUST include any joined shutdown and backend close errors.
-+- When caller cancellation ends `Stop`, it MUST close UDP and join any close error with the caller error.
-+- `Stop` MUST NOT wait for or include the background cleanup result on that early return.
++- After HTTP/3 shutdown fails, background cleanup MUST close the backend and join any backend close error with `http3.h3_shutdown`.
++- If `Stop` observes cleanup completion, it MUST include the joined shutdown and backend close errors. The caller-cancellation path above does not include this background result.
 +
 +### Code table
 +
@@ -341,6 +1347,7 @@ diff --git a/docs/specs/http3.md b/docs/specs/http3.md
 +- `TestH3StopShutsTCPWhileH3Drains` proves that TCP stops accepting while an HTTP/3 request drains.
 +- `TestH3RefusesExtendedConnect` proves that an extended CONNECT request answers 501 without reaching the router while plain H3 traffic still passes.
 +- `TestH3StopMeetsCallerDeadline` proves that `Stop` returns at the caller deadline with a stuck handler.
++- `TestH3StopCallerDeadlineClosesUDPWithCallerError` proves that a caller-deadline `Stop` returns promptly with the deadline cause and closes the UDP listener, whether or not completed cleanup also contributes a shutdown fault.
 +- `TestH3RefusesEarlyData` sends QUIC 0-RTT data and checks that the server resumes the TLS session without accepting that data.
 +- `TestH3StopClosesOnTimeout` proves that a timed-out shutdown ends the HTTP/3 request.
 +- `TestH3AltSvcAbsentWhenH3False` proves no header without `H3`.
