@@ -16,9 +16,10 @@ The v0.26.6 update keeps the local fixes that sloplint still needs.
 
 ## Why
 
-sloplint skips a whole file when the parse tree has one ERROR or MISSING node.
-Valid PowerShell that the stock grammar rejects therefore reports `meta/parse-error`
-and loses every other finding for that file.
+Unsupported PowerShell syntax can produce `meta/parse-error`. Recovery may still
+analyze unaffected regions while excluding the affected spans. If recovery fails
+or leaves no code, normal rule coverage is lost; the shared parsing deadline can
+also end analysis with a timeout.
 
 ## Regeneration
 
