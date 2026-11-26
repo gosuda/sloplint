@@ -36,12 +36,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+        id: checkout
       - name: Check formatting
         run: cargo fmt --all --check
       - name: Verify grammar manifest
         run: bash scripts/grammars.sh check
+        if: ${{ !cancelled() && steps.checkout.outcome == 'success' }}
       - name: Verify release scripts
         run: bash scripts/selftest-release-scripts.sh
+        if: ${{ !cancelled() && steps.checkout.outcome == 'success' }}
       - name: Install cargo-deny
         run: |
           dir="cargo-deny-$CARGO_DENY_VERSION-x86_64-unknown-linux-musl"
@@ -51,8 +54,11 @@ jobs:
           printf '%s\n' "$CARGO_DENY_SHA256  $RUNNER_TEMP/$dir.tar.gz" | sha256sum --check --strict
           tar -xzf "$RUNNER_TEMP/$dir.tar.gz" -C "$RUNNER_TEMP" "$dir/cargo-deny"
           printf '%s\n' "$RUNNER_TEMP/$dir" >> "$GITHUB_PATH"
+        if: ${{ !cancelled() && steps.checkout.outcome == 'success' }}
+        id: deny
       - run: cargo deny check
 
+        if: ${{ !cancelled() && steps.deny.outcome == 'success' }}
   test:
     # Full proof on Linux: clippy, the whole suite, a release build per
     # Linux target, and the single self-lint run.
@@ -62,8 +68,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { runs_on: depot-ubuntu-24.04, target: x86_64-unknown-linux-gnu, require_fs_caps: "1" }
-          - { runs_on: depot-ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu, require_fs_caps: "1" }
+          - {runs_on: depot-ubuntu-24.04, target: x86_64-unknown-linux-gnu, require_fs_caps: "1"}
+          - {runs_on: depot-ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu, require_fs_caps: "1"}
     env:
       CARGO_INCREMENTAL: "0"
       # Keep assertion checks and useful backtraces without full debug symbols.
@@ -80,7 +86,8 @@ jobs:
         run: TZ=UTC find vendor -exec touch -t 200001010000 {} +
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          shared-key: ${{ matrix.target }}
+          shared-key: ${{ matrix.target }}-${{ github.ref }}-vendor-${{ hashFiles('vendor/**') }}-lock-${{ hashFiles('Cargo.lock') }}
+          workspaces: crates -> ../target
       - run: cargo clippy --workspace --all-targets --locked --target ${{ matrix.target }} -- -D warnings
       - run: cargo test --workspace --locked --no-fail-fast --target ${{ matrix.target }}
         if: ${{ !cancelled() && steps.vendor.outcome == 'success' }}
@@ -96,20 +103,17 @@ jobs:
     # Extended platform proof runs weekly, manually, and for release tags.
     if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
     runs-on: ${{ matrix.runs_on }}
-    timeout-minutes: 30
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         include:
           - runs_on: depot-macos-latest
             target: x86_64-apple-darwin
-            tests: -p sloplint-syntax --test recursion_depth
           - runs_on: depot-macos-latest
             target: aarch64-apple-darwin
-            tests: -p sloplint --lib --test invariants --test configuration --test colocation_paths --test discovery_boundaries --test io_and_cache --test pipeline
           - runs_on: depot-windows-2025-4
             target: x86_64-pc-windows-msvc
-            tests: -p sloplint --test invariants --test pipeline
     env:
       CARGO_INCREMENTAL: "0"
       CARGO_PROFILE_DEV_DEBUG: line-tables-only
@@ -135,7 +139,8 @@ jobs:
         run: TZ=UTC find vendor -exec touch -t 200001010000 {} +
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          shared-key: ${{ matrix.target }}
+          shared-key: ${{ matrix.target }}-${{ github.ref }}-vendor-${{ hashFiles('vendor/**') }}-lock-${{ hashFiles('Cargo.lock') }}
+          workspaces: crates -> ../target
       - name: Clippy for the target
         run: cargo clippy --workspace --all-targets --locked --target ${{ matrix.target }} -- -D warnings
       - name: Cross-check Windows ARM64
@@ -143,8 +148,7 @@ jobs:
         run: |
           rustup target add aarch64-pc-windows-msvc
           cargo clippy --workspace --all-targets --locked --target aarch64-pc-windows-msvc -- -D warnings
-      - name: Run platform-specific tests
+      - name: Run the complete native target suite
         if: ${{ !cancelled() && steps.vendor.outcome == 'success' }}
-        run: >
-          cargo test --locked --no-fail-fast --target ${{ matrix.target }}
-          ${{ matrix.tests }}
+        run: >-
+          cargo test --workspace --locked --no-fail-fast --target ${{ matrix.target }}

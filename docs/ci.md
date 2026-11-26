@@ -43,3 +43,7 @@ requirements. Release builds do not restore shared CI caches.
 
 Runner inventory: <https://depot.dev/docs/github-actions/runner-types>.
 Attestation policy: <https://cli.github.com/manual/gh_attestation_verify>.
+
+Ordinary merges and direct main pushes do not start a second CI run. PR checks
+and merge queues provide the routine gate; weekly/manual verification and
+release-tag checks provide the later complete platform runs.
