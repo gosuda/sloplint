@@ -81,8 +81,13 @@ fn text(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
 
-/// Every regular file under root with its bytes, plus the entry names.
+/// Every entry under root: regular files with their bytes, directories with
+/// a marker, and symlinks with their targets. A `check` that leaves an empty
+/// directory or a symlink behind changes the snapshot, so the tree
+/// comparison cannot pass it as clean.
 fn snapshot(root: &Path) -> Vec<(PathBuf, Vec<u8>)> {
+    const DIR_MARK: &[u8] = b"<dir>";
+    const OTHER_MARK: &[u8] = b"<other>";
     let mut out = Vec::new();
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
@@ -91,14 +96,22 @@ fn snapshot(root: &Path) -> Vec<(PathBuf, Vec<u8>)> {
         for entry in entries {
             let entry = entry.unwrap_or_else(|e| panic!("entry: {e}"));
             let path = entry.path();
+            let rel = path
+                .strip_prefix(root)
+                .unwrap_or_else(|e| panic!("prefix: {e}"))
+                .to_path_buf();
             let kind = entry.file_type().unwrap_or_else(|e| panic!("kind: {e}"));
             if kind.is_dir() {
+                out.push((rel, DIR_MARK.to_vec()));
                 stack.push(path);
             } else if kind.is_file() {
-                let rel = path
-                    .strip_prefix(root)
-                    .unwrap_or_else(|e| panic!("prefix: {e}"));
-                out.push((rel.to_path_buf(), read(&path)));
+                out.push((rel, read(&path)));
+            } else if kind.is_symlink() {
+                let target = std::fs::read_link(&path)
+                    .unwrap_or_else(|e| panic!("read_link {}: {e}", path.display()));
+                out.push((rel, target.as_os_str().as_encoded_bytes().to_vec()));
+            } else {
+                out.push((rel, OTHER_MARK.to_vec()));
             }
         }
     }
@@ -112,6 +125,26 @@ fn nlink(path: &Path) -> u64 {
     std::fs::metadata(path)
         .unwrap_or_else(|e| panic!("metadata {}: {e}", path.display()))
         .nlink()
+}
+
+/// An empty directory or a symlink left behind must change the snapshot: the
+/// tree comparison guards `check`, so entries `snapshot` cannot see would let
+/// a writing `check` pass as clean.
+#[test]
+fn snapshot_sees_new_directories_and_symlinks() {
+    let (_tmp, root) = tempdir();
+    seed(&root);
+    let before = snapshot(&root);
+    std::fs::create_dir_all(root.join("empty-dir"))
+        .unwrap_or_else(|e| panic!("mkdir empty-dir: {e}"));
+    #[cfg(unix)]
+    std::os::unix::fs::symlink("sample.rs", root.join("link.rs"))
+        .unwrap_or_else(|e| panic!("symlink: {e}"));
+    let after = snapshot(&root);
+    assert_ne!(
+        after, before,
+        "an empty directory or symlink must change the snapshot"
+    );
 }
 
 /// The baseline is replaced atomically, never rewritten in place: a linked
