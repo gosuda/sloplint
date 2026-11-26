@@ -27,8 +27,8 @@ Date: 2026-11-19.
   crash_regressions,dependencies,examples/external,fuzzing,sanitize,
   run-corpus.*}`. The `external` examples submodule (github.com/tlaplus/examples)
   is not fetched.
-- `sloplint-grammar.patch` holds the one local change below (S1) plus the
-  corpus expectation it flips. `grammar.js` is otherwise byte-identical to
+- `sloplint-grammar.patch` holds the local changes below (S1-S3) plus the
+  corpus expectations they flip. `grammar.js` is otherwise byte-identical to
   upstream HEAD.
 
 ## Regenerating src/
