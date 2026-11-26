@@ -1,7 +1,7 @@
 diff --git a/http3/http3_stop_test.lgo b/http3/http3_stop_test.lgo
 --- a/http3/http3_stop_test.lgo
 +++ b/http3/http3_stop_test.lgo
-@@ -1,515 +1,485 @@
+@@ -1,515 +1,488 @@
 -package http3_test
 -
 -import (
@@ -863,8 +863,11 @@ diff --git a/http3/http3_stop_test.lgo b/http3/http3_stop_test.lgo
 +	started := time.Now()
 +	err := p.srv.Stop(stopCtx)
 +	elapsed := time.Since(started)
++	if err == nil {
++		return errors.New("http3: Stop past the caller deadline reported success")
++	}
 +	if !errors.Is(err, context.DeadlineExceeded) {
-+		return fmt.Errorf("http3: Stop past the caller deadline = %v, want the caller deadline", err)
++		return fmt.Errorf("http3: Stop did not retain the caller deadline: %w", err)
 +	}
 +	if elapsed > 1500*time.Millisecond {
 +		return fmt.Errorf("http3: Stop blocked %v past the 300ms caller deadline", elapsed)
