@@ -54,9 +54,9 @@ for name, target in targets.items():
     source = "{ root: A<string> }" if name in ("forward", "reverse") else ("A<string>" if name == "direct" else "A<string[]>")
     witness = oracle / f"{name}.ts"
     witness.write_text(preamble + f"declare const value: {source};\nconst result: {target} = value;\n")
-    run(f"typescript-{name}", ["node", "node_modules/typescript/bin/tsc", "--ignoreConfig", "--noEmit", "--strict", "--skipLibCheck", "--pretty", "false", str(witness)], None, limit=30)
+    run(f"typescript-{name}", ["node", "node_modules/typescript/bin/tsc", "--ignoreConfig", "--noEmit", "--strict", "--skipLibCheck", "--pretty", "false", str(witness)], 1, "error TS2322:", limit=30)
 test = (PROOF / "test.rs").read_text()
-assert hashlib.sha256(test.encode()).hexdigest() == "f75d61cddd8a5c44539a22ff3bc340f230e83e6dc7620d5baec0990ad49942f5"
+assert hashlib.sha256(test.encode()).hexdigest() == "27bf6b9d2459d2aff6cd9938bf48341dc2a1d70d572f177155a9c29c737ab91a"
 assert original.endswith("}\n")
 RELATION.write_text(original[:-2] + test + "}\n")
 args = ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib"]

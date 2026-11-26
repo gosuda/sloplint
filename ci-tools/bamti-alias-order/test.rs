@@ -36,7 +36,11 @@
                 let second = table.object_type(vec![PropertyType::new("root", false, target_alias)]);
                 (first, second)
             };
-            let target = table.union(&[first, second]);
+            let target = if reversed {
+                table.union(&[second, first])
+            } else {
+                table.union(&[first, second])
+            };
             let Type::Union(members) = table.get(target) else {
                 panic!("distinct union members must be retained");
             };
