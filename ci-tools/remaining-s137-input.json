@@ -1,0 +1,12 @@
+{
+  "head": "948fa8b3ec6a76a02dcc2d9cb95410404c672de9",
+  "base": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+  "draft_tree": "e73d650b23d05b3ac1000e2d3453af9986749293",
+  "patch_sha256": "59d5a76b91c503f02ed3e02e0fd932d611b092c03ece97c390293bf1c7671a30",
+  "input_files": {
+    "vendor/tree-sitter-powershell/grammar.js": "2717d89cef8b5ce6424aa999bd736a6ed3134dcf6418fd999223f5b749054eab",
+    "crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs": "05df885ffebdc75f199fe248f0e840ab724b32d0d16e455ed7307ee21aaa352a",
+    "vendor/tree-sitter-powershell/test/corpus/sloplint_multiline_boundaries.txt": "30a0d0bf14ec3014d1b5b590cf850590d4f8d0013a846d471fc6e7e8a5b91174",
+    "vendor/tree-sitter-powershell/SLOPLINT.md": "7af3d6fec6ff0a9a43b8b4f4e04550e9c398def21fea6c824a580a709b45ffb1"
+  }
+}
