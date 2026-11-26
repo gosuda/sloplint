@@ -48,9 +48,13 @@ fn is_boundary(prev: char, next: char) -> bool {
 }
 
 pub fn longest_static_chunk(segments: &[&str]) -> u32 {
+    longest_static_chunk_with_escape(segments, b'\\')
+}
+
+pub fn longest_static_chunk_with_escape(segments: &[&str], escape: u8) -> u32 {
     segments
         .iter()
-        .map(|segment| longest_in_segment(segment))
+        .map(|segment| longest_in_segment(segment, escape))
         .max()
         .unwrap_or(0)
 }
@@ -211,9 +215,9 @@ struct Scan {
 }
 
 impl Scan {
-    fn step(&mut self, bytes: &[u8]) {
+    fn step(&mut self, bytes: &[u8], escape: u8) {
         match bytes[self.i] {
-            b'\\' => self.escape(bytes),
+            byte if byte == escape => self.escape(bytes),
             b'{' => self.brace(bytes),
             b'}' if bytes.get(self.i + 1) == Some(&b'}') => {
                 self.run += 1;
@@ -272,7 +276,7 @@ impl Scan {
     }
 }
 
-fn longest_in_segment(segment: &str) -> u32 {
+fn longest_in_segment(segment: &str, escape: u8) -> u32 {
     let bytes = segment.as_bytes();
     let mut scan = Scan {
         best: 0,
@@ -280,7 +284,7 @@ fn longest_in_segment(segment: &str) -> u32 {
         i: 0,
     };
     while scan.i < bytes.len() {
-        scan.step(bytes);
+        scan.step(bytes, escape);
     }
     scan.best.max(scan.run)
 }
@@ -333,6 +337,15 @@ mod tests {
         assert_eq!(longest_static_chunk(&["50% off", "plain"]), 5);
     }
 
+    #[test]
+    fn powershell_chunks_keep_backslashes_and_break_at_backticks() {
+        assert_eq!(
+            longest_static_chunk_with_escape(&[r"\bin\deploy\"], b'`'),
+            12
+        );
+        assert_eq!(longest_static_chunk_with_escape(&["ab`ncd"], b'`'), 2);
+        assert_eq!(longest_static_chunk_with_escape(&["ab``cd"], b'`'), 2);
+    }
     #[test]
     fn interp_chunks_measure_only_literal_runs() {
         assert_eq!(longest_static_chunk_interp("service started: {name}"), 17);

@@ -54,12 +54,16 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool 
         lexer->mark_end(lexer);
 
         bool saw_newline = false;
+        bool saw_blank_line = false;
         for (;;) {
             if (lexer->lookahead == 0) return true;
             if (lexer->lookahead == '}') return true;
             if (lexer->lookahead == ';') return true;
             if (lexer->lookahead == ')') return true;
-            if (lexer->lookahead == '\n') saw_newline = true;
+            if (lexer->lookahead == '\n') {
+                saw_blank_line = saw_blank_line || saw_newline;
+                saw_newline = true;
+            }
             else if (lexer->lookahead == '`') {
                 // A backtick before a line break joins the lines, so it is
                 // white space here: `$x -replace "a", "b" `` newline newline `}`.
@@ -70,9 +74,10 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool 
             else if (!iswspace(lexer->lookahead)) {
                 // A line break ends the statement, except when the next
                 // line continues an if statement: `}` newline `else {`.
-                // A leading pipe continues the pipeline: `hello` newline `| Out-String`.
+                // A leading pipe on the next line continues the pipeline.
+                // An intervening blank line ends the statement.
                 if (saw_newline) {
-                    if (lexer->lookahead == '|') return false;
+                    if (lexer->lookahead == '|' && !saw_blank_line) return false;
                     return !at_else_keyword(lexer);
                 }
                 return false;
@@ -162,9 +167,9 @@ static bool scan_method_block_head(TSLexer *lexer)
 // `${`, `$(` or a variable. The internal lexer cannot express `$` not
 // followed by `{` (no lookahead), so an external token covers the lone case.
 // `${name` without `}` and `${}` then have no valid token and raise an error
-// as PowerShell does. A `$` that could open a longer `$` token (variable,
-// sub-expression, `$` escape or `$` whitespace) is left to the internal lexer
-// so the longer match wins, as before.
+// as PowerShell does. Variables and sub-expressions stay with the internal
+// lexer. A plain dollar before whitespace, a backslash or a backtick ends
+// here, leaving the following here-string closing newline untouched.
 static bool scan_loose_dollar(void *payload, TSLexer *lexer, const bool *valid_symbols)
 {
     if (!valid_symbols[LOOSE_DOLLAR]) return false;
@@ -172,8 +177,7 @@ static bool scan_loose_dollar(void *payload, TSLexer *lexer, const bool *valid_s
     lexer->advance(lexer, false);
     int32_t next = lexer->lookahead;
     if (next == '{' || next == '(') return false;
-    if (next == '$' || next == '^' || next == '?' || next == '`') return false;
-    if (next == '\\' || iswspace(next)) return false;
+    if (next == '$' || next == '^' || next == '?') return false;
     if (iswalnum(next) || next == '_') return false;
     lexer->mark_end(lexer);
     lexer->result_symbol = LOOSE_DOLLAR;

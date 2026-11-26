@@ -73,6 +73,20 @@ interpolation, and the context-specific continuation behavior. Native
 PowerShell 7.7.0 parsing separately confirms these accepted and rejected
 forms; this comparison does not execute the commands.
 
+## Literal dollars and blank-line boundaries
+
+The external scanner accepts a literal dollar before whitespace, a backslash,
+or a backtick. It leaves the following newline untouched so an expandable
+here-string can still close on that line. A leading pipe continues the previous
+statement only when no blank line intervenes. Blank lines before `else` retain
+their existing behavior.
+
+These scanner-only changes leave grammar.js and the generated parser unchanged.
+The Rust regressions cover LF and CRLF, whitespace-only blank lines, valid
+here-string endings, and malformed interpolation controls. CLI fixtures also
+cover searchable and short interpolated Windows paths; the adapter uses
+PowerShell's backtick escape character when measuring their literal runs.
+
 ## What v0.26.6 replaces
 
 Upstream [PR #65](https://github.com/airbus-cert/tree-sitter-powershell/pull/65)
@@ -101,7 +115,7 @@ The remaining local groups do not have an upstream fix in this release:
 | Case-insensitive numbers, cast operands, type names and generic ranks, bitwise and membership operators | No issue or PR identified for these changes |
 | String text and here-string escapes, statement terminators, method-block scanner | No issue or PR identified for these changes |
 
-The current patch has 1,557 lines and 42 diff hunks. It includes the
+The current patch has 1,684 lines and 37 diff hunks. It includes the
 native argument corpus along with the grammar and scanner changes.
 
 ## Round 1 grammar changes

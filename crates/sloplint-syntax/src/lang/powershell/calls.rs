@@ -1,5 +1,5 @@
 use sloplint_core::facts::{Arg, ArgShape, CallKind};
-use sloplint_core::text::longest_static_chunk;
+use sloplint_core::text::longest_static_chunk_with_escape;
 use tree_sitter::Node;
 
 use crate::hooks::{
@@ -47,7 +47,7 @@ fn ps_string_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
         .and_then(|s| s.strip_suffix('"'))
         .unwrap_or(raw);
     ArgShape::Str {
-        longest_static: longest_static_chunk(&[body]),
+        longest_static: longest_static_chunk_with_escape(&[body], b'`'),
     }
 }
 
@@ -88,7 +88,7 @@ fn ps_static_run(cx: &Cx<'_, '_>, inner: Node<'_>) -> u32 {
         cursor = cursor.max(dynamic.end_byte());
     }
     gaps.push(slice(cx.src, cursor.min(end), end));
-    longest_static_chunk(&gaps)
+    longest_static_chunk_with_escape(&gaps, b'`')
 }
 
 fn ps_concat_static(cx: &Cx<'_, '_>, n: Node<'_>) -> u32 {
@@ -197,7 +197,7 @@ fn ps_generic_static(cx: &Cx<'_, '_>, node: Node<'_>) -> u32 {
         cursor = cursor.max(dynamic.end_byte());
     }
     gaps.push(slice(cx.src, cursor.min(end), end));
-    longest_static_chunk(&gaps)
+    longest_static_chunk_with_escape(&gaps, b'`')
 }
 
 fn ps_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {

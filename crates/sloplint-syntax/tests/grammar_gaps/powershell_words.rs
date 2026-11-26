@@ -1,5 +1,7 @@
 //! Argument boundaries retain protected text and validate interpolation.
 
+use sloplint_core::facts::ArgShape;
+
 use super::powershell::{call, run, run_clean};
 
 #[test]
@@ -111,5 +113,57 @@ fn crlf_after_an_escape_inside_a_bare_argument_ends_the_command() {
             .map(|call| call.callee)
             .collect::<Vec<_>>();
         assert_eq!(callees, ["Write-Output", "Get-Date"], "{source:?}");
+    }
+}
+
+#[test]
+fn here_string_dollar_does_not_consume_the_closing_line() {
+    for body in ["^\\d+$", "$ ", "$\t", "$\\", "$`n", "$`$"] {
+        for ending in ["\n", "\r\n"] {
+            let source =
+                format!("$p = @\"{ending}{body}{ending}\"@{ending}Write-Output done{ending}");
+            let analysis = run_clean(&source);
+            assert_eq!(call(&analysis, "Write-Output").args.len(), 1, "{source:?}");
+        }
+    }
+    for body in ["${name", "${}", "$(Get-Date"] {
+        let source = format!("$p = @\"\n{body}\n\"@\n");
+        assert!(run(&source).parse_error.is_some(), "{source:?}");
+    }
+}
+
+#[test]
+fn leading_pipes_require_an_adjacent_nonblank_line() {
+    for ending in ["\n", "\r\n"] {
+        for space in ["", " ", "\t"] {
+            run_clean(&format!("Get-Date{ending}{space}| Write-Output{ending}"));
+            let source = format!("Get-Date{ending}{space}{ending}| Write-Output{ending}");
+            assert!(run(&source).parse_error.is_some(), "{source:?}");
+        }
+        run_clean(&format!(
+            "if ($true) {{ 1 }}{ending}{ending}else {{ 2 }}{ending}"
+        ));
+    }
+}
+
+#[test]
+fn variable_path_literals_use_powershell_escape_rules() {
+    for (source, searchable) in [
+        (r#"Write-Host $r\bin\deploy\"$id""#, true),
+        (r#"Write-Host $r\x\"$id""#, false),
+        (r#"Write-Host "$r\bin\deploy\$id""#, true),
+        (r#"Write-Host "$r\x\$id""#, false),
+    ] {
+        let analysis = run_clean(source);
+        let arguments = &call(&analysis, "Write-Host").args;
+        assert_eq!(arguments.len(), 1, "{source}");
+        let ArgShape::Concat { longest_static } = arguments[0].shape else {
+            panic!("expected an interpolated path: {source}");
+        };
+        assert_eq!(
+            longest_static >= 8,
+            searchable,
+            "{source}: {longest_static}"
+        );
     }
 }
