@@ -1,0 +1,20 @@
+{
+  "patch": "remaining-elegant-guard.patch",
+  "patch_sha256": "45d906cc4dfe82412e785b431cec534226cd86b7fa78cdb53bff284848b3a89d",
+  "cases": {
+    "pr27": {
+      "head": "6aeb314c6196c3a21c0a2f4c1406ff52915e72ec",
+      "base": "afa5a631ec41cb1e9aa0634b2d547d084bd27e33",
+      "old_tree": "895ecf3c8bf8ce800a8db523bb9cf24351f0affc",
+      "tree": "571167cdc982b7af15a7a2f96f053b7ae8e0d69e"
+    },
+    "pr24": {
+      "head": "801d75e266e0f827817238286171c517fe84b5b2",
+      "base": "afa5a631ec41cb1e9aa0634b2d547d084bd27e33",
+      "initial_patch": "remaining-elegant24.patch",
+      "initial_patch_sha256": "9cf96eab10a225157c048bf27b6a76d43d66b0b188dbfee483e5a5cfc23cb1ab",
+      "old_tree": "cd966185163456e24a30eae268ec52a8804543df",
+      "tree": "4edb92f8213003450e3b12838498fd776cb6591e"
+    }
+  }
+}
