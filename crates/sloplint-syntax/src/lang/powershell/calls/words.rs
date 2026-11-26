@@ -103,6 +103,7 @@ pub(super) fn ps_word_shape(raw: &str, dynamics: &[(usize, usize)]) -> ArgShape<
     let mut offset = 0;
     let mut dynamic = 0;
     let mut interpolated = false;
+    let mut has_unicode_escape = false;
     let mut run = 0;
     let mut best = 0;
     while offset < raw.len() {
@@ -137,7 +138,9 @@ pub(super) fn ps_word_shape(raw: &str, dynamics: &[(usize, usize)]) -> ArgShape<
         if ch == '`' {
             best = best.max(run);
             run = 0;
-            offset += ps_unicode_escape_len(&raw[offset..])
+            let unicode_escape = ps_unicode_escape_len(&raw[offset..]);
+            has_unicode_escape |= unicode_escape.is_some();
+            offset += unicode_escape
                 .unwrap_or_else(|| raw[offset..].chars().next().map_or(0, char::len_utf8));
         } else if ch == '\'' && quote == PsWordQuote::Bare {
             quote = PsWordQuote::Verbatim;
@@ -170,7 +173,11 @@ pub(super) fn ps_word_shape(raw: &str, dynamics: &[(usize, usize)]) -> ArgShape<
         }
     } else {
         ArgShape::Str {
-            longest_static: narrow(raw.chars().count()),
+            longest_static: narrow(if has_unicode_escape {
+                best.max(run)
+            } else {
+                raw.chars().count()
+            }),
         }
     }
 }

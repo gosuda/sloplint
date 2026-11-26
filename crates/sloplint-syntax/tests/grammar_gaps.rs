@@ -60,6 +60,8 @@ mod powershell;
 mod powershell_continuations;
 #[path = "grammar_gaps/powershell_literal_runs.rs"]
 mod powershell_literal_runs;
+#[path = "grammar_gaps/powershell_plain_escapes.rs"]
+mod powershell_plain_escapes;
 #[path = "grammar_gaps/powershell_separators.rs"]
 mod powershell_separators;
 #[path = "grammar_gaps/powershell_syntax.rs"]

@@ -6,3 +6,4 @@ e.ps1:2 info grep/contiguous-log-literal
 f.ps1:2 info grep/contiguous-log-literal
 g.ps1:2 info grep/contiguous-log-literal
 h.ps1:2 info grep/contiguous-log-literal
+i.ps1:2 info grep/contiguous-log-literal
