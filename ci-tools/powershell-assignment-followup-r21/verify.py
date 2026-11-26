@@ -190,7 +190,7 @@ for label, source, head, tree in snapshots:
         tests = [
             ("conditional-ownership", "powershell_assignment_escapes::escaped_lines_keep_conditional_values_and_branches_together", 0 if label == "pre" else 101),
             ("dash-extent", "powershell_format_dash_words::format_mark_dash_words_keep_native_counts_and_complete_extents", None if label == "pre" else 101),
-            ("legacy-query", "powershell_separator_queries::legacy_separator_queries_compile_and_capture_exact_character_extents", 0 if label == "pre" else 101),
+            ("legacy-query", "powershell_separator_queries::legacy_separator_queries_compile_and_report_observed_extents", 0 if label == "pre" else 101),
             ("quoted-dash-control", "powershell_format_dash_words::quoted_format_mark_dash_words_remain_single_arguments", 0),
         ]
         for name, test, expected in tests:
@@ -203,5 +203,5 @@ for label, source, head, tree in snapshots:
                 path.unlink()
             else:
                 path.write_bytes(content)
-    assert identity(source, head, tree) == initial[label]
+        assert identity(source, head, tree) == initial[label]
 print("FROZEN_FOLLOWUP_BASELINE_COMPLETE " + json.dumps({"sources": initial, "native_cases": len(native), "results": RESULTS}, sort_keys=True), flush=True)

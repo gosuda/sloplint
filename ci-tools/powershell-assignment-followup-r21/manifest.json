@@ -4,7 +4,7 @@
   "pre_base": "61c88ec4d492dd1ab72f76b15b84fa9434cccfaa",
   "pre_tree": "589aff2ec97f6e6f8179453ff6882fe19b3b65b2",
   "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
-  "mode": "Freeze native AST/argv/extents and real legacy custom-query behavior on unchanged pre-r20 and published-r20 source. No production edits. Comma and ordinary-character-escape cases are observations before choosing product assertions.",
+  "mode": "Freeze native AST/argv/extents and observe the authentic pre-r20 custom-query capture table before asserting its exact spans. No production edits.",
   "cases": {
     "conditional": 96,
     "checked_argv": 54,
@@ -12,10 +12,11 @@
     "observational_ordinary_escapes": 8
   },
   "proof_sha256": {
-    "verify.py": "5226f2366aad49be45acff16c33c19765e8c5f42874ba8e93b88f96a2fbf28c3",
+    "verify.py": "0620dbc1c2bdc74e93aeb1dc723f952601d49a1551b570e77609a5f34dc83edb",
     "native-oracle.ps1": "2166f6d4bab520ac415791d21f1d775075734068cd6eb9866aed511da7e44b15",
     "cases.json": "13d35c2437eafe38a219e8548a820718cb58d1744bf4c827d6bf45a8c5ea297c",
-    "frozen-modules.json": "eb57abc090ba6c3c4b277097ed3acd3f5670ed381357168d0bad9b5b4bba8ae5"
+    "frozen-modules.json": "4b85f443d53c9a3c4bc138c469dfd5f1f856503a7f79cb0433c86fd1e7b2ae22",
+    "initial-frozen-modules.json": "eb57abc090ba6c3c4b277097ed3acd3f5670ed381357168d0bad9b5b4bba8ae5"
   },
   "threads": [
     "PRRT_kwDOVOMFM868heFN",
@@ -34,5 +35,15 @@
     "ordinary_pr_run": 45877442939,
     "ordinary_conclusion": "success",
     "retirement": "3a2ede51f89777df54121ca9e65d572bb497826f"
+  },
+  "initial_harness_failure": {
+    "producer": "1de4c392fa38571ff054962abed235395351985c",
+    "run": 45881064468,
+    "job": 140120224934,
+    "artifact": 15147900558,
+    "artifact_zip_sha256": "5c5c3918ffd62efc903f444003d15c38209140d56f5dcef6117b27b3cf40583b",
+    "phase": "pre-legacy-query",
+    "exit": 101,
+    "reason": "The old grammar captures repeated spaces as one span; initial per-character expectation was false. Native oracle176 and pre conditional ownership passed. Dash extent was already RED on pre-r20."
   }
 }
