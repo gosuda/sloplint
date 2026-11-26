@@ -27,6 +27,16 @@ def run(name: str, args: list[str], expected: int = 0, required: str = "", cwd: 
     results[name] = result.returncode
     (evidence / "results.json").write_text(json.dumps({"manifest": manifest, "exits": results}, sort_keys=True, indent=2) + "\n")
     print(f"EXIT {name}: {result.returncode}\n{result.stdout[-30000:]}", flush=True)
+    if result.returncode != expected:
+        lines = result.stdout.splitlines()
+        printed: set[int] = set()
+        for index, line in enumerate(lines):
+            if "FAILED" not in line and "panicked at" not in line and not line.startswith("error:"):
+                continue
+            for context in range(max(0, index - 2), min(len(lines), index + 15)):
+                if context not in printed:
+                    print(f"FAILURE_CONTEXT {name} {context + 1}: {lines[context]}", flush=True)
+                    printed.add(context)
     assert result.returncode == expected, (name, result.returncode, expected)
     if required:
         assert required in result.stdout, (name, required)
@@ -143,7 +153,7 @@ elif mode in ("x64", "arm"):
         finally:
             calls.write_bytes(saved)
         identity()
-        run("candidate-regressions", ["cargo", "test", "--locked", "-p", "sloplint-syntax", "--test", "grammar_gaps", "--target", target, "powershell_", "--", "--nocapture"])
+        run("candidate-regressions", ["cargo", "test", "--locked", "-p", "sloplint-syntax", "--test", "grammar_gaps", "--target", target, "powershell", "--", "--nocapture"])
     run("clippy", ["cargo", "clippy", "--workspace", "--all-targets", "--locked", "--target", target, "--", "-D", "warnings"])
     run("workspace", ["cargo", "test", "--workspace", "--locked", "--no-fail-fast", "--target", target])
     run("release", ["cargo", "build", "--release", "--locked", "--target", target])
