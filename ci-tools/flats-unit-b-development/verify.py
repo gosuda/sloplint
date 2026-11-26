@@ -206,7 +206,8 @@ def run_group(group):
                            cwd=SOURCE, env=env, capture_output=True, text=True)
     assert probe.returncode == 0, probe.stderr
     go_env = json.loads(probe.stdout)
-    assert go_env["GOCACHEPROG"] == "" and go_env["GOENV"] == "off", go_env
+    assert env["GOENV"] == "off" and go_env["GOCACHEPROG"] == "" and go_env["GOENV"] == "", go_env
+    go_env["process_GOENV"] = env["GOENV"]
     write("go-environment.json", go_env)
     items = plan(group)
     write("executed-plan.json", items)

@@ -73,9 +73,9 @@
     "sha256": "a1236f5bbd7d1bb1c1c6151e2f4767dce1b1518ad431b0184e1567ed5cc61d5b"
   },
   "probe_base": "1f5abb94a5c5c4aae204d41b936eca4de9afa358",
-  "helper_sha256": "1e17109637b4e50fc195c3f50dc90ad0bcc6ba236f6f22075dc10931a32815b8",
+  "helper_sha256": "dfc0a953ec3aedc6a06c9e139704d240f63f8ff6432b17b53e00532d44ccfeab",
   "plans_sha256": "b20a6ba1ba705c115484d70149ac03d54b760683b56632d78d167fb4d048035c",
-  "probe_workflow_sha256": "e19e1819d90b5b7f6f746bd8c2faed389564de7c01aa273715568aa4d3f2126e",
+  "probe_workflow_sha256": "fde0dbb1bbe6a1e09ca1c4eae19a22e1c6a733c751166cd7bc2dd509cfd99400",
   "checkout_eol": "core.autocrlf=false",
   "producer_corrections": [
     {
@@ -84,6 +84,17 @@
       "result": "rejected before jobs; runner context unavailable in job-level env",
       "fix": "derive artifact directory from RUNNER_TEMP inside Python; leave runner context only in permitted step inputs",
       "source": "https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability"
+    },
+    {
+      "run": 45848108190,
+      "head": "8c63f30813cd476167ab456737f986f64c2fd3bd",
+      "result": "exact candidate prepare passed; incorrect GOENV reported-path assertion stopped all commands",
+      "observed": {
+        "process_GOENV": "off",
+        "go_env_GOENV": "",
+        "go_env_GOCACHEPROG": ""
+      },
+      "fix": "assert explicit process GOENV=off and its empty reported file path; retain empty GOCACHEPROG assertion; sparse checkout only public proof paths to reduce unrelated host setup"
     }
   ]
 }
