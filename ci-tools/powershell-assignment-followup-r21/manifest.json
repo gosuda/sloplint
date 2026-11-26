@@ -1,40 +1,44 @@
 {
   "base": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
   "base_tree": "171bbe1c7137faf98fb7981f69288120cd18bdf6",
-  "pre_base": "61c88ec4d492dd1ab72f76b15b84fa9434cccfaa",
-  "pre_tree": "589aff2ec97f6e6f8179453ff6882fe19b3b65b2",
   "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
-  "mode": "Freeze native AST/argv/extents and observe the authentic pre-r20 custom-query capture table before asserting its exact spans. No production edits.",
-  "cases": {
-    "conditional": 96,
-    "checked_argv": 54,
-    "observational_comma_argv": 18,
-    "observational_ordinary_escapes": 8
-  },
+  "mode": "Freeze native behavior before edits; generate three independent concerns, run focused source gates before full x64/ARM64/lint jobs, verify all blobs before/after, and reconstruct exact candidate trees from digest-checked packed source.",
   "proof_sha256": {
-    "verify.py": "0620dbc1c2bdc74e93aeb1dc723f952601d49a1551b570e77609a5f34dc83edb",
-    "native-oracle.ps1": "2166f6d4bab520ac415791d21f1d775075734068cd6eb9866aed511da7e44b15",
-    "cases.json": "13d35c2437eafe38a219e8548a820718cb58d1744bf4c827d6bf45a8c5ea297c",
-    "frozen-modules.json": "4b85f443d53c9a3c4bc138c469dfd5f1f856503a7f79cb0433c86fd1e7b2ae22",
-    "initial-frozen-modules.json": "eb57abc090ba6c3c4b277097ed3acd3f5670ed381357168d0bad9b5b4bba8ae5"
+    "preserved-grammar-cases.json": "039f762b5971236a96d92f9875852072932a6779ed3fe1deace8288943942088",
+    "preserved-grammar-oracle.ps1": "4b7c31e31bfcbcef4ff8a8d5abf3d7850e211add893f2e9a0da34902fc8d3f02",
+    "preserved-literal-cases.json": "9eb65f67588aa21b61f8a0073794a496b7263b7b959f88f5099cd4c01a7f7d32",
+    "preserved-literal-oracle.ps1": "8bceaa20931d06609b35aaab9c107ea514d294fe36152a3c7b857ae9280f1eb6",
+    "cases.json": "70fc8831ceb47b66d4421a500b3a632a69adbb0ac4bd521b38cffd8255a04e98",
+    "native-oracle.ps1": "cb1d34d29ed3fd73fa535a3b38689f8be8576600e2b329aeca559b61c69f6292",
+    "token-cases.json": "c51cb52596632b43443bf2f79dcdc21bdb0a85dab3d5468fd802c4de35bad79b",
+    "token-oracle.ps1": "438a05a95ba585dec15ed00a73f6c5187c44d7bc1df32990a341b9a472996bca",
+    "token-expected.json": "91d3db55c886ea1bbf37c44377e73dd0a34c6d03ffc17a925689278ed2b7a7aa",
+    "token-parser-cases.json": "6ed75b48d91d1d1a2c8221c43896caacde3de402cb0181a9347eb424aecda024",
+    "terminator-parser-cases.json": "c096a8ff4c56af01fa66883d4948ebe2e38cbac0a919b6a2f12fe9db4b0e2da8",
+    "terminator-native-expected.json": "35b2e3bb17ded486a61dd72f67ce56d4537ef86f89725cab9f768985412d862f",
+    "verify.py": "09b75b597f97c75bc95b1308a213bf87327c6a3521db1e904c678d0a621e92a3",
+    "authored-stages.json": "dab72a6962085c5b4a15befad3e41f7cdee2be2270f64cf5a749e312fdaeb35a",
+    "followup-cases.json": "13d35c2437eafe38a219e8548a820718cb58d1744bf4c827d6bf45a8c5ea297c",
+    "followup-oracle.ps1": "2166f6d4bab520ac415791d21f1d775075734068cd6eb9866aed511da7e44b15",
+    "followup-native-expected.json": "259320f0032660df9dc29d20c705e30c3f32990113d2b00203b6775a96b6fa22",
+    "query-baseline-lines.json": "1aad0a5262e8466bd908d6cf6fd35eddc0bd03fe40341bdba7364e211091cdd7",
+    "near-controls.json": "b8c69e9ff4079d030be8bc1015f20291d1606764290a26773669cdb213652d7b"
   },
   "threads": [
     "PRRT_kwDOVOMFM868heFN",
     "PRRT_kwDOVOMFM868heGc",
     "PRRT_kwDOVOMFM868heHT"
   ],
-  "parser_cache_isolation": {
-    "environment": "TREE_SITTER_LIBDIR",
-    "source": "https://github.com/tree-sitter/tree-sitter/blob/v0.27.1/crates/loader/src/loader.rs",
-    "strategy": "Separate empty library directories for pre/current sources, recording each compiled library digest."
-  },
-  "prior_published_receipt": {
-    "head": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
-    "tree": "171bbe1c7137faf98fb7981f69288120cd18bdf6",
-    "source_run": 45875733057,
-    "ordinary_pr_run": 45877442939,
-    "ordinary_conclusion": "success",
-    "retirement": "3a2ede51f89777df54121ca9e65d572bb497826f"
+  "baseline": {
+    "producer": "7b437bd9ec7ea9703a1a35d7eaa9a7cf2b3449fe",
+    "run": 45881856636,
+    "job": 140122879205,
+    "artifact": 15147946239,
+    "zip_sha256": "17ea292495ac45658a820c7944ccf0a7923ca26b10383ff1e9841114ff7e402a",
+    "source_current": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+    "source_previous": "61c88ec4d492dd1ab72f76b15b84fa9434cccfaa",
+    "outcome": "Native176 pass. Current conditional/dash/query regressions exit101; pre conditional/query/protected controls exit0, pre dash exits101. All tracked source blobs restored and verified on both snapshots.",
+    "original_query_capture_lines": 24
   },
   "initial_harness_failure": {
     "producer": "1de4c392fa38571ff054962abed235395351985c",
@@ -45,5 +49,34 @@
     "phase": "pre-legacy-query",
     "exit": 101,
     "reason": "The old grammar captures repeated spaces as one span; initial per-character expectation was false. Native oracle176 and pre conditional ownership passed. Dash extent was already RED on pre-r20."
-  }
+  },
+  "preserved_receipt": {
+    "producer": "e0a750f9ac252e056c92bd885963682ba3dc495f",
+    "source_run": 45875733057,
+    "ordinary_run": 45877442939,
+    "ordinary_conclusion": "success",
+    "retirement": "3a2ede51f89777df54121ca9e65d572bb497826f"
+  },
+  "native": {
+    "preserved_parser_comparisons": 485,
+    "new_conditional_cases": 96,
+    "new_argument_cases": 54,
+    "new_comma_cases": 18,
+    "required_parser_comparisons": 653,
+    "near_controls": 6,
+    "known_prior_observations": 8,
+    "preserved_literal_outputs": 52,
+    "new_actual_argv": 72
+  },
+  "known_prior_observations": "Eight native-valid leading escaped command names were rejected on both pre-r20 and published-r20 parsers. They are recorded separately, do not weaken any required native assertion, and are outside these three review findings.",
+  "lexical_priority_source": "https://github.com/tree-sitter/tree-sitter/blob/v0.27.1/docs/src/creating-parsers/3-writing-the-grammar.md",
+  "gates": [
+    "native PowerShell7.7.0 actual AST/tokens/argv and literal values",
+    "all three stages: existing and new focused PowerShell adapter regressions",
+    "full native x64 and ARM64 Clippy all targets/workspace no-fail-fast/release",
+    "x64 release self-lint",
+    "fmt/grammar manifest/release-script selftests/cargo-deny0.20.2",
+    "authoritative upstream grammar patch reapply/full corpus/fresh generation/whitespace",
+    "exact source identity before and after"
+  ]
 }

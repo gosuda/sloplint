@@ -1,0 +1,3132 @@
+[
+  {
+    "id": "lf-lf-attached-none-top",
+    "source": "Get-Date`\n`\n| Write-Output\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date`\n`\n",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 12
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 12,
+        "end": 13
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 14,
+        "end": 26
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 26,
+        "end": 27
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 28,
+        "end": 28
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date\n\n",
+        "text": "Get-Date`\n`\n",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "lf-lf-attached-none-group",
+    "source": "(Get-Date`\n`\n| Write-Output)\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date`\n`\n",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 13
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 13,
+        "end": 14
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 15,
+        "end": 27
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 27,
+        "end": 28
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 28,
+        "end": 29
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 30,
+        "end": 30
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date\n\n",
+        "text": "Get-Date`\n`\n",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "lf-lf-attached-space-top",
+    "source": "Get-Date`\n `\n| Write-Output\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date`\n",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 10
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 11,
+        "end": 13
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 13,
+        "end": 14
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 15,
+        "end": 27
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 27,
+        "end": 28
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 29
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date\n",
+        "text": "Get-Date`\n",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "lf-lf-attached-space-group",
+    "source": "(Get-Date`\n `\n| Write-Output)\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date`\n",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 11
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 12,
+        "end": 14
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 14,
+        "end": 15
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 16,
+        "end": 28
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 28,
+        "end": 29
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 30
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 31,
+        "end": 31
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date\n",
+        "text": "Get-Date`\n",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "lf-lf-spaced-none-top",
+    "source": "Get-Date `\n`\n| Write-Output\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 8
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 9,
+        "end": 11
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 11,
+        "end": 13
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 13,
+        "end": 14
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 15,
+        "end": 27
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 27,
+        "end": 28
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 29
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "lf-lf-spaced-none-group",
+    "source": "(Get-Date `\n`\n| Write-Output)\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 9
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 10,
+        "end": 12
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 12,
+        "end": 14
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 14,
+        "end": 15
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 16,
+        "end": 28
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 28,
+        "end": 29
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 30
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 31,
+        "end": 31
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "lf-lf-spaced-space-top",
+    "source": "Get-Date `\n `\n| Write-Output\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 8
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 9,
+        "end": 11
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 12,
+        "end": 14
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 14,
+        "end": 15
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 16,
+        "end": 28
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 28,
+        "end": 29
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 30,
+        "end": 30
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "lf-lf-spaced-space-group",
+    "source": "(Get-Date `\n `\n| Write-Output)\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 9
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 10,
+        "end": 12
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 13,
+        "end": 15
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 15,
+        "end": 16
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 17,
+        "end": 29
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 30
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 30,
+        "end": 31
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 32,
+        "end": 32
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "lf-crlf-attached-none-top",
+    "source": "Get-Date`\n`\r\n| Write-Output\r\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date`\n`\r",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 12
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 12,
+        "end": 13
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 13,
+        "end": 14
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 15,
+        "end": 27
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 27,
+        "end": 29
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 30,
+        "end": 30
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date\n\r",
+        "text": "Get-Date`\n`\r",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "lf-crlf-attached-none-group",
+    "source": "(Get-Date`\n`\r\n| Write-Output)\r\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date`\n`\r",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 13
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 13,
+        "end": 14
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 14,
+        "end": 15
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 16,
+        "end": 28
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 28,
+        "end": 29
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 31
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 32,
+        "end": 32
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date\n\r",
+        "text": "Get-Date`\n`\r",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "lf-crlf-attached-space-top",
+    "source": "Get-Date`\n `\r\n| Write-Output\r\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date`\n",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 10
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 11,
+        "end": 14
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 14,
+        "end": 15
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 16,
+        "end": 28
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 28,
+        "end": 30
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 31,
+        "end": 31
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date\n",
+        "text": "Get-Date`\n",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "lf-crlf-attached-space-group",
+    "source": "(Get-Date`\n `\r\n| Write-Output)\r\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date`\n",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 11
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 12,
+        "end": 15
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 15,
+        "end": 16
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 17,
+        "end": 29
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 30
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 30,
+        "end": 32
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 33,
+        "end": 33
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date\n",
+        "text": "Get-Date`\n",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "lf-crlf-spaced-none-top",
+    "source": "Get-Date `\n`\r\n| Write-Output\r\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 8
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 9,
+        "end": 11
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 11,
+        "end": 14
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 14,
+        "end": 15
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 16,
+        "end": 28
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 28,
+        "end": 30
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 31,
+        "end": 31
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "lf-crlf-spaced-none-group",
+    "source": "(Get-Date `\n`\r\n| Write-Output)\r\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 9
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 10,
+        "end": 12
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 12,
+        "end": 15
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 15,
+        "end": 16
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 17,
+        "end": 29
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 30
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 30,
+        "end": 32
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 33,
+        "end": 33
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "lf-crlf-spaced-space-top",
+    "source": "Get-Date `\n `\r\n| Write-Output\r\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 8
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 9,
+        "end": 11
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 12,
+        "end": 15
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 15,
+        "end": 16
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 17,
+        "end": 29
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 31
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 32,
+        "end": 32
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "lf-crlf-spaced-space-group",
+    "source": "(Get-Date `\n `\r\n| Write-Output)\r\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 9
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 10,
+        "end": 12
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 13,
+        "end": 16
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 16,
+        "end": 17
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 18,
+        "end": 30
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 30,
+        "end": 31
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 31,
+        "end": 33
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 34,
+        "end": 34
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "crlf-lf-attached-none-top",
+    "source": "Get-Date`\r\n`\n| Write-Output\n",
+    "accepted": false,
+    "errors": [
+      {
+        "id": "EmptyPipeElement",
+        "text": "|",
+        "start": 13,
+        "end": 14
+      }
+    ],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date`\r",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 10
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 10,
+        "end": 11
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 11,
+        "end": 13
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 13,
+        "end": 14
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 15,
+        "end": 27
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 27,
+        "end": 28
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 29
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date\r",
+        "text": "Get-Date`\r",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "crlf-lf-attached-none-group",
+    "source": "(Get-Date`\r\n`\n| Write-Output)\n",
+    "accepted": false,
+    "errors": [
+      {
+        "id": "MissingEndParenthesisInExpression",
+        "text": "",
+        "start": 11,
+        "end": 11
+      },
+      {
+        "id": "UnexpectedToken",
+        "text": ")",
+        "start": 28,
+        "end": 29
+      }
+    ],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date`\r",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 11
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 11,
+        "end": 12
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 12,
+        "end": 14
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 14,
+        "end": 15
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 16,
+        "end": 28
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 28,
+        "end": 29
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 30
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 31,
+        "end": 31
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date\r",
+        "text": "Get-Date`\r",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "crlf-lf-attached-space-top",
+    "source": "Get-Date`\r\n `\n| Write-Output\n",
+    "accepted": false,
+    "errors": [
+      {
+        "id": "EmptyPipeElement",
+        "text": "|",
+        "start": 14,
+        "end": 15
+      }
+    ],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date`\r",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 10
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 10,
+        "end": 11
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 12,
+        "end": 14
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 14,
+        "end": 15
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 16,
+        "end": 28
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 28,
+        "end": 29
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 30,
+        "end": 30
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date\r",
+        "text": "Get-Date`\r",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "crlf-lf-attached-space-group",
+    "source": "(Get-Date`\r\n `\n| Write-Output)\n",
+    "accepted": false,
+    "errors": [
+      {
+        "id": "MissingEndParenthesisInExpression",
+        "text": "",
+        "start": 11,
+        "end": 11
+      },
+      {
+        "id": "UnexpectedToken",
+        "text": ")",
+        "start": 29,
+        "end": 30
+      }
+    ],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date`\r",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 11
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 11,
+        "end": 12
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 13,
+        "end": 15
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 15,
+        "end": 16
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 17,
+        "end": 29
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 30
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 30,
+        "end": 31
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 32,
+        "end": 32
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date\r",
+        "text": "Get-Date`\r",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "crlf-lf-spaced-none-top",
+    "source": "Get-Date `\r\n`\n| Write-Output\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 8
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 9,
+        "end": 12
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 12,
+        "end": 14
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 14,
+        "end": 15
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 16,
+        "end": 28
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 28,
+        "end": 29
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 30,
+        "end": 30
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "crlf-lf-spaced-none-group",
+    "source": "(Get-Date `\r\n`\n| Write-Output)\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 9
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 10,
+        "end": 13
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 13,
+        "end": 15
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 15,
+        "end": 16
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 17,
+        "end": 29
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 30
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 30,
+        "end": 31
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 32,
+        "end": 32
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "crlf-lf-spaced-space-top",
+    "source": "Get-Date `\r\n `\n| Write-Output\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 8
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 9,
+        "end": 12
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 13,
+        "end": 15
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 15,
+        "end": 16
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 17,
+        "end": 29
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 30
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 31,
+        "end": 31
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "crlf-lf-spaced-space-group",
+    "source": "(Get-Date `\r\n `\n| Write-Output)\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 9
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 10,
+        "end": 13
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 14,
+        "end": 16
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 16,
+        "end": 17
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 18,
+        "end": 30
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 30,
+        "end": 31
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 31,
+        "end": 32
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 33,
+        "end": 33
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "crlf-crlf-attached-none-top",
+    "source": "Get-Date`\r\n`\r\n| Write-Output\r\n",
+    "accepted": false,
+    "errors": [
+      {
+        "id": "EmptyPipeElement",
+        "text": "|",
+        "start": 14,
+        "end": 15
+      }
+    ],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date`\r",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 10
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 10,
+        "end": 11
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 11,
+        "end": 14
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 14,
+        "end": 15
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 16,
+        "end": 28
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 28,
+        "end": 30
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 31,
+        "end": 31
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date\r",
+        "text": "Get-Date`\r",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "crlf-crlf-attached-none-group",
+    "source": "(Get-Date`\r\n`\r\n| Write-Output)\r\n",
+    "accepted": false,
+    "errors": [
+      {
+        "id": "MissingEndParenthesisInExpression",
+        "text": "",
+        "start": 11,
+        "end": 11
+      },
+      {
+        "id": "UnexpectedToken",
+        "text": ")",
+        "start": 29,
+        "end": 30
+      }
+    ],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date`\r",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 11
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 11,
+        "end": 12
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 12,
+        "end": 15
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 15,
+        "end": 16
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 17,
+        "end": 29
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 30
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 30,
+        "end": 32
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 33,
+        "end": 33
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date\r",
+        "text": "Get-Date`\r",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "crlf-crlf-attached-space-top",
+    "source": "Get-Date`\r\n `\r\n| Write-Output\r\n",
+    "accepted": false,
+    "errors": [
+      {
+        "id": "EmptyPipeElement",
+        "text": "|",
+        "start": 15,
+        "end": 16
+      }
+    ],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date`\r",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 10
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 10,
+        "end": 11
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 12,
+        "end": 15
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 15,
+        "end": 16
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 17,
+        "end": 29
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 31
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 32,
+        "end": 32
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date\r",
+        "text": "Get-Date`\r",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "crlf-crlf-attached-space-group",
+    "source": "(Get-Date`\r\n `\r\n| Write-Output)\r\n",
+    "accepted": false,
+    "errors": [
+      {
+        "id": "MissingEndParenthesisInExpression",
+        "text": "",
+        "start": 11,
+        "end": 11
+      },
+      {
+        "id": "UnexpectedToken",
+        "text": ")",
+        "start": 30,
+        "end": 31
+      }
+    ],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date`\r",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 11
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 11,
+        "end": 12
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 13,
+        "end": 16
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 16,
+        "end": 17
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 18,
+        "end": 30
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 30,
+        "end": 31
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 31,
+        "end": 33
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 34,
+        "end": 34
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date\r",
+        "text": "Get-Date`\r",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "crlf-crlf-spaced-none-top",
+    "source": "Get-Date `\r\n`\r\n| Write-Output\r\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 8
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 9,
+        "end": 12
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 12,
+        "end": 15
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 15,
+        "end": 16
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 17,
+        "end": 29
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 31
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 32,
+        "end": 32
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "crlf-crlf-spaced-none-group",
+    "source": "(Get-Date `\r\n`\r\n| Write-Output)\r\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 9
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 10,
+        "end": 13
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 13,
+        "end": 16
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 16,
+        "end": 17
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 18,
+        "end": 30
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 30,
+        "end": 31
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 31,
+        "end": 33
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 34,
+        "end": 34
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "crlf-crlf-spaced-space-top",
+    "source": "Get-Date `\r\n `\r\n| Write-Output\r\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 8
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 9,
+        "end": 12
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 13,
+        "end": 16
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 16,
+        "end": 17
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 18,
+        "end": 30
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 30,
+        "end": 32
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 33,
+        "end": 33
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "crlf-crlf-spaced-space-group",
+    "source": "(Get-Date `\r\n `\r\n| Write-Output)\r\n",
+    "accepted": true,
+    "errors": [],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 9
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 10,
+        "end": 13
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 14,
+        "end": 17
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 17,
+        "end": 18
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 19,
+        "end": 31
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 31,
+        "end": 32
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 32,
+        "end": 34
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 35,
+        "end": 35
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "ordinary-lf-lf-top",
+    "source": "Get-Date\n`\n| Write-Output\n",
+    "accepted": false,
+    "errors": [
+      {
+        "id": "EmptyPipeElement",
+        "text": "|",
+        "start": 11,
+        "end": 12
+      }
+    ],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 8
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 8,
+        "end": 9
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 9,
+        "end": 11
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 11,
+        "end": 12
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 13,
+        "end": 25
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 25,
+        "end": 26
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 27,
+        "end": 27
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "ordinary-lf-lf-group",
+    "source": "(Get-Date\n`\n| Write-Output)\n",
+    "accepted": false,
+    "errors": [
+      {
+        "id": "MissingEndParenthesisInExpression",
+        "text": "",
+        "start": 9,
+        "end": 9
+      },
+      {
+        "id": "UnexpectedToken",
+        "text": ")",
+        "start": 26,
+        "end": 27
+      }
+    ],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 9
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 9,
+        "end": 10
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 10,
+        "end": 12
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 12,
+        "end": 13
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 14,
+        "end": 26
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 26,
+        "end": 27
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 27,
+        "end": 28
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 29
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "ordinary-lf-crlf-top",
+    "source": "Get-Date\n`\r\n| Write-Output\r\n",
+    "accepted": false,
+    "errors": [
+      {
+        "id": "EmptyPipeElement",
+        "text": "|",
+        "start": 12,
+        "end": 13
+      }
+    ],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 8
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 8,
+        "end": 9
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 9,
+        "end": 12
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 12,
+        "end": 13
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 14,
+        "end": 26
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 26,
+        "end": 28
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 29
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "ordinary-lf-crlf-group",
+    "source": "(Get-Date\n`\r\n| Write-Output)\r\n",
+    "accepted": false,
+    "errors": [
+      {
+        "id": "MissingEndParenthesisInExpression",
+        "text": "",
+        "start": 9,
+        "end": 9
+      },
+      {
+        "id": "UnexpectedToken",
+        "text": ")",
+        "start": 27,
+        "end": 28
+      }
+    ],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 9
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 9,
+        "end": 10
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 10,
+        "end": 13
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 13,
+        "end": 14
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 15,
+        "end": 27
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 27,
+        "end": 28
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 28,
+        "end": 30
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 31,
+        "end": 31
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "ordinary-crlf-lf-top",
+    "source": "Get-Date\r\n`\n| Write-Output\n",
+    "accepted": false,
+    "errors": [
+      {
+        "id": "EmptyPipeElement",
+        "text": "|",
+        "start": 12,
+        "end": 13
+      }
+    ],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 8
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 8,
+        "end": 10
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 10,
+        "end": 12
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 12,
+        "end": 13
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 14,
+        "end": 26
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 26,
+        "end": 27
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 28,
+        "end": 28
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "ordinary-crlf-lf-group",
+    "source": "(Get-Date\r\n`\n| Write-Output)\n",
+    "accepted": false,
+    "errors": [
+      {
+        "id": "MissingEndParenthesisInExpression",
+        "text": "",
+        "start": 9,
+        "end": 9
+      },
+      {
+        "id": "UnexpectedToken",
+        "text": ")",
+        "start": 27,
+        "end": 28
+      }
+    ],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 9
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 9,
+        "end": 11
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\n",
+        "flags": "ParseModeInvariant",
+        "start": 11,
+        "end": 13
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 13,
+        "end": 14
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 15,
+        "end": 27
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 27,
+        "end": 28
+      },
+      {
+        "kind": "NewLine",
+        "text": "\n",
+        "flags": "ParseModeInvariant",
+        "start": 28,
+        "end": 29
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 30,
+        "end": 30
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "ordinary-crlf-crlf-top",
+    "source": "Get-Date\r\n`\r\n| Write-Output\r\n",
+    "accepted": false,
+    "errors": [
+      {
+        "id": "EmptyPipeElement",
+        "text": "|",
+        "start": 13,
+        "end": 14
+      }
+    ],
+    "tokens": [
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 0,
+        "end": 8
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 8,
+        "end": 10
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 10,
+        "end": 13
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 13,
+        "end": 14
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 15,
+        "end": 27
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 27,
+        "end": 29
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 30,
+        "end": 30
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  },
+  {
+    "id": "ordinary-crlf-crlf-group",
+    "source": "(Get-Date\r\n`\r\n| Write-Output)\r\n",
+    "accepted": false,
+    "errors": [
+      {
+        "id": "MissingEndParenthesisInExpression",
+        "text": "",
+        "start": 9,
+        "end": 9
+      },
+      {
+        "id": "UnexpectedToken",
+        "text": ")",
+        "start": 28,
+        "end": 29
+      }
+    ],
+    "tokens": [
+      {
+        "kind": "LParen",
+        "text": "(",
+        "flags": "ParseModeInvariant",
+        "start": 0,
+        "end": 1
+      },
+      {
+        "kind": "Generic",
+        "text": "Get-Date",
+        "flags": "CommandName",
+        "start": 1,
+        "end": 9
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 9,
+        "end": 11
+      },
+      {
+        "kind": "LineContinuation",
+        "text": "`\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 11,
+        "end": 14
+      },
+      {
+        "kind": "Pipe",
+        "text": "|",
+        "flags": "SpecialOperator, ParseModeInvariant",
+        "start": 14,
+        "end": 15
+      },
+      {
+        "kind": "Generic",
+        "text": "Write-Output",
+        "flags": "CommandName",
+        "start": 16,
+        "end": 28
+      },
+      {
+        "kind": "RParen",
+        "text": ")",
+        "flags": "ParseModeInvariant",
+        "start": 28,
+        "end": 29
+      },
+      {
+        "kind": "NewLine",
+        "text": "\r\n",
+        "flags": "ParseModeInvariant",
+        "start": 29,
+        "end": 31
+      },
+      {
+        "kind": "EndOfInput",
+        "text": "",
+        "flags": "ParseModeInvariant",
+        "start": 32,
+        "end": 32
+      }
+    ],
+    "commands": [
+      {
+        "name": "Get-Date",
+        "text": "Get-Date",
+        "count": 0
+      },
+      {
+        "name": "Write-Output",
+        "text": "Write-Output",
+        "count": 0
+      }
+    ]
+  }
+]
