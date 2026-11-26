@@ -159,8 +159,7 @@ seeing the complete previous baseline bytes, but the replacement breaks the
 replaced file's hard-link group, so a hard-linked sibling keeps the old bytes
 with one fewer link. Recording twice without changes writes byte-identical
 content, and ratchet runs against the same tree report byte-identical
-results. Hard-link preservation holds for every other path: `check` never
-touches sources, so their link counts hold.
+results. `check` never touches sources, so their link counts hold.
 
 `sloplint init` writes exactly `sloplint.toml` in the current directory. It
 refuses when the name already exists and leaves no temporary file behind.

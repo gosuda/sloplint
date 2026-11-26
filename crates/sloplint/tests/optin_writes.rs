@@ -81,13 +81,16 @@ fn text(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
 
-/// Every entry under root: regular files with their bytes, directories with
-/// a marker, and symlinks with their targets. A `check` that leaves an empty
-/// directory or a symlink behind changes the snapshot, so the tree
-/// comparison cannot pass it as clean.
-fn snapshot(root: &Path) -> Vec<(PathBuf, Vec<u8>)> {
-    const DIR_MARK: &[u8] = b"<dir>";
-    const OTHER_MARK: &[u8] = b"<other>";
+#[derive(Debug, Eq, PartialEq)]
+enum EntryContents {
+    Directory,
+    File(Vec<u8>),
+    Symlink(PathBuf),
+    Special(std::fs::FileType),
+}
+
+/// Every entry under root, without traversing symbolic links.
+fn snapshot(root: &Path) -> Vec<(PathBuf, EntryContents)> {
     let mut out = Vec::new();
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
@@ -96,27 +99,93 @@ fn snapshot(root: &Path) -> Vec<(PathBuf, Vec<u8>)> {
         for entry in entries {
             let entry = entry.unwrap_or_else(|e| panic!("entry: {e}"));
             let path = entry.path();
+            let kind = entry.file_type().unwrap_or_else(|e| panic!("kind: {e}"));
+            let contents = if kind.is_dir() {
+                stack.push(path.clone());
+                EntryContents::Directory
+            } else if kind.is_file() {
+                EntryContents::File(read(&path))
+            } else if kind.is_symlink() {
+                EntryContents::Symlink(
+                    std::fs::read_link(&path).unwrap_or_else(|e| panic!("read_link: {e}")),
+                )
+            } else {
+                EntryContents::Special(kind)
+            };
             let rel = path
                 .strip_prefix(root)
-                .unwrap_or_else(|e| panic!("prefix: {e}"))
-                .to_path_buf();
-            let kind = entry.file_type().unwrap_or_else(|e| panic!("kind: {e}"));
-            if kind.is_dir() {
-                out.push((rel, DIR_MARK.to_vec()));
-                stack.push(path);
-            } else if kind.is_file() {
-                out.push((rel, read(&path)));
-            } else if kind.is_symlink() {
-                let target = std::fs::read_link(&path)
-                    .unwrap_or_else(|e| panic!("read_link {}: {e}", path.display()));
-                out.push((rel, target.as_os_str().as_encoded_bytes().to_vec()));
-            } else {
-                out.push((rel, OTHER_MARK.to_vec()));
-            }
+                .unwrap_or_else(|e| panic!("prefix: {e}"));
+            out.push((rel.to_path_buf(), contents));
         }
     }
-    out.sort();
+    out.sort_by(|(left, _), (right, _)| left.cmp(right));
     out
+}
+
+#[test]
+fn snapshot_detects_empty_directories() {
+    let (_tmp, root) = tempdir();
+    let before = snapshot(&root);
+    std::fs::create_dir(root.join("empty")).unwrap_or_else(|e| panic!("mkdir: {e}"));
+    assert_ne!(
+        snapshot(&root),
+        before,
+        "an empty directory is a tree change"
+    );
+    let directory = snapshot(&root);
+    std::fs::remove_dir(root.join("empty")).unwrap_or_else(|e| panic!("remove directory: {e}"));
+    write(&root, "empty", "<dir>");
+    assert_ne!(
+        snapshot(&root),
+        directory,
+        "a file containing a marker is still distinct from a directory"
+    );
+}
+
+#[test]
+#[cfg(unix)]
+fn snapshot_records_symbolic_links_without_following_them() {
+    let (_tmp, root) = tempdir();
+    let (_outside, outside) = tempdir();
+    write(&outside, "data", "first");
+    let before = snapshot(&root);
+    std::os::unix::fs::symlink(&outside, root.join("link"))
+        .unwrap_or_else(|e| panic!("symlink: {e}"));
+    let linked = snapshot(&root);
+    assert_ne!(linked, before, "a symbolic link is a tree change");
+    write(&outside, "data", "second");
+    assert_eq!(
+        snapshot(&root),
+        linked,
+        "link targets stay outside the snapshot"
+    );
+    std::fs::remove_file(root.join("link")).unwrap_or_else(|e| panic!("remove link: {e}"));
+    std::os::unix::fs::symlink(outside.join("data"), root.join("link"))
+        .unwrap_or_else(|e| panic!("symlink: {e}"));
+    assert_ne!(
+        snapshot(&root),
+        linked,
+        "retargeting a symbolic link is a tree change"
+    );
+}
+
+#[derive(serde::Deserialize)]
+struct CliDocument {
+    summary: CliSummary,
+}
+
+#[derive(serde::Deserialize)]
+struct CliSummary {
+    files: usize,
+    findings: usize,
+    baselined: usize,
+}
+
+fn successful_summary(output: &Output) -> CliSummary {
+    assert!(output.status.success(), "stderr: {}", text(&output.stderr));
+    sonic_rs::from_slice::<CliDocument>(&output.stdout)
+        .unwrap_or_else(|e| panic!("successful output is not a JSON report: {e}"))
+        .summary
 }
 
 #[cfg(unix)]
@@ -127,30 +196,9 @@ fn nlink(path: &Path) -> u64 {
         .nlink()
 }
 
-/// An empty directory or a symlink left behind must change the snapshot: the
-/// tree comparison guards `check`, so entries `snapshot` cannot see would let
-/// a writing `check` pass as clean.
-#[test]
-fn snapshot_sees_new_directories_and_symlinks() {
-    let (_tmp, root) = tempdir();
-    seed(&root);
-    let before = snapshot(&root);
-    std::fs::create_dir_all(root.join("empty-dir"))
-        .unwrap_or_else(|e| panic!("mkdir empty-dir: {e}"));
-    #[cfg(unix)]
-    std::os::unix::fs::symlink("sample.rs", root.join("link.rs"))
-        .unwrap_or_else(|e| panic!("symlink: {e}"));
-    let after = snapshot(&root);
-    assert_ne!(
-        after, before,
-        "an empty directory or symlink must change the snapshot"
-    );
-}
-
 /// The baseline is replaced atomically, never rewritten in place: a linked
-/// reader keeps seeing the complete previous baseline (A009). Hard-link
-/// preservation therefore holds for every path `baseline` does not replace:
-/// `check` never touches sources, so their link counts hold.
+/// reader keeps seeing the complete previous baseline (A009), with one fewer
+/// link to that old inode. `check` never touches sources or their link counts.
 #[test]
 fn recorded_baseline_replaces_atomically_preserving_linked_readers() {
     let (_tmp, root) = tempdir();
@@ -163,6 +211,8 @@ fn recorded_baseline_replaces_atomically_preserving_linked_readers() {
 
     let sibling = root.join("baseline-copy.json");
     std::fs::hard_link(&baseline, &sibling).unwrap_or_else(|e| panic!("hard_link: {e}"));
+    #[cfg(unix)]
+    assert_eq!(nlink(&baseline), 2, "fixture needs a linked baseline");
 
     write(&root, "extra.rs", "pub fn manage(flag: bool) {}\n");
     run_ok(&writing(&root));
@@ -173,6 +223,15 @@ fn recorded_baseline_replaces_atomically_preserving_linked_readers() {
         first,
         "a linked reader keeps seeing the complete previous baseline"
     );
+    #[cfg(unix)]
+    {
+        assert_eq!(
+            nlink(&sibling),
+            1,
+            "replacement removes the old baseline link"
+        );
+        assert_eq!(nlink(&baseline), 1, "the replacement has its own inode");
+    }
 }
 
 #[test]
@@ -236,13 +295,15 @@ fn check_cli_writes_nothing_and_keeps_hard_links() {
         assert_eq!(nlink(&root.join("sample.rs")), 2, "fixture needs two links");
     }
     let before = snapshot(&root);
-    let first = cli(&root, &["check", "--no-cache"]);
-    let second = cli(&root, &["check", "--no-cache"]);
-    assert!(
-        first.status.success(),
-        "a clean check run must succeed, not just exit alike: {}",
-        text(&first.stderr)
-    );
+    let first = cli(&root, &["check", "--no-cache", "--format", "json"]);
+    let second = cli(&root, &["check", "--no-cache", "--format", "json"]);
+    let expected_files = if cfg!(unix) { 2 } else { 1 };
+    for output in [&first, &second] {
+        let summary = successful_summary(output);
+        assert_eq!(summary.files, expected_files);
+        assert_eq!(summary.findings, expected_files);
+        assert_eq!(summary.baselined, 0);
+    }
     assert_eq!(
         snapshot(&root),
         before,
@@ -253,11 +314,6 @@ fn check_cli_writes_nothing_and_keeps_hard_links() {
         nlink(&root.join("sample.rs")),
         2,
         "a check run must keep hard link counts"
-    );
-    assert_eq!(
-        (first.status.code(), second.status.code()),
-        (first.status.code(), first.status.code()),
-        "repeated checks must exit alike"
     );
     assert_eq!(
         first.stdout, second.stdout,
@@ -277,18 +333,28 @@ fn ratchet_cli_runs_are_stable() {
         text(&recorded.stderr)
     );
     let run = |args: &[&str]| cli(&root, args);
-    let first = run(&["check", "--no-cache", "--mode", "ratchet"]);
-    let second = run(&["check", "--no-cache", "--mode", "ratchet"]);
-    assert!(
-        first.status.success(),
-        "a stable ratchet run must succeed, not just exit alike: {}",
-        text(&first.stderr)
-    );
-    assert_eq!(
-        (first.status.code(), second.status.code()),
-        (first.status.code(), first.status.code()),
-        "repeated ratchet runs must exit alike"
-    );
+    let first = run(&[
+        "check",
+        "--no-cache",
+        "--mode",
+        "ratchet",
+        "--format",
+        "json",
+    ]);
+    let second = run(&[
+        "check",
+        "--no-cache",
+        "--mode",
+        "ratchet",
+        "--format",
+        "json",
+    ]);
+    for output in [&first, &second] {
+        let summary = successful_summary(output);
+        assert_eq!(summary.files, 1);
+        assert_eq!(summary.findings, 0);
+        assert_eq!(summary.baselined, 1);
+    }
     assert_eq!(
         first.stdout, second.stdout,
         "repeated ratchet runs must print identical output"
