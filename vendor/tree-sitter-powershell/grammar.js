@@ -382,6 +382,18 @@ export default grammar({
             ),
           ),
         ),
+        // A literal format mark before dashes starts a word as well, so a
+        // spaced redirect keeps a mark-led dash filename instead of
+        // reporting a syntax error. Same precedence as the dash-first form.
+        token(
+          prec(
+            1,
+            new RegExp(
+              /[\u200B\uFEFF\u2060]+-+/.source +
+                wordTail(/[^&\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000()}|;,"'`]/.source),
+            ),
+          ),
+        ),
         token(
           choice(
             new RegExp(
