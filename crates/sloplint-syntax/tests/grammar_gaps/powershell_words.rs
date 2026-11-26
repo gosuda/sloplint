@@ -108,7 +108,7 @@ fn crlf_after_an_escape_inside_a_bare_argument_ends_the_command() {
             .facts
             .calls
             .iter()
-            .map(|call| call.callee.as_str())
+            .map(|call| call.callee)
             .collect::<Vec<_>>();
         assert_eq!(callees, ["Write-Output", "Get-Date"], "{source:?}");
     }
