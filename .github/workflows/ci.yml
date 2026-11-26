@@ -111,38 +111,9 @@ jobs:
           bin="target/${{ matrix.target }}/release/sloplint"
           "$bin" check crates --format agent --strictness standard --mode threshold --fail-on minor
 
-  clippy-cross:
-    # Clippy for the macOS and Windows targets runs here on cheap Linux
-    # runners: `cargo clippy --target` needs only the target std, no linker
-    # and no native runner, so the proof is identical.
-    runs-on: depot-ubuntu-24.04
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          - x86_64-apple-darwin
-          - aarch64-apple-darwin
-          - x86_64-pc-windows-msvc
-          - aarch64-pc-windows-msvc
-    env:
-      CARGO_INCREMENTAL: "0"
-      CARGO_PROFILE_DEV_DEBUG: line-tables-only
-      CARGO_PROFILE_TEST_DEBUG: line-tables-only
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - run: rustup target add ${{ matrix.target }}
-      - name: Preserve vendor dependency fingerprints
-        run: TZ=UTC find vendor -exec touch -t 200001010000 {} +
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          shared-key: ${{ matrix.target }}
-      - run: cargo clippy --workspace --all-targets --locked --target ${{ matrix.target }} -- -D warnings
-
   test-native:
-    # Native runners prove only what they alone can prove: the target
+    # Native runners prove only what they alone can prove: per-target
+    # clippy (build scripts need the native C toolchain), the target
     # links, the executable runs on the OS, and the platform-gated tests
     # pass. Everything portable runs in `test` on Linux.
     runs-on: ${{ matrix.runs_on }}
@@ -171,6 +142,8 @@ jobs:
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           shared-key: ${{ matrix.target }}
+      - name: Clippy for the native target
+        run: cargo clippy --workspace --all-targets --locked --target ${{ matrix.target }} -- -D warnings
       - name: Build for the native target
         run: cargo build --locked --target ${{ matrix.target }}
       - name: Smoke-test the native executable
