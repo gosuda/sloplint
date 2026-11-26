@@ -1,6 +1,6 @@
 # Gosuda CI and PR reconciliation
 
-Observed through 2026-11-26T19:04:06.302Z. This is a finite snapshot, not an atomic organization-wide transaction.
+Observed through 2026-11-26T21:18:48.387Z. This is a finite snapshot, not an atomic organization-wide transaction.
 
 ## Runner result
 
@@ -14,7 +14,7 @@ Every audited maintained PR head selects Depot runners or contains no runner job
 | Unique workflow blobs | 245 |
 | Unique job definitions | 789 |
 | Open PR heads with non-Depot or forbidden runner labels | 0 |
-| Unresolved review threads | 31 |
+| Unresolved review threads | 30 |
 | Confirmed merge conflicts | 7 |
 | Unknown mergeability states | 0 |
 
@@ -48,13 +48,19 @@ These are changes to repository-controlled workflows. No billing saving or unive
 
 Each completed repair has an immutable checkpoint linking its source tree, native run and probe retirement. Earlier failed or expected-failure controls remain in that evidence; they are not presented as passing full runs.
 
+## Published repair with later findings
+
+[gosuda/sloplint #137](https://github.com/gosuda/sloplint/pull/137) is published at [`57adc9fff126`](https://github.com/gosuda/sloplint/commit/57adc9fff126a9826e0fb0be921c28e6cdb08391). Its [native verification](https://github.com/gosuda/sloplint/actions/runs/45893490495) completed successfully for source tree `f518b3943c6b86af53c334175309303c3d79f38b`. The [ordinary PR workflow](https://github.com/gosuda/sloplint/actions/runs/45895428017) is success.
+
+2 later source findings remain open. The separate verification-tree question was resolved by matching the published commit, native candidate and ordinary-CI merge tree. The [immutable checkpoint](https://github.com/gosuda/sloplint/blob/a10db6900c5ed16b4be9530ca240d2624b1c98b5/ci-tools/powershell-context-boundaries-r22/checkpoint.json) preserves the passing gates, failed experiments, baseline controls and retired verification workflow.
+
 ## Remaining review and conflict work
 
 | PR | Unresolved threads | Merge conflict |
 | --- | ---: | --- |
 | [gosuda/ssh-chat #1](https://github.com/gosuda/ssh-chat/pull/1) | 0 | Confirmed |
 | [gosuda/ruk #20](https://github.com/gosuda/ruk/pull/20) | 2 | No confirmed conflict |
-| [gosuda/sloplint #137](https://github.com/gosuda/sloplint/pull/137) | 3 | No confirmed conflict |
+| [gosuda/sloplint #137](https://github.com/gosuda/sloplint/pull/137) | 2 | No confirmed conflict |
 | [gosuda/LoGOs #343](https://github.com/gosuda/LoGOs/pull/343) | 3 | No confirmed conflict |
 | [gosuda/LoGOs #342](https://github.com/gosuda/LoGOs/pull/342) | 4 | No confirmed conflict |
 | [gosuda/LoGOs #339](https://github.com/gosuda/LoGOs/pull/339) | 1 | Confirmed |
