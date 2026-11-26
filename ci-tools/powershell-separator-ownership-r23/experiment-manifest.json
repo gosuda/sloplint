@@ -2,7 +2,7 @@
   "base": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
   "base_tree": "f518b3943c6b86af53c334175309303c3d79f38b",
   "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
-  "kind": "Bounded two-stage grammar experiment; generated diagnostic snapshots are not publication candidates.",
+  "kind": "Second bounded two-stage grammar experiment. Discard nonempty-redirection change; test complete leading-format-mark words and explicit context ambiguity. Generated diagnostic snapshots are not publication candidates.",
   "baseline": {
     "producer": "0f58011fc01ed4fb380ebab8eda08fc6779b05d3",
     "run": 45897555856,
@@ -13,28 +13,89 @@
   },
   "stages": [
     {
-      "id": "nonempty-redirection",
-      "file": "nonempty-redirection.js",
-      "sha256": "e9203a517c973a00a85ae5806dc2ce9f93f017846e8c966cbbfc783226e46f5e"
+      "id": "leading-format-word",
+      "file": "leading-format-word.js",
+      "sha256": "6c21d8a35aab11b1e48c9c2566e6c1250dbca1b36d1c9a4320dc4211679470cf"
     },
     {
-      "id": "separator-only-context",
-      "file": "separator-only-context.js",
-      "sha256": "a0c038815ba61614a95a143ffed43e9b86690b189078880273589dcae111b7bd"
+      "id": "separator-context-conflict",
+      "file": "separator-context-conflict.js",
+      "sha256": "8a907812bdfc48e794e6307f779d99d8d151479ca594d92efd095ec5961a9d80"
     }
   ],
   "formatted_regression_sha256": "2e6fa92f81ba3ccfb3592f150f10aeb2c3fbaf45952a7b2fe9cb897dbdd740f5",
   "cases": 673,
   "query_count": 16,
   "proof_sha256": {
-    "experiment.py": "b0a59442f20a07fb880b835be0f9710f28e3ed09e8ff5a59f1e2fb9af815efe9",
-    "experiment-controls.json": "709401592caf742d8a5f190d73ae1d9d8cb6987122dcc98a9d215ee1feb12152",
+    "experiment.py": "67bd5a4b04801b26188c84932c2edd62303cf04e5ce8313d5842e6dfd0dfb0ee",
+    "experiment-controls.json": "39502e3f9e9f874dd70f7b38a24b86bdaa2c6f5fc3d87958d275e94e53a94efc",
     "experiment-cases.json": "571c7d6ace01a405a3774f6d890a6edfbdd58bddada109a2c21711f2ae51e75c",
     "experiment-cases.tsv": "7d723871466c365edfc81f6235053b1e2ecaa5cf63fa92f5ed531714f8fa85d2",
     "experiment-observer.rs": "244239b17f8848a0f3c4fa7795f45c8d8ce79ea019fefc64bcea9a8a2e6f2f2d",
     "regression.rs": "c96027dd2dc6a613ba1c5e4826911cb5689c83e5d32d22dff00318c9bd73a294",
     "baseline-packed.b64": "cfc776d2c4651a3daaddaf7d23cc076ac72b6ea6b0959187e55f54b3a35abac3",
     "nonempty-redirection.js": "e9203a517c973a00a85ae5806dc2ce9f93f017846e8c966cbbfc783226e46f5e",
-    "separator-only-context.js": "a0c038815ba61614a95a143ffed43e9b86690b189078880273589dcae111b7bd"
+    "separator-only-context.js": "a0c038815ba61614a95a143ffed43e9b86690b189078880273589dcae111b7bd",
+    "experiment1-receipt.json": "39487fccdae0787fe566d9e3dd7f78554124e9fcac49c638b7211ef883a085ef",
+    "experiment1-packed.b64": "64ed42dc742e2edd6848b07773f6940d40a79b53b1398f4907916cdc6f4a5d25",
+    "leading-format-word.js": "6c21d8a35aab11b1e48c9c2566e6c1250dbca1b36d1c9a4320dc4211679470cf",
+    "separator-context-conflict.js": "8a907812bdfc48e794e6307f779d99d8d151479ca594d92efd095ec5961a9d80"
+  },
+  "prior_experiment": {
+    "producer": "2d26393753aa08502d589bd6ed6b75fbb02f3246",
+    "run": 45902314748,
+    "job": 140190791561,
+    "artifact": 15156034360,
+    "zip_sha256": "3a3e176760912fb07ea3383c5025802c284c8d9bf9f6d8b69202676ceb074be4",
+    "packed": {
+      "payload_sha256": "7c50c8d033121e8fb444690a3382cc036a4095b02fa4b48f3624ffbc501e7b8d",
+      "gzip_sha256": "e6594b3c9be0ec083545a592994888b33236dd7649b4b2a271a900071878b412",
+      "payload_bytes": 4062127,
+      "gzip_bytes": 226546,
+      "base64_bytes": 302064
+    },
+    "outcomes": [
+      {
+        "id": "nonempty-redirection",
+        "source": {
+          "base": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
+          "tree": "a59d5de80780ab80647255ffa98b0ee620535dd9",
+          "tracked_blobs": 4906,
+          "index_sha256": "d572d57032257d9822ad2f16b653e36cff57df8e83be2fb20fa5299aac03bd04",
+          "files": {
+            "vendor/tree-sitter-powershell/grammar.js": "e9203a517c973a00a85ae5806dc2ce9f93f017846e8c966cbbfc783226e46f5e",
+            "vendor/tree-sitter-powershell/src/grammar.json": "9f0e2acda5d97fbdab1eabc17000ce9c34186e03740f35af80783288acb42478",
+            "vendor/tree-sitter-powershell/src/parser.c": "5b8baa48f5ad9f666c41c1a7a0c297b69e56cf761aae072b870bcca0e8f7116a",
+            "vendor/tree-sitter-powershell/src/node-types.json": "cc0ca0ff480d8278d54719e0dc7a5213018e4a39333e7f1986481972bec64404"
+          }
+        },
+        "node_types_unchanged": true,
+        "focused_exit": 101,
+        "corpus_exit": 0,
+        "eligible": false,
+        "failure_count": 227,
+        "failure_kinds": [
+          "native-acceptance",
+          "native-command-extents",
+          "native-target-bytes",
+          "old-comment-query:direct-comment",
+          "old-comment-query:separator-comment",
+          "old-comment-query:element-separator"
+        ]
+      },
+      {
+        "id": "separator-only-context",
+        "generation_exit": 1,
+        "eligible": false,
+        "failure_count": 0,
+        "failure_kinds": []
+      }
+    ],
+    "source_restored": {
+      "head": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
+      "tree": "f518b3943c6b86af53c334175309303c3d79f38b",
+      "tracked_blobs": 4906,
+      "index_sha256": "73b2ffef65c2b6087de35a3fcc1ef31b3e32968bf1696b4ce519537a9f54ed5f"
+    }
   }
 }

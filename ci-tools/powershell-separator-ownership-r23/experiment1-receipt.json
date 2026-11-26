@@ -1,0 +1,57 @@
+{
+  "producer": "2d26393753aa08502d589bd6ed6b75fbb02f3246",
+  "run": 45902314748,
+  "job": 140190791561,
+  "artifact": 15156034360,
+  "zip_sha256": "3a3e176760912fb07ea3383c5025802c284c8d9bf9f6d8b69202676ceb074be4",
+  "packed": {
+    "payload_sha256": "7c50c8d033121e8fb444690a3382cc036a4095b02fa4b48f3624ffbc501e7b8d",
+    "gzip_sha256": "e6594b3c9be0ec083545a592994888b33236dd7649b4b2a271a900071878b412",
+    "payload_bytes": 4062127,
+    "gzip_bytes": 226546,
+    "base64_bytes": 302064
+  },
+  "outcomes": [
+    {
+      "id": "nonempty-redirection",
+      "source": {
+        "base": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
+        "tree": "a59d5de80780ab80647255ffa98b0ee620535dd9",
+        "tracked_blobs": 4906,
+        "index_sha256": "d572d57032257d9822ad2f16b653e36cff57df8e83be2fb20fa5299aac03bd04",
+        "files": {
+          "vendor/tree-sitter-powershell/grammar.js": "e9203a517c973a00a85ae5806dc2ce9f93f017846e8c966cbbfc783226e46f5e",
+          "vendor/tree-sitter-powershell/src/grammar.json": "9f0e2acda5d97fbdab1eabc17000ce9c34186e03740f35af80783288acb42478",
+          "vendor/tree-sitter-powershell/src/parser.c": "5b8baa48f5ad9f666c41c1a7a0c297b69e56cf761aae072b870bcca0e8f7116a",
+          "vendor/tree-sitter-powershell/src/node-types.json": "cc0ca0ff480d8278d54719e0dc7a5213018e4a39333e7f1986481972bec64404"
+        }
+      },
+      "node_types_unchanged": true,
+      "focused_exit": 101,
+      "corpus_exit": 0,
+      "eligible": false,
+      "failure_count": 227,
+      "failure_kinds": [
+        "native-acceptance",
+        "native-command-extents",
+        "native-target-bytes",
+        "old-comment-query:direct-comment",
+        "old-comment-query:separator-comment",
+        "old-comment-query:element-separator"
+      ]
+    },
+    {
+      "id": "separator-only-context",
+      "generation_exit": 1,
+      "eligible": false,
+      "failure_count": 0,
+      "failure_kinds": []
+    }
+  ],
+  "source_restored": {
+    "head": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
+    "tree": "f518b3943c6b86af53c334175309303c3d79f38b",
+    "tracked_blobs": 4906,
+    "index_sha256": "73b2ffef65c2b6087de35a3fcc1ef31b3e32968bf1696b4ce519537a9f54ed5f"
+  }
+}

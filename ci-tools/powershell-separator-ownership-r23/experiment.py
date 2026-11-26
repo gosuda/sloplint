@@ -264,8 +264,32 @@ def healthy_query(lines: list[str], identity: str, query: str) -> bool:
 def utf16_to_byte(source: str, offset: int) -> int:
     return len(source.encode("utf-16-le")[:offset * 2].decode("utf-16-le").encode())
 
-baseline_parsers = parse_cases("unchanged-current")
-baseline_queries, _ = query_observations("unchanged-current", False)
+prior_receipt = json.loads((PROOF / "experiment1-receipt.json").read_text())
+prior_packed = base64.b64decode((PROOF / "experiment1-packed.b64").read_text())
+assert len(prior_packed) == prior_receipt["packed"]["gzip_bytes"]
+assert hashlib.sha256(prior_packed).hexdigest() == prior_receipt["packed"]["gzip_sha256"]
+prior_bytes = gzip.decompress(prior_packed)
+assert len(prior_bytes) == prior_receipt["packed"]["payload_bytes"]
+assert hashlib.sha256(prior_bytes).hexdigest() == prior_receipt["packed"]["payload_sha256"]
+prior = json.loads(prior_bytes)
+assert prior["baseline_source"] == initial
+for name in ("experiment-cases.json", "experiment-cases.tsv", "experiment-observer.rs", "regression.rs", "baseline-packed.b64"):
+    assert prior["manifest"]["proof_sha256"][name] == MANIFEST["proof_sha256"][name], name
+assert prior["manifest"]["formatted_regression_sha256"] == MANIFEST["formatted_regression_sha256"]
+expected_baseline_results = {
+    "unchanged-current-format-probes": 0,
+    "unchanged-current-clean-grammar": 0,
+    "unchanged-current-compile-probes": 0,
+    "unchanged-current-queries": 0,
+}
+for name, expected in expected_baseline_results.items():
+    record = next(item for item in prior["results"] if item["name"] == name)
+    assert record["exit"] == record["expected"] == expected and not record["timed_out"], record
+baseline_parsers = prior["baseline_parsers"]
+baseline_queries = prior["baseline_queries"]
+assert len(baseline_parsers) == len(CASES) == 673
+assert sum(line.startswith("OWNERSHIP_QUERY_COMPILE ") and line.endswith(" OK") for line in baseline_queries) == 16
+assert sum(line.startswith("OWNERSHIP_QUERY_ROW ") for line in baseline_queries) == len(CASES) * 16
 baseline_by_id = {record["id"]: record for record in baseline_parsers}
 reference_current = {record["id"]: record for record in REFERENCE["parsers"]["current"]}
 for identity, record in reference_current.items():
@@ -280,7 +304,10 @@ for query in ("direct-comment", "separator-comment", "element-separator", "all-c
         identity = case["id"]
         assert query_records(baseline_queries, identity, query) == query_records(REFERENCE["queries"]["current"], identity, query)
 assert unchanged_identity(SOURCE, str(MANIFEST["base"]), str(MANIFEST["base_tree"])) == initial
-print("FROZEN_CURRENT_COMPATIBILITY_MATCH " + json.dumps({"cases": len(CASES), "queries": 16, "reference_cases": 483}), flush=True)
+print("VERIFIED_REUSED_CURRENT_COMPATIBILITY " + json.dumps({
+    "receipt": prior_receipt, "cases": len(CASES), "queries": 16, "reference_cases": 483,
+    "verified_baseline_results": expected_baseline_results,
+}), flush=True)
 
 for stage in MANIFEST["stages"]:
     label = stage["id"]
