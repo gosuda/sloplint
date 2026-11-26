@@ -18,8 +18,8 @@ class Candidate:
 
 
 CANDIDATES = (
-    Candidate(25, "8a03c878c30036add4e5b20e87f24c35c907bfd3", "902e828c784bd4f1c4610284bd1f781a47bf51c88d3d06bfdf3fd9fd530623ff"),
-    Candidate(28, "38bbbb8dc176fe5013b9b7f7d281533d39bafa2d", "baab8a3ea9490104cc6f18d66ef6643bbf082152e2e4e62e7411198acac89e13"),
+    Candidate(20, "7dbfc581cc8743413897bfa6bce45d95e948ae75", "df7e134c2bdc6cc8b734d596ce065ad323fc03e7027b234c7537f1147e099b4b"),
+    Candidate(25, "c7b945965cb20dd29573b1e1a3d184cd067c0445", "4fd499614bfb15f8f843d8ea1ea2771a3cddc70ce013de6dcde7adbb403fa9fe"),
 )
 BASE = "84e5ff153f781c7e2d02804a5c24997858f618ab"
 WORKSPACE = Path(os.environ["GITHUB_WORKSPACE"])
@@ -67,7 +67,7 @@ def case_command(group: str, name: str) -> list[str]:
     source = (SOURCE / f"test/crush/test_{group}.ml").read_text().split("let cases =", 1)[1]
     names = re.findall(r'Test_tools_test_support.case\s+"([^"]+)"', source)
     index = names.index(name)
-    return ["dune", "exec", "--profile", "release", "test/crush/test_crush.exe", "--", "test", group, str(index), "--verbose"]
+    return ["dune", "exec", "--profile", "release", "test/crush/test_crush.exe", "--", "test", group.replace("_", "-"), str(index), "--verbose"]
 
 
 def check_regression(candidate: Candidate, folder: Path, module: str, group: str, name: str, label: str, failure: str, *, rebuild_cli: bool = False) -> bool:
@@ -109,11 +109,24 @@ def check(candidate: Candidate) -> dict[str, object]:
     result["fmt"] = run(["dune", "build", "@fmt"], folder / "fmt.log")
     result["build"] = run(["dune", "build", "--profile", "release"], folder / "build.log")
     result["tests"] = run(["dune", "runtest", "--profile", "release"], folder / "tests.log")
+    if candidate.number == 20 and result["build"] == 0:
+        result["fd_operands"] = check_regression(candidate, folder, "bin/crush/lib/tools_shell.ml", "tools_shell", "conservative shell classifier", "fd-operands", "fd -- -X has only literal data operands")
     if candidate.number == 25 and result["build"] == 0:
-        result["pending_approval"] = check_regression(candidate, folder, "bin/crush/lib/agent.ml", "agent", "stopped turn does not await sibling approval", "pending-approval", "Lwt_unix.Timeout")
-        result["explicit_cancel"] = check_regression(candidate, folder, "bin/crush/lib/agent.ml", "agent", "explicit cancel joins hook cleanup", "explicit-cancel", "Canceled")
-    if candidate.number == 28 and result["build"] == 0:
-        result["cache_destination"] = check_regression(candidate, folder, "bin/crush/lib/models.ml", "cli", "update-providers needs a cache directory", "cache-destination", "refresh reports the unavailable cache path", rebuild_cli=True)
+        for label, name in [("explicit_cancel", "explicit cancel joins hook cleanup"), ("external_cancel", "external cancel persists completed write"), ("closed_post_hook", "cancelled body skips closed post hook")]:
+            result[label] = check_regression(candidate, folder, "bin/crush/lib/agent.ml", "agent", name, label.replace("_", "-"), "completed write result was not persisted exactly once")
+        path = SOURCE / "bin/crush/lib/hooks.ml"
+        repaired = path.read_text()
+        original = "if code = 0 then completed := true;"
+        assert repaired.count(original) == 1
+        args = case_command("hooks", "failing hook kills detached child")
+        try:
+            path.write_text(repaired.replace(original, "completed := true;", 1))
+            red = run(args, folder / "detached-failure-red.log")
+            reproduced = red != 0 and "Lwt_unix.Timeout" in (folder / "detached-failure-red.log").read_text()
+        finally:
+            path.write_text(repaired)
+        green = run(args, folder / "detached-failure-green.log")
+        result["detached_failure"] = reproduced and green == 0
     git("diff", "--exit-code")
     assert git("write-tree") == result["tree"]
     (folder / "results.json").write_text(json.dumps(result, indent=2) + "\n")
@@ -129,9 +142,8 @@ def main() -> int:
         results[str(candidate.number)] = check(candidate)
         (EVIDENCE / "results.json").write_text(json.dumps(results, indent=2) + "\n")
     passed = all(all(result[name] == 0 for name in ("format_sources", "fmt", "build", "tests")) for result in results.values())
-    passed = passed and results["25"].get("pending_approval") is True
-    passed = passed and results["25"].get("explicit_cancel") is True
-    passed = passed and results["28"].get("cache_destination") is True
+    passed = passed and results["20"].get("fd_operands") is True
+    passed = passed and all(results["25"].get(name) is True for name in ("explicit_cancel", "external_cancel", "closed_post_hook", "detached_failure"))
     return 0 if passed else 1
 
 

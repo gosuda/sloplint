@@ -1,78 +1,81 @@
+diff --git a/bin/crush/lib/shell_screen.ml b/bin/crush/lib/shell_screen.ml
+index 469bcfc..6b7fa8e 100644
 --- a/bin/crush/lib/shell_screen.ml
 +++ b/bin/crush/lib/shell_screen.ml
-@@ -1552,14 +1552,20 @@
-         (List.rev reversed, rest)
-     | word :: rest -> command_words ~batch (word :: reversed) rest
+@@ -153,10 +153,20 @@ let wrappers =
+     "su";
+   ]
+ 
++let fd_exec_flags = [ "-x"; "-X"; "--exec"; "--exec-batch" ]
++
++let fd_data_flags =
++  [ "-e"; "--extension"; "-E"; "--exclude"; "-t"; "--type"; "-d"; "--max-depth" ]
++
++let rec fd_executes = function
++  | flag :: _operand :: rest when List.mem flag fd_data_flags -> fd_executes rest
++  | "--" :: _ | [] -> false
++  | flag :: rest -> List.mem flag fd_exec_flags || fd_executes rest
++
+ let exec_flags =
+   [
+     ("find", [ "-exec"; "-execdir"; "-ok"; "-okdir" ]);
+-    ("fd", [ "-x"; "-X"; "--exec"; "--exec-batch" ]);
++    ("fd", fd_exec_flags);
+   ]
+ 
+ let code_flags =
+@@ -1467,7 +1477,7 @@ and exec_commands sink ~depth program flags args =
+         "-printf";
+         "-D";
+       ]
+-    else [ "-e"; "--extension"; "-E"; "--exclude"; "-t"; "--type"; "-d"; "--max-depth" ]
++    else fd_data_flags
    in
--  let action flag rest =
--    let batch = program = "find" && List.mem flag [ "-exec"; "-execdir" ] in
--    let command, rest = command_words ~batch [] rest in
--    if List.exists (fun word -> not word.fixed) command then review sink computed_program;
--    (match command with
--    | name :: _ when String.contains name.value '{' -> review sink computed_program
--    | _ -> analyze sink ~depth command);
--    rest
-+  let actions = ref [] in
-+  let action flag words =
-+    match List.find_opt (fun (start, _) -> start == words) !actions with
-+    | Some (_, rest) -> rest
-+    | None ->
-+        let batch = program = "find" && List.mem flag [ "-exec"; "-execdir" ] in
-+        let command, rest = command_words ~batch [] words in
-+        actions := (words, rest) :: !actions;
-+        if List.exists (fun word -> not word.fixed) command then
-+          review sink computed_program;
-+        (match command with
-+        | name :: _ when String.contains name.value '{' -> review sink computed_program
-+        | _ -> analyze sink ~depth command);
-+        rest
-   in
-   let rec ambiguous = function
-     | [] -> ()
+   let switches =
+     if program = "find" then
+diff --git a/bin/crush/lib/shell_screen.mli b/bin/crush/lib/shell_screen.mli
+index 3806eaa..73f36cf 100644
+--- a/bin/crush/lib/shell_screen.mli
++++ b/bin/crush/lib/shell_screen.mli
+@@ -40,3 +40,8 @@ val platform : dialect
+ val screen : dialect -> string -> verdict
+ (** [screen dialect command] classifies [command]. {!Blocked} takes precedence over
+     {!Review}, and a command that fails to parse is {!Review} unless it is {!Blocked}. *)
++
++val fd_executes : string list -> bool
++(** [fd_executes args] recognizes execution actions in literal [fd] arguments that have
++    already passed {!screen} as {!Clear}. Known data operands and arguments after [--]
++    are not options. The argument list excludes the program name. *)
+diff --git a/bin/crush/lib/tools_shell.ml b/bin/crush/lib/tools_shell.ml
+index 7ffa1f1..508df0d 100644
 --- a/bin/crush/lib/tools_shell.ml
 +++ b/bin/crush/lib/tools_shell.ml
-@@ -94,7 +94,7 @@
+@@ -94,7 +94,7 @@ let safe_simple_command command args =
        "printenv";
      ]
    in
--  if command = "fd" then not (has_option_prefix [ "--exec"; "-x" ] args)
-+  if command = "fd" then not (has_option_prefix [ "--exec"; "-x"; "-X" ] args)
+-  if command = "fd" then not (has_option_prefix [ "--exec"; "-x"; "-X" ] args)
++  if command = "fd" then not (Shell_screen.fd_executes args)
    else if command = "rg" then not (has_option_prefix [ "--pre"; "--pre-glob" ] args)
    else List.mem command safe || (command = "env" && args = [])
  
+diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
+index 33a1153..6c5bafc 100644
 --- a/test/crush/test_tools_shell.ml
 +++ b/test/crush/test_tools_shell.ml
-@@ -110,6 +110,12 @@
-   Alcotest.(check bool)
-     "find exec is mutable" false
-     (Tools_shell.is_read_only "find . -exec cat {} \\;");
+@@ -117,6 +117,15 @@ let test_classifier () =
+         false
+         (Tools_shell.is_read_only ("fd -g README.md " ^ action ^ " touch changed")))
+     [ "-x"; "-X"; "--exec"; "--exec-batch" ];
 +  List.iter
-+    (fun action ->
++    (fun command ->
 +      Alcotest.(check bool)
-+        ("fd " ^ action ^ " is mutable") false
-+        (Tools_shell.is_read_only ("fd -g README.md " ^ action ^ " touch changed")))
-+    [ "-x"; "-X"; "--exec"; "--exec-batch" ];
++        (command ^ " has only literal data operands")
++        true (Tools_shell.is_read_only command))
++    [ "fd -- -X"; "fd -- --exec"; "fd -e -X README.md"; "fd -E --exec README.md" ];
++  Alcotest.(check bool)
++    "fd option operand does not end option parsing" false
++    (Tools_shell.is_read_only "fd -e -- -X touch changed");
    Alcotest.(check bool)
      "sed in-place is mutable" false
      (Tools_shell.is_read_only "sed -i s/a/b/ file");
-@@ -434,6 +440,11 @@
-       ({|find . -exec printf '%s' "$label" \;|}, "review");
-     ]
- 
-+let test_nested_fd_actions () =
-+  let command = String.concat "" (List.init 24 (fun _ -> "fd --color never -X ")) in
-+  check_posix_verdicts
-+    [ (command ^ "printf ready", "review"); (command ^ "./cu''rl.exe", "blocked") ]
-+
- let test_ansi_c_bash_equivalence () =
-   if not Sys.win32 then (
-     if Option.is_none (Charamel_os.Exe.find "bash") then Alcotest.skip ();
-@@ -572,6 +583,8 @@
-     Test_tools_test_support.case "parameter quote context" `Quick test_parameter_quotes;
-     Test_tools_test_support.case "command lookup mode" `Quick test_command_lookup;
-     Test_tools_test_support.case "find data positions" `Quick test_find_data_slots;
-+    Test_tools_test_support.case "nested fd actions are screened once" `Quick
-+      test_nested_fd_actions;
-     Test_tools_test_support.case "ANSI-C NUL matches bash" `Quick
-       test_ansi_c_bash_equivalence;
-     Test_tools_test_support.case "screen requires review" `Quick
