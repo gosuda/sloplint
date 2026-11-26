@@ -1,0 +1,118 @@
+{
+  "scope": "Flats D3 Unit C editor follow-up",
+  "execution_state": "completed",
+  "candidate_verdict": "accepted",
+  "candidate": {
+    "repository": "gosuda/Flats",
+    "head": "4c3e0652b6d1a93c4d4a8cac93b79beaf315f2cc",
+    "tree": "6eec14666cf6b71d56f686a7f7709b0527d53b8f",
+    "branch": "fix/docs-native-backspace-20261126",
+    "base": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
+    "files": [
+      {
+        "path": "internal/apps/docs/_web/build.mjs",
+        "sha256": "48af351f5188ae99dc739f5ae30b88de0e3bb11cb4353864e41300d822b8fcce"
+      },
+      {
+        "path": "internal/apps/docs/dist/BUILD-INPUTS.sha256",
+        "sha256": "16e2752336d671a09673167440a7ea2ed2a7858179ef02b958a79f75866a9ec5"
+      },
+      {
+        "path": "internal/apps/docs/dist/server.js",
+        "sha256": "ce0529d2450ebd6907929f1d0958f892924f4850c12e75bbd08fc0ae507c9553"
+      },
+      {
+        "path": "internal/apps/docs/testdata/browser_test.mjs",
+        "sha256": "8dd918a536ff12d248db6c44c02c0957f8625d379fb316f8c3184488030ce22b"
+      }
+    ]
+  },
+  "publication": "Prepared for user-authorized PR publication; PR event checks will be assessed separately. No merge or auto-merge is authorized.",
+  "stages": {
+    "design": {
+      "state": "completed",
+      "verdict": "accepted",
+      "snapshot": {
+        "repository": "gosuda/sloplint",
+        "commit": "63f8d62557caea32a07c077f432c4f0e1f85d18a",
+        "path": "ci-tools/flats-review/D3.md",
+        "sha256": "2b658a28d5524575b4cad9c77ea03ac37a960f94eec2df609212b0d8e4f998e4"
+      },
+      "receipt": {
+        "commit": "28143b7a1a3549a61a0b1ca6837c13e69b764af9",
+        "path": "ci-tools/flats-review/D3-review.md",
+        "sha256": "28d115a78c3037eb32e66015125df53090ee5a5ad3949a58448dab6d9697191d",
+        "reviewer_model": "gpt-6.2-sol",
+        "session": "/root/bitcoin_round7/flats_design_review"
+      }
+    },
+    "implementation": {
+      "state": "completed",
+      "verdict": "accepted",
+      "snapshot": "4c3e0652b6d1a93c4d4a8cac93b79beaf315f2cc",
+      "tree": "6eec14666cf6b71d56f686a7f7709b0527d53b8f",
+      "receipt": {
+        "head": "b490f862eda77ff7cf4052d86b6489096f09b603",
+        "path": "ci-tools/flats-review/editor-implementation-review.md",
+        "sha256": "b438fc0954879e3c4a944e922d1e2b574a7bc674ab94ab26511b4ef6c9e2a504"
+      },
+      "report": {
+        "head": "9826c32c42194bbcbdc4c0a4f8c4a2c59d711428",
+        "path": "ci-tools/flats-review/editor-implementation.json"
+      }
+    },
+    "testing": {
+      "state": "completed",
+      "verdict": "accepted",
+      "snapshot": "4c3e0652b6d1a93c4d4a8cac93b79beaf315f2cc",
+      "tree": "6eec14666cf6b71d56f686a7f7709b0527d53b8f",
+      "receipt": {
+        "head": "b2b60fdd08e54acac19f8f09aaeb83f278a10218",
+        "path": "ci-tools/flats-review/editor-testing-review.md",
+        "sha256": "4de723420ac14041ddc54a294f8090ef2879141a7a5cd5fb1d3f362630a33754"
+      },
+      "report": {
+        "head": "20b1fbe6dd66f28e3b1dc3c8c4b44e94b466cecb",
+        "path": "ci-tools/flats-review/editor-testing.json",
+        "sha256": "93827ce58aea2263bfd812684cacda0640e9aead9d58188adcfc3e9011c47b42"
+      },
+      "run": 45853897652,
+      "job": 140027094370
+    }
+  },
+  "authors": [
+    "gpt-6.2-astra /root/bitcoin_round7"
+  ],
+  "reviewers": [
+    "gpt-6.2-sol /root/bitcoin_round7/flats_design_review",
+    "gpt-6.2-sol /root/bitcoin_round7/flats_implementation_review",
+    "gpt-6.2-sol /root/bitcoin_round7/flats_testing_review"
+  ],
+  "model_evidence": "Fixed canonical model binding supplied by collaboration tool. No reviewer source changes or adopted algorithms.",
+  "budgets": {
+    "design_corrections_used": 3,
+    "design_corrections_limit": 3,
+    "invocation_retries_used": 1,
+    "invocation_retries_limit": 2,
+    "implementation_corrections_used": 0,
+    "implementation_corrections_limit": 3,
+    "testing_corrections_used": 1,
+    "testing_corrections_limit": 3
+  },
+  "preflight": {
+    "main": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
+    "head": "4c3e0652b6d1a93c4d4a8cac93b79beaf315f2cc",
+    "tree": "6eec14666cf6b71d56f686a7f7709b0527d53b8f",
+    "identity_checked": true,
+    "existing_prs": 0
+  },
+  "limitations": [
+    "Only Unit C is in this snapshot. Unit B's independent work and its unresolved product-specification conflict are separate.",
+    "The native DOM path is exercised in Chromium, not physical mobile OS keyboard hardware.",
+    "Full-browser access headers and cookies belong to the existing repository test host; this test establishes editor behavior, not a production human-approval boundary.",
+    "No merging or auto-merge is authorized."
+  ],
+  "source_delta_after_review": "none",
+  "open_findings": [],
+  "task_boundary": "Only Unit C is completed. Unit B and its unresolved product-specification conflict remain separate and incomplete."
+}
