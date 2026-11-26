@@ -21,7 +21,7 @@ Date: 2026-11-24.
   (`Cargo.toml`). The crate is unpublished on crates.io and npm; the
   `Cargo.toml` `repository` already names the upstream repository.
 - `sloplint-grammar.patch` carries the grammar delta vs the pinned
-  upstream: 53 hunks, none of them from an upstream PR. Moving the pin to
+  upstream: 52 hunks, none of them from an upstream PR. Moving the pin to
   `fefc2ef` changed the `grammar.js` patch indexes and hunk offsets.
   The extra hunk records a prior vendored change: `queries/highlights.scm`
   drops `(public_section) @keyword.import`, because the patch folds
