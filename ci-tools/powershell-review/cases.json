@@ -1,0 +1,149 @@
+[
+  {
+    "name": "anonymous_prefix",
+    "word": "$r\\one\\\"$id\"",
+    "longest": 5,
+    "expected": "__ROOT__\\one\\__ID__",
+    "source": "Write-Host $r\\one\\\"$id\"\n"
+  },
+  {
+    "name": "long_anonymous_prefix",
+    "word": "$long_root_name\\one\\\"$id\"",
+    "longest": 5,
+    "expected": "__ROOT__\\one\\__ID__",
+    "source": "Write-Host $long_root_name\\one\\\"$id\"\n"
+  },
+  {
+    "name": "braced_prefix",
+    "word": "${r/part}\\one\\\"$id\"",
+    "longest": 5,
+    "expected": "__ROOT__\\one\\__ID__",
+    "source": "Write-Host ${r/part}\\one\\\"$id\"\n"
+  },
+  {
+    "name": "scoped_prefix",
+    "word": "$env:TEMP\\one\\\"$id\"",
+    "longest": 5,
+    "expected": "__ROOT__\\one\\__ID__",
+    "source": "Write-Host $env:TEMP\\one\\\"$id\"\n"
+  },
+  {
+    "name": "verbatim_backtick",
+    "word": "$r/'abc`defgh'\"$id\"",
+    "longest": 10,
+    "expected": "__ROOT__/abc`defgh__ID__",
+    "source": "Write-Host $r/'abc`defgh'\"$id\"\n"
+  },
+  {
+    "name": "adjacent_quote_modes",
+    "word": "$r/\"abc\"'defgh'\"$id\"",
+    "longest": 9,
+    "expected": "__ROOT__/abcdefgh__ID__",
+    "source": "Write-Host $r/\"abc\"'defgh'\"$id\"\n"
+  },
+  {
+    "name": "verbatim_then_expandable",
+    "word": "$r/'abc'\"defgh$id\"",
+    "longest": 9,
+    "expected": "__ROOT__/abcdefgh__ID__",
+    "source": "Write-Host $r/'abc'\"defgh$id\"\n"
+  },
+  {
+    "name": "verbatim_doubled_quote",
+    "word": "$r/'abc''def'\"$id\"",
+    "longest": 8,
+    "expected": "__ROOT__/abc'def__ID__",
+    "source": "Write-Host $r/'abc''def'\"$id\"\n"
+  },
+  {
+    "name": "expandable_doubled_quote",
+    "word": "$r/\"abc\"\"def$id\"",
+    "longest": 8,
+    "expected": "__ROOT__/abc\"def__ID__",
+    "source": "Write-Host $r/\"abc\"\"def$id\"\n"
+  },
+  {
+    "name": "dynamic_boundary",
+    "word": "$r/abc\"$id\"defgh",
+    "longest": 5,
+    "expected": "__ROOT__/abc__ID__defgh",
+    "source": "Write-Host $r/abc\"$id\"defgh\n"
+  },
+  {
+    "name": "verbatim_dollar",
+    "word": "$r/'abc$id'\"$id\"",
+    "longest": 7,
+    "expected": "__ROOT__/abc$id__ID__",
+    "source": "Write-Host $r/'abc$id'\"$id\"\n"
+  },
+  {
+    "name": "verbatim_backtick_dollar",
+    "word": "$r/'abc`$id'\"$id\"",
+    "longest": 8,
+    "expected": "__ROOT__/abc`$id__ID__",
+    "source": "Write-Host $r/'abc`$id'\"$id\"\n"
+  },
+  {
+    "name": "bare_escape",
+    "word": "$r/ab`tcdefgh\"$id\"",
+    "longest": 6,
+    "expected": "__ROOT__/ab\tcdefgh__ID__",
+    "source": "Write-Host $r/ab`tcdefgh\"$id\"\n"
+  },
+  {
+    "name": "expandable_escape",
+    "word": "$r/\"ab`tcdefgh$id\"",
+    "longest": 6,
+    "expected": "__ROOT__/ab\tcdefgh__ID__",
+    "source": "Write-Host $r/\"ab`tcdefgh$id\"\n"
+  },
+  {
+    "name": "verbatim_escape_text",
+    "word": "$r/'ab`tcdefgh'\"$id\"",
+    "longest": 11,
+    "expected": "__ROOT__/ab`tcdefgh__ID__",
+    "source": "Write-Host $r/'ab`tcdefgh'\"$id\"\n"
+  },
+  {
+    "name": "only_anonymous_variable",
+    "word": "$r/abcdefgh",
+    "longest": 9,
+    "expected": "__ROOT__/abcdefgh",
+    "source": "Write-Host $r/abcdefgh\n"
+  },
+  {
+    "name": "short_anonymous_path",
+    "word": "$r/x",
+    "longest": 2,
+    "expected": "__ROOT__/x",
+    "source": "Write-Host $r/x\n"
+  },
+  {
+    "name": "bare_inner_variable",
+    "word": "$r/foo$middle/bar\"$id\"",
+    "longest": 4,
+    "expected": "__ROOT__/foo__MID__/bar__ID__",
+    "source": "Write-Host $r/foo$middle/bar\"$id\"\n"
+  },
+  {
+    "name": "unicode_literal",
+    "word": "$r/'café😀'\"$id\"",
+    "longest": 6,
+    "expected": "__ROOT__/café😀__ID__",
+    "source": "Write-Host $r/'café😀'\"$id\"\n"
+  },
+  {
+    "name": "unicode_variable",
+    "word": "$r/foo$π/bar\"$id\"",
+    "longest": 4,
+    "expected": "__ROOT__/foo__PI__/bar__ID__",
+    "source": "Write-Host $r/foo$π/bar\"$id\"\n"
+  },
+  {
+    "name": "subexpression_boundary",
+    "word": "$r/ab\"$(Get-Date)\"cdefgh",
+    "longest": 6,
+    "expected": "__ROOT__/ab__DATE__cdefgh",
+    "source": "Write-Host $r/ab\"$(Get-Date)\"cdefgh\n"
+  }
+]

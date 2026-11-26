@@ -1,0 +1,15 @@
+{
+  "repo": "gosuda/sloplint",
+  "head": "948fa8b3ec6a76a02dcc2d9cb95410404c672de9",
+  "base": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+  "tree": "58277501769605c6c1dee222263094404a3d52d5",
+  "patch_sha256": "ec7fe998fab626875811c21b75d876ef4aa71fddc47e6b4c8e11569bdb682850",
+  "files": {
+    "crates/sloplint-syntax/src/lang/powershell/calls.rs": "0681b1db17efe592cafacbab29519798837ca4fce1a84b3c0fba65580be24a59",
+    "crates/sloplint-syntax/tests/grammar_gaps.rs": "61fe8fbd7525261f3130aa69cb2e0ce64d2d457104bc6a04c5806d1204e2ef59",
+    "crates/sloplint-syntax/tests/grammar_gaps/powershell_literal_runs.rs": "7593dd8ae32acc84676fef2902a794dfefa4366c241fcdceda3a0469513aeb36",
+    "crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/d.ps1": "bc4b837760e8ff17ace83d9559381caba2a10d49f51e3ef4d8d6d26a0e23d3e4",
+    "crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/g.ps1": "353151aada9eeda7b4f3e093fa7a5dd426853eb547ad73dc90a3f2017b3af9bb",
+    "crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/expected.txt": "493f08a76f0ae5f67d3e1940aca758d5df931c31a9e990f41ea5561089c2e170"
+  }
+}

@@ -1,0 +1,527 @@
+diff --git a/crates/sloplint-syntax/src/lang/powershell/calls.rs b/crates/sloplint-syntax/src/lang/powershell/calls.rs
+--- a/crates/sloplint-syntax/src/lang/powershell/calls.rs
++++ b/crates/sloplint-syntax/src/lang/powershell/calls.rs
+@@ -174,30 +174,130 @@
+     node
+ }
+ 
++#[derive(Clone, Copy, PartialEq, Eq)]
++enum PsWordQuote {
++    Bare,
++    Expandable,
++    Verbatim,
++}
++
++// The grammar hides a variable-path word's leading variable in an anonymous
++// token. Scan that name without including its following path separator.
++fn ps_word_variable_end(raw: &str) -> Option<usize> {
++    let tail = raw.strip_prefix('$')?;
++    let first = tail.chars().next()?;
++    if first == '{' {
++        let mut escaped = false;
++        for (offset, ch) in tail.char_indices().skip(1) {
++            if escaped {
++                escaped = false;
++            } else if ch == '`' {
++                escaped = true;
++            } else if ch == '}' {
++                return Some(1 + offset + ch.len_utf8());
++            }
++        }
++        return None;
++    }
++    if matches!(first, '$' | '?' | '^') {
++        return Some(1 + first.len_utf8());
++    }
++    if first != '_' && !first.is_alphanumeric() {
++        return None;
++    }
++    let mut end = 1 + first.len_utf8();
++    for (offset, ch) in tail.char_indices().skip(1) {
++        if ch == ':' && tail[offset..].starts_with("::") {
++            break;
++        }
++        if !ch.is_alphanumeric() && !matches!(ch, '_' | '?' | ':') {
++            break;
++        }
++        end = 1 + offset + ch.len_utf8();
++    }
++    Some(end)
++}
++
++// Named AST holes are disjoint and sorted, and their byte offsets are relative
++// to this UTF-8 word. Quotes change lexical mode without breaking a literal run.
++fn ps_word_static_run(raw: &str, dynamics: &[(usize, usize)]) -> u32 {
++    let mut quote = PsWordQuote::Bare;
++    let mut offset = 0;
++    let mut dynamic = 0;
++    let mut run = 0;
++    let mut best = 0;
++    while offset < raw.len() {
++        if let Some(&(start, end)) = dynamics.get(dynamic)
++            && offset == start
++        {
++            best = best.max(run);
++            run = 0;
++            offset = end;
++            dynamic += 1;
++            continue;
++        }
++        let ch = raw[offset..].chars().next().expect("offset is before the end");
++        offset += ch.len_utf8();
++        if quote == PsWordQuote::Verbatim {
++            if ch == '\'' {
++                if raw[offset..].starts_with('\'') {
++                    run += 1;
++                    offset += 1;
++                } else {
++                    quote = PsWordQuote::Bare;
++                }
++            } else {
++                run += 1;
++            }
++            continue;
++        }
++        if ch == '`' {
++            best = best.max(run);
++            run = 0;
++            if let Some(escaped) = raw[offset..].chars().next() {
++                offset += escaped.len_utf8();
++            }
++        } else if ch == '\'' && quote == PsWordQuote::Bare {
++            quote = PsWordQuote::Verbatim;
++        } else if ch == '"' {
++            if quote == PsWordQuote::Expandable && raw[offset..].starts_with('"') {
++                run += 1;
++                offset += 1;
++            } else {
++                quote = if quote == PsWordQuote::Bare {
++                    PsWordQuote::Expandable
++                } else {
++                    PsWordQuote::Bare
++                };
++            }
++        } else if ch == '$'
++            && let Some(end) = ps_word_variable_end(&raw[offset - 1..])
++        {
++            best = best.max(run);
++            run = 0;
++            offset += end - 1;
++        } else {
++            run += 1;
++        }
++    }
++    narrow(best.max(run))
++}
++
+ fn ps_generic_static(cx: &Cx<'_, '_>, node: Node<'_>) -> u32 {
+     let mut dynamics = Vec::new();
+     let mut stack = vec![node];
+     while let Some(current) = stack.pop() {
+         if current.kind() == "variable" || current.kind() == "sub_expression" {
+-            dynamics.push(current);
++            dynamics.push((
++                current.start_byte() - node.start_byte(),
++                current.end_byte() - node.start_byte(),
++            ));
+         } else {
+             stack.extend(named_children(current));
+         }
+     }
+-    dynamics.sort_by_key(|d| d.start_byte());
+-    let end = node.end_byte();
+-    let mut gaps = Vec::new();
+-    let mut cursor = node.start_byte();
+-    for dynamic in &dynamics {
+-        gaps.push(slice(
+-            cx.src,
+-            cursor.min(dynamic.start_byte()),
+-            dynamic.start_byte(),
+-        ));
+-        cursor = cursor.max(dynamic.end_byte());
+-    }
+-    gaps.push(slice(cx.src, cursor.min(end), end));
+-    longest_static_chunk_with_escape(&gaps, b'`')
++    dynamics.sort_unstable_by_key(|&(start, _)| start);
++    ps_word_static_run(text(cx, node), &dynamics)
+ }
+ 
+ fn ps_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
+@@ -205,7 +305,13 @@
+     match node.kind() {
+         "string_literal" => ps_string_shape(cx, node),
+         "generic_token" => {
+-            if subtree_has_kind(node, "variable") || subtree_has_kind(node, "sub_expression") {
++            let raw = text(cx, node);
++            let variable_path = ps_word_variable_end(raw)
++                .is_some_and(|end| matches!(raw.as_bytes().get(end), Some(b'/' | b'\\')));
++            if variable_path
++                || subtree_has_kind(node, "variable")
++                || subtree_has_kind(node, "sub_expression")
++            {
+                 ArgShape::Concat {
+                     longest_static: ps_generic_static(cx, node),
+                 }
+diff --git a/crates/sloplint-syntax/tests/grammar_gaps.rs b/crates/sloplint-syntax/tests/grammar_gaps.rs
+--- a/crates/sloplint-syntax/tests/grammar_gaps.rs
++++ b/crates/sloplint-syntax/tests/grammar_gaps.rs
+@@ -56,6 +56,8 @@
+ mod php;
+ #[path = "grammar_gaps/powershell.rs"]
+ mod powershell;
++#[path = "grammar_gaps/powershell_literal_runs.rs"]
++mod powershell_literal_runs;
+ #[path = "grammar_gaps/powershell_syntax.rs"]
+ mod powershell_syntax;
+ #[path = "grammar_gaps/powershell_words.rs"]
+diff --git a/crates/sloplint-syntax/tests/grammar_gaps/powershell_literal_runs.rs b/crates/sloplint-syntax/tests/grammar_gaps/powershell_literal_runs.rs
+new file mode 100644
+--- /dev/null
++++ b/crates/sloplint-syntax/tests/grammar_gaps/powershell_literal_runs.rs
+@@ -0,0 +1,322 @@
++//! Interpolated command words must measure the literal value, excluding
++//! hidden variable prefixes and quote syntax. Named AST holes still delimit
++//! subexpressions; backticks are literal inside single-quoted segments.
++
++use sloplint_core::facts::ArgShape;
++
++use super::powershell::{call, run_clean};
++
++#[test]
++fn anonymous_prefix() {
++    let analysis = run_clean("Write-Host $r\\one\\\"$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 5 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn long_anonymous_prefix() {
++    let analysis = run_clean("Write-Host $long_root_name\\one\\\"$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 5 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn braced_prefix() {
++    let analysis = run_clean("Write-Host ${r/part}\\one\\\"$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 5 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn scoped_prefix() {
++    let analysis = run_clean("Write-Host $env:TEMP\\one\\\"$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 5 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn verbatim_backtick() {
++    let analysis = run_clean("Write-Host $r/'abc`defgh'\"$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 10 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn adjacent_quote_modes() {
++    let analysis = run_clean("Write-Host $r/\"abc\"'defgh'\"$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 9 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn verbatim_then_expandable() {
++    let analysis = run_clean("Write-Host $r/'abc'\"defgh$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 9 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn verbatim_doubled_quote() {
++    let analysis = run_clean("Write-Host $r/'abc''def'\"$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 8 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn expandable_doubled_quote() {
++    let analysis = run_clean("Write-Host $r/\"abc\"\"def$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 8 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn dynamic_boundary() {
++    let analysis = run_clean("Write-Host $r/abc\"$id\"defgh\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 5 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn verbatim_dollar() {
++    let analysis = run_clean("Write-Host $r/'abc$id'\"$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 7 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn verbatim_backtick_dollar() {
++    let analysis = run_clean("Write-Host $r/'abc`$id'\"$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 8 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn bare_escape() {
++    let analysis = run_clean("Write-Host $r/ab`tcdefgh\"$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 6 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn expandable_escape() {
++    let analysis = run_clean("Write-Host $r/\"ab`tcdefgh$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 6 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn verbatim_escape_text() {
++    let analysis = run_clean("Write-Host $r/'ab`tcdefgh'\"$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 11 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn only_anonymous_variable() {
++    let analysis = run_clean("Write-Host $r/abcdefgh\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 9 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn short_anonymous_path() {
++    let analysis = run_clean("Write-Host $r/x\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 2 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn bare_inner_variable() {
++    let analysis = run_clean("Write-Host $r/foo$middle/bar\"$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 4 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn unicode_literal() {
++    let analysis = run_clean("Write-Host $r/'café😀'\"$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 6 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn unicode_variable() {
++    let analysis = run_clean("Write-Host $r/foo$π/bar\"$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 4 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn subexpression_boundary() {
++    let analysis = run_clean("Write-Host $r/ab\"$(Get-Date)\"cdefgh\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 6 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
+diff --git a/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/d.ps1 b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/d.ps1
+new file mode 100644
+--- /dev/null
++++ b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/d.ps1
+@@ -0,0 +1,3 @@
++function Invoke-Log($r, $id) {
++  Write-Host $r\one\"$id"
++}
+diff --git a/crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/g.ps1 b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/g.ps1
+new file mode 100644
+--- /dev/null
++++ b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/g.ps1
+@@ -0,0 +1,3 @@
++function Invoke-Log($r, $id) {
++  Write-Host $r/'abc`defgh'"$id"
++}
+diff --git a/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/expected.txt b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/expected.txt
+--- a/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/expected.txt
++++ b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/expected.txt
+@@ -1,3 +1,4 @@
+ a.ps1:2 info grep/contiguous-log-literal
+ b.ps1:2 info grep/contiguous-log-literal
+ c.ps1:2 info grep/contiguous-log-literal
++d.ps1:2 info grep/contiguous-log-literal
