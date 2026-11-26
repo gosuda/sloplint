@@ -3,8 +3,9 @@
 //! recovery node sets `has_error` without producing a cursor-visible error
 //! position.
 //!
-//! `vendor/tree-sitter-alloy` carries no grammar patch (the upstream corpus
-//! passes unmodified at the pinned revision), so these are control tests:
+//! `vendor/tree-sitter-alloy` carries a 19-hunk local patch over the
+//! upstream source pinned in its SLOPLINT.md. The grammar package is
+//! unpublished, so these are not control tests against a pristine tree:
 //! they pin the facts the Alloy adapter reads, and a shape regression in a
 //! re-vendor shows up as a changed fact, not only as a new error.
 
