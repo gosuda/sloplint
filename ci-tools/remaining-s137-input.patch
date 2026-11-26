@@ -4810,7 +4810,7 @@ diff --git a/vendor/tree-sitter-powershell/SLOPLINT.md b/vendor/tree-sitter-powe
 diff --git a/vendor/tree-sitter-powershell/src/scanner.c b/vendor/tree-sitter-powershell/src/scanner.c
 --- a/vendor/tree-sitter-powershell/src/scanner.c
 +++ b/vendor/tree-sitter-powershell/src/scanner.c
-@@ -1,216 +1,268 @@
+@@ -1,216 +1,240 @@
 -// Copyright (c) Microsoft Corporation. All rights reserved.
 -// Licensed under the MIT License. See the LICENSE file in the project root for full license information.
 -
@@ -5227,35 +5227,7 @@ diff --git a/vendor/tree-sitter-powershell/src/scanner.c b/vendor/tree-sitter-po
 +        lexer->advance(lexer, false);
 +        saw_newline = true;
 +    }
-+    if (!saw_newline || lexer->lookahead != '    if (valid_symbols[METHOD_BLOCK_HEAD] &&
-+        (lexer->lookahead == '.' || lexer->lookahead == ':')) {
-+        return scan_method_block_head(lexer);
-+    }
-+    if (scan_loose_dollar(payload, lexer, valid_symbols)) return true;
-+    // The statement terminator consumes nothing, so it must be tried last: when
-+    // both are valid, a `--` has to win over the empty terminator.
-+    if (scan_bare_dashes(payload, lexer, valid_symbols)) return true;
-+    return scan_statement_terminator(payload, lexer, valid_symbols);
-+}
-+
-+void *tree_sitter_powershell_external_scanner_create()
-+{
-+    return NULL;
-+}
-+
-+void tree_sitter_powershell_external_scanner_destroy(void *p)
-+{
-+}
-+
-+unsigned tree_sitter_powershell_external_scanner_serialize(void *payload, char *buffer)
-+{
-+    return 0;
-+}
-+
-+void tree_sitter_powershell_external_scanner_deserialize(void *payload, const char *buffer, unsigned length)
-+{
-+}
-+) return false;
++    if (!saw_newline || lexer->lookahead != '$') return false;
 +    lexer->mark_end(lexer);
 +    lexer->result_symbol = HERE_STRING_NEWLINE;
 +    return true;

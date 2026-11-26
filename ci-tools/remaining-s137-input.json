@@ -1,13 +1,13 @@
 {
   "head": "948fa8b3ec6a76a02dcc2d9cb95410404c672de9",
   "base": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
-  "draft_tree": "a62a0dcdb397b686c4d22098a82303d3b305beae",
-  "patch_sha256": "0b3da4714d94c63fee417a12ed7039303b0edfddfe518f21bbf21cd0fe621346",
+  "draft_tree": "d7471d6bc8f5e4cbf21308013dc4f07b05cfb239",
+  "patch_sha256": "904cd613918a99e9732135e28ea43474c3470c1cebf24dbeb2d54de4f1c6fd76",
   "input_files": {
     "vendor/tree-sitter-powershell/grammar.js": "2919aa8cfe138655174201d2258022807cc81dfc00bacdcbc73ea4fa35966250",
     "crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs": "05df885ffebdc75f199fe248f0e840ab724b32d0d16e455ed7307ee21aaa352a",
     "vendor/tree-sitter-powershell/test/corpus/sloplint_multiline_boundaries.txt": "4f271f25ee9cb9b1144c6c16a9cea9d76631636d9628496e2a7a1f14cd2d6d77",
     "vendor/tree-sitter-powershell/SLOPLINT.md": "e6795820920d9c2730d48fb87be3f29d61952b25d3e72bcdfcd134118639accf",
-    "vendor/tree-sitter-powershell/src/scanner.c": "8de1a74988354d235c26c399ec4536ba963c4f6fd6c667a794bff9a240fbc870"
+    "vendor/tree-sitter-powershell/src/scanner.c": "c5fc60ea7427b7e0605e0818354c1d125ca7a4210112f538351c465de09c3699"
   }
 }

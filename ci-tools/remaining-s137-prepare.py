@@ -52,6 +52,7 @@ def parser_cases(binary: Path, cases: list[dict[str, str | bool]], phase: str) -
         path = root / f"case-{index}.ps1"
         path.write_bytes(str(case["source"]).encode())
         result = subprocess.run([str(binary), "parse", "--quiet", str(path)], cwd=VENDOR, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False, timeout=30)
+        assert "Failed to load language" not in result.stdout, result.stdout
         accepted = result.returncode == 0
         record: dict[str, str | bool | int] = {"id": str(case["id"]), "accepted": accepted, "expected": bool(case["accepted"]), "exit": result.returncode}
         records.append(record)
@@ -94,6 +95,7 @@ def main() -> None:
     assert git("write-tree") == manifest["draft_tree"]
     for path, digest in cast(dict[str, str], manifest["input_files"]).items():
         assert hashlib.sha256((SOURCE / path).read_bytes()).hexdigest() == digest, path
+    run("scanner-syntax", ["cc", "-fsyntax-only", "-std=c11", "-I", str(VENDOR / "src"), str(VENDOR / "src/scanner.c")])
     run("generate", [str(tree_sitter), "generate"], cwd=VENDOR)
     assert parser_cases(tree_sitter, cases, "candidate") == []
     run("corpus-update", [str(tree_sitter), "test", "--update"], cwd=VENDOR)
