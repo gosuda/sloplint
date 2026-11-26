@@ -25,6 +25,7 @@ jobs:
           repository: gosuda/flats
           ref: 4c3e0652b6d1a93c4d4a8cac93b79beaf315f2cc
           path: candidate
+          fetch-depth: 2
           persist-credentials: false
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:

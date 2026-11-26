@@ -31,6 +31,7 @@ def git(*args: str) -> str:
 def identity() -> None:
     assert git("rev-parse", "HEAD") == manifest["head"]
     assert git("write-tree") == manifest["tree"]
+    assert git("rev-parse", "HEAD^") == manifest["base"]
     assert git("status", "--porcelain", "--untracked-files=all") == ""
     assert subprocess.check_output(["go", "env", "GOCACHEPROG"], cwd=root, env=environment, text=True).strip() == ""
     for item in cast(list[dict[str, str]], manifest["files"]):
