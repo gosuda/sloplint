@@ -1,0 +1,45 @@
+{
+  "scope": "Completed D3 Unit C editor follow-up",
+  "pr": "https://github.com/gosuda/flats/pull/273",
+  "head": "4c3e0652b6d1a93c4d4a8cac93b79beaf315f2cc",
+  "tree": "6eec14666cf6b71d56f686a7f7709b0527d53b8f",
+  "design": "accepted",
+  "implementation": "accepted",
+  "testing": "accepted",
+  "final_run": 45853897652,
+  "final_job": 140027094370,
+  "final_producer": "e1caad46023181d574f2f07cbfe7b4bd04dca60b",
+  "final_artifact": 15135316102,
+  "final_zip_sha256": "417fdb108bfab478de6bed0694da37ccac22b94722648bc736ff64120aa32e51",
+  "task_report": {
+    "head": "5b4ae637f8e730905bbec06a09a24b1cd0debc6f",
+    "path": "ci-tools/flats-review/editor-task-report.json"
+  },
+  "review_receipts": [
+    {
+      "head": "b490f862eda77ff7cf4052d86b6489096f09b603",
+      "path": "ci-tools/flats-review/editor-implementation-review.md",
+      "sha256": "b438fc0954879e3c4a944e922d1e2b574a7bc674ab94ab26511b4ef6c9e2a504"
+    },
+    {
+      "head": "b2b60fdd08e54acac19f8f09aaeb83f278a10218",
+      "path": "ci-tools/flats-review/editor-testing-review.md",
+      "sha256": "4de723420ac14041ddc54a294f8090ef2879141a7a5cd5fb1d3f362630a33754"
+    }
+  ],
+  "retired_paths": [
+    "ci-tools/flats-backspace/browser_test.mjs",
+    "ci-tools/flats-backspace/candidate-build.mjs",
+    "ci-tools/flats-backspace/final-verify.py",
+    "ci-tools/flats-backspace/inspect.py",
+    "ci-tools/flats-backspace/manifest.json",
+    "ci-tools/flats-backspace/repository-browser.mjs",
+    "ci-tools/flats-backspace/testing-manifest.json",
+    "ci-tools/flats-backspace/testing-verify.py",
+    "ci-tools/flats-backspace/verify.py",
+    ".github/workflows/flats-backspace-evidence.yml"
+  ],
+  "retirement": "Remove completed temporary producer files additively; all native recipes and source proofs remain available in immutable history. PR event CI runs separately.",
+  "pr_mergeable": true,
+  "pr_mergeable_state": "unstable"
+}
