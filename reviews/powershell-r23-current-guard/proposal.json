@@ -1,0 +1,50 @@
+{
+  "base": "e7ee97e84246863766ec7465777a035134533feb",
+  "base_tree": "5d2a547a693d073ad9739311e7b653baa96a08d6",
+  "status": "Authored diagnostic proposal only; native baseline and candidate gates pending.",
+  "scope": "Replace unconditional comment command element with a zero-width context guard after a separator consumed by that same command argument. Preserve the externally authored format-mark token and all global extras/separator rules.",
+  "files": {
+    "grammar_sha256": "ce73c3d494db81f5e873c2234abb63c90bf0e65b5d969c767c353651ca214a48",
+    "scanner_sha256": "6c29f1be37ed4fd2cc0b03016404a9acc3510749106357f764d7a156c0140065"
+  },
+  "hypotheses": [
+    {
+      "weight": 0.85,
+      "claim": "Unconditional comment element causes both new regressions.",
+      "falsifier": "Exact pre-external57 source has the same detached redirect target."
+    },
+    {
+      "weight": 0.15,
+      "claim": "An independent optional-target ambiguity remains.",
+      "falsifier": "Removing unconditional comment while preserving old context restores native target ownership."
+    }
+  ],
+  "prefix_receipt": {
+    "producer": "0f029807a43153c6d8e97fc2a23f1cb47077e98a",
+    "run": 45907682159,
+    "job": 140208249794,
+    "artifact": 15158408204,
+    "zip_sha256": "cb2c8c723cfe341fe4b02a53129e8646dd890e07cc612279788648f955744f24",
+    "payload_sha256": "83c698351168269fead93a42f5cdc69088e7dc80ad16ffb04128843509a9b5f2",
+    "gzip_sha256": "2c479f8cbd8dc46c8159341ad156d9e05bccf00f7abe63a6ff123e754177a4f4",
+    "payload_bytes": 494578,
+    "gzip_bytes": 29622,
+    "base64_bytes": 39496,
+    "formatted_observer_sha256": "85e21f1ece01d8d06778deec011b217ae7458c3893c2336929449cefe522b3ee"
+  },
+  "constraints": [
+    "Keep existing anonymous separators and public array/list/member shapes.",
+    "Guard requires its own preceding separator in command argument context; it must not close a pending redirection.",
+    "Append external slot7 only; no scanner state.",
+    "Entry mark stays before lookahead; consuming failed probes return directly.",
+    "Native newline/negative/bare/stop-parsing controls retain old behavior.",
+    "Preserve 230 exact target, historical query, continuation and comment contracts."
+  ],
+  "observed_prefixes": [
+    "---",
+    "--9",
+    "---9"
+  ],
+  "guard_baseline_run": 45907682159,
+  "reconciliation_run": 45908737910
+}
