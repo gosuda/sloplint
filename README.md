@@ -19,7 +19,7 @@ It is written for developers and for coding agents. The default `agent` output f
 - **4 strictness profiles** (`minimal`, `basic`, `standard`, `strict`), each monotone in coverage and thresholds. A rule stays on at `standard` only when at least 80 percent of sampled findings were judged true after tightening; new rules without measured precision start as strict-only advisories (see [Precision](#precision)).
 - **Ratchet mode** freezes today's findings into a baseline, so only new debt fails the build.
 
-sloplint works from syntax alone: tree-sitter parses each file and per-language heuristics lower the tree into facts, so results are approximate by design. It is not a typechecker or a security analyzer, and it applies no patches itself; every finding carries a `fix:` line describing the change a human or agent should make. In C#, property accessors, operators, conversion operators, and destructors count as functions.
+sloplint works from syntax alone: tree-sitter parses each file and per-language heuristics lower the tree into facts, so results are approximate by design. It is not a typechecker or a security analyzer, and it applies no patches itself; in the default `agent` format every finding carries a `fix:` line describing the change a human or agent should make. In C#, property accessors, operators, conversion operators, and destructors count as functions.
 
 ## Quick start
 
@@ -139,6 +139,31 @@ sloplint check --mode ratchet   # reports only findings absent from the baseline
 
 `sloplint baseline` refuses to replace an existing regular file that is not a sloplint baseline, such as `sloplint.toml` or a source file: it exits 2 and leaves the file untouched; delete the file to record a baseline there.
 
+### What sloplint writes
+
+`check` writes nothing to the project tree: findings go to stdout, and the
+per-user cache lives outside the checkout. In the default `agent` format every
+finding carries a `fix:` line describing the change a human or agent should
+make (the `json` format carries the same text in its `fix` field, and the
+`human` format shows it as a help annotation); applying it is always opt-in
+and never done by `check`. Repeated runs on a clean tree print
+byte-identical output and change nothing.
+
+`baseline` writes exactly one file in the project tree: the path named by
+`project.baseline`, relative to the project root. The per-user cache outside
+the checkout is still read and written unless `--no-cache` is passed, even on
+runs that refuse the baseline file. Recording is opt-in: only `baseline`
+writes the baseline file, and only `init` writes the configuration. The file
+is replaced atomically, never rewritten in place: a linked reader keeps
+seeing the complete previous baseline bytes, but the replacement breaks the
+replaced file's hard-link group, so a hard-linked sibling keeps the old bytes
+with one fewer link. Recording twice without changes writes byte-identical
+content, and ratchet runs against the same tree report byte-identical
+results. `check` never touches sources, so their link counts hold.
+
+`sloplint init` writes exactly `sloplint.toml` in the current directory. It
+refuses when the name already exists and leaves no temporary file behind.
+
 The cache is per-user and never stored in the checkout. It lives in `sloplint/<hash of the project root>/cache-v2/` under `$XDG_CACHE_HOME` when that is absolute, else under `~/.cache`, `~/Library/Caches`, or `%LOCALAPPDATA%`. The key includes a hash of the running executable. `--no-cache` skips it. A damaged or mismatched cache falls back to a fresh analysis.
 
 sloplint warns and runs without the cache when the cache directory is a symlink, is not a directory, is writable by group or others, or sits inside the project root, when no home directory is set, or when the running executable cannot be read.
@@ -181,7 +206,7 @@ When `complexity/cognitive-depth` and `complexity/nesting-depth` report the same
 
 `--format agent` (default, stable machine-parseable text), `--format human` (annotated snippets with color), `--format json` (one document: findings, rules fired, summary).
 
-Agent lines read `path:line:col: <rung>/<confidence>: message [rule]`, followed by `context:` and `fix:` lines. The summary reads `summary: strictness=S files=N findings=N blocker=N critical=N major=N minor=N info=N baselined=N stale=N skipped=N`. JSON findings carry `"severity"` and `"confidence"`; the JSON summary carries one count per rung. Human output uses one color per rung. `sloplint rules` shows `level`, `confidence`, `roles=entry:..,test:..,support:..,bench:..,example:..`, and cut points for graded rules.
+Agent lines read `path:line:col: <rung>/<confidence>: message [rule]`, followed by `context:` and `fix:` lines. The summary reads `summary: strictness=S files=N findings=N blocker=N critical=N major=N minor=N info=N baselined=N stale=N skipped=N`. JSON findings carry `"severity"`, `"confidence"`, and `"fix"`; the JSON summary carries one count per rung. Human output uses one color per rung. `sloplint rules` shows `level`, `confidence`, `roles=entry:..,test:..,support:..,bench:..,example:..`, and cut points for graded rules.
 
 ### Skipped files
 

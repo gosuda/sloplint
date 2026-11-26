@@ -20,16 +20,34 @@ pub struct Cli {
 #[derive(Debug, Subcommand)]
 pub enum Command {
     /// Lint the project and report findings (the default).
+    ///
+    /// `check` writes nothing to the project tree: findings go to stdout and
+    /// the per-user cache lives outside the checkout. In the default `agent`
+    /// format every finding carries a `fix:` line describing the change a
+    /// human or agent should make (the `json` format carries the same text in
+    /// its `fix` field, and the `human` format shows it as a help
+    /// annotation); applying it is always opt-in and never done by `check`.
     Check(CheckArgs),
     /// Record the current findings as the ratchet baseline.
+    ///
+    /// Writes exactly one file in the project tree, the file named by
+    /// `project.baseline`, and refuses an existing file that is not a
+    /// sloplint baseline. The per-user cache outside the checkout is still
+    /// read and written unless `--no-cache` is passed, even when the baseline
+    /// file is refused. The file is replaced atomically, never rewritten in
+    /// place.
     Baseline(BaselineArgs),
     /// Show the effective rule settings.
     Rules(RulesArgs),
     /// Write a default sloplint.toml in the current directory.
+    ///
+    /// Refuses when the name already exists and leaves no temporary file
+    /// behind.
     Init,
 }
 
-/// Arguments of `check`.
+/// Arguments of `check`. `check` applies nothing itself: it reports findings
+/// and leaves every file in the project tree byte-identical.
 #[derive(Debug, Args)]
 pub struct CheckArgs {
     /// Paths whose findings are reported; every run analyzes the whole project root, but with no PATHS only findings under the current directory are reported (the whole root when the current directory is outside it).
@@ -57,7 +75,8 @@ pub struct CheckArgs {
     pub run: RunArgs,
 }
 
-/// Arguments of `baseline`.
+/// Arguments of `baseline`. Recording is opt-in: only `baseline` writes the
+/// baseline file, and only `init` writes the configuration.
 #[derive(Debug, Args)]
 pub struct BaselineArgs {
     /// Shared selection and cache options.
