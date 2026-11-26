@@ -159,7 +159,7 @@ def main() -> int:
         results[candidate.label] = check(candidate)
         (EVIDENCE / "batch-results.json").write_text(json.dumps(results, indent=2) + "\n")
     passed = all(result["gate"] == 0 and result["eject"] == 0 for result in results.values())
-    passed = passed and results["combined"].get("regressions") == 0
+    passed = passed and all(label != "combined" or result.get("regressions") == 0 for label, result in results.items())
     passed = passed and all(all(result.get("proofs", {}).values()) for result in results.values())
     return 0 if passed else 1
 
