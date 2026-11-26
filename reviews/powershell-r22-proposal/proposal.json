@@ -1,0 +1,19 @@
+{
+  "base": "83f73f04e7f20bf405dbf4c2de3bd5467c8010bb",
+  "base_tree": "703b3a5a445883598bfb7ef05c263a76d6629235",
+  "status": "Unverified source proposal; no maintained-ref change or source-gate claim.",
+  "guards": "Two branch-specific zero-width external symbols identify the next owned branch without a shared prefix before elseif repetition. Guards are outside public clause nodes and fields; all existing anonymous keywords remain unchanged.",
+  "source_sha256": {
+    "scanner": "2fd87acf1414f295545c435e0ca597cab2e361c3a7fe7975492e6989c46eefdb",
+    "grammar": "c99653ddd29abaa600d73e924d6de65ce00e0d2423c057638cb3c85875fa25df",
+    "notes": "ff4f974084a94b0ae3eaddcd0591137e9f63c64dad4a2dc4743d53de31ad1d1d",
+    "recovery_documentation": "8e477292d8adf63013524f06781d235e8e760aedeca42865f6fc2e227cb63610"
+  },
+  "native_receipt": {
+    "producer": "a263043efec225686eb474da637742e1129eabdc",
+    "run": 45888591536,
+    "job": 140145364637,
+    "artifact": 15151180936,
+    "zip_sha256": "0a76bd3c9df88fd1d3cb3243a58736082a53538421d8d78983cc84567b0e5569"
+  }
+}
