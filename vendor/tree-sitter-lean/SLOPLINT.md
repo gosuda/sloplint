@@ -1,19 +1,32 @@
 # tree-sitter-lean, vendored for sloplint
 
-Date: 2026-11-21.
+Date: 2026-11-24.
 
 ## Origin
 
 - Upstream: `https://github.com/Julian/tree-sitter-lean`, default branch
-  `main`, commit `0d28e5d6e8c4755f5df7ef9bde3b6ec6f59fae94` dated
-  2026-11-01 (`Merge pull request #30`, HEAD on 2026-11-19; the repository
-  has no tags and no releases).
+  `main`, commit `fefc2eff9a83eeb72cda44646709e40e33e09175` dated
+  2026-11-21 (`Merge pull request #36`, still HEAD on 2026-11-24; the
+  repository has no tags and no releases). The previous pin was
+  `0d28e5d6e8c4755f5df7ef9bde3b6ec6f59fae94` (2026-11-01, PR #30 merge);
+  the only change between the two is PR #36.
 - Licence: MIT (`LICENSE`: `Copyright (c) 2024 Julian Berman`).
+- String gaps (a backslash, a line break, and the next line's
+  indentation inside `"…"` and `s!"…"`) come from upstream PR #36
+  (issue #8): commit `5c56950` is applied with its authorship
+  (`grammar.js`, `test/corpus/literals.txt`). Its companion `d9736e6`
+  only regenerated upstream's parser, so the regeneration of the patched
+  grammar here replaces it.
 - Rust crate name and version are unchanged: `tree-sitter-lean 0.2.0`
   (`Cargo.toml`). The crate is unpublished on crates.io and npm; the
   `Cargo.toml` `repository` already names the upstream repository.
 - `sloplint-grammar.patch` carries the grammar delta vs the pinned
-  upstream. Round 2 (2026-11-21) covers, on top of the original
+  upstream: 54 hunks, none of them from an upstream PR. Moving the pin to
+  `fefc2ef` changed the `grammar.js` patch indexes and hunk offsets.
+  The extra hunk records a prior vendored change: `queries/highlights.scm`
+  drops `(public_section) @keyword.import`, because the patch folds
+  `public_section` into `section`, and a query naming a missing node does
+  not compile. Round 2 (2026-11-21) covers, on top of the original
   `open <ns> renaming a → b` fix:
   - `do`-block layout: `try … catch … finally` without separator tokens
     (the scanner now peeks clause keywords at same-indent and marks the
@@ -61,9 +74,9 @@ Date: 2026-11-21.
     until every enclosing block has closed. Each zero-width dedent pops
     one serialized indentation level; the final newline consumes input.
     This also preserves sibling statement separators without replay flags.
-  - Known upstream-parity gaps (identical ERROR on the pinned upstream,
-    unfixed by convention): `simpa using h`, `rcases h with ⟨…⟩`,
-    `first | …` alternation, `∀ᶠ`, a comma after a tactic in `by` blocks
+  - Known upstream-parity gaps: some tactic and modifier forms lack
+    dedicated nodes or produce errors. Examples include `simpa using h`,
+    `rcases h with ⟨…⟩`, `first | …` alternation, `∀ᶠ`, a comma after a tactic in `by` blocks
     (`by t, u` parses as `app(t, ERROR, u)` identically upstream), and
     `open … hiding`/`export` modifier words landing in
     `namespace`/`custom_command` nodes. (`open only Nat` now parses
@@ -71,15 +84,19 @@ Date: 2026-11-21.
   - Generated-artifact note: `src/parser.c` (~97MB) is not committed;
     `src/parser.c.gz` is, and `bindings/rust/build.rs` inflates it into
     `OUT_DIR` when the plain file is absent.
-- `Cargo.toml` has one addition: an empty `[workspace]` table after the
-  `[dev-dependencies]` section. Without it `cargo fmt --all` reports the
-  vendored package as belonging to the parent workspace and fails. No other
-  manifest change.
+- `Cargo.toml` has two additions: a `flate2 = "1"` build dependency
+  (`bindings/rust/build.rs` inflates `src/parser.c.gz` with it) and an
+  empty `[workspace]` table after the `[dev-dependencies]` section.
+  Without the table `cargo fmt --all` reports the vendored package as
+  belonging to the parent workspace and fails. `.gitignore` is replaced
+  by one that ignores `src/parser.c` and `lean.so`. No other packaging
+  change.
 - Files kept from the revision: `Cargo.toml`, `LICENSE`, `README.md`,
   `grammar.js`, `queries/` (`folds`, `highlights`, `indents`, `injections`,
   `locals`), `src/` (`grammar.json`, `node-types.json`, `parser.c.gz`,
   `scanner.c`, `tree_sitter/`), `bindings/rust/` (`build.rs`, `lib.rs`),
-  `test/corpus/` (7 files), `tree-sitter.json`.
+  `test/corpus/` (upstream's 7 files plus `sloplint-commands.txt`),
+  `tree-sitter.json`.
 - Files dropped: `binding.gyp`, `bindings/c/`, `bindings/node/`,
   `bindings/python/`, `CMakeLists.txt`, `Makefile`, `pyproject.toml`,
   `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.github/`.
@@ -89,40 +106,42 @@ Date: 2026-11-21.
 - `src/` is regenerated from the patched `grammar.js`/`src/scanner.c`
   with tree-sitter-cli 0.27.1 (`tree-sitter generate --abi 15`): the
   output carries `#define LANGUAGE_VERSION 15`, which the workspace
-  runtime (`tree-sitter 0.27.2`) loads. Generation peaks at ~26 GB RSS
-  and ~40 minutes — keep grammar deltas small vs a known-good generate;
-  the kernel OOM-kills past ~26-27 GB and swap does not help.
+  runtime (`tree-sitter 0.27.2`) loads. Allow sufficient memory
+  for generation. The PR #36 regeneration reached 10.5 GiB resident
+  memory and spent substantial time paging under host memory pressure.
 - `src/scanner.c` is upstream plus the sloplint delta: an external
   scanner for dotted and quoted identifiers, nested block/doc/module-doc
   comments, raw string literals with matched `#` counts, and the
   layout-sensitive `_indent`, `_dedent`, `_newline` tokens that delimit
   tactic and do-block bodies, extended with `mark_end`-guarded word
-  peeks, replay-free multi-level dedents, and widened identifier
-  characters (see the grammar patch). The indentation stack is the
+  peeks, replay-free multi-level dedents, widened identifier
+  characters, and token-end marks on completed block comments and raw
+  strings so a same-line token after `by` keeps its full span
+  (see the grammar patch). The indentation stack is the
   complete serialized scanner state.
-- Verification: `tree-sitter test` in this directory, 313/313 corpus
-  cases pass (see "Corpus results"). `tree-sitter test` builds the
-  plain `src/parser.c`, so after a fresh clone first inflate the
+- `tree-sitter test` builds the plain `src/parser.c` (see "Corpus
+  results"). After a fresh clone, first inflate the
   committed copy: `gzip -dc src/parser.c.gz > src/parser.c`. Purge
   `$XDG_CACHE_HOME/tree-sitter` before rerunning after any future edit,
   per `vendor/README.md`.
 
 ## Size
 
-`src/parser.c`: 97,113,146 bytes, 2,571,806 lines. States: 18895
+`src/parser.c`: 97,113,414 bytes, 2,571,816 lines. States: 18895
 (`STATE_COUNT`), 12150 large. Symbols: 647. Token count: 434. External
 tokens: 11 (`EXTERNAL_TOKEN_COUNT`). Fields: 57. ABI 15
-(`LANGUAGE_VERSION`). Over GitHub's 100 MB blob limit when combined with
-the rest of the diff, so `src/parser.c` is gitignored and `src/parser.c.gz`
+(`LANGUAGE_VERSION`). To keep the large generated diff out of Git,
+`src/parser.c` is ignored and `src/parser.c.gz`
 (~5.5 MB) is committed; `bindings/rust/build.rs` inflates it into
 `OUT_DIR` when the plain file is absent.
 
 ## Corpus results
 
-`tree-sitter test` (cli 0.27.1, this directory, committed parser):
-
-- Total parses: 313; successful parses: 313; failed parses: 0.
-
+`tree-sitter test --debug-build` (CLI 0.27.1): 315 cases passed, including
+the new string-gap literal and the expected `ERROR` for a comma between
+tactics. With the same 315 corpus inputs, the previous vendor parser
+reported errors on 2 inputs, plain `fefc2ef` on 12, and this parser on 1
+(the expected tactic separator error).
 ## Scanner progress regression
 
 The scanner must either consume input or change serialized state whenever
@@ -150,7 +169,7 @@ make it valid.
 
 ## Node compatibility
 
-The sloplint Lean adapter (`crates/sloplint-syntax/src/lang/lean.rs`)
+The sloplint Lean adapter (`crates/sloplint-syntax/src/lang/lean/`)
 maps the grammar's own node names onto the linter roles. Definitions
 (`def`, `theorem` which also covers `lemma`, `abbrev`, `opaque`, `axiom`,
 `instance`, `example`, `constant`, `where_aux_def`) are functions with
@@ -161,6 +180,8 @@ applications, which the grammar leaves as generic terms per its README)
 is the call; `import` and `open` are imports; `inductive` and `structure`
 are type definitions; `let` and `have` are declarations; `block_assign`
 (`:=`) is the write; the four comment nodes are comments.
+The string-gap fix extends the existing `escape_sequence` token. The
+generated node types do not change, so the adapter does not change.
 
 Unmapped, with reasons:
 
