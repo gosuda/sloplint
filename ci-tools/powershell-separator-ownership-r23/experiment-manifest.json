@@ -1,0 +1,40 @@
+{
+  "base": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
+  "base_tree": "f518b3943c6b86af53c334175309303c3d79f38b",
+  "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+  "kind": "Bounded two-stage grammar experiment; generated diagnostic snapshots are not publication candidates.",
+  "baseline": {
+    "producer": "0f58011fc01ed4fb380ebab8eda08fc6779b05d3",
+    "run": 45897555856,
+    "job": 140175103765,
+    "artifact": 15153798568,
+    "zip_sha256": "20ab226cfc6b420c0818050292d2b23b9e7e6ea047b2a7fef73810190d87d8ea",
+    "payload_sha256": "3538168ddbeaeeff89f5acba0e7e059bd300f5fbf481bbde4839d55fffb1460e"
+  },
+  "stages": [
+    {
+      "id": "nonempty-redirection",
+      "file": "nonempty-redirection.js",
+      "sha256": "e9203a517c973a00a85ae5806dc2ce9f93f017846e8c966cbbfc783226e46f5e"
+    },
+    {
+      "id": "separator-only-context",
+      "file": "separator-only-context.js",
+      "sha256": "a0c038815ba61614a95a143ffed43e9b86690b189078880273589dcae111b7bd"
+    }
+  ],
+  "formatted_regression_sha256": "2e6fa92f81ba3ccfb3592f150f10aeb2c3fbaf45952a7b2fe9cb897dbdd740f5",
+  "cases": 673,
+  "query_count": 16,
+  "proof_sha256": {
+    "experiment.py": "b0a59442f20a07fb880b835be0f9710f28e3ed09e8ff5a59f1e2fb9af815efe9",
+    "experiment-controls.json": "709401592caf742d8a5f190d73ae1d9d8cb6987122dcc98a9d215ee1feb12152",
+    "experiment-cases.json": "571c7d6ace01a405a3774f6d890a6edfbdd58bddada109a2c21711f2ae51e75c",
+    "experiment-cases.tsv": "7d723871466c365edfc81f6235053b1e2ecaa5cf63fa92f5ed531714f8fa85d2",
+    "experiment-observer.rs": "244239b17f8848a0f3c4fa7795f45c8d8ce79ea019fefc64bcea9a8a2e6f2f2d",
+    "regression.rs": "c96027dd2dc6a613ba1c5e4826911cb5689c83e5d32d22dff00318c9bd73a294",
+    "baseline-packed.b64": "cfc776d2c4651a3daaddaf7d23cc076ac72b6ea6b0959187e55f54b3a35abac3",
+    "nonempty-redirection.js": "e9203a517c973a00a85ae5806dc2ce9f93f017846e8c966cbbfc783226e46f5e",
+    "separator-only-context.js": "a0c038815ba61614a95a143ffed43e9b86690b189078880273589dcae111b7bd"
+  }
+}
