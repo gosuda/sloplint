@@ -1,0 +1,78 @@
+====================
+Variable path parses a balanced subexpression
+====================
+
+Copy-Item $PSScriptRoot/"$(Get-Date)" $dest
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          command_name: (command_name)
+          command_elements: (command_elements
+            (command_argument_sep)
+            (generic_token
+              (sub_expression
+                statements: (statement_list
+                  (pipeline
+                    (pipeline_chain
+                      (command
+                        command_name: (command_name)))))))
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (variable)))))))))
+
+====================
+Variable path retains an escaped interpolation opener
+====================
+
+Copy-Item $PSScriptRoot/"`$(Get-Date" $dest
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          command_name: (command_name)
+          command_elements: (command_elements
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (variable)))))))))
+
+====================
+Variable path rejects an unclosed subexpression
+:error
+====================
+
+Copy-Item $PSScriptRoot/"$(Get-Date" $dest
+
+---
+
+
+
+====================
+Hyphenated command continues across a backtick newline
+====================
+
+Get-Date`
+| Write-Output
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          command_name: (command_name))
+        (command
+          command_name: (command_name))))))

@@ -58,6 +58,8 @@ mod php;
 mod powershell;
 #[path = "grammar_gaps/powershell_syntax.rs"]
 mod powershell_syntax;
+#[path = "grammar_gaps/powershell_words.rs"]
+mod powershell_words;
 #[path = "grammar_gaps/python.rs"]
 mod python;
 #[path = "grammar_gaps/quint.rs"]

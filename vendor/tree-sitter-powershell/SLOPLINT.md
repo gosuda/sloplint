@@ -32,7 +32,7 @@ and loses every other finding for that file.
   `bash scripts/grammars.sh verify tree-sitter-powershell` checks the result
   against the vendored files. Run `tree-sitter test` in the vendor directory
   to include the sloplint corpus.
-- The regenerated parser uses ABI 15 and has 2,713 states.
+- The regenerated parser uses ABI 15 and has 2,779 states.
 
 ## Native argument follow-up
 
@@ -52,6 +52,20 @@ thirteen new boundary cases. Standalone parameters keep their existing node
 kind. Variable-prefixed paths use the same protected word-tail segments,
 and command names delimit unquoted U+00A0 while retaining quoted and escaped
 segments. Rust adapter regressions assert the resulting argument counts.
+
+## Expandable path and continuation boundaries
+
+Variable-prefixed paths remain one `generic_token` argument. Double-quoted
+segments now use the existing subexpression parser, so a missing `)` inside
+`$(...)` produces a syntax error. Balanced and nested quoted expressions,
+escaped dollar signs, verbatim segments, and protected U+00A0 retain their
+argument boundaries.
+
+Backtick escapes in word and parameter names exclude line breaks. The
+shared parameter-word pattern requires a complete escape pair; it cannot
+steal the trailing backtick from a hyphenated command name. The existing
+line-continuation extra owns both LF and CRLF. The corpus adds four boundary
+cases, and adapter tests exercise both physical line endings.
 
 ## What v0.26.6 replaces
 
@@ -81,7 +95,7 @@ The remaining local groups do not have an upstream fix in this release:
 | Case-insensitive numbers, cast operands, type names and generic ranks, bitwise and membership operators | No issue or PR identified for these changes |
 | String text and here-string escapes, statement terminators, method-block scanner | No issue or PR identified for these changes |
 
-The current patch has 1,779 lines and 19 diff hunks. It includes the
+The current patch has 1,477 lines and 41 diff hunks. It includes the
 native argument corpus along with the grammar and scanner changes.
 
 ## Round 1 grammar changes

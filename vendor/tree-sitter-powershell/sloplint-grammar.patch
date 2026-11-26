@@ -1,17 +1,11 @@
 diff --git a/grammar.js b/grammar.js
-index 1f8b448..c1eb233 100644
+index 1f8b448..b9dcafa 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -1,137 +1,180 @@
- const PREC = {
-   KEYWORD: 1,
-   UNARY: 2,
-   CAST: 3,
-   ELEMENT_ACCESS: 4,
-   EMPTY: 5,
+@@ -7,10 +7,35 @@ const PREC = {
    PARAM: 6,
  };
- 
+
 +// sloplint: a command-line word may hold quoted segments that contain spaces,
 +// pipes or parentheses: -x="a b", --format='%H||%P'. The segments are matched as
 +// a unit inside the word token. A double-quoted segment holds no nested quote,
@@ -19,7 +13,10 @@ index 1f8b448..c1eb233 100644
 +// parameter -p, a colon, and then the word V="$($m.x)".
 +const WORD_SQ = /'[^']*'/.source;
 +const WORD_DQ = /"([^"`]|`.)*"/.source;
-+const WORD_ESC = /`./.source;
++const WORD_ESC = /`[^\r\n]/.source;
++const PARAMETER_WORD = /-+/.source +
++  '(' + /[a-zA-Z_?\-]/.source + '|' + WORD_ESC + ')' +
++  '(' + /[a-zA-Z0-9_?\-]/.source + '|' + WORD_ESC + ')*';
 +
 +/**
 + * The repeated tail of a command-line word.
@@ -32,22 +29,19 @@ index 1f8b448..c1eb233 100644
 +
  export default grammar({
    name: 'powershell',
- 
+
 -  externals: ($) => [$._statement_terminator, $._bare_dashes],
 +  externals: ($) => [
 +    $._statement_terminator,
 +    $._bare_dashes,
 +    $._method_block_head,
 +  ],
- 
+
    extras: ($) => [
      $.comment,
-     /\s/,
-     /`\n/,
-     /`\r\n/,
-     /[\uFEFF\u2060\u200B\u00A0]/,
+@@ -21,15 +46,27 @@ export default grammar({
    ],
- 
+
    conflicts: ($) => [
 +    [$._cast_operand, $.invokation_foreach_expression],
      [$._literal, $.member_name],
@@ -60,7 +54,7 @@ index 1f8b448..c1eb233 100644
 +    // parameter's attribute or a cast inside the default's array literal.
 +    [$._cast_operand, $.member_access, $.invokation_expression],
    ],
- 
+
    rules: {
 -    program: ($) => seq(optional($.param_block), $.statement_list),
 +    // sloplint: a script file body may be a list of named blocks
@@ -71,24 +65,13 @@ index 1f8b448..c1eb233 100644
 +        optional($.param_block),
 +        optional(choice($.statement_list, $.named_block_list)),
 +      ),
- 
+
      // Comments
      comment: ($) =>
-       token(
-         choice(
-           /#[^\r\n]*/,
-           seq('<#', repeat(choice(/[^#`]+/, /#+[^>#]/, /`.{1}|`\r?\n/)), /#+>/),
-         ),
-       ),
- 
-     // Literal
-     _literal: ($) =>
-       choice($.integer_literal, $.string_literal, $.real_literal),
- 
-     // Integer Literals
+@@ -48,22 +85,24 @@ export default grammar({
      integer_literal: ($) =>
        choice($.decimal_integer_literal, $.hexadecimal_integer_literal),
- 
+
 +    // sloplint: numeric prefixes, exponents and multiplier suffixes are
 +    // case-insensitive in PowerShell (0XFF, 1E3, 1MB, 10Gb).
      decimal_integer_literal: ($) =>
@@ -101,7 +84,7 @@ index 1f8b448..c1eb233 100644
 +          optional(/[kmgtpKMGTP][bB]/),
          ),
        ),
- 
+
      hexadecimal_integer_literal: ($) =>
        token(
          seq(
@@ -114,10 +97,8 @@ index 1f8b448..c1eb233 100644
 +          optional(/[kmgtpKMGTP][bB]/),
          ),
        ),
- 
-     // Real Literals
-     real_literal: ($) =>
-       token(
+
+@@ -73,18 +112,18 @@ export default grammar({
          choice(
            seq(
              /[0-9]+\.[0-9]+/,
@@ -142,18 +123,7 @@ index 1f8b448..c1eb233 100644
            ),
          ),
        ),
- 
-     // String literal
-     string_literal: ($) =>
-       choice(
-         $.expandable_string_literal,
-         $.verbatim_string_characters,
-         $.expandable_here_string_literal,
-         $.verbatim_here_string_characters,
-       ),
- 
-     expandable_string_literal: ($) =>
-       seq(
+@@ -103,7 +142,10 @@ export default grammar({
          /\"(\s*\#*)*/, // this is a trick to avoid tree-sitter allowing comment between tokens, as string should be tokenize but powershell allow subexpression inside it...
          repeat(
            choice(
@@ -165,20 +135,7 @@ index 1f8b448..c1eb233 100644
              $.variable,
              $.sub_expression,
              token.immediate(/\$(`.{1}|`\r?\n|[\s\\])/),
-             token.immediate(/`.{1}|`\r?\n/),
-             token.immediate('""'),
-             token.immediate('$'),
-           ),
-         ),
-         repeat(token.immediate('$')),
-         token.immediate(/(\s*\#*)*\"/),
-       ),
- 
-     expandable_here_string_literal: ($) =>
-       seq(
-         /@\" *\r?\n/,
-         repeat(
-           choice(
+@@ -124,7 +166,11 @@ export default grammar({
              token.immediate(/[^\$\r\n`]+/),
              $.variable,
              $.sub_expression,
@@ -191,47 +148,19 @@ index 1f8b448..c1eb233 100644
              token.immediate(/(\r?\n)+\"[^@]/),
              token.immediate('$'),
              token.immediate(/`.{1}|`\r?\n/),
-           ),
-         ),
-         token.immediate(/(\r?\n)+\"@/),
-       ),
- 
-     verbatim_string_characters: ($) =>
-       token(seq('\'', repeat(choice(/[^']+/, '\'\'')), '\'')),
-@@ -142,21 +185,24 @@ export default grammar({
-           /@\'\s*\r?\n/,
-           repeat(choice(/[^\r\n]/, /(\r?\n)+[^\'\r\n]/, /\r?\n\'[^@]/)),
-           /(\r?\n)+\'@/,
-         ),
-       ),
- 
-     // Simple names
+@@ -149,7 +195,10 @@ export default grammar({
      simple_name: ($) => /[a-zA-Z_][a-zA-Z0-9_]*/,
- 
+
      // Type names
 -    type_identifier: ($) => /[a-zA-Z0-9_]+/,
 +    // sloplint: a type name may hold nested-type `+` and generic-arity
 +    // backtick parts: System.Environment+SpecialFolder, System.Func`1,
 +    // Dictionary`2+Enumerator.
 +    type_identifier: ($) => /[a-zA-Z0-9_]+([`+]+[a-zA-Z0-9_]+)*/,
- 
+
      type_name: ($) =>
        choice($.type_identifier, seq($.type_name, '.', $.type_identifier)),
- 
-     array_type_name: ($) => seq($.type_name, '['),
-     generic_type_name: ($) => seq($.type_name, '['),
- 
-     // Operators and punctuators
-     assignement_operator: ($) =>
-       choice('=', '!=', '+=', '*=', '/=', '%=', '-='),
-@@ -218,20 +264,25 @@ export default grammar({
-         reservedWord('-ge'),
-         reservedWord('-gt'),
-         reservedWord('-icontains'),
-         reservedWord('-ieq'),
-         reservedWord('-ige'),
-         reservedWord('-igt'),
-         reservedWord('-ile'),
+@@ -225,6 +274,11 @@ export default grammar({
          reservedWord('-ilike'),
          reservedWord('-ilt'),
          reservedWord('-imatch'),
@@ -243,94 +172,92 @@ index 1f8b448..c1eb233 100644
          reservedWord('-in'),
          reservedWord('-ine'),
          reservedWord('-inotcontains'),
-         reservedWord('-inotlike'),
-         reservedWord('-inotmatch'),
-         reservedWord('-ireplace'),
-         reservedWord('-is'),
-         reservedWord('-isnot'),
-         reservedWord('-isplit'),
-         reservedWord('-join'),
-@@ -299,33 +350,109 @@ export default grammar({
-             /[a-zA-Z0-9_]+|\?/,
-           ),
-         ),
-         $.braced_variable,
-       ),
- 
-     braced_variable: ($) => /\$\{[^}]+\}/,
- 
+@@ -306,19 +360,107 @@ export default grammar({
+
      // Commands
      generic_token: ($) =>
 -      token(/[^\(\)\$\"\'\-\{\}@\|\[`\&\s][^\&\s\(\)\}\|;,]*/),
-+      token(
-+        choice(
-+          new RegExp(
-+            /[^()$"'\-{}@|\[`&\s\u00A0]/.source + wordTail(/[^&\s\u00A0()}|;,"'`]/.source),
-+          ),
-+          // sloplint: option with an attached value, as in -I=dir,
-+          // --go_out=$dir or -buildmode=c-shared. A bare -Name or -Name:
-+          // stays a command_parameter. Commas belong to the value, as in
-+          // --format=csv,noheader: native commands receive one string
-+          // (about_Parsing, argument mode).
-+          new RegExp(
-+            /-+[a-zA-Z_?\-`][a-zA-Z0-9_?\-`]*/.source +
-+              /[^a-zA-Z0-9_?\-`\s\u00A0:<>&(){}|;,"'$@\[]/.source +
-+              wordTail(/[^&\s\u00A0()}|;"'`]/.source),
-+          ),
-+          // sloplint: dash-colon word, as in --:warning: the colon does not
-+          // delimit a standalone `--` token, so the whole word is one
-+          // generic token (see scanner.c: `:` is not a bare-dash delimiter).
-+          // Unquoted, unescaped commas end the word so `--:first,second` is a
-+          // list; quoted or escaped commas stay inside. A quoted or escaped
-+          // segment may follow the colon at once, as in `--:"warning text"`.
-+          new RegExp(
-+            /-+:/.source +
-+              '(' + /[^&\s\u00A0()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + WORD_ESC + ')' +
-+              wordTail(/[^&,\s\u00A0()}|;"'`]/.source),
-+          ),
-+          // sloplint: word that starts with a variable and continues as a
-+          // path, as in $env:TEMP\x.ps1 or ${root}/bin.
-+          new RegExp(
-+            /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)[\\\/]/.source +
-+              wordTail(/[^&\s\u00A0()}|;,"'`]/.source),
-+          ),
-+          // sloplint: bare escape sequence used as a word, as in
-+          // Write-Host `r`n — expandable-string content without quotes.
-+          new RegExp(WORD_ESC + wordTail(/[^&\s\u00A0()}|;,"'`]/.source)),
-+          // sloplint: word that interleaves a variable head with quoted or
-+          // plain segments, as in $x"cat"$y — a single expandable word.
-+          new RegExp(
-+            /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)/.source +
++      choice(
++        $._variable_path_word,
++        token(
++          choice(
++            new RegExp(
++              /[^()$"'\-{}@|\[`&\s\u00A0]/.source + wordTail(/[^&\s\u00A0()}|;,"'`]/.source),
++            ),
++            // sloplint: option with an attached value, as in -I=dir,
++            // --go_out=$dir or -buildmode=c-shared. A bare -Name or -Name:
++            // stays a command_parameter. Commas belong to the value, as in
++            // --format=csv,noheader: native commands receive one string
++            // (about_Parsing, argument mode).
++            new RegExp(
++              PARAMETER_WORD +
++                /[^a-zA-Z0-9_?\-`\s\u00A0:<>&(){}|;,"'$@\[]/.source +
++                wordTail(/[^&\s\u00A0()}|;"'`]/.source),
++            ),
++            // sloplint: dash-colon word, as in --:warning: the colon does not
++            // delimit a standalone `--` token, so the whole word is one
++            // generic token (see scanner.c: `:` is not a bare-dash delimiter).
++            // Unquoted, unescaped commas end the word so `--:first,second` is a
++            // list; quoted or escaped commas stay inside. A quoted or escaped
++            // segment may follow the colon at once, as in `--:"warning text"`.
++            new RegExp(
++              /-+:/.source +
++                '(' + /[^&\s\u00A0()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + WORD_ESC + ')' +
++                wordTail(/[^&,\s\u00A0()}|;"'`]/.source),
++            ),
++            // sloplint: bare escape sequence used as a word, as in
++            // Write-Host `r`n — expandable-string content without quotes.
++            new RegExp(WORD_ESC + wordTail(/[^&\s\u00A0()}|;,"'`]/.source)),
++            // sloplint: word that interleaves a variable head with quoted or
++            // plain segments, as in $x"cat"$y — a single expandable word.
++            new RegExp(
++              /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)/.source +
++                '(' + WORD_SQ + '|' + WORD_DQ + ')' +
++                wordTail(/[^&\s\u00A0()}|;,]/.source),
++            ),
++            // sloplint: a variable head followed by `..` or by a `.` that
++            // does not open a member name is argument-mode text, as in
++            // `to $EndDate...` or `$v..$w`. `$v.foo` stays member access:
++            // neither alternative takes a single `.` before an identifier
++            // char.
++            new RegExp(
++              /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)/.source +
++                '(' +
++                  /\.{2,}[^&\s\u00A0()}|;,"'`]*/.source + '|' +
++                  /\.[^&\s\u00A0()}|;,"'`a-zA-Z0-9_$][^&\s\u00A0()}|;,"'`]*/.source +
++                ')',
++            ),
++            // sloplint: word that starts with a quoted segment and keeps
++            // going as one expandable argument word, as in "a"`n"b" or
++            // 'a'`n'b'. At least one continuation is required, so a bare
++            // "a" still lexes as expandable_string.
++            new RegExp(
 +              '(' + WORD_SQ + '|' + WORD_DQ + ')' +
-+              wordTail(/[^&\s\u00A0()}|;,]/.source),
-+          ),
-+          // sloplint: a variable head followed by `..` or by a `.` that
-+          // does not open a member name is argument-mode text, as in
-+          // `to $EndDate...` or `$v..$w`. `$v.foo` stays member access:
-+          // neither alternative takes a single `.` before an identifier
-+          // char.
-+          new RegExp(
-+            /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)/.source +
-+              '(' +
-+                /\.{2,}[^&\s\u00A0()}|;,"'`]*/.source + '|' +
-+                /\.[^&\s\u00A0()}|;,"'`a-zA-Z0-9_$][^&\s\u00A0()}|;,"'`]*/.source +
-+              ')',
-+          ),
-+          // sloplint: word that starts with a quoted segment and keeps
-+          // going as one expandable argument word, as in "a"`n"b" or
-+          // 'a'`n'b'. At least one continuation is required, so a bare
-+          // "a" still lexes as expandable_string.
-+          new RegExp(
-+            '(' + WORD_SQ + '|' + WORD_DQ + ')' +
-+              '(' +
-+                /[^&\s\u00A0()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + WORD_ESC +
-+              ')+',
++                '(' +
++                  /[^&\s\u00A0()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + WORD_ESC +
++                ')+',
++            ),
 +          ),
 +        ),
 +      ),
- 
++
++    // sloplint: variable-prefixed paths stay one argument, but expandable
++    // quoted segments must parse their variables and subexpressions.
++    _variable_path_word: ($) =>
++      seq(
++        token(/\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)[\\\/]/),
++        repeat(
++          choice(
++            token.immediate(/[^&\s\u00A0()}|;,"'`]+/),
++            token.immediate(new RegExp(WORD_ESC)),
++            token.immediate(new RegExp(WORD_SQ)),
++            seq(token.immediate('"'), $._expandable_string_literal_immediate),
++          ),
++        ),
++      ),
+
      _command_token: ($) => token(/[^\(\)\{\}\s;\&]+/),
- 
+
 +    // sloplint: a switch clause word may open with a double quote only when
 +    // it is a complete quoted word. Otherwise "^(a)$" is cut at the first
 +    // parenthesis, lexed as a word, and the clause fails to parse.
@@ -348,28 +275,15 @@ index 1f8b448..c1eb233 100644
          token(
            choice(
              // `-Name`, `-Name1`, `--long-flag`, `-A5`
-             /-+[a-zA-Z_?\-`][a-zA-Z0-9_?\-`]*/,
+-            /-+[a-zA-Z_?\-`][a-zA-Z0-9_?\-`]*/,
++            new RegExp(PARAMETER_WORD),
              // `--format=%H`, `--pretty=format:"%B"`: a native option with an attached value
 -            /--?[a-zA-Z_][a-zA-Z0-9_\-]*=([^\s"'`;|&(){}]|"[^"\r\n]*"|'[^'\r\n]*')*/,
 +            /--?[a-zA-Z_][a-zA-Z0-9_\-]*=([^\s\u00A0"'`;|&(){}]|"[^"\r\n]*"|'[^'\r\n]*')*/,
            ),
          ),
          // A bare `--` or `-` argument (see scanner.c).
-         $._bare_dashes,
-       ),
- 
-     _verbatim_command_argument_chars: ($) =>
-       repeat1(choice(/"[^"]*"/, /&[^&]*/, /[^\|\r\n]+/)),
- 
-     // Grammar
-@@ -392,20 +519,27 @@ export default grammar({
-           $.function_statement,
-           $.class_statement,
-           $.enum_statement,
-           seq($.flow_control_statement, $._statement_terminator),
-           $.trap_statement,
-           $.try_statement,
-           $.data_statement,
+@@ -399,6 +541,13 @@ export default grammar({
            $.inlinescript_statement,
            $.parallel_statement,
            $.sequence_statement,
@@ -383,24 +297,10 @@ index 1f8b448..c1eb233 100644
            seq($.pipeline, $._statement_terminator),
            // `npm run dev &` (PowerShell 7): runs the pipeline as a background job
            seq($.pipeline, $.background_operator),
-           $.empty_statement,
-         ),
-       ),
- 
-     empty_statement: ($) => prec(PREC.EMPTY, ';'),
- 
-     background_operator: ($) => '&',
-@@ -469,30 +603,32 @@ export default grammar({
-         seq('(', $.pipeline, ')'),
-         seq(reservedWord('-file'), $.switch_filename),
-       ),
- 
-     switch_filename: ($) => choice($._command_token, $._primary_expression),
- 
-     switch_body: ($) => seq('{', optional($.switch_clauses), '}'),
- 
+@@ -476,16 +625,18 @@ export default grammar({
+
      switch_clauses: ($) => repeat1($.switch_clause),
- 
+
 +    // sloplint: terminators between switch clauses are optional in
 +    // PowerShell, so clauses may share a line: { 1 { "a" } default { "b" } }.
      switch_clause: ($) =>
@@ -411,31 +311,17 @@ index 1f8b448..c1eb233 100644
 +        optional($._statement_terminator),
          repeat(';'),
        ),
- 
+
      switch_clause_condition: ($) =>
 -      choice($._command_token, $._primary_expression),
 +      choice($._switch_clause_token, $._primary_expression),
- 
+
      foreach_statement: ($) =>
        seq(
-         reservedWord('foreach'),
-         optional($.foreach_parameter),
-         '(',
-         $.variable,
-         reservedWord('in'),
-         $.pipeline,
-         ')',
-@@ -561,51 +697,65 @@ export default grammar({
-     do_statement: ($) =>
-       seq(
-         reservedWord('do'),
-         $.statement_block,
-         choice(reservedWord('while'), reservedWord('until')),
-         '(',
-         field('condition', $.while_condition),
+@@ -568,8 +719,11 @@ export default grammar({
          ')',
        ),
- 
+
 +    // sloplint: attributes may precede a function definition, like they may
 +    // class and enum: [Alias('x')] function f {}, [OutputType([int])] f {}.
      function_statement: ($) =>
@@ -444,8 +330,7 @@ index 1f8b448..c1eb233 100644
          choice(
            reservedWord('function'),
            reservedWord('filter'),
-           reservedWord('workflow'),
-         ),
+@@ -578,10 +732,19 @@ export default grammar({
          $.function_name,
          optional($.function_parameter_declaration),
          '{',
@@ -455,7 +340,7 @@ index 1f8b448..c1eb233 100644
 +        ),
          '}',
        ),
- 
+
 +    // sloplint: a function body may put its first statement right after the
 +    // param block on the same line: function f { param($a) $a }. The hidden
 +    // rule is aliased to script_block, the kind a body with a line break after
@@ -464,43 +349,20 @@ index 1f8b448..c1eb233 100644
 +      seq($.param_block, field('script_block_body', $.script_block_body)),
 +
      function_name: ($) => $._command_token,
- 
+
      function_parameter_declaration: ($) =>
-       seq('(', optional($.parameter_list), ')'),
- 
-     flow_control_statement: ($) =>
-       choice(
-         seq(reservedWord('break'), optional($.label_expression)),
-         seq(reservedWord('continue'), optional($.label_expression)),
-         seq(reservedWord('throw'), optional($.pipeline)),
-         seq(reservedWord('return'), optional($.pipeline)),
-         seq(reservedWord('exit'), optional($.pipeline)),
-       ),
- 
+@@ -598,7 +761,9 @@ export default grammar({
+
      label: ($) => token(seq(':', /[a-zA-Z_][a-zA-Z0-9_]*/)),
- 
+
 -    label_expression: ($) => choice($.label, $.unary_expression),
 +    // sloplint: a loop label may be a bare name: break outer, continue top.
 +    label_expression: ($) =>
 +      choice($.label, $.simple_name, $.unary_expression),
- 
+
      trap_statement: ($) =>
        seq(reservedWord('trap'), optional($.type_literal), $.statement_block),
- 
-     try_statement: ($) =>
-       seq(
-         reservedWord('try'),
-         $.statement_block,
-         choice(
-           seq($.catch_clauses, optional($.finally_clause)),
-@@ -726,116 +876,177 @@ export default grammar({
- 
-     _string_literal_immediate: ($) =>
-       seq(
-         /[^']+/,
-         '\'',
-       ),
- 
+@@ -733,7 +898,7 @@ export default grammar({
      command_name: ($) =>
        seq(
          choice(
@@ -509,20 +371,7 @@ index 1f8b448..c1eb233 100644
            // tree-sitter does not allow to control lexer
            // each start keyword into _statement rule must be present here
            // https://github.com/airbus-cert/tree-sitter-powershell/issues/24
-           new RegExp(caseInsensitive('break-')),
-           new RegExp(caseInsensitive('continue-')),
-           new RegExp(caseInsensitive('throw-')),
-           new RegExp(caseInsensitive('return-')),
-           new RegExp(caseInsensitive('exit-')),
-           new RegExp(caseInsensitive('try-')),
-           new RegExp(caseInsensitive('trap-')),
-           new RegExp(caseInsensitive('if-')),
-           new RegExp(caseInsensitive('function-')),
-           new RegExp(caseInsensitive('filter-')),
-           new RegExp(caseInsensitive('workflow-')),
-           new RegExp(caseInsensitive('class-')),
-           new RegExp(caseInsensitive('enum-')),
-           new RegExp(caseInsensitive('switch-')),
+@@ -754,10 +919,23 @@ export default grammar({
            new RegExp(caseInsensitive('for-')),
            new RegExp(caseInsensitive('while-')),
            new RegExp(caseInsensitive('parallel-')),
@@ -547,25 +396,17 @@ index 1f8b448..c1eb233 100644
              seq(token.immediate('"'), $._expandable_string_literal_immediate),
              seq(token.immediate('\''), $._string_literal_immediate),
              token.immediate('""'),
-             token.immediate('\'\''),
-           ),
+@@ -766,7 +944,8 @@ export default grammar({
          ),
        ),
- 
+
 -    path_command_name_token: ($) => /[0-9a-zA-Z_?\-\.\\]+/,
 +    // sloplint: `/` is a path separator too: . $PSScriptRoot/x.ps1, ./build.ps1.
 +    path_command_name_token: ($) => /[0-9a-zA-Z_?\-\.\\\/]+/,
- 
+
      // Use to parse command path
      path_command_name: ($) =>
-       repeat1(choice($.path_command_name_token, $.variable)),
- 
-     command_name_expr: ($) =>
-       choice($.command_name, $.path_command_name, $._primary_expression),
- 
-     command_elements: ($) => prec.right(repeat1($._command_element)),
- 
-     _command_element: ($) =>
+@@ -781,41 +960,86 @@ export default grammar({
        prec.right(
          choice(
            $.command_parameter,
@@ -578,7 +419,7 @@ index 1f8b448..c1eb233 100644
            $.stop_parsing,
          ),
        ),
- 
+
 +    // sloplint: a call in an argument may be followed by more member access
 +    // and calls: foo $s.ToString().TrimEnd(). The pieces are siblings of the
 +    // argument, like the first argument_list.
@@ -589,7 +430,7 @@ index 1f8b448..c1eb233 100644
 +
      // Stop parsing is a token that end the parsing of command line
      stop_parsing: ($) => /--%[^\r\n]*/,
- 
+
      // Generic token is hard to manage
      // So a definition is that a generic token must have to begin by one or more space char
 -    command_argument_sep: ($) => prec.right(choice(repeat1(' '), ':')),
@@ -598,9 +439,9 @@ index 1f8b448..c1eb233 100644
 +    // parameter is opaque). Format characters (U+200B, U+FEFF, U+2060) stay
 +    // out: they are extras, not separators.
 +    command_argument_sep: ($) => prec.right(choice(repeat1(choice(' ', '\t', '\u00A0')), ':')),
- 
+
      // Adapt the grammar to have same behavior
- 
+
 +    // sloplint: a parenthesized list may start at once after `--`, as in
 +    // `--(Get-Date), (Get-Date)`: the commas continue the array without an
 +    // intervening separator.
@@ -626,7 +467,7 @@ index 1f8b448..c1eb233 100644
            $.script_block_expression,
          ),
        ),
- 
+
 +    // sloplint: in argument position a comma list may hold bare words as
 +    // well as expressions: Select-Object Name,Length. The hidden rules are
 +    // aliased so that the node keeps the array_literal_expression kind.
@@ -659,43 +500,25 @@ index 1f8b448..c1eb233 100644
 +      ),
 +
 +    _command_list_parameter: ($) =>
-+      token(/-+[a-zA-Z_?\-`][a-zA-Z0-9_?\-`]*/),
++      token(new RegExp(PARAMETER_WORD)),
 +
 +
      verbatim_command_argument: ($) =>
        seq('--%', $._verbatim_command_argument_chars),
- 
-     redirections: ($) => repeat1($.redirection),
- 
-     redirection: ($) =>
-       choice(
-         $.merging_redirection_operator,
+
+@@ -827,8 +1051,10 @@ export default grammar({
          seq($.file_redirection_operator, $.redirected_file_name),
        ),
- 
+
 +    // sloplint: a redirect may follow its operator with no separator, as
 +    // in '/r'>null — a bare word target then lexes as generic_token.
      redirected_file_name: ($) =>
 -      choice($._command_argument, $._primary_expression),
 +      choice($._command_argument, $._primary_expression, $.generic_token),
- 
+
      // Class
      class_attribute: ($) =>
-       choice(token(reservedWord('hidden')), token(reservedWord('static'))),
- 
-     class_property_definition: ($) =>
-       seq(
-         optional($.attribute),
-         repeat($.class_attribute),
-         optional($.type_literal),
-@@ -850,59 +1061,86 @@ export default grammar({
- 
-     class_method_definition: ($) =>
-       seq(
-         optional($.attribute),
-         repeat($.class_attribute),
-         optional($.type_literal),
-         $.simple_name,
+@@ -857,13 +1083,26 @@ export default grammar({
          '(',
          optional($.class_method_parameter_list),
          ')',
@@ -711,7 +534,7 @@ index 1f8b448..c1eb233 100644
          optional($.script_block),
          '}',
        ),
- 
+
 +    // sloplint: attributes may precede class and enum definitions:
 +    // [DscResource()] class R {}, [Flags()] enum E {}. pwsh also reports
 +    // CustomAttributeTypeNotFound for an unknown attribute type here, which
@@ -722,20 +545,7 @@ index 1f8b448..c1eb233 100644
          token(reservedWord('class')),
          $.simple_name,
          optional(seq(':', $.simple_name, repeat(seq(',', $.simple_name)))),
-         '{',
-         repeat(
-           choice(
-             seq(
-               $.class_property_definition,
-               $._statement_terminator,
-               repeat(';'),
-             ),
-             $.class_method_definition,
-           ),
-         ),
-         '}',
-       ),
- 
+@@ -884,6 +1123,7 @@ export default grammar({
      // Enums
      enum_statement: ($) =>
        seq(
@@ -743,13 +553,9 @@ index 1f8b448..c1eb233 100644
          token(reservedWord('enum')),
          $.simple_name,
          '{',
-         repeat(seq($.enum_member, $._statement_terminator, repeat(';'))),
-         '}',
-       ),
- 
-     enum_member: ($) =>
+@@ -895,7 +1135,20 @@ export default grammar({
        seq($.simple_name, optional(seq('=', $.integer_literal))),
- 
+
      // Expressions
 -    _expression: ($) => $.logical_expression,
 +    // sloplint: PowerShell 7 ternary: $a ? "x" : "y". The condition is a
@@ -766,26 +572,12 @@ index 1f8b448..c1eb233 100644
 +          choice($.logical_expression, $.ternary_expression),
 +        ),
 +      ),
- 
+
      logical_expression: ($) =>
        prec.left(
-         choice(
-           $.bitwise_expression,
-           seq(
-             $.logical_expression,
-             choice(
-               reservedWord('-and'),
-               reservedWord('-or'),
-@@ -1001,21 +1239,49 @@ export default grammar({
-         $.pre_decrement_expression,
-         $.cast_expression,
-         seq(reservedWord('-split'), $.unary_expression),
-         seq(reservedWord('-join'), $.unary_expression),
-       ),
- 
-     pre_increment_expression: ($) => seq('++', $.unary_expression),
+@@ -1008,7 +1261,35 @@ export default grammar({
      pre_decrement_expression: ($) => seq('--', $.unary_expression),
- 
+
      cast_expression: ($) =>
 -      prec(PREC.CAST, seq($.type_literal, $.unary_expression)),
 +      prec(
@@ -817,27 +609,13 @@ index 1f8b448..c1eb233 100644
 +        seq(reservedWord('-split'), $.unary_expression),
 +        seq(reservedWord('-join'), $.unary_expression),
 +      ),
- 
+
      attributed_variable: ($) => seq($.type_literal, $.variable),
- 
-     _primary_expression: ($) =>
-       choice(
-         $._value,
-         $.member_access,
-         $.element_access,
-         $.invokation_expression,
-         $.post_increment_expression,
-@@ -1035,22 +1301,26 @@ export default grammar({
-       ),
- 
-     parenthesized_expression: ($) => seq('(', $.pipeline, ')'),
- 
-     sub_expression: ($) =>
-       seq('$(', field('statements', optional($.statement_list)), ')'),
- 
+
+@@ -1042,8 +1323,12 @@ export default grammar({
      array_expression: ($) =>
        seq('@(', field('statements', optional($.statement_list)), ')'),
- 
+
 +    // sloplint: an empty block is a valid script block expression: {} or { }.
      script_block_expression: ($) =>
 -      seq('{', optional($.param_block), $.script_block, '}'),
@@ -845,27 +623,13 @@ index 1f8b448..c1eb233 100644
 +        seq('{', optional($.param_block), $.script_block, '}'),
 +        seq('{', '}'),
 +      ),
- 
+
      hash_literal_expression: ($) =>
        seq('@{', optional($.hash_literal_body), '}'),
- 
-     hash_literal_body: ($) => repeat1($.hash_entry),
- 
-     hash_entry: ($) =>
-       seq(
-         $.key_expression,
-         '=',
-@@ -1094,25 +1364,31 @@ export default grammar({
-         seq(
-           $._primary_expression,
-           token.immediate('.'),
-           $.member_name,
-           $.argument_list,
-         ),
-         seq($._primary_expression, '::', $.member_name, $.argument_list),
+@@ -1101,11 +1386,17 @@ export default grammar({
          $.invokation_foreach_expression,
        ),
- 
+
 -    // adding this rule to handle .foreach synthax
 +    // sloplint: a method name may take a script block with no parentheses
 +    // when the brace follows the name at once: $a.Where{ $_ },
@@ -881,22 +645,8 @@ index 1f8b448..c1eb233 100644
 +        $._method_block_head,
          $.script_block_expression,
        ),
- 
-     argument_list: ($) =>
-       seq(
-         '(',
-         field('argument_expression_list', optional($.argument_expression_list)),
-         ')',
-       ),
- 
-@@ -1138,24 +1414,27 @@ export default grammar({
-           ),
-         ),
-       ),
- 
-     bitwise_argument_expression: ($) =>
-       prec.left(
-         choice(
+
+@@ -1145,10 +1436,13 @@ export default grammar({
            $.comparison_argument_expression,
            seq(
              $.bitwise_argument_expression,
@@ -913,24 +663,10 @@ index 1f8b448..c1eb233 100644
              ),
              $.comparison_argument_expression,
            ),
-         ),
-       ),
- 
-     comparison_argument_expression: ($) =>
-       prec.left(
-         choice(
-           $.additive_argument_expression,
-@@ -1206,46 +1485,63 @@ export default grammar({
-     range_argument_expression: ($) =>
-       prec.left(
-         choice(
-           $.unary_expression,
-           seq($.range_argument_expression, '..', $.unary_expression),
-         ),
-       ),
- 
+@@ -1213,32 +1507,49 @@ export default grammar({
+
      type_literal: ($) => seq('[', $.type_spec, ']'),
- 
+
 +    // sloplint: array ranks may repeat after an array or generic type
 +    // (int[][], List[int][]), and a generic argument may be wrapped in its
 +    // own brackets: Dictionary[[string], [int]].
@@ -947,11 +683,11 @@ index 1f8b448..c1eb233 100644
 +        ),
          $.type_name,
        ),
- 
+
 +    _rank: ($) => seq('[', optional($.dimension), ']'),
 +
      dimension: ($) => repeat1(','),
- 
+
      generic_type_arguments: ($) =>
 -      seq($.type_spec, repeat(seq(',', $.type_spec))),
 +      seq(
@@ -961,10 +697,10 @@ index 1f8b448..c1eb233 100644
 +
 +    _generic_type_argument: ($) =>
 +      choice($.type_spec, seq('[', $.type_spec, ']')),
- 
+
      // Attributes
      attribute_list: ($) => repeat1($.attribute),
- 
+
      attribute: ($) =>
 -      choice(
 -        seq(
@@ -988,49 +724,26 @@ index 1f8b448..c1eb233 100644
 +        ')',
 +        ']',
        ),
- 
+
      attribute_name: ($) => $.type_spec,
- 
-     attribute_arguments: ($) =>
-       seq($.attribute_argument, repeat(seq(',', $.attribute_argument))),
- 
-     attribute_argument: ($) =>
-       choice(
-         $._expression,
 diff --git a/src/scanner.c b/src/scanner.c
 index b46de2b..a94753f 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
-@@ -1,96 +1,172 @@
- // Copyright (c) Microsoft Corporation. All rights reserved.
- // Licensed under the MIT License. See the LICENSE file in the project root for full license information.
- 
- #include "tree_sitter/parser.h"
- #include <wctype.h>
- 
+@@ -6,7 +6,8 @@
+
  enum TOKEN_TYPE {
      STATEMENT_TERMINATOR,
 -    BARE_DASHES
 +    BARE_DASHES,
 +    METHOD_BLOCK_HEAD
  };
- 
+
  /* --- API --- */
- 
- void *tree_sitter_powershell_external_scanner_create();
- 
- void tree_sitter_powershell_external_scanner_destroy(void *p);
- 
- unsigned tree_sitter_powershell_external_scanner_serialize(void *payload, char *buffer);
- 
- void tree_sitter_powershell_external_scanner_deserialize(void *payload, const char *buffer, unsigned length);
- 
- bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols);
- 
- /* --- Internal Functions --- */
- 
+@@ -25,6 +26,25 @@ bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer,
+
  static void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
- 
+
 +// sloplint: true when the lookahead starts the keyword `else` or `elseif`,
 +// as a whole word. The lookahead is consumed; the caller has already marked
 +// the end of the zero-width terminator token.
@@ -1053,10 +766,10 @@ index b46de2b..a94753f 100644
  static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool *valid_symbols)
  {
      if (valid_symbols[STATEMENT_TERMINATOR]) {
-         lexer->result_symbol = STATEMENT_TERMINATOR;
+@@ -32,13 +52,26 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool
          // This token has no characters -- everything is lookahead to determine its existence
          lexer->mark_end(lexer);
- 
+
 +        bool saw_newline = false;
          for (;;) {
              if (lexer->lookahead == 0) return true;
@@ -1082,11 +795,7 @@ index b46de2b..a94753f 100644
              skip(lexer);
          }
      }
- 
-     return false;
- }
- 
- // A bare `-` or `--` argument: `--` ends option parsing for a native command
+@@ -50,13 +83,22 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool
  // (`git log -- path`, `cargo test -- --nocapture`) and `-` names stdin
  // (`tar -xf -`). `--` is also the decrement operator and `-` the unary minus,
  // so the lexer cannot tell them apart by length or precedence: the token is
@@ -1106,15 +815,13 @@ index b46de2b..a94753f 100644
  static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_symbols)
  {
      if (!valid_symbols[BARE_DASHES]) return false;
- 
+
 -    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') skip(lexer);
 +    while (is_horizontal_space(lexer->lookahead)) skip(lexer);
      if (lexer->lookahead != '-') return false;
      lexer->advance(lexer, false);
      if (lexer->lookahead == '-') lexer->advance(lexer, false);
-     lexer->mark_end(lexer);
- 
-     switch (lexer->lookahead) {
+@@ -66,12 +108,18 @@ static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_sy
          case 0:
          case ' ':
          case '\t':
@@ -1133,13 +840,10 @@ index b46de2b..a94753f 100644
          case '}':
              lexer->result_symbol = BARE_DASHES;
              return true;
-         default:
-             return false;
-     }
- }
- 
+@@ -82,8 +130,36 @@ static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_sy
+
  /* --- API Implementation --- */
- 
+
 +// sloplint: `.Name` or `::Name` when `{` follows the name at once, as in
 +// $a.Where{ $_ }. The token ends before the brace. Anything else is left to
 +// the internal lexer, which re-reads the input from the start.
@@ -1173,69 +877,29 @@ index b46de2b..a94753f 100644
      // The statement terminator consumes nothing, so it must be tried last: when
      // both are valid, a `--` has to win over the empty terminator.
      if (scan_bare_dashes(payload, lexer, valid_symbols)) return true;
-     return scan_statement_terminator(payload, lexer, valid_symbols);
- }
- 
- void *tree_sitter_powershell_external_scanner_create()
- {
-     return NULL;
- }
 diff --git a/test/corpus/native_arguments.txt b/test/corpus/native_arguments.txt
 index e91d0a4..6043257 100644
 --- a/test/corpus/native_arguments.txt
 +++ b/test/corpus/native_arguments.txt
-@@ -37,21 +37,21 @@ cargo test -p core -- --nocapture --test-threads=1
-             (command_argument_sep)
-             (generic_token)
-             (command_argument_sep)
-             (command_parameter)
-             (command_argument_sep)
-             (generic_token)
-             (command_parameter)
+@@ -44,7 +44,7 @@ cargo test -p core -- --nocapture --test-threads=1
              (command_argument_sep)
              (command_parameter)
              (command_argument_sep)
 -            (command_parameter)))))))
 +            (generic_token)))))))
- 
+
  ===
  Native: -- at the end of the command
- ===
- 
- git log --
- 
- ---
- 
- (program
-@@ -148,43 +148,43 @@ git log --format=%H
- (program
-   (statement_list
-     (pipeline
-       (pipeline_chain
-         (command
-           (command_name)
-           (command_elements
+@@ -155,7 +155,7 @@ git log --format=%H
              (command_argument_sep)
              (generic_token)
              (command_argument_sep)
 -            (command_parameter)))))))
 +            (generic_token)))))))
- 
+
  ===
  Native: --option=value with a quoted value
- ===
- 
- git log --pretty=format:"%h %s" --since='2 weeks ago'
- 
- ---
- 
- (program
-   (statement_list
-     (pipeline
-       (pipeline_chain
-         (command
-           (command_name)
-           (command_elements
+@@ -175,9 +175,9 @@ git log --pretty=format:"%h %s" --since='2 weeks ago'
              (command_argument_sep)
              (generic_token)
              (command_argument_sep)
@@ -1244,24 +908,10 @@ index e91d0a4..6043257 100644
              (command_argument_sep)
 -            (command_parameter)))))))
 +            (generic_token)))))))
- 
+
  ===
  Native: short flag with an attached number
- ===
- 
- grep -n -A5 needle file.txt
- 
- ---
- 
- (program
-@@ -265,63 +265,66 @@ Select-Object Id, State, Command
- ---
- 
- (program
-   (statement_list
-     (pipeline
-       (pipeline_chain
-         (command
+@@ -272,9 +272,10 @@ Select-Object Id, State, Command
            (command_name)
            (command_elements
              (command_argument_sep)
@@ -1272,20 +922,10 @@ index e91d0a4..6043257 100644
 +              (generic_token)
 +              (generic_token)
 +              (generic_token))))))))
- 
+
  ===
  Native: comma list without spaces
- ===
- 
- Get-Process a,b
- 
- ---
- 
- (program
-   (statement_list
-     (pipeline
-       (pipeline_chain
-         (command
+@@ -292,8 +293,9 @@ Get-Process a,b
            (command_name)
            (command_elements
              (command_argument_sep)
@@ -1294,22 +934,10 @@ index e91d0a4..6043257 100644
 +            (array_literal_expression
 +              (generic_token)
 +              (generic_token))))))))
- 
+
  ===
  Native: comma list as a parameter value
- ===
- 
- Add-Type -AssemblyName System.Windows.Forms,System.Drawing
- 
- ---
- 
- (program
-   (statement_list
-     (pipeline
-       (pipeline_chain
-         (command
-           (command_name)
-           (command_elements
+@@ -313,8 +315,9 @@ Add-Type -AssemblyName System.Windows.Forms,System.Drawing
              (command_argument_sep)
              (command_parameter)
              (command_argument_sep)
@@ -1318,24 +946,10 @@ index e91d0a4..6043257 100644
 +            (array_literal_expression
 +              (generic_token)
 +              (generic_token))))))))
- 
+
  ===
  Native: quoted comma list still an array
- ===
- 
- Start-Process python -ArgumentList '-m','app.gui' -PassThru
- 
- ---
- 
- (program
-@@ -412,10 +415,448 @@ Write-Output a & Write-Output b
-             (generic_token)
-             (command_argument_sep)))))
-     (background_operator)
-     (pipeline
-       (pipeline_chain
-         (command
-           (command_name)
+@@ -419,3 +422,441 @@ Write-Output a & Write-Output b
            (command_elements
              (command_argument_sep)
              (generic_token)))))))
@@ -1777,3 +1391,87 @@ index e91d0a4..6043257 100644
 +      (pipeline_chain
 +        (command
 +          (command_name))))))
+diff --git a/test/corpus/sloplint_word_boundaries.txt b/test/corpus/sloplint_word_boundaries.txt
+new file mode 100644
+index 0000000..8e901b0
+--- /dev/null
++++ b/test/corpus/sloplint_word_boundaries.txt
+@@ -0,0 +1,78 @@
++====================
++Variable path parses a balanced subexpression
++====================
++
++Copy-Item $PSScriptRoot/"$(Get-Date)" $dest
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (pipeline_chain
++        (command
++          command_name: (command_name)
++          command_elements: (command_elements
++            (command_argument_sep)
++            (generic_token
++              (sub_expression
++                statements: (statement_list
++                  (pipeline
++                    (pipeline_chain
++                      (command
++                        command_name: (command_name)))))))
++            (command_argument_sep)
++            (array_literal_expression
++              (unary_expression
++                (variable)))))))))
++
++====================
++Variable path retains an escaped interpolation opener
++====================
++
++Copy-Item $PSScriptRoot/"`$(Get-Date" $dest
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (pipeline_chain
++        (command
++          command_name: (command_name)
++          command_elements: (command_elements
++            (command_argument_sep)
++            (generic_token)
++            (command_argument_sep)
++            (array_literal_expression
++              (unary_expression
++                (variable)))))))))
++
++====================
++Variable path rejects an unclosed subexpression
++:error
++====================
++
++Copy-Item $PSScriptRoot/"$(Get-Date" $dest
++
++---
++
++
++
++====================
++Hyphenated command continues across a backtick newline
++====================
++
++Get-Date`
++| Write-Output
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (pipeline_chain
++        (command
++          command_name: (command_name))
++        (command
++          command_name: (command_name))))))

@@ -1476,6 +1476,25 @@
     }
   },
   {
+    "type": "generic_token",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "sub_expression",
+          "named": true
+        },
+        {
+          "type": "variable",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "generic_type_arguments",
     "named": true,
     "fields": {},
@@ -4116,10 +4135,6 @@
   {
     "type": "function",
     "named": false
-  },
-  {
-    "type": "generic_token",
-    "named": true
   },
   {
     "type": "hexadecimal_integer_literal",
