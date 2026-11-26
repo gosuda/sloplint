@@ -1,0 +1,44 @@
+{
+  "state": "rejected; not published",
+  "producer": "deaf593cfc84ff19ef829080a010bd0b88aaf5da",
+  "run": 45852203001,
+  "job": 140021180450,
+  "source_tree": "e49a7ffadb20c7b667e9c69760e7117a9a8eb284",
+  "relations_sha256": "99de904efa506dd0f0991f314d3a25c301378b67c2f174e504ea3a8898fe4b55",
+  "artifact": {
+    "id": 15134692439,
+    "node_id": "MDg6QXJ0aWZhY3QxNTEzNDY5MjQzOQ==",
+    "name": "bamti-alias-views-evidence-deaf593cfc84ff19ef829080a010bd0b88aaf5da",
+    "size_in_bytes": 132540,
+    "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15134692439",
+    "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15134692439/zip",
+    "expired": false,
+    "digest": "sha256:f4ca1b0e85b893274959cc2396c7040a71abe58d9681ec798efa00824d86ddd5",
+    "created_at": "2026-11-26T16:01:32Z",
+    "updated_at": "2026-11-26T16:01:32Z",
+    "expires_at": "2026-12-03T16:01:31Z",
+    "workflow_run": {
+      "id": 45852203001,
+      "repository_id": 1424164147,
+      "head_repository_id": 1424164147,
+      "head_branch": "ci/bamti-alias-views-20261126-r17",
+      "head_sha": "deaf593cfc84ff19ef829080a010bd0b88aaf5da"
+    }
+  },
+  "results": {
+    "relations": 79,
+    "mutation_controls": 3,
+    "corpus_frontend_seconds": 46.9,
+    "fmt": 0,
+    "check": 0,
+    "clippy": 0,
+    "authority": 0,
+    "workspace": 101,
+    "workspace_failures": [
+      "task_106_sync_cases_match_node_in_every_execution_mode",
+      "all_pinned_cases_match_node_in_every_execution_mode"
+    ],
+    "diagnosis": "Valita calls fail BAMTS-C053 under unconditional prepared class and alias view expansion. Node contracts and npm were not reached."
+  },
+  "published_head": "11e99ee0788613ff6a9fd7d5b0afddf819953850"
+}
