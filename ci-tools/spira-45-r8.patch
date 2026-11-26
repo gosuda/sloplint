@@ -1,120 +1,2194 @@
-diff --git a/db/faults_test.lgo b/db/faults_test.lgo
-index fad7857..de82f33 100644
---- a/db/faults_test.lgo
-+++ b/db/faults_test.lgo
-@@ -18,7 +18,9 @@ import (
- 
- func faultExec(t *testing.T, pool *db.Pool, statement string) {
- 	t.Helper()
--	if _, err := db.Exec(t.Context(), pool, statement); err != nil {
-+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
-+	defer cancel()
-+	if _, err := db.Exec(ctx, pool, statement); err != nil {
- 		t.Fatalf("faultExec %q: %v", statement, err)
- 		return
- 	}
-@@ -181,12 +183,16 @@ type constraintProbe struct {
- 
- func withConstraintProbe(t *testing.T, ctx context.Context, pool *db.Pool, p constraintProbe) {
- 	t.Helper()
-+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-+	defer cancel()
- 	if _, err := db.Exec(ctx, pool, "CREATE TABLE "+p.table+" (n integer not null unique)"); err != nil {
- 		t.Fatalf("create %s: %v", p.table, err)
- 		return
- 	}
- 	defer func() {
--		if _, derr := db.Exec(context.Background(), pool, "DROP TABLE "+p.table); derr != nil {
-+		cleanup, stop := context.WithTimeout(context.Background(), 5*time.Second)
-+		defer stop()
-+		if _, derr := db.Exec(cleanup, pool, "DROP TABLE "+p.table); derr != nil {
- 			t.Errorf("drop %s: %v", p.table, derr)
- 		}
- 	}()
-@@ -201,3 +207,22 @@ func withConstraintProbe(t *testing.T, ctx context.Context, pool *db.Pool, p con
- 	}
- 	p.check(dupErr)
- }
+diff --git a/db/db_test.lgo b/db/db_test.lgo
+--- a/db/db_test.lgo
++++ b/db/db_test.lgo
+@@ -1,1093 +1,1097 @@
+-package db_test
+-
+-import (
+-	"context"
+-	"database/sql"
+-	"database/sql/driver"
+-	"errors"
+-	"fmt"
+-	"logos/sync"
+-	"strings"
+-	"testing"
+-	"time"
+-
+-	"github.com/gosuda/spira/db"
+-
+-	"modernc.org/sqlite"
+-)
+-
+-const insertThing = "INSERT INTO things (n) VALUES (?)"
+-
+-const cacheLimit = 256
+-
+-func openPool(t *testing.T) *db.Pool {
+-	t.Helper()
+-	key := strings.NewReplacer("/", "_", "(", "_", ")", "_").Replace(t.Name())
+-	pool, err := db.Open("sqlite", fmt.Sprintf("file:spira_%s?mode=memory&cache=shared", key))
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: open %s: %v", key, err))
+-	}
+-	if pool == nil {
+-		panic("db_test: Open returned no pool")
+-	}
+-	if serr := pool.Start(t.Context()); serr != nil {
+-		panic(fmt.Sprintf("db_test: start %s: %v", key, serr))
+-	}
+-	t.Cleanup(func() {
+-		if err := pool.Stop(context.Background()); err != nil {
+-			t.Errorf("Stop: %v", err)
+-		}
+-	})
+-	return pool
+-}
+-
+-func createThings(t *testing.T, pool *db.Pool) {
+-	t.Helper()
+-	if _, err := db.Exec(t.Context(), pool, "CREATE TABLE things (n integer not null)"); err != nil {
+-		panic(fmt.Sprintf("db_test: create: %v", err))
+-	}
+-}
+-
+-func insertThingRow(t *testing.T, q db.Querier) {
+-	t.Helper()
+-	if _, err := db.Exec(t.Context(), q, insertThing, 7); err != nil {
+-		panic(fmt.Sprintf("db_test: insert: %v", err))
+-	}
+-}
+-
+-func countThings(t *testing.T, pool *db.Pool) int {
+-	t.Helper()
+-	rows, err := pool.QueryContext(t.Context(), "SELECT COUNT(*) FROM things")
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: count: %v", err))
+-	}
+-	if rows == nil {
+-		panic("db_test: count returned no rows handle")
+-	}
+-	defer closeRows(t, rows)
+-	if !rows.Next() {
+-		t.Fatal("count: query returned no row")
+-	}
+-	var n int
+-	if serr := rows.Scan(&n); serr != nil {
+-		t.Fatalf("scan: %v", serr)
+-	}
+-	return n
+-}
+-
+-func closeRows(t *testing.T, rows *sql.Rows?) {
+-	if rows == nil {
+-		return
+-	}
+-	if err := rows.Close(); err != nil {
+-		t.Errorf("close: %v", err)
+-	}
+-}
+-
+-func TestInTxCommitsOnSuccess(t *testing.T) {
+-	pool := openPool(t)
+-	createThings(t, pool)
+-	saved, err := db.InTx[int](t.Context(), pool, func(tx *db.Tx) (int, error) {
+-		insertThingRow(t, tx)
+-		return 7, nil
+-	})
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: InTx: %v", err))
+-	}
+-	if saved != 7 {
+-		t.Fatalf("InTx result = %d, want 7", saved)
+-	}
+-	if n := countThings(t, pool); n != 1 {
+-		t.Fatalf("rows after commit = %d, want 1", n)
+-	}
+-}
+-
+-func TestInTxRollsBackOnError(t *testing.T) {
+-	pool := openPool(t)
+-	createThings(t, pool)
+-	boom := errors.New("boom")
+-	_, err := db.InTx[int](t.Context(), pool, func(tx *db.Tx) (int, error) {
+-		insertThingRow(t, tx)
+-		return 0, boom
+-	})
+-	if !errors.Is(err, boom) {
+-		t.Fatalf("InTx error = %v, want boom", err)
+-	}
+-	if n := countThings(t, pool); n != 0 {
+-		t.Fatalf("rows after error = %d, want 0", n)
+-	}
+-}
+-
+-func TestInTxRollsBackOnPanic(t *testing.T) {
+-	pool := openPool(t)
+-	createThings(t, pool)
+-	recovered := runPanickingTx(t, pool)
+-	if recovered == nil {
+-		t.Fatal("InTx swallowed the work panic")
+-	}
+-	if n := countThings(t, pool); n != 0 {
+-		t.Fatalf("rows after panic = %d, want 0", n)
+-	}
+-	txProbeFreed(t, pool, "things", 7)
+-}
+-
+-func runPanickingTx(t *testing.T, pool *db.Pool) (recovered any) {
+-	defer func() {
+-		recovered = recover()
+-	}()
+-	_, err := db.InTx[int](t.Context(), pool, func(tx *db.Tx) (int, error) {
+-		insertThingRow(t, tx)
+-		panic("boom")
+-	})
+-	if err != nil {
+-		t.Errorf("InTx returned an error alongside the panic: %v", err)
+-	}
+-	return recovered
+-}
+-
+-func TestStatementCacheNeverExceedsCapacity(t *testing.T) {
+-	pool := openPool(t)
+-	createThings(t, pool)
+-	for i := range 1000 {
+-		runCount(t, pool, fmt.Sprintf("SELECT COUNT(*) FROM things WHERE n <> %d", i))
+-	}
+-	if got := pool.Prepared(); got != cacheLimit {
+-		t.Fatalf("cache holds %d statements, want %d", got, cacheLimit)
+-	}
+-	runCount(t, pool, "SELECT COUNT(*) FROM things WHERE n <> 0")
+-	if got := pool.Prepared(); got != cacheLimit {
+-		t.Fatalf("cache holds %d statements after reuse, want %d", got, cacheLimit)
+-	}
+-}
+-
+-func runCount(t *testing.T, pool *db.Pool, query string) {
+-	t.Helper()
+-	rows, err := pool.QueryContext(t.Context(), query)
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: query %q: %v", query, err))
+-	}
+-	if rows == nil {
+-		panic(fmt.Sprintf("db_test: query %q returned no rows handle", query))
+-	}
+-	defer closeRows(t, rows)
+-	if !rows.Next() {
+-		t.Fatalf("query %q returned no row", query)
+-	}
+-}
+-
+-func TestInExpandsTheMarker(t *testing.T) {
+-	cases := []struct {
+-		query string
+-		name  string
+-		count int
+-		want  string
+-	}{
+-		{"SELECT * FROM t WHERE id IN (/*SLICE:ids*/?)", "ids", 3, "/*db:nocache*/SELECT * FROM t WHERE id IN (?,?,?)"},
+-		{"SELECT * FROM t WHERE id IN (/*SLICE:ids*/?)", "ids", 1, "/*db:nocache*/SELECT * FROM t WHERE id IN (?)"},
+-		{"SELECT * FROM t WHERE id IN (/*SLICE:ids*/?)", "ids", 0, "/*db:nocache*/SELECT * FROM t WHERE id IN (NULL)"},
+-		{"UPDATE t SET a = ? WHERE b IN (/*SLICE:keys*/?)", "keys", 2, "/*db:nocache*/UPDATE t SET a = ? WHERE b IN (?,?)"},
+-		{"SELECT * FROM t WHERE a IN (/*SLICE:x*/?) AND b IN (/*SLICE:y*/?)", "y", 2, "/*db:nocache*/SELECT * FROM t WHERE a IN (/*SLICE:x*/?) AND b IN (?,?)"},
+-		{"SELECT * FROM t", "ids", 2, "/*db:nocache*/SELECT * FROM t"},
+-	}
+-	for _, c := range cases {
+-		got := db.In(c.query, c.name, c.count)
+-		if got != c.want {
+-			t.Errorf("In(%q, %q, %d) = %q, want %q", c.query, c.name, c.count, got, c.want)
+-		}
+-	}
+-}
+-
+-func TestInRunsThroughThePoolUncached(t *testing.T) {
+-	pool := openPool(t)
+-	createThings(t, pool)
+-	ctx := t.Context()
+-	for _, n := range []int{5, 7, 9} {
+-		if _, err := db.Exec(ctx, pool, insertThing, n); err != nil {
+-			panic(fmt.Sprintf("db_test: insert %d: %v", n, err))
+-		}
+-	}
+-	before := pool.Prepared()
+-	matched := db.In("SELECT n FROM things WHERE n IN (/*SLICE:ns*/?) ORDER BY n", "ns", 2)
+-	assertQueryResult(t, pool, matched, []any{5, 7})
+-	empty := db.In("SELECT n FROM things WHERE n IN (/*SLICE:ns*/?)", "ns", 0)
+-	assertQueryResult(t, pool, empty, nil)
+-	if got := pool.Prepared(); got != before {
+-		t.Fatalf("cache holds %d statements after In queries, want %d", got, before)
+-	}
+-}
+-
+-func assertQueryResult(t *testing.T, pool *db.Pool, query string, args []any) {
+-	t.Helper()
+-	rows, err := pool.QueryContext(t.Context(), query, args...)
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: query: %v", err))
+-	}
+-	if rows == nil {
+-		panic("db_test: query returned no rows handle")
+-	}
+-	defer closeRows(t, rows)
+-	seen := 0
+-	for rows.Next() {
+-		var n int
+-		if serr := rows.Scan(&n); serr != nil {
+-			t.Fatalf("scan: %v", serr)
+-		}
+-		if seen < len(args) {
+-			if want, ok := args[seen].(int); ok && n != want {
+-				t.Fatalf("row %d = %d, want %d", seen, n, want)
+-			}
+-		}
+-		seen++
+-	}
+-	if seen != len(args) {
+-		t.Fatalf("query returned %d rows, want %d", seen, len(args))
+-	}
+-}
+-
+-func TestOpenRejectsUnknownDriver(t *testing.T) {
+-	_, err := db.Open("oracle", "x")
+-	if err == nil {
+-		t.Fatal("Open accepted the unknown driver oracle")
+-	}
+-	if !errors.Is(err, db.ErrUnknownDriver) || !strings.Contains(err.Error(), `unknown driver "oracle"`) {
+-		t.Fatalf("error = %v, want db.ErrUnknownDriver with the driver name", err)
+-	}
+-}
+-
+-func TestOpenRejectsMysqlWithoutParseTime(t *testing.T) {
+-	_, err := db.Open("mysql", "user:pass@/dbname")
+-	if err == nil {
+-		t.Fatal("Open accepted a mysql DSN without parseTime=true")
+-	}
+-	if !errors.Is(err, db.ErrMissingParseTime) || !strings.Contains(err.Error(), "db: mysql DSN needs parseTime=true") {
+-		t.Fatalf("error = %v, want db.ErrMissingParseTime", err)
+-	}
+-}
+-
+-func TestDialectOfRejectsParseTimeInThePassword(t *testing.T) {
+-	_, err := db.DialectOf("mysql", "user:parseTime=true@tcp(localhost:3306)/db")
+-	if err == nil {
+-		t.Fatal("DialectOf accepted parseTime in the password")
+-	}
+-	if !errors.Is(err, db.ErrMissingParseTime) || !strings.Contains(err.Error(), "db: mysql DSN needs parseTime=true") {
+-		t.Fatalf("error = %v, want db.ErrMissingParseTime", err)
+-	}
+-}
+-
+-type stopOutcome struct {
+-	err  sync.Locked[error]
+-	done chan struct{}
+-}
+-
+-func detached(work func()) {
+-	ctx, cancel := context.WithCancel(context.Background())
+-	context.AfterFunc(ctx, work)
+-	cancel()
+-}
+-
+-func registerBlockingFunction(ctx context.Context, started chan struct{}, release chan struct{}) string {
+-	block := func(_ *sqlite.FunctionContext, _ []driver.Value) (driver.Value, error) {
+-		select {
+-		case started <- struct{}{}:
+-		case <-ctx.Done():
+-		}
+-		select {
+-		case <-release:
+-		case <-ctx.Done():
+-		}
+-		return int64(1), nil
+-	}
+-	name := fmt.Sprintf("spira_block_stop_%d", time.Now().UnixNano())
+-	if err := sqlite.RegisterScalarFunction(name, 0, block); err != nil {
+-		panic(fmt.Sprintf("db_test: register function: %v", err))
+-	}
+-	return name
+-}
+-
+-func checkStopShutdown(t *testing.T, ctx context.Context, pool *db.Pool, stop *stopOutcome) {
+-	t.Helper()
+-	var serr error
+-	stop.err.WithLock(func(e *error) { serr = *e })
+-	if !errors.Is(serr, context.DeadlineExceeded) || !strings.Contains(serr.Error(), "db: stop:") {
+-		t.Fatalf("Stop error = %v, want db: stop: context deadline exceeded", serr)
+-	}
+-	closed := false
+-	for !closed && ctx.Err() == nil {
+-		_, qerr := pool.ExecContext(ctx, "/*db:nocache*/SELECT 1")
+-		closed = qerr != nil && strings.Contains(qerr.Error(), "database is closed")
+-		if !closed {
+-			time.Sleep(5 * time.Millisecond)
+-		}
+-	}
+-	if !closed {
+-		t.Fatal("the pool stayed open after the timed-out Stop and the end of the statement")
+-	}
+-	if got := pool.Prepared(); got != 0 {
+-		t.Fatalf("cache holds %d statements after Stop, want 0", got)
+-	}
+-}
+-
+-func TestStopReturnsByItsDeadlineWhileAStatementRuns(t *testing.T) {
+-	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+-	defer cancel()
+-	started := make(chan struct{}, 1)
+-	release := make(chan struct{})
+-	blocker := registerBlockingFunction(ctx, started, release)
+-	pool := openPool(t)
+-	statement := &stopOutcome{done: make(chan struct{})}
+-	detached(func() {
+-		_, qerr := pool.ExecContext(ctx, "SELECT "+blocker+"()")
+-		statement.err.WithLock(func(e *error) { *e = qerr })
+-		close(statement.done)
+-	})
+-	select {
+-	case <-started:
+-	case <-ctx.Done():
+-		t.Fatal("the blocking statement did not start")
+-	}
+-	stopCtx, stopCancel := context.WithTimeout(ctx, 50*time.Millisecond)
+-	defer stopCancel()
+-	stop := &stopOutcome{done: make(chan struct{})}
+-	detached(func() {
+-		serr := pool.Stop(stopCtx)
+-		stop.err.WithLock(func(e *error) { *e = serr })
+-		close(stop.done)
+-	})
+-	returnedInTime := true
+-	select {
+-	case <-stop.done:
+-	case <-time.After(2 * time.Second):
+-		returnedInTime = false
+-	}
+-	close(release)
+-	select {
+-	case <-statement.done:
+-	case <-ctx.Done():
+-		t.Fatal("the blocking statement did not finish after its release")
+-	}
+-	if !returnedInTime {
+-		t.Fatal("Stop did not return by its 50ms deadline while a cached statement ran")
+-	}
+-	checkStopShutdown(t, ctx, pool, stop)
+-	}
+-
+-func TestDialectOfMatchesEachDriverName(t *testing.T) {
+-	cases := []struct {
+-		driver string
+-		dsn    string
+-		want   string
+-	}{
+-		{"sqlite", "file:x?mode=memory", "sqlite"},
+-		{"pgx", "postgres://localhost/db", "postgres"},
+-		{"postgres", "postgres://localhost/db", "postgres"},
+-		{"mysql", "user@/db?parseTime=true", "mysql"},
+-		{"sqlserver", "sqlserver://localhost?database=db", "mssql"},
+-	}
+-	for _, c := range cases {
+-		d, err := db.DialectOf(c.driver, c.dsn)
+-		if err != nil {
+-			panic(fmt.Sprintf("db_test: DialectOf(%s): %v", c.driver, err))
+-		}
+-		if got := dialectName(d); got != c.want {
+-			t.Fatalf("DialectOf(%s) = %s, want %s", c.driver, got, c.want)
+-		}
+-	}
+-	if _, err := db.DialectOf("mysql", "user@/db"); err == nil || !errors.Is(err, db.ErrMissingParseTime) {
+-		t.Fatalf("DialectOf(mysql, missing parseTime) error = %v", err)
+-	}
+-	if _, err := db.DialectOf("oracle", "x"); err == nil || !errors.Is(err, db.ErrUnknownDriver) {
+-		t.Fatalf("DialectOf(oracle) error = %v", err)
+-	}
+-}
+-
+-func dialectName(d db.Dialect) string {
+-	switch d.(type) {
+-	case db.SQLite:
+-		return "sqlite"
+-	case db.Postgres:
+-		return "postgres"
+-	case db.MySQL:
+-		return "mysql"
+-	case db.MSSQL:
+-		return "mssql"
+-	case nil:
+-		return "nil"
+-	}
+-	return "unknown"
+-}
+-
+-type productCode string
+-
+-type plainRow struct {
+-	ID   int64       `col:"id"`
+-	N    int         `col:"n"`
+-	I8   int8        `col:"i8"`
+-	I16  int16       `col:"i16"`
+-	I32  int32       `col:"i32"`
+-	F32  float32     `col:"f32"`
+-	F64  float64     `col:"f64"`
+-	S    string      `col:"s"`
+-	Code productCode `col:"code"`
+-	B    []byte      `col:"b"`
+-	Yes  bool        `col:"yes"`
+-}
+-
+-const createPlain = `CREATE TABLE plain (
+-	id INTEGER PRIMARY KEY,
+-	n INTEGER,
+-	i8 INTEGER,
+-	i16 INTEGER,
+-	i32 INTEGER,
+-	f32 REAL,
+-	f64 REAL,
+-	s TEXT,
+-	code TEXT,
+-	b BLOB,
+-	yes INTEGER
+-)`
+-
+-const insertPlain = `INSERT INTO plain (id, n, i8, i16, i32, f32, f64, s, code, b, yes)
+-	VALUES (1, 41, -3, 300, 70000, 2.5, 3.125, 'left', 'SKU-1', x'6279746573', 1)`
+-
+-const selectPlain = `SELECT id, n, i8, i16, i32, f32, f64, s, code, b, yes FROM plain`
+-
+-func mustExec(t *testing.T, q db.Querier, statement string) {
+-	t.Helper()
+-	if _, err := db.Exec(t.Context(), q, statement); err != nil {
+-		panic(fmt.Sprintf("db_test: exec %q: %v", statement, err))
+-	}
+-}
+-
+-func readPlainRaw(t *testing.T, pool *db.Pool) plainRow {
+-	t.Helper()
+-	rows, err := pool.QueryContext(t.Context(), selectPlain)
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: raw query: %v", err))
+-	}
+-	if rows == nil {
+-		panic("db_test: raw query returned no rows handle")
+-	}
+-	defer closeRows(t, rows)
+-	if !rows.Next() {
+-		t.Fatal("raw query returned no row")
+-	}
+-	var raw plainRow
+-	if serr := rows.Scan(&raw.ID, &raw.N, &raw.I8, &raw.I16, &raw.I32, &raw.F32, &raw.F64, &raw.S, &raw.Code, &raw.B, &raw.Yes); serr != nil {
+-		t.Fatalf("raw scan: %v", serr)
+-	}
+-	return raw
+-}
+-
+-func plainDiff(got plainRow, want plainRow) error {
+-	if got.ID != want.ID || got.N != want.N || got.I8 != want.I8 || got.I16 != want.I16 || got.I32 != want.I32 {
+-		return fmt.Errorf("int columns = %+v, want %+v", got, want)
+-	}
+-	if got.F32 != want.F32 || got.F64 != want.F64 || got.S != want.S || string(got.Code) != string(want.Code) || got.Yes != want.Yes {
+-		return fmt.Errorf("value columns = %+v, want %+v", got, want)
+-	}
+-	if string(got.B) != string(want.B) {
+-		return fmt.Errorf("blob = %q, want %q", got.B, want.B)
+-	}
+-	return nil
+-}
+-
+-func TestQueryScansEveryPlainKind(t *testing.T) {
+-	pool := openPool(t)
+-	mustExec(t, pool, createPlain)
+-	mustExec(t, pool, insertPlain)
+-	rows, err := db.Query[plainRow](t.Context(), pool, selectPlain)
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: query plain: %v", err))
+-	}
+-	if len(rows) != 1 {
+-		t.Fatalf("Query returned %d rows, want 1", len(rows))
+-	}
+-	if diff := plainDiff(rows[0], readPlainRaw(t, pool)); diff != nil {
+-		t.Fatal(diff)
+-	}
+-}
+-
+-type stampedRow struct {
+-	ID int64     `col:"id"`
+-	At time.Time `col:"ts"`
+-}
+-
+-func TestQueryScansTimestampColumn(t *testing.T) {
+-	pool := openPool(t)
+-	mustExec(t, pool, "CREATE TABLE stamped (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL)")
+-	mustExec(t, pool, "INSERT INTO stamped (id, ts) VALUES (1, '2026-11-18 10:20:30')")
+-	got, err := db.Query[stampedRow](t.Context(), pool, "SELECT id, ts FROM stamped")
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: query stamped: %v", err))
+-	}
+-	if len(got) != 1 {
+-		t.Fatalf("Query returned %d rows, want 1", len(got))
+-	}
+-	rows, rerr := pool.QueryContext(t.Context(), "SELECT id, ts FROM stamped")
+-	if rerr != nil {
+-		panic(fmt.Sprintf("db_test: raw query: %v", rerr))
+-	}
+-	if rows == nil {
+-		panic("db_test: raw query returned no rows handle")
+-	}
+-	defer closeRows(t, rows)
+-	if !rows.Next() {
+-		t.Fatal("raw query returned no row")
+-	}
+-	var id int64
+-	var want time.Time
+-	if serr := rows.Scan(&id, &want); serr != nil {
+-		panic(fmt.Sprintf("db_test: raw scan: %v", serr))
+-	}
+-	if got[0].ID != id || !got[0].At.Equal(want) {
+-		t.Fatalf("scan = %d %v, want %d %v", got[0].ID, got[0].At, id, want)
+-	}
+-}
+-
+-type pairRow struct {
+-	A string `col:"a"`
+-	B string `col:"b"`
+-}
+-
+-func pairPool(t *testing.T) *db.Pool {
+-	t.Helper()
+-	pool := openPool(t)
+-	mustExec(t, pool, "CREATE TABLE pairs (a TEXT, b TEXT)")
+-	mustExec(t, pool, "INSERT INTO pairs (a, b) VALUES ('x', 'y')")
+-	return pool
+-}
+-
+-func TestQueryRejectsWrongColumnOrder(t *testing.T) {
+-	pool := pairPool(t)
+-	_, err := db.Query[pairRow](t.Context(), pool, "SELECT b, a FROM pairs")
+-	if !errors.Is(err, db.ErrShapeMismatch) || !strings.Contains(err.Error(), `column 0 is "b"`) {
+-		t.Fatalf("error = %v, want db.ErrShapeMismatch", err)
+-	}
+-}
+-
+-func TestQueryRejectsExtraColumn(t *testing.T) {
+-	pool := pairPool(t)
+-	_, err := db.Query[pairRow](t.Context(), pool, "SELECT a, b, a AS c FROM pairs")
+-	if !errors.Is(err, db.ErrShapeMismatch) || !strings.Contains(err.Error(), "has 2 fields, query returned 3 columns") {
+-		t.Fatalf("error = %v, want db.ErrShapeMismatch", err)
+-	}
+-}
+-
+-func TestQueryRejectsMissingColumn(t *testing.T) {
+-	pool := pairPool(t)
+-	_, err := db.Query[pairRow](t.Context(), pool, "SELECT a FROM pairs")
+-	if !errors.Is(err, db.ErrShapeMismatch) || !strings.Contains(err.Error(), "has 2 fields, query returned 1 columns") {
+-		t.Fatalf("error = %v, want db.ErrShapeMismatch", err)
+-	}
+-}
+-
+-func TestQueryRejectsMismatchedColumnsWithoutRows(t *testing.T) {
+-	pool := openPool(t)
+-	mustExec(t, pool, "CREATE TABLE pairs (a TEXT, b TEXT)")
+-	_, err := db.Query[pairRow](t.Context(), pool, "SELECT a, b, a AS c FROM pairs")
+-	if !errors.Is(err, db.ErrShapeMismatch) || !strings.Contains(err.Error(), "has 2 fields, query returned 3 columns") {
+-		t.Fatalf("error = %v, want db.ErrShapeMismatch", err)
+-	}
+-}
+-
+-func TestOneRejectsMismatchedColumnsWithoutRows(t *testing.T) {
+-	pool := openPool(t)
+-	mustExec(t, pool, "CREATE TABLE pairs (a TEXT, b TEXT)")
+-	_, err := db.One[pairRow](t.Context(), pool, "SELECT b, a FROM pairs")
+-	if !errors.Is(err, db.ErrShapeMismatch) || !strings.Contains(err.Error(), `column 0 is "b"`) {
+-		t.Fatalf("error = %v, want db.ErrShapeMismatch", err)
+-	}
+-}
+-
+-type strictRow struct {
+-	ID int64  `col:"id"`
+-	S  string `col:"s"`
+-}
+-
+-func TestQueryRejectsNullInNonOptional(t *testing.T) {
+-	pool := openPool(t)
+-	mustExec(t, pool, "CREATE TABLE strict (id INTEGER PRIMARY KEY, s TEXT)")
+-	mustExec(t, pool, "INSERT INTO strict (id, s) VALUES (1, NULL)")
+-	_, err := db.Query[strictRow](t.Context(), pool, "SELECT id, s FROM strict")
+-	if !errors.Is(err, db.ErrNullInNonOptional) || !strings.Contains(err.Error(), "NULL in non-optional") {
+-		t.Fatalf("error = %v, want db.ErrNullInNonOptional", err)
+-	}
+-}
+-
+-type innerRow struct {
+-	B int    `col:"b"`
+-	C string `col:"c"`
+-}
+-
+-type outerRow struct {
+-	A     string  `col:"a"`
+-	Inner innerRow
+-	D     bool    `col:"d"`
+-}
+-
+-func nestedPool(t *testing.T) *db.Pool {
+-	t.Helper()
+-	pool := openPool(t)
+-	mustExec(t, pool, "CREATE TABLE nested (a TEXT, b INTEGER, c TEXT, d INTEGER)")
+-	mustExec(t, pool, "INSERT INTO nested (a, b, c, d) VALUES ('x', 7, 'y', 1)")
+-	return pool
+-}
+-
+-func TestQueryFlattensNestedStructs(t *testing.T) {
+-	pool := nestedPool(t)
+-	got, err := db.Query[outerRow](t.Context(), pool, "SELECT a, b, c, d FROM nested")
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: query nested: %v", err))
+-	}
+-	if len(got) != 1 {
+-		t.Fatalf("Query returned %d rows, want 1", len(got))
+-	}
+-	rows, rerr := pool.QueryContext(t.Context(), "SELECT a, b, c, d FROM nested")
+-	if rerr != nil {
+-		panic(fmt.Sprintf("db_test: raw query: %v", rerr))
+-	}
+-	if rows == nil {
+-		panic("db_test: raw query returned no rows handle")
+-	}
+-	defer closeRows(t, rows)
+-	if !rows.Next() {
+-		t.Fatal("raw query returned no row")
+-	}
+-	var a string
+-	var b int
+-	var c string
+-	var d bool
+-	if serr := rows.Scan(&a, &b, &c, &d); serr != nil {
+-		t.Fatalf("raw scan: %v", serr)
+-	}
+-	if got[0].A != a || got[0].Inner.B != b || got[0].Inner.C != c || got[0].D != d {
+-		t.Fatalf("nested scan = %+v, want a=%q b=%d c=%q d=%v", got[0], a, b, c, d)
+-	}
+-}
+-
+-func TestQueryRejectsWrongNestedOrder(t *testing.T) {
+-	pool := nestedPool(t)
+-	_, err := db.Query[outerRow](t.Context(), pool, "SELECT a, c, b, d FROM nested")
+-	if !errors.Is(err, db.ErrShapeMismatch) || !strings.Contains(err.Error(), `column 1 is "c"`) {
+-		t.Fatalf("error = %v, want db.ErrShapeMismatch", err)
+-	}
+-}
+-
+-func TestQueryScansScalarColumns(t *testing.T) {
+-	pool := openPool(t)
+-	createThings(t, pool)
+-	insertThingRow(t, pool)
+-	nums, err := db.Query[int64](t.Context(), pool, "SELECT n FROM things")
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: query int64: %v", err))
+-	}
+-	if len(nums) != 1 || nums[0] != 7 {
+-		t.Fatalf("Query int64 = %v, want [7]", nums)
+-	}
+-	if n := countThings(t, pool); n != 1 {
+-		t.Fatalf("count = %d, want 1", n)
+-	}
+-	words, werr := db.Query[string](t.Context(), pool, "SELECT CAST(n AS TEXT) FROM things")
+-	if werr != nil {
+-		panic(fmt.Sprintf("db_test: query string: %v", werr))
+-	}
+-	if len(words) != 1 || words[0] != "7" {
+-		t.Fatalf("Query string = %v, want [7]", words)
+-	}
+-}
+-
+-func TestOneReturnsAbsentWithoutARow(t *testing.T) {
+-	pool := openPool(t)
+-	createThings(t, pool)
+-	got, err := db.One[int64](t.Context(), pool, "SELECT n FROM things")
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: one absent: %v", err))
+-	}
+-	if got != nil {
+-		t.Fatalf("One = %v, want absent", got)
+-	}
+-}
+-
+-func TestOneReturnsTheOnlyRow(t *testing.T) {
+-	pool := openPool(t)
+-	createThings(t, pool)
+-	insertThingRow(t, pool)
+-	got, err := db.One[int64](t.Context(), pool, "SELECT n FROM things")
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: one row: %v", err))
+-	}
+-	if got == nil {
+-		t.Fatal("One returned no row")
+-	}
+-	if value := got ?? 0; value != 7 {
+-		t.Fatalf("One = %d, want 7", value)
+-	}
+-}
+-
+-func TestOneRejectsTwoRows(t *testing.T) {
+-	pool := openPool(t)
+-	createThings(t, pool)
+-	insertThingRow(t, pool)
+-	insertThingRow(t, pool)
+-	_, err := db.One[int64](t.Context(), pool, "SELECT n FROM things")
+-	if !errors.Is(err, db.ErrShapeMismatch) || !strings.Contains(err.Error(), "query returned more than one row") {
+-		t.Fatalf("error = %v, want db.ErrShapeMismatch", err)
+-	}
+-}
+-
+-type mapRow struct {
+-	ID int64             `col:"id"`
+-	M  map[string]string `col:"m"`
+-}
+-
+-func TestQueryRejectsUnsupportedFieldBeforeRows(t *testing.T) {
+-	pool := openPool(t)
+-	mustExec(t, pool, "CREATE TABLE maps (id INTEGER, m TEXT)")
+-	_, err := db.Query[mapRow](t.Context(), pool, "SELECT id, m FROM maps")
+-	if !errors.Is(err, db.ErrShapeMismatch) || !strings.Contains(err.Error(), "unsupported type") {
+-		t.Fatalf("error = %v, want db.ErrShapeMismatch", err)
+-	}
+-}
+-
+-func TestQueryServesSixteenConcurrentReaders(t *testing.T) {
+-	pool := openPool(t)
+-	mustExec(t, pool, createPlain)
+-	mustExec(t, pool, insertPlain)
+-	want := readPlainRaw(t, pool)
+-	read := func() error {
+-		rows, err := db.Query[plainRow](t.Context(), pool, selectPlain)
+-		if err != nil {
+-			return fmt.Errorf("query: %w", err)
+-		}
+-		if len(rows) != 1 {
+-			return fmt.Errorf("query returned %d rows, want 1", len(rows))
+-		}
+-		return plainDiff(rows[0], want)
+-	}
+-	spawn := func() error {
+-		go group (t.Context(), limit = 16) {
+-			for range 16 {
+-				go { read()? }
+-			}
+-		}
+-		return nil
+-	}
+-	if err := spawn(); err != nil {
+-		t.Fatalf("concurrent readers: %v", err)
+-	}
+-}
+-
+-type snakeRow struct {
+-	ProductID  int64
+-	OrderTotal float64
+-}
+-
+-func TestQueryExpectsSnakeCaseWithoutTag(t *testing.T) {
+-	pool := openPool(t)
+-	mustExec(t, pool, "CREATE TABLE snake (product_id INTEGER, order_total REAL)")
+-	mustExec(t, pool, "INSERT INTO snake (product_id, order_total) VALUES (9, 4.5)")
+-	got, err := db.Query[snakeRow](t.Context(), pool, "SELECT product_id, order_total FROM snake")
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: query snake: %v", err))
+-	}
+-	if len(got) != 1 || got[0].ProductID != 9 || got[0].OrderTotal != 4.5 {
+-		t.Fatalf("Query = %+v, want one row 9/4.5", got)
+-	}
+-	_, aerr := db.Query[snakeRow](t.Context(), pool, "SELECT order_total, product_id FROM snake")
+-	if !errors.Is(aerr, db.ErrShapeMismatch) || !strings.Contains(aerr.Error(), `column 0 is "order_total"`) {
+-		t.Fatalf("error = %v, want db.ErrShapeMismatch", aerr)
+-	}
+-}
+-
+-type optionRow struct {
+-	OptS string? `col:"opt_s"`
+-	OptB bool? `col:"opt_b"`
+-	OptI16 int16? `col:"opt_i16"`
+-	OptI32 int32? `col:"opt_i32"`
+-	OptI64 int64? `col:"opt_i64"`
+-	OptF32 float32? `col:"opt_f32"`
+-	OptF64 float64? `col:"opt_f64"`
+-	OptT time.Time? `col:"opt_t"`
+-}
+-
+-type optionRaw struct {
+-	OptS sql.Null[string]
+-	OptB sql.Null[bool]
+-	OptI16 sql.Null[int16]
+-	OptI32 sql.Null[int32]
+-	OptI64 sql.Null[int64]
+-	OptF32 sql.Null[float32]
+-	OptF64 sql.Null[float64]
+-	OptT sql.Null[time.Time]
+-}
+-
+-const createOpts = `CREATE TABLE opts (
+-	id INTEGER PRIMARY KEY,
+-	opt_s TEXT,
+-	opt_b INTEGER,
+-	opt_i16 INTEGER,
+-	opt_i32 INTEGER,
+-	opt_i64 INTEGER,
+-	opt_f32 REAL,
+-	opt_f64 REAL,
+-	opt_t TIMESTAMP
+-)`
+-
+-const insertOptsNull = `INSERT INTO opts (id) VALUES (1)`
+-
+-const insertOptsFull = `INSERT INTO opts (id, opt_s, opt_b, opt_i16, opt_i32, opt_i64, opt_f32, opt_f64, opt_t)
+-	VALUES (2, 'sku', 1, -16, -32, -64, 1.5, 2.25, '2026-11-18 10:30:00')`
+-
+-const optCols = `opt_s, opt_b, opt_i16, opt_i32, opt_i64, opt_f32, opt_f64, opt_t`
+-
+-const selectOpts = `SELECT ` + optCols + ` FROM opts ORDER BY id`
+-
+-const selectOneOpt = `SELECT ` + optCols + ` FROM opts WHERE id = 1`
+-
+-func optsPool(t *testing.T) *db.Pool {
+-	t.Helper()
+-	pool := openPool(t)
+-	mustExec(t, pool, createOpts)
+-	mustExec(t, pool, insertOptsNull)
+-	mustExec(t, pool, insertOptsFull)
+-	return pool
+-}
+-
+-func readOptsRaw(t *testing.T, pool *db.Pool) []optionRaw {
+-	t.Helper()
+-	rows, err := pool.QueryContext(t.Context(), selectOpts)
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: raw query: %v", err))
+-	}
+-	if rows == nil {
+-		panic("db_test: raw query returned no rows handle")
+-	}
+-	defer closeRows(t, rows)
+-	var out []optionRaw
+-	for rows.Next() {
+-		var raw optionRaw
+-		if serr := rows.Scan(&raw.OptS, &raw.OptB, &raw.OptI16, &raw.OptI32, &raw.OptI64, &raw.OptF32, &raw.OptF64, &raw.OptT); serr != nil {
+-			t.Fatalf("raw scan: %v", serr)
+-			return out
+-		}
+-		out = append(out, raw)
+-	}
+-	return out
+-}
+-
+-func optDiff[V comparable](opt V?, raw sql.Null[V]) error {
+-	present := opt != nil
+-	if present != raw.Valid {
+-		return fmt.Errorf("present = %v, raw valid = %v", present, raw.Valid)
+-	}
+-	if !present {
+-		return nil
+-	}
+-	var zero V
+-	if value := opt ?? zero; value != raw.V {
+-		return fmt.Errorf("value = %v, raw %v", value, raw.V)
+-	}
+-	return nil
+-}
+-
+-func optTimeDiff(opt time.Time?, raw sql.Null[time.Time]) error {
+-	present := opt != nil
+-	if present != raw.Valid {
+-		return fmt.Errorf("present = %v, raw valid = %v", present, raw.Valid)
+-	}
+-	if !present {
+-		return nil
+-	}
+-	var zero time.Time
+-	if value := opt ?? zero; !value.Equal(raw.V) {
+-		return fmt.Errorf("value = %v, raw %v", value, raw.V)
+-	}
+-	return nil
+-}
+-
+-func TestQueryRoundTripsOptionFields(t *testing.T) {
+-	pool := optsPool(t)
+-	rows, err := db.Query[optionRow](t.Context(), pool, selectOpts)
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: query opts: %v", err))
+-	}
+-	raw := readOptsRaw(t, pool)
+-	if len(rows) != 2 || len(raw) != 2 {
+-		t.Fatalf("Query returned %d rows, raw %d, want 2", len(rows), len(raw))
+-		return
+-	}
+-	diff := errors.Join(
+-		optDiff(rows[0].OptS, raw[0].OptS),
+-		optDiff(rows[0].OptB, raw[0].OptB),
+-		optDiff(rows[0].OptI16, raw[0].OptI16),
+-		optDiff(rows[0].OptI32, raw[0].OptI32),
+-		optDiff(rows[0].OptI64, raw[0].OptI64),
+-		optDiff(rows[0].OptF32, raw[0].OptF32),
+-		optDiff(rows[0].OptF64, raw[0].OptF64),
+-		optTimeDiff(rows[0].OptT, raw[0].OptT),
+-		optDiff(rows[1].OptS, raw[1].OptS),
+-		optDiff(rows[1].OptB, raw[1].OptB),
+-		optDiff(rows[1].OptI16, raw[1].OptI16),
+-		optDiff(rows[1].OptI32, raw[1].OptI32),
+-		optDiff(rows[1].OptI64, raw[1].OptI64),
+-		optDiff(rows[1].OptF32, raw[1].OptF32),
+-		optDiff(rows[1].OptF64, raw[1].OptF64),
+-		optTimeDiff(rows[1].OptT, raw[1].OptT),
+-	)
+-	if diff != nil {
+-		t.Fatalf("option round trip: %v", diff)
+-	}
+-}
+-
+-func TestOneRoundTripsAnOptionField(t *testing.T) {
+-	pool := optsPool(t)
+-	got, err := db.One[optionRow](t.Context(), pool, selectOneOpt)
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: one null row: %v", err))
+-	}
+-	if got == nil {
+-		t.Fatalf("One returned no row")
+-		return
+-	}
+-	var absent optionRow
+-	row := got ?? absent
+-	if row.OptS != nil || row.OptT != nil {
+-		t.Fatalf("NULL row = %+v, want every option absent", row)
+-	}
+-}
+-
+-type mixedRow struct {
+-	A string `col:"a"`
+-	Mid int64? `col:"mid"`
+-	B string `col:"b"`
+-}
+-
+-func TestQueryKeepsOptionPosition(t *testing.T) {
+-	pool := openPool(t)
+-	mustExec(t, pool, "CREATE TABLE mixed (a TEXT, mid INTEGER, b TEXT)")
+-	mustExec(t, pool, "INSERT INTO mixed (a, mid, b) VALUES ('p', 42, 'q')")
+-	mustExec(t, pool, "INSERT INTO mixed (a, mid, b) VALUES ('x', NULL, 'y')")
+-	rows, err := db.Query[mixedRow](t.Context(), pool, "SELECT a, mid, b FROM mixed ORDER BY a")
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: query mixed: %v", err))
+-	}
+-	if len(rows) != 2 {
+-		t.Fatalf("Query returned %d rows, want 2", len(rows))
+-		return
+-	}
+-	if rows[0].A != "p" || rows[0].B != "q" {
+-		t.Fatalf("first row = %+v, want a=p b=q", rows[0])
+-		return
+-	}
+-	if value := rows[0].Mid ?? 0; value != 42 {
+-		t.Fatalf("first mid = %d, want 42", value)
+-		return
+-	}
+-	if rows[1].Mid != nil {
+-		t.Fatalf("second mid holds a value, want absent")
+-		return
+-	}
+-	if rows[1].A != "x" || rows[1].B != "y" {
+-		t.Fatalf("second row = %+v, want a=x b=y", rows[1])
+-	}
+-}
+-
+-type Status string
+-
+-type statusRow struct {
+-	Name Status `col:"name"`
+-	Note string? `col:"note"`
+-}
+-
+-func TestQueryScansNamedStringBesideOption(t *testing.T) {
+-	pool := openPool(t)
+-	mustExec(t, pool, "CREATE TABLE status (name TEXT, note TEXT)")
+-	mustExec(t, pool, "INSERT INTO status (name, note) VALUES ('open', NULL)")
+-	mustExec(t, pool, "INSERT INTO status (name, note) VALUES ('shut', 'x')")
+-	rows, err := db.Query[statusRow](t.Context(), pool, "SELECT name, note FROM status ORDER BY name")
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: query status: %v", err))
+-	}
+-	if len(rows) != 2 {
+-		t.Fatalf("Query returned %d rows, want 2", len(rows))
+-		return
+-	}
+-	if rows[0].Name != "open" || rows[0].Note != nil {
+-		t.Fatalf("first row = %+v, want name=open note absent", rows[0])
+-		return
+-	}
+-	if rows[1].Name != "shut" {
+-		t.Fatalf("second row = %+v, want name=shut", rows[1])
+-		return
+-	}
+-	if value := rows[1].Note ?? ""; value != "x" {
+-		t.Fatalf("second note = %q, want x", value)
+-	}
+-}
+-
+-type OrderID int64
+-
+-type Flag bool
+-
+-type Ratio float64
+-
+-type namedScalarRow struct {
+-	ID     OrderID `col:"id"`
+-	Active Flag    `col:"active"`
+-	Score  Ratio   `col:"score"`
+-	Note   int64?  `col:"note"`
+-}
+-
+-func TestQueryScansNamedScalars(t *testing.T) {
+-	pool := openPool(t)
+-	mustExec(t, pool, "CREATE TABLE named_scalars (id INTEGER, active INTEGER, score REAL, note INTEGER)")
+-	mustExec(t, pool, "INSERT INTO named_scalars (id, active, score, note) VALUES (7, 1, 2.5, 42)")
+-	mustExec(t, pool, "INSERT INTO named_scalars (id, active, score, note) VALUES (8, 0, 3.25, NULL)")
+-	rows, err := db.Query[namedScalarRow](t.Context(), pool, "SELECT id, active, score, note FROM named_scalars ORDER BY id")
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: query named scalars: %v", err))
+-	}
+-	if len(rows) != 2 {
+-		t.Fatalf("Query returned %d rows, want 2", len(rows))
+-		return
+-	}
+-	if rows[0].ID != 7 || rows[0].Active != true || rows[0].Score != 2.5 {
+-		t.Fatalf("first row = %+v, want id=7 active=true score=2.5", rows[0])
+-		return
+-	}
+-	if value := rows[0].Note ?? 0; value != 42 {
+-		t.Fatalf("first note = %d, want 42", value)
+-		return
+-	}
+-	if rows[1].ID != 8 || rows[1].Active != false || rows[1].Score != 3.25 {
+-		t.Fatalf("second row = %+v, want id=8 active=false score=3.25", rows[1])
+-		return
+-	}
+-	if rows[1].Note != nil {
+-		t.Fatalf("second note holds a value, want absent")
+-		return
+-	}
+-	got, err := db.One[namedScalarRow](t.Context(), pool, "SELECT id, active, score, note FROM named_scalars WHERE id = 8")
+-	if err != nil {
+-		panic(fmt.Sprintf("db_test: one named scalar: %v", err))
+-	}
+-	if got == nil {
+-		t.Fatalf("One returned no row")
+-		return
+-	}
+-	var absent namedScalarRow
+-	one := got ?? absent
+-	if one.ID != 8 || one.Active != false || one.Score != 3.25 || one.Note != nil {
+-		t.Fatalf("one row = %+v, want id=8 active=false score=3.25 note absent", one)
+-	}
+-}
+-
+-func TestQueryRejectsNullInNamedScalar(t *testing.T) {
+-	pool := openPool(t)
+-	mustExec(t, pool, "CREATE TABLE named_null (id INTEGER, active INTEGER, score REAL, note INTEGER)")
+-	mustExec(t, pool, "INSERT INTO named_null (id, active, score, note) VALUES (NULL, 1, 2.5, 9)")
+-	_, err := db.Query[namedScalarRow](t.Context(), pool, "SELECT id, active, score, note FROM named_null")
+-	if !errors.Is(err, db.ErrNullInNonOptional) || !strings.Contains(err.Error(), "NULL in non-optional") {
+-		t.Fatalf("error = %v, want db.ErrNullInNonOptional", err)
+-	}
+-}
++package db_test
 +
-+func TestConstraintProbeDropsAfterContextCancellation(t *testing.T) {
-+	pool := openPool(t)
-+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
-+	defer cancel()
-+	withConstraintProbe(t, ctx, pool, constraintProbe{
-+		table: "fault_uniq_cancel",
-+		mark:  "?",
-+		check: func(err error) {
-+			if !errors.Is(err, db.ErrConstraintViolation) {
-+				t.Fatalf("duplicate insert = %v, want constraint violation", err)
-+				return
-+			}
-+			cancel()
-+		},
-+	})
-+	faultExec(t, pool, "CREATE TABLE fault_uniq_cancel (n INTEGER NOT NULL UNIQUE)")
-+	faultExec(t, pool, "DROP TABLE fault_uniq_cancel")
-+}
-diff --git a/example/shop/catalog/fault_test.lgo b/example/shop/catalog/fault_test.lgo
-index b1c220c..3494f95 100644
---- a/example/shop/catalog/fault_test.lgo
-+++ b/example/shop/catalog/fault_test.lgo
-@@ -10,23 +10,34 @@ import (
- 
- 	"github.com/gosuda/spira/example/shop/catalog"
- 	"github.com/gosuda/spira/fault/faulttest"
-+	"github.com/gosuda/spira/web"
- )
- 
-+const catalogProbeCause = "SECRET-CATALOG-73019\n<catalog-probe data-value=\"untrusted\">"
++import (
++	"context"
++	"database/sql"
++	"database/sql/driver"
++	"errors"
++	"fmt"
++	"logos/sync"
++	"strings"
++	"testing"
++	"time"
 +
- func TestCatalogUnknownProductStaysClientSafe(t *testing.T) {
--	const secret = "SECRET-CATALOG-73019"
--	raw := faulttest.PublicJSON(t, catalog.ErrUnknownProduct.Wrap(errors.New(secret)))
--	faulttest.RefuseLeak(t, raw, secret)
--	if !strings.Contains(string(raw), `"catalog.unknown_product"`) {
--		t.Fatalf("public view %s lacks the fault code", raw)
-+	wrapped := catalog.ErrUnknownProduct.Wrap(errors.New(catalogProbeCause))
-+	if !strings.Contains(wrapped.Error(), catalogProbeCause) {
-+		t.Fatalf("operator diagnostic %q lost its cause", wrapped.Error())
- 		return
- 	}
--	if !strings.Contains(string(raw), "The product was not found.") {
--		t.Fatalf("public view %s lacks the constant message", raw)
-+	assertCatalogPublic(t, faulttest.PublicJSON(t, wrapped))
-+}
++	"github.com/gosuda/spira/db"
 +
-+func TestCatalogWrappedFaultHTTPHidesCause(t *testing.T) {
-+	router := web.NewRouter()
-+	router.Handle(http.MethodGet, "/catalog-fault", func(_ *web.Context) (web.Reply, error) {
-+		return nil, catalog.ErrUnknownProduct.Wrap(errors.New(catalogProbeCause))
-+	})
-+	response := get(t, router, "/catalog-fault", nil)
-+	if response.Code != http.StatusNotFound {
-+		t.Fatalf("wrapped fault status = %d, want 404", response.Code)
- 		return
- 	}
-+	assertCatalogPublic(t, response.Body.Bytes())
- }
- 
--func TestCatalogMissingProductHidesWrappedCause(t *testing.T) {
-+func TestCatalogMissingProductReturnsSafeNotFound(t *testing.T) {
- 	pool := openPool(t)
- 	if pool == nil {
- 		return
-@@ -37,9 +48,14 @@ func TestCatalogMissingProductHidesWrappedCause(t *testing.T) {
- 		t.Fatalf("missing status = %d, want 404", missing.Code)
- 		return
- 	}
--	faulttest.RefuseLeak(t, missing.Body.Bytes(), "SECRET-CATALOG-73019")
-+	assertCatalogPublic(t, missing.Body.Bytes())
-+}
++	"modernc.org/sqlite"
++)
 +
-+func assertCatalogPublic(t *testing.T, raw []byte) {
++const insertThing = "INSERT INTO things (n) VALUES (?)"
++
++const cacheLimit = 256
++
++func openPool(t *testing.T) *db.Pool {
 +	t.Helper()
-+	faulttest.RefuseLeak(t, raw, "SECRET-CATALOG-73019", "catalog-probe", "untrusted")
- 	var problem map[string]string
--	if err := json.Unmarshal(missing.Body.Bytes(), &problem); err != nil {
-+	if err := json.Unmarshal(raw, &problem); err != nil {
- 		t.Fatalf("decode missing product fault: %v", err)
- 		return
- 	}
++	key := strings.NewReplacer("/", "_", "(", "_", ")", "_").Replace(t.Name())
++	pool, err := db.Open("sqlite", fmt.Sprintf("file:spira_%s?mode=memory&cache=shared", key))
++	if err != nil {
++		panic(fmt.Sprintf("db_test: open %s: %v", key, err))
++	}
++	if pool == nil {
++		panic("db_test: Open returned no pool")
++	}
++	t.Cleanup(func() {
++		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
++		defer cancel()
++		if err := pool.Stop(ctx); err != nil {
++			t.Errorf("Stop: %v", err)
++		}
++	})
++	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
++	defer cancel()
++	if serr := pool.Start(ctx); serr != nil {
++		panic(fmt.Sprintf("db_test: start %s: %v", key, serr))
++	}
++	return pool
++}
++
++func createThings(t *testing.T, pool *db.Pool) {
++	t.Helper()
++	if _, err := db.Exec(t.Context(), pool, "CREATE TABLE things (n integer not null)"); err != nil {
++		panic(fmt.Sprintf("db_test: create: %v", err))
++	}
++}
++
++func insertThingRow(t *testing.T, q db.Querier) {
++	t.Helper()
++	if _, err := db.Exec(t.Context(), q, insertThing, 7); err != nil {
++		panic(fmt.Sprintf("db_test: insert: %v", err))
++	}
++}
++
++func countThings(t *testing.T, pool *db.Pool) int {
++	t.Helper()
++	rows, err := pool.QueryContext(t.Context(), "SELECT COUNT(*) FROM things")
++	if err != nil {
++		panic(fmt.Sprintf("db_test: count: %v", err))
++	}
++	if rows == nil {
++		panic("db_test: count returned no rows handle")
++	}
++	defer closeRows(t, rows)
++	if !rows.Next() {
++		t.Fatal("count: query returned no row")
++	}
++	var n int
++	if serr := rows.Scan(&n); serr != nil {
++		t.Fatalf("scan: %v", serr)
++	}
++	return n
++}
++
++func closeRows(t *testing.T, rows *sql.Rows?) {
++	if rows == nil {
++		return
++	}
++	if err := rows.Close(); err != nil {
++		t.Errorf("close: %v", err)
++	}
++}
++
++func TestInTxCommitsOnSuccess(t *testing.T) {
++	pool := openPool(t)
++	createThings(t, pool)
++	saved, err := db.InTx[int](t.Context(), pool, func(tx *db.Tx) (int, error) {
++		insertThingRow(t, tx)
++		return 7, nil
++	})
++	if err != nil {
++		panic(fmt.Sprintf("db_test: InTx: %v", err))
++	}
++	if saved != 7 {
++		t.Fatalf("InTx result = %d, want 7", saved)
++	}
++	if n := countThings(t, pool); n != 1 {
++		t.Fatalf("rows after commit = %d, want 1", n)
++	}
++}
++
++func TestInTxRollsBackOnError(t *testing.T) {
++	pool := openPool(t)
++	createThings(t, pool)
++	boom := errors.New("boom")
++	_, err := db.InTx[int](t.Context(), pool, func(tx *db.Tx) (int, error) {
++		insertThingRow(t, tx)
++		return 0, boom
++	})
++	if !errors.Is(err, boom) {
++		t.Fatalf("InTx error = %v, want boom", err)
++	}
++	if n := countThings(t, pool); n != 0 {
++		t.Fatalf("rows after error = %d, want 0", n)
++	}
++}
++
++func TestInTxRollsBackOnPanic(t *testing.T) {
++	pool := openPool(t)
++	createThings(t, pool)
++	recovered := runPanickingTx(t, pool)
++	if recovered == nil {
++		t.Fatal("InTx swallowed the work panic")
++	}
++	if n := countThings(t, pool); n != 0 {
++		t.Fatalf("rows after panic = %d, want 0", n)
++	}
++	txProbeFreed(t, pool, "things", 7)
++}
++
++func runPanickingTx(t *testing.T, pool *db.Pool) (recovered any) {
++	defer func() {
++		recovered = recover()
++	}()
++	_, err := db.InTx[int](t.Context(), pool, func(tx *db.Tx) (int, error) {
++		insertThingRow(t, tx)
++		panic("boom")
++	})
++	if err != nil {
++		t.Errorf("InTx returned an error alongside the panic: %v", err)
++	}
++	return recovered
++}
++
++func TestStatementCacheNeverExceedsCapacity(t *testing.T) {
++	pool := openPool(t)
++	createThings(t, pool)
++	for i := range 1000 {
++		runCount(t, pool, fmt.Sprintf("SELECT COUNT(*) FROM things WHERE n <> %d", i))
++	}
++	if got := pool.Prepared(); got != cacheLimit {
++		t.Fatalf("cache holds %d statements, want %d", got, cacheLimit)
++	}
++	runCount(t, pool, "SELECT COUNT(*) FROM things WHERE n <> 0")
++	if got := pool.Prepared(); got != cacheLimit {
++		t.Fatalf("cache holds %d statements after reuse, want %d", got, cacheLimit)
++	}
++}
++
++func runCount(t *testing.T, pool *db.Pool, query string) {
++	t.Helper()
++	rows, err := pool.QueryContext(t.Context(), query)
++	if err != nil {
++		panic(fmt.Sprintf("db_test: query %q: %v", query, err))
++	}
++	if rows == nil {
++		panic(fmt.Sprintf("db_test: query %q returned no rows handle", query))
++	}
++	defer closeRows(t, rows)
++	if !rows.Next() {
++		t.Fatalf("query %q returned no row", query)
++	}
++}
++
++func TestInExpandsTheMarker(t *testing.T) {
++	cases := []struct {
++		query string
++		name  string
++		count int
++		want  string
++	}{
++		{"SELECT * FROM t WHERE id IN (/*SLICE:ids*/?)", "ids", 3, "/*db:nocache*/SELECT * FROM t WHERE id IN (?,?,?)"},
++		{"SELECT * FROM t WHERE id IN (/*SLICE:ids*/?)", "ids", 1, "/*db:nocache*/SELECT * FROM t WHERE id IN (?)"},
++		{"SELECT * FROM t WHERE id IN (/*SLICE:ids*/?)", "ids", 0, "/*db:nocache*/SELECT * FROM t WHERE id IN (NULL)"},
++		{"UPDATE t SET a = ? WHERE b IN (/*SLICE:keys*/?)", "keys", 2, "/*db:nocache*/UPDATE t SET a = ? WHERE b IN (?,?)"},
++		{"SELECT * FROM t WHERE a IN (/*SLICE:x*/?) AND b IN (/*SLICE:y*/?)", "y", 2, "/*db:nocache*/SELECT * FROM t WHERE a IN (/*SLICE:x*/?) AND b IN (?,?)"},
++		{"SELECT * FROM t", "ids", 2, "/*db:nocache*/SELECT * FROM t"},
++	}
++	for _, c := range cases {
++		got := db.In(c.query, c.name, c.count)
++		if got != c.want {
++			t.Errorf("In(%q, %q, %d) = %q, want %q", c.query, c.name, c.count, got, c.want)
++		}
++	}
++}
++
++func TestInRunsThroughThePoolUncached(t *testing.T) {
++	pool := openPool(t)
++	createThings(t, pool)
++	ctx := t.Context()
++	for _, n := range []int{5, 7, 9} {
++		if _, err := db.Exec(ctx, pool, insertThing, n); err != nil {
++			panic(fmt.Sprintf("db_test: insert %d: %v", n, err))
++		}
++	}
++	before := pool.Prepared()
++	matched := db.In("SELECT n FROM things WHERE n IN (/*SLICE:ns*/?) ORDER BY n", "ns", 2)
++	assertQueryResult(t, pool, matched, []any{5, 7})
++	empty := db.In("SELECT n FROM things WHERE n IN (/*SLICE:ns*/?)", "ns", 0)
++	assertQueryResult(t, pool, empty, nil)
++	if got := pool.Prepared(); got != before {
++		t.Fatalf("cache holds %d statements after In queries, want %d", got, before)
++	}
++}
++
++func assertQueryResult(t *testing.T, pool *db.Pool, query string, args []any) {
++	t.Helper()
++	rows, err := pool.QueryContext(t.Context(), query, args...)
++	if err != nil {
++		panic(fmt.Sprintf("db_test: query: %v", err))
++	}
++	if rows == nil {
++		panic("db_test: query returned no rows handle")
++	}
++	defer closeRows(t, rows)
++	seen := 0
++	for rows.Next() {
++		var n int
++		if serr := rows.Scan(&n); serr != nil {
++			t.Fatalf("scan: %v", serr)
++		}
++		if seen < len(args) {
++			if want, ok := args[seen].(int); ok && n != want {
++				t.Fatalf("row %d = %d, want %d", seen, n, want)
++			}
++		}
++		seen++
++	}
++	if seen != len(args) {
++		t.Fatalf("query returned %d rows, want %d", seen, len(args))
++	}
++}
++
++func TestOpenRejectsUnknownDriver(t *testing.T) {
++	_, err := db.Open("oracle", "x")
++	if err == nil {
++		t.Fatal("Open accepted the unknown driver oracle")
++	}
++	if !errors.Is(err, db.ErrUnknownDriver) || !strings.Contains(err.Error(), `unknown driver "oracle"`) {
++		t.Fatalf("error = %v, want db.ErrUnknownDriver with the driver name", err)
++	}
++}
++
++func TestOpenRejectsMysqlWithoutParseTime(t *testing.T) {
++	_, err := db.Open("mysql", "user:pass@/dbname")
++	if err == nil {
++		t.Fatal("Open accepted a mysql DSN without parseTime=true")
++	}
++	if !errors.Is(err, db.ErrMissingParseTime) || !strings.Contains(err.Error(), "db: mysql DSN needs parseTime=true") {
++		t.Fatalf("error = %v, want db.ErrMissingParseTime", err)
++	}
++}
++
++func TestDialectOfRejectsParseTimeInThePassword(t *testing.T) {
++	_, err := db.DialectOf("mysql", "user:parseTime=true@tcp(localhost:3306)/db")
++	if err == nil {
++		t.Fatal("DialectOf accepted parseTime in the password")
++	}
++	if !errors.Is(err, db.ErrMissingParseTime) || !strings.Contains(err.Error(), "db: mysql DSN needs parseTime=true") {
++		t.Fatalf("error = %v, want db.ErrMissingParseTime", err)
++	}
++}
++
++type stopOutcome struct {
++	err  sync.Locked[error]
++	done chan struct{}
++}
++
++func detached(work func()) {
++	ctx, cancel := context.WithCancel(context.Background())
++	context.AfterFunc(ctx, work)
++	cancel()
++}
++
++func registerBlockingFunction(ctx context.Context, started chan struct{}, release chan struct{}) string {
++	block := func(_ *sqlite.FunctionContext, _ []driver.Value) (driver.Value, error) {
++		select {
++		case started <- struct{}{}:
++		case <-ctx.Done():
++		}
++		select {
++		case <-release:
++		case <-ctx.Done():
++		}
++		return int64(1), nil
++	}
++	name := fmt.Sprintf("spira_block_stop_%d", time.Now().UnixNano())
++	if err := sqlite.RegisterScalarFunction(name, 0, block); err != nil {
++		panic(fmt.Sprintf("db_test: register function: %v", err))
++	}
++	return name
++}
++
++func checkStopShutdown(t *testing.T, ctx context.Context, pool *db.Pool, stop *stopOutcome) {
++	t.Helper()
++	var serr error
++	stop.err.WithLock(func(e *error) { serr = *e })
++	if !errors.Is(serr, context.DeadlineExceeded) || !strings.Contains(serr.Error(), "db: stop:") {
++		t.Fatalf("Stop error = %v, want db: stop: context deadline exceeded", serr)
++	}
++	closed := false
++	for !closed && ctx.Err() == nil {
++		_, qerr := pool.ExecContext(ctx, "/*db:nocache*/SELECT 1")
++		closed = qerr != nil && strings.Contains(qerr.Error(), "database is closed")
++		if !closed {
++			time.Sleep(5 * time.Millisecond)
++		}
++	}
++	if !closed {
++		t.Fatal("the pool stayed open after the timed-out Stop and the end of the statement")
++	}
++	if got := pool.Prepared(); got != 0 {
++		t.Fatalf("cache holds %d statements after Stop, want 0", got)
++	}
++}
++
++func TestStopReturnsByItsDeadlineWhileAStatementRuns(t *testing.T) {
++	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
++	defer cancel()
++	started := make(chan struct{}, 1)
++	release := make(chan struct{})
++	blocker := registerBlockingFunction(ctx, started, release)
++	pool := openPool(t)
++	statement := &stopOutcome{done: make(chan struct{})}
++	detached(func() {
++		_, qerr := pool.ExecContext(ctx, "SELECT "+blocker+"()")
++		statement.err.WithLock(func(e *error) { *e = qerr })
++		close(statement.done)
++	})
++	select {
++	case <-started:
++	case <-ctx.Done():
++		t.Fatal("the blocking statement did not start")
++	}
++	stopCtx, stopCancel := context.WithTimeout(ctx, 50*time.Millisecond)
++	defer stopCancel()
++	stop := &stopOutcome{done: make(chan struct{})}
++	detached(func() {
++		serr := pool.Stop(stopCtx)
++		stop.err.WithLock(func(e *error) { *e = serr })
++		close(stop.done)
++	})
++	returnedInTime := true
++	select {
++	case <-stop.done:
++	case <-time.After(2 * time.Second):
++		returnedInTime = false
++	}
++	close(release)
++	select {
++	case <-statement.done:
++	case <-ctx.Done():
++		t.Fatal("the blocking statement did not finish after its release")
++	}
++	if !returnedInTime {
++		t.Fatal("Stop did not return by its 50ms deadline while a cached statement ran")
++	}
++	checkStopShutdown(t, ctx, pool, stop)
++	}
++
++func TestDialectOfMatchesEachDriverName(t *testing.T) {
++	cases := []struct {
++		driver string
++		dsn    string
++		want   string
++	}{
++		{"sqlite", "file:x?mode=memory", "sqlite"},
++		{"pgx", "postgres://localhost/db", "postgres"},
++		{"postgres", "postgres://localhost/db", "postgres"},
++		{"mysql", "user@/db?parseTime=true", "mysql"},
++		{"sqlserver", "sqlserver://localhost?database=db", "mssql"},
++	}
++	for _, c := range cases {
++		d, err := db.DialectOf(c.driver, c.dsn)
++		if err != nil {
++			panic(fmt.Sprintf("db_test: DialectOf(%s): %v", c.driver, err))
++		}
++		if got := dialectName(d); got != c.want {
++			t.Fatalf("DialectOf(%s) = %s, want %s", c.driver, got, c.want)
++		}
++	}
++	if _, err := db.DialectOf("mysql", "user@/db"); err == nil || !errors.Is(err, db.ErrMissingParseTime) {
++		t.Fatalf("DialectOf(mysql, missing parseTime) error = %v", err)
++	}
++	if _, err := db.DialectOf("oracle", "x"); err == nil || !errors.Is(err, db.ErrUnknownDriver) {
++		t.Fatalf("DialectOf(oracle) error = %v", err)
++	}
++}
++
++func dialectName(d db.Dialect) string {
++	switch d.(type) {
++	case db.SQLite:
++		return "sqlite"
++	case db.Postgres:
++		return "postgres"
++	case db.MySQL:
++		return "mysql"
++	case db.MSSQL:
++		return "mssql"
++	case nil:
++		return "nil"
++	}
++	return "unknown"
++}
++
++type productCode string
++
++type plainRow struct {
++	ID   int64       `col:"id"`
++	N    int         `col:"n"`
++	I8   int8        `col:"i8"`
++	I16  int16       `col:"i16"`
++	I32  int32       `col:"i32"`
++	F32  float32     `col:"f32"`
++	F64  float64     `col:"f64"`
++	S    string      `col:"s"`
++	Code productCode `col:"code"`
++	B    []byte      `col:"b"`
++	Yes  bool        `col:"yes"`
++}
++
++const createPlain = `CREATE TABLE plain (
++	id INTEGER PRIMARY KEY,
++	n INTEGER,
++	i8 INTEGER,
++	i16 INTEGER,
++	i32 INTEGER,
++	f32 REAL,
++	f64 REAL,
++	s TEXT,
++	code TEXT,
++	b BLOB,
++	yes INTEGER
++)`
++
++const insertPlain = `INSERT INTO plain (id, n, i8, i16, i32, f32, f64, s, code, b, yes)
++	VALUES (1, 41, -3, 300, 70000, 2.5, 3.125, 'left', 'SKU-1', x'6279746573', 1)`
++
++const selectPlain = `SELECT id, n, i8, i16, i32, f32, f64, s, code, b, yes FROM plain`
++
++func mustExec(t *testing.T, q db.Querier, statement string) {
++	t.Helper()
++	if _, err := db.Exec(t.Context(), q, statement); err != nil {
++		panic(fmt.Sprintf("db_test: exec %q: %v", statement, err))
++	}
++}
++
++func readPlainRaw(t *testing.T, pool *db.Pool) plainRow {
++	t.Helper()
++	rows, err := pool.QueryContext(t.Context(), selectPlain)
++	if err != nil {
++		panic(fmt.Sprintf("db_test: raw query: %v", err))
++	}
++	if rows == nil {
++		panic("db_test: raw query returned no rows handle")
++	}
++	defer closeRows(t, rows)
++	if !rows.Next() {
++		t.Fatal("raw query returned no row")
++	}
++	var raw plainRow
++	if serr := rows.Scan(&raw.ID, &raw.N, &raw.I8, &raw.I16, &raw.I32, &raw.F32, &raw.F64, &raw.S, &raw.Code, &raw.B, &raw.Yes); serr != nil {
++		t.Fatalf("raw scan: %v", serr)
++	}
++	return raw
++}
++
++func plainDiff(got plainRow, want plainRow) error {
++	if got.ID != want.ID || got.N != want.N || got.I8 != want.I8 || got.I16 != want.I16 || got.I32 != want.I32 {
++		return fmt.Errorf("int columns = %+v, want %+v", got, want)
++	}
++	if got.F32 != want.F32 || got.F64 != want.F64 || got.S != want.S || string(got.Code) != string(want.Code) || got.Yes != want.Yes {
++		return fmt.Errorf("value columns = %+v, want %+v", got, want)
++	}
++	if string(got.B) != string(want.B) {
++		return fmt.Errorf("blob = %q, want %q", got.B, want.B)
++	}
++	return nil
++}
++
++func TestQueryScansEveryPlainKind(t *testing.T) {
++	pool := openPool(t)
++	mustExec(t, pool, createPlain)
++	mustExec(t, pool, insertPlain)
++	rows, err := db.Query[plainRow](t.Context(), pool, selectPlain)
++	if err != nil {
++		panic(fmt.Sprintf("db_test: query plain: %v", err))
++	}
++	if len(rows) != 1 {
++		t.Fatalf("Query returned %d rows, want 1", len(rows))
++	}
++	if diff := plainDiff(rows[0], readPlainRaw(t, pool)); diff != nil {
++		t.Fatal(diff)
++	}
++}
++
++type stampedRow struct {
++	ID int64     `col:"id"`
++	At time.Time `col:"ts"`
++}
++
++func TestQueryScansTimestampColumn(t *testing.T) {
++	pool := openPool(t)
++	mustExec(t, pool, "CREATE TABLE stamped (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL)")
++	mustExec(t, pool, "INSERT INTO stamped (id, ts) VALUES (1, '2026-11-18 10:20:30')")
++	got, err := db.Query[stampedRow](t.Context(), pool, "SELECT id, ts FROM stamped")
++	if err != nil {
++		panic(fmt.Sprintf("db_test: query stamped: %v", err))
++	}
++	if len(got) != 1 {
++		t.Fatalf("Query returned %d rows, want 1", len(got))
++	}
++	rows, rerr := pool.QueryContext(t.Context(), "SELECT id, ts FROM stamped")
++	if rerr != nil {
++		panic(fmt.Sprintf("db_test: raw query: %v", rerr))
++	}
++	if rows == nil {
++		panic("db_test: raw query returned no rows handle")
++	}
++	defer closeRows(t, rows)
++	if !rows.Next() {
++		t.Fatal("raw query returned no row")
++	}
++	var id int64
++	var want time.Time
++	if serr := rows.Scan(&id, &want); serr != nil {
++		panic(fmt.Sprintf("db_test: raw scan: %v", serr))
++	}
++	if got[0].ID != id || !got[0].At.Equal(want) {
++		t.Fatalf("scan = %d %v, want %d %v", got[0].ID, got[0].At, id, want)
++	}
++}
++
++type pairRow struct {
++	A string `col:"a"`
++	B string `col:"b"`
++}
++
++func pairPool(t *testing.T) *db.Pool {
++	t.Helper()
++	pool := openPool(t)
++	mustExec(t, pool, "CREATE TABLE pairs (a TEXT, b TEXT)")
++	mustExec(t, pool, "INSERT INTO pairs (a, b) VALUES ('x', 'y')")
++	return pool
++}
++
++func TestQueryRejectsWrongColumnOrder(t *testing.T) {
++	pool := pairPool(t)
++	_, err := db.Query[pairRow](t.Context(), pool, "SELECT b, a FROM pairs")
++	if !errors.Is(err, db.ErrShapeMismatch) || !strings.Contains(err.Error(), `column 0 is "b"`) {
++		t.Fatalf("error = %v, want db.ErrShapeMismatch", err)
++	}
++}
++
++func TestQueryRejectsExtraColumn(t *testing.T) {
++	pool := pairPool(t)
++	_, err := db.Query[pairRow](t.Context(), pool, "SELECT a, b, a AS c FROM pairs")
++	if !errors.Is(err, db.ErrShapeMismatch) || !strings.Contains(err.Error(), "has 2 fields, query returned 3 columns") {
++		t.Fatalf("error = %v, want db.ErrShapeMismatch", err)
++	}
++}
++
++func TestQueryRejectsMissingColumn(t *testing.T) {
++	pool := pairPool(t)
++	_, err := db.Query[pairRow](t.Context(), pool, "SELECT a FROM pairs")
++	if !errors.Is(err, db.ErrShapeMismatch) || !strings.Contains(err.Error(), "has 2 fields, query returned 1 columns") {
++		t.Fatalf("error = %v, want db.ErrShapeMismatch", err)
++	}
++}
++
++func TestQueryRejectsMismatchedColumnsWithoutRows(t *testing.T) {
++	pool := openPool(t)
++	mustExec(t, pool, "CREATE TABLE pairs (a TEXT, b TEXT)")
++	_, err := db.Query[pairRow](t.Context(), pool, "SELECT a, b, a AS c FROM pairs")
++	if !errors.Is(err, db.ErrShapeMismatch) || !strings.Contains(err.Error(), "has 2 fields, query returned 3 columns") {
++		t.Fatalf("error = %v, want db.ErrShapeMismatch", err)
++	}
++}
++
++func TestOneRejectsMismatchedColumnsWithoutRows(t *testing.T) {
++	pool := openPool(t)
++	mustExec(t, pool, "CREATE TABLE pairs (a TEXT, b TEXT)")
++	_, err := db.One[pairRow](t.Context(), pool, "SELECT b, a FROM pairs")
++	if !errors.Is(err, db.ErrShapeMismatch) || !strings.Contains(err.Error(), `column 0 is "b"`) {
++		t.Fatalf("error = %v, want db.ErrShapeMismatch", err)
++	}
++}
++
++type strictRow struct {
++	ID int64  `col:"id"`
++	S  string `col:"s"`
++}
++
++func TestQueryRejectsNullInNonOptional(t *testing.T) {
++	pool := openPool(t)
++	mustExec(t, pool, "CREATE TABLE strict (id INTEGER PRIMARY KEY, s TEXT)")
++	mustExec(t, pool, "INSERT INTO strict (id, s) VALUES (1, NULL)")
++	_, err := db.Query[strictRow](t.Context(), pool, "SELECT id, s FROM strict")
++	if !errors.Is(err, db.ErrNullInNonOptional) || !strings.Contains(err.Error(), "NULL in non-optional") {
++		t.Fatalf("error = %v, want db.ErrNullInNonOptional", err)
++	}
++}
++
++type innerRow struct {
++	B int    `col:"b"`
++	C string `col:"c"`
++}
++
++type outerRow struct {
++	A     string  `col:"a"`
++	Inner innerRow
++	D     bool    `col:"d"`
++}
++
++func nestedPool(t *testing.T) *db.Pool {
++	t.Helper()
++	pool := openPool(t)
++	mustExec(t, pool, "CREATE TABLE nested (a TEXT, b INTEGER, c TEXT, d INTEGER)")
++	mustExec(t, pool, "INSERT INTO nested (a, b, c, d) VALUES ('x', 7, 'y', 1)")
++	return pool
++}
++
++func TestQueryFlattensNestedStructs(t *testing.T) {
++	pool := nestedPool(t)
++	got, err := db.Query[outerRow](t.Context(), pool, "SELECT a, b, c, d FROM nested")
++	if err != nil {
++		panic(fmt.Sprintf("db_test: query nested: %v", err))
++	}
++	if len(got) != 1 {
++		t.Fatalf("Query returned %d rows, want 1", len(got))
++	}
++	rows, rerr := pool.QueryContext(t.Context(), "SELECT a, b, c, d FROM nested")
++	if rerr != nil {
++		panic(fmt.Sprintf("db_test: raw query: %v", rerr))
++	}
++	if rows == nil {
++		panic("db_test: raw query returned no rows handle")
++	}
++	defer closeRows(t, rows)
++	if !rows.Next() {
++		t.Fatal("raw query returned no row")
++	}
++	var a string
++	var b int
++	var c string
++	var d bool
++	if serr := rows.Scan(&a, &b, &c, &d); serr != nil {
++		t.Fatalf("raw scan: %v", serr)
++	}
++	if got[0].A != a || got[0].Inner.B != b || got[0].Inner.C != c || got[0].D != d {
++		t.Fatalf("nested scan = %+v, want a=%q b=%d c=%q d=%v", got[0], a, b, c, d)
++	}
++}
++
++func TestQueryRejectsWrongNestedOrder(t *testing.T) {
++	pool := nestedPool(t)
++	_, err := db.Query[outerRow](t.Context(), pool, "SELECT a, c, b, d FROM nested")
++	if !errors.Is(err, db.ErrShapeMismatch) || !strings.Contains(err.Error(), `column 1 is "c"`) {
++		t.Fatalf("error = %v, want db.ErrShapeMismatch", err)
++	}
++}
++
++func TestQueryScansScalarColumns(t *testing.T) {
++	pool := openPool(t)
++	createThings(t, pool)
++	insertThingRow(t, pool)
++	nums, err := db.Query[int64](t.Context(), pool, "SELECT n FROM things")
++	if err != nil {
++		panic(fmt.Sprintf("db_test: query int64: %v", err))
++	}
++	if len(nums) != 1 || nums[0] != 7 {
++		t.Fatalf("Query int64 = %v, want [7]", nums)
++	}
++	if n := countThings(t, pool); n != 1 {
++		t.Fatalf("count = %d, want 1", n)
++	}
++	words, werr := db.Query[string](t.Context(), pool, "SELECT CAST(n AS TEXT) FROM things")
++	if werr != nil {
++		panic(fmt.Sprintf("db_test: query string: %v", werr))
++	}
++	if len(words) != 1 || words[0] != "7" {
++		t.Fatalf("Query string = %v, want [7]", words)
++	}
++}
++
++func TestOneReturnsAbsentWithoutARow(t *testing.T) {
++	pool := openPool(t)
++	createThings(t, pool)
++	got, err := db.One[int64](t.Context(), pool, "SELECT n FROM things")
++	if err != nil {
++		panic(fmt.Sprintf("db_test: one absent: %v", err))
++	}
++	if got != nil {
++		t.Fatalf("One = %v, want absent", got)
++	}
++}
++
++func TestOneReturnsTheOnlyRow(t *testing.T) {
++	pool := openPool(t)
++	createThings(t, pool)
++	insertThingRow(t, pool)
++	got, err := db.One[int64](t.Context(), pool, "SELECT n FROM things")
++	if err != nil {
++		panic(fmt.Sprintf("db_test: one row: %v", err))
++	}
++	if got == nil {
++		t.Fatal("One returned no row")
++	}
++	if value := got ?? 0; value != 7 {
++		t.Fatalf("One = %d, want 7", value)
++	}
++}
++
++func TestOneRejectsTwoRows(t *testing.T) {
++	pool := openPool(t)
++	createThings(t, pool)
++	insertThingRow(t, pool)
++	insertThingRow(t, pool)
++	_, err := db.One[int64](t.Context(), pool, "SELECT n FROM things")
++	if !errors.Is(err, db.ErrShapeMismatch) || !strings.Contains(err.Error(), "query returned more than one row") {
++		t.Fatalf("error = %v, want db.ErrShapeMismatch", err)
++	}
++}
++
++type mapRow struct {
++	ID int64             `col:"id"`
++	M  map[string]string `col:"m"`
++}
++
++func TestQueryRejectsUnsupportedFieldBeforeRows(t *testing.T) {
++	pool := openPool(t)
++	mustExec(t, pool, "CREATE TABLE maps (id INTEGER, m TEXT)")
++	_, err := db.Query[mapRow](t.Context(), pool, "SELECT id, m FROM maps")
++	if !errors.Is(err, db.ErrShapeMismatch) || !strings.Contains(err.Error(), "unsupported type") {
++		t.Fatalf("error = %v, want db.ErrShapeMismatch", err)
++	}
++}
++
++func TestQueryServesSixteenConcurrentReaders(t *testing.T) {
++	pool := openPool(t)
++	mustExec(t, pool, createPlain)
++	mustExec(t, pool, insertPlain)
++	want := readPlainRaw(t, pool)
++	read := func() error {
++		rows, err := db.Query[plainRow](t.Context(), pool, selectPlain)
++		if err != nil {
++			return fmt.Errorf("query: %w", err)
++		}
++		if len(rows) != 1 {
++			return fmt.Errorf("query returned %d rows, want 1", len(rows))
++		}
++		return plainDiff(rows[0], want)
++	}
++	spawn := func() error {
++		go group (t.Context(), limit = 16) {
++			for range 16 {
++				go { read()? }
++			}
++		}
++		return nil
++	}
++	if err := spawn(); err != nil {
++		t.Fatalf("concurrent readers: %v", err)
++	}
++}
++
++type snakeRow struct {
++	ProductID  int64
++	OrderTotal float64
++}
++
++func TestQueryExpectsSnakeCaseWithoutTag(t *testing.T) {
++	pool := openPool(t)
++	mustExec(t, pool, "CREATE TABLE snake (product_id INTEGER, order_total REAL)")
++	mustExec(t, pool, "INSERT INTO snake (product_id, order_total) VALUES (9, 4.5)")
++	got, err := db.Query[snakeRow](t.Context(), pool, "SELECT product_id, order_total FROM snake")
++	if err != nil {
++		panic(fmt.Sprintf("db_test: query snake: %v", err))
++	}
++	if len(got) != 1 || got[0].ProductID != 9 || got[0].OrderTotal != 4.5 {
++		t.Fatalf("Query = %+v, want one row 9/4.5", got)
++	}
++	_, aerr := db.Query[snakeRow](t.Context(), pool, "SELECT order_total, product_id FROM snake")
++	if !errors.Is(aerr, db.ErrShapeMismatch) || !strings.Contains(aerr.Error(), `column 0 is "order_total"`) {
++		t.Fatalf("error = %v, want db.ErrShapeMismatch", aerr)
++	}
++}
++
++type optionRow struct {
++	OptS string? `col:"opt_s"`
++	OptB bool? `col:"opt_b"`
++	OptI16 int16? `col:"opt_i16"`
++	OptI32 int32? `col:"opt_i32"`
++	OptI64 int64? `col:"opt_i64"`
++	OptF32 float32? `col:"opt_f32"`
++	OptF64 float64? `col:"opt_f64"`
++	OptT time.Time? `col:"opt_t"`
++}
++
++type optionRaw struct {
++	OptS sql.Null[string]
++	OptB sql.Null[bool]
++	OptI16 sql.Null[int16]
++	OptI32 sql.Null[int32]
++	OptI64 sql.Null[int64]
++	OptF32 sql.Null[float32]
++	OptF64 sql.Null[float64]
++	OptT sql.Null[time.Time]
++}
++
++const createOpts = `CREATE TABLE opts (
++	id INTEGER PRIMARY KEY,
++	opt_s TEXT,
++	opt_b INTEGER,
++	opt_i16 INTEGER,
++	opt_i32 INTEGER,
++	opt_i64 INTEGER,
++	opt_f32 REAL,
++	opt_f64 REAL,
++	opt_t TIMESTAMP
++)`
++
++const insertOptsNull = `INSERT INTO opts (id) VALUES (1)`
++
++const insertOptsFull = `INSERT INTO opts (id, opt_s, opt_b, opt_i16, opt_i32, opt_i64, opt_f32, opt_f64, opt_t)
++	VALUES (2, 'sku', 1, -16, -32, -64, 1.5, 2.25, '2026-11-18 10:30:00')`
++
++const optCols = `opt_s, opt_b, opt_i16, opt_i32, opt_i64, opt_f32, opt_f64, opt_t`
++
++const selectOpts = `SELECT ` + optCols + ` FROM opts ORDER BY id`
++
++const selectOneOpt = `SELECT ` + optCols + ` FROM opts WHERE id = 1`
++
++func optsPool(t *testing.T) *db.Pool {
++	t.Helper()
++	pool := openPool(t)
++	mustExec(t, pool, createOpts)
++	mustExec(t, pool, insertOptsNull)
++	mustExec(t, pool, insertOptsFull)
++	return pool
++}
++
++func readOptsRaw(t *testing.T, pool *db.Pool) []optionRaw {
++	t.Helper()
++	rows, err := pool.QueryContext(t.Context(), selectOpts)
++	if err != nil {
++		panic(fmt.Sprintf("db_test: raw query: %v", err))
++	}
++	if rows == nil {
++		panic("db_test: raw query returned no rows handle")
++	}
++	defer closeRows(t, rows)
++	var out []optionRaw
++	for rows.Next() {
++		var raw optionRaw
++		if serr := rows.Scan(&raw.OptS, &raw.OptB, &raw.OptI16, &raw.OptI32, &raw.OptI64, &raw.OptF32, &raw.OptF64, &raw.OptT); serr != nil {
++			t.Fatalf("raw scan: %v", serr)
++			return out
++		}
++		out = append(out, raw)
++	}
++	return out
++}
++
++func optDiff[V comparable](opt V?, raw sql.Null[V]) error {
++	present := opt != nil
++	if present != raw.Valid {
++		return fmt.Errorf("present = %v, raw valid = %v", present, raw.Valid)
++	}
++	if !present {
++		return nil
++	}
++	var zero V
++	if value := opt ?? zero; value != raw.V {
++		return fmt.Errorf("value = %v, raw %v", value, raw.V)
++	}
++	return nil
++}
++
++func optTimeDiff(opt time.Time?, raw sql.Null[time.Time]) error {
++	present := opt != nil
++	if present != raw.Valid {
++		return fmt.Errorf("present = %v, raw valid = %v", present, raw.Valid)
++	}
++	if !present {
++		return nil
++	}
++	var zero time.Time
++	if value := opt ?? zero; !value.Equal(raw.V) {
++		return fmt.Errorf("value = %v, raw %v", value, raw.V)
++	}
++	return nil
++}
++
++func TestQueryRoundTripsOptionFields(t *testing.T) {
++	pool := optsPool(t)
++	rows, err := db.Query[optionRow](t.Context(), pool, selectOpts)
++	if err != nil {
++		panic(fmt.Sprintf("db_test: query opts: %v", err))
++	}
++	raw := readOptsRaw(t, pool)
++	if len(rows) != 2 || len(raw) != 2 {
++		t.Fatalf("Query returned %d rows, raw %d, want 2", len(rows), len(raw))
++		return
++	}
++	diff := errors.Join(
++		optDiff(rows[0].OptS, raw[0].OptS),
++		optDiff(rows[0].OptB, raw[0].OptB),
++		optDiff(rows[0].OptI16, raw[0].OptI16),
++		optDiff(rows[0].OptI32, raw[0].OptI32),
++		optDiff(rows[0].OptI64, raw[0].OptI64),
++		optDiff(rows[0].OptF32, raw[0].OptF32),
++		optDiff(rows[0].OptF64, raw[0].OptF64),
++		optTimeDiff(rows[0].OptT, raw[0].OptT),
++		optDiff(rows[1].OptS, raw[1].OptS),
++		optDiff(rows[1].OptB, raw[1].OptB),
++		optDiff(rows[1].OptI16, raw[1].OptI16),
++		optDiff(rows[1].OptI32, raw[1].OptI32),
++		optDiff(rows[1].OptI64, raw[1].OptI64),
++		optDiff(rows[1].OptF32, raw[1].OptF32),
++		optDiff(rows[1].OptF64, raw[1].OptF64),
++		optTimeDiff(rows[1].OptT, raw[1].OptT),
++	)
++	if diff != nil {
++		t.Fatalf("option round trip: %v", diff)
++	}
++}
++
++func TestOneRoundTripsAnOptionField(t *testing.T) {
++	pool := optsPool(t)
++	got, err := db.One[optionRow](t.Context(), pool, selectOneOpt)
++	if err != nil {
++		panic(fmt.Sprintf("db_test: one null row: %v", err))
++	}
++	if got == nil {
++		t.Fatalf("One returned no row")
++		return
++	}
++	var absent optionRow
++	row := got ?? absent
++	if row.OptS != nil || row.OptT != nil {
++		t.Fatalf("NULL row = %+v, want every option absent", row)
++	}
++}
++
++type mixedRow struct {
++	A string `col:"a"`
++	Mid int64? `col:"mid"`
++	B string `col:"b"`
++}
++
++func TestQueryKeepsOptionPosition(t *testing.T) {
++	pool := openPool(t)
++	mustExec(t, pool, "CREATE TABLE mixed (a TEXT, mid INTEGER, b TEXT)")
++	mustExec(t, pool, "INSERT INTO mixed (a, mid, b) VALUES ('p', 42, 'q')")
++	mustExec(t, pool, "INSERT INTO mixed (a, mid, b) VALUES ('x', NULL, 'y')")
++	rows, err := db.Query[mixedRow](t.Context(), pool, "SELECT a, mid, b FROM mixed ORDER BY a")
++	if err != nil {
++		panic(fmt.Sprintf("db_test: query mixed: %v", err))
++	}
++	if len(rows) != 2 {
++		t.Fatalf("Query returned %d rows, want 2", len(rows))
++		return
++	}
++	if rows[0].A != "p" || rows[0].B != "q" {
++		t.Fatalf("first row = %+v, want a=p b=q", rows[0])
++		return
++	}
++	if value := rows[0].Mid ?? 0; value != 42 {
++		t.Fatalf("first mid = %d, want 42", value)
++		return
++	}
++	if rows[1].Mid != nil {
++		t.Fatalf("second mid holds a value, want absent")
++		return
++	}
++	if rows[1].A != "x" || rows[1].B != "y" {
++		t.Fatalf("second row = %+v, want a=x b=y", rows[1])
++	}
++}
++
++type Status string
++
++type statusRow struct {
++	Name Status `col:"name"`
++	Note string? `col:"note"`
++}
++
++func TestQueryScansNamedStringBesideOption(t *testing.T) {
++	pool := openPool(t)
++	mustExec(t, pool, "CREATE TABLE status (name TEXT, note TEXT)")
++	mustExec(t, pool, "INSERT INTO status (name, note) VALUES ('open', NULL)")
++	mustExec(t, pool, "INSERT INTO status (name, note) VALUES ('shut', 'x')")
++	rows, err := db.Query[statusRow](t.Context(), pool, "SELECT name, note FROM status ORDER BY name")
++	if err != nil {
++		panic(fmt.Sprintf("db_test: query status: %v", err))
++	}
++	if len(rows) != 2 {
++		t.Fatalf("Query returned %d rows, want 2", len(rows))
++		return
++	}
++	if rows[0].Name != "open" || rows[0].Note != nil {
++		t.Fatalf("first row = %+v, want name=open note absent", rows[0])
++		return
++	}
++	if rows[1].Name != "shut" {
++		t.Fatalf("second row = %+v, want name=shut", rows[1])
++		return
++	}
++	if value := rows[1].Note ?? ""; value != "x" {
++		t.Fatalf("second note = %q, want x", value)
++	}
++}
++
++type OrderID int64
++
++type Flag bool
++
++type Ratio float64
++
++type namedScalarRow struct {
++	ID     OrderID `col:"id"`
++	Active Flag    `col:"active"`
++	Score  Ratio   `col:"score"`
++	Note   int64?  `col:"note"`
++}
++
++func TestQueryScansNamedScalars(t *testing.T) {
++	pool := openPool(t)
++	mustExec(t, pool, "CREATE TABLE named_scalars (id INTEGER, active INTEGER, score REAL, note INTEGER)")
++	mustExec(t, pool, "INSERT INTO named_scalars (id, active, score, note) VALUES (7, 1, 2.5, 42)")
++	mustExec(t, pool, "INSERT INTO named_scalars (id, active, score, note) VALUES (8, 0, 3.25, NULL)")
++	rows, err := db.Query[namedScalarRow](t.Context(), pool, "SELECT id, active, score, note FROM named_scalars ORDER BY id")
++	if err != nil {
++		panic(fmt.Sprintf("db_test: query named scalars: %v", err))
++	}
++	if len(rows) != 2 {
++		t.Fatalf("Query returned %d rows, want 2", len(rows))
++		return
++	}
++	if rows[0].ID != 7 || rows[0].Active != true || rows[0].Score != 2.5 {
++		t.Fatalf("first row = %+v, want id=7 active=true score=2.5", rows[0])
++		return
++	}
++	if value := rows[0].Note ?? 0; value != 42 {
++		t.Fatalf("first note = %d, want 42", value)
++		return
++	}
++	if rows[1].ID != 8 || rows[1].Active != false || rows[1].Score != 3.25 {
++		t.Fatalf("second row = %+v, want id=8 active=false score=3.25", rows[1])
++		return
++	}
++	if rows[1].Note != nil {
++		t.Fatalf("second note holds a value, want absent")
++		return
++	}
++	got, err := db.One[namedScalarRow](t.Context(), pool, "SELECT id, active, score, note FROM named_scalars WHERE id = 8")
++	if err != nil {
++		panic(fmt.Sprintf("db_test: one named scalar: %v", err))
++	}
++	if got == nil {
++		t.Fatalf("One returned no row")
++		return
++	}
++	var absent namedScalarRow
++	one := got ?? absent
++	if one.ID != 8 || one.Active != false || one.Score != 3.25 || one.Note != nil {
++		t.Fatalf("one row = %+v, want id=8 active=false score=3.25 note absent", one)
++	}
++}
++
++func TestQueryRejectsNullInNamedScalar(t *testing.T) {
++	pool := openPool(t)
++	mustExec(t, pool, "CREATE TABLE named_null (id INTEGER, active INTEGER, score REAL, note INTEGER)")
++	mustExec(t, pool, "INSERT INTO named_null (id, active, score, note) VALUES (NULL, 1, 2.5, 9)")
++	_, err := db.Query[namedScalarRow](t.Context(), pool, "SELECT id, active, score, note FROM named_null")
++	if !errors.Is(err, db.ErrNullInNonOptional) || !strings.Contains(err.Error(), "NULL in non-optional") {
++		t.Fatalf("error = %v, want db.ErrNullInNonOptional", err)
++	}
++}
