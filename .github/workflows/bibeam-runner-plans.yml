@@ -1,4 +1,4 @@
-name: Verify BiBeam release runner plans
+name: Verify BiBeam generated actions and required gates
 on:
   push:
     branches: [ci/bibeam-runner-plan-20261126-r8]
@@ -6,9 +6,15 @@ on:
 permissions:
   contents: read
 jobs:
-  plans:
-    runs-on: depot-ubuntu-24.04-4
-    timeout-minutes: 25
+  gates:
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 120
+    env:
+      CARGO_BUILD_JOBS: '6'
+      CARGO_TERM_COLOR: never
+      RUSTC_WRAPPER: ''
+      RUSTDOCFLAGS: '-D warnings'
+      CARGO_TARGET_DIR: ${{ github.workspace }}/build
     defaults:
       run:
         shell: bash
@@ -20,28 +26,38 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: gosuda/BiBeam
-          ref: adf65e044ad1440f374b9c2ce2a516751c16e359
+          ref: 5f448a85e18792bd3288ebdc1e0dcf5f89fdadcc
           path: source
           persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - uses: taiki-e/install-action@893d6ee8d714b6c7dfe2bcd94e5759e9a7958a7e
+        with:
+          tool: cargo-nextest,taplo-cli,typos-cli,cargo-deny,cargo-machete,cocogitto,actionlint
       - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
         with:
           version: "0.13.9"
           python-version: "3.15"
           require-checksums: true
           enable-cache: false
-      - name: Install pinned cargo-dist
+      - name: Install the pinned release generator
         run: |
+          set -euo pipefail
           curl --fail --silent --show-error --location --retry 3 --output "$RUNNER_TEMP/dist.tar.xz" https://github.com/axodotdev/cargo-dist/releases/download/v0.31.0/cargo-dist-x86_64-unknown-linux-gnu.tar.xz
           printf '%s  %s\n' cd355dab0b4c02fb59038fef87655550021d07f45f1d82f947a34ef98560abb8 "$RUNNER_TEMP/dist.tar.xz" | sha256sum --check --strict
           tar -xJf "$RUNNER_TEMP/dist.tar.xz" -C "$RUNNER_TEMP"
           install "$RUNNER_TEMP/cargo-dist-x86_64-unknown-linux-gnu/dist" "$HOME/.cargo/bin/dist"
           dist --version
-      - name: Resolve every maintained release matrix
-        run: uv run --no-project --python 3.15 probe/ci-tools/bibeam-plans/verify.py
+      - name: Regenerate and verify each exact source tree
+        run: |
+          set -euo pipefail
+          uv run --no-project --python 3.15 probe/ci-tools/bibeam-plans/actions.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-        if: always()
+        if: ${{ !cancelled() }}
         with:
-          name: bibeam-runner-plans-${{ github.sha }}
+          name: bibeam-action-gates-${{ github.sha }}
           path: evidence/
           if-no-files-found: error
           retention-days: 7

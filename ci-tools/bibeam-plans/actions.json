@@ -1,0 +1,29 @@
+[
+  {
+    "number": 19,
+    "head": "5f448a85e18792bd3288ebdc1e0dcf5f89fdadcc",
+    "input_tree": "c24d6d1258a2ff40a68c058b2e45fcbb2034a854",
+    "action": "actions/checkout",
+    "version": "v7",
+    "input_config_sha256": "d72ed90cf5f6557379469cc248f2cb6fd6b1d9dae532ea2827112c607acb5dc3",
+    "commit_message": "ci: preserve checkout v7 in cargo-dist\n\nConfigure the action version in the release generator and retain\nDepot-only target runners. Regenerate and verify the release plan\nwith the repository's full prescribed hook surface.\n"
+  },
+  {
+    "number": 1,
+    "head": "5ee461f86ce14e6480d55862825bf737fc56f0a7",
+    "input_tree": "9e12d209fdccb6126f4a5ae4d4c3039873a2d6c8",
+    "action": "actions/download-artifact",
+    "version": "v8",
+    "input_config_sha256": "7e42d95da7ec912175f38e5cc7f8b4e6456a3850968d542b42ef62e194a94f98",
+    "commit_message": "ci: preserve download-artifact v8 in cargo-dist\n\nConfigure the action version in the release generator and retain\nDepot-only target runners. Regenerate and verify the release plan\nwith the repository's full prescribed hook surface.\n"
+  },
+  {
+    "number": 2,
+    "head": "dce8bb89bc4fd7fd72bebd974edf8ce555fd4eff",
+    "input_tree": "6ac1c70b8773be9ff08bf18d6b87e013ffd2553a",
+    "action": "actions/upload-artifact",
+    "version": "v7",
+    "input_config_sha256": "49dfe9c50acad554cd619dcf74d049774140a58d2214a7af50a5b56941a34ec5",
+    "commit_message": "ci: preserve upload-artifact v7 in cargo-dist\n\nConfigure the action version in the release generator and retain\nDepot-only target runners. Regenerate and verify the release plan\nwith the repository's full prescribed hook surface.\n"
+  }
+]
