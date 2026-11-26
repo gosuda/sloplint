@@ -291,9 +291,9 @@ fn a_double_dash_ends_the_options_of_a_native_command() {
     assert!(
         matches!(
             dotnet.args[8].shape,
-            ArgShape::Concat { longest_static: 31 }
+            ArgShape::Concat { longest_static: 14 }
         ),
-        "the value after -p: is one word with its quotes and subexpression, variables discounted: {:?}",
+        "the value after -p: excludes the complete computed subexpression: {:?}",
         dotnet.args
     );
 }

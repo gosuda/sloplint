@@ -3,6 +3,7 @@
 use std::sync::LazyLock;
 
 use regex::Regex;
+use sloplint_core::facts::ArgShape;
 
 use crate::hooks::narrow;
 
@@ -26,9 +27,9 @@ fn ps_word_name_char(ch: char) -> bool {
     ch.len_utf16() == 1 && NAME_CHAR.is_match(ch.encode_utf8(&mut utf8))
 }
 
-// The grammar hides a variable-path word's leading variable in an anonymous
-// token. Scan that name without including its following path separator.
-pub(super) fn ps_word_variable_end(raw: &str) -> Option<usize> {
+// Generic-word variables can be hidden in anonymous grammar tokens. Scan the
+// name without including its following literal text.
+fn ps_word_variable_end(raw: &str) -> Option<usize> {
     let tail = raw.strip_prefix('$')?;
     let first = tail.chars().next()?;
     if first == '{' {
@@ -63,12 +64,45 @@ pub(super) fn ps_word_variable_end(raw: &str) -> Option<usize> {
     Some(end)
 }
 
+// Unicode escape spelling is one escape, including its braces and hex digits.
+// PowerShell accepts UTF-16 surrogate values as well as Unicode scalar values.
+fn ps_unicode_escape_len(raw: &str) -> Option<usize> {
+    let hex = raw.strip_prefix("u{")?;
+    let mut value = 0;
+    for (offset, byte) in hex.bytes().take(7).enumerate() {
+        if byte == b'}' {
+            return (offset != 0 && value <= 0x10ffff).then_some(offset + 3);
+        }
+        value = value * 16 + char::from(byte).to_digit(16)?;
+    }
+    None
+}
+
+// PowerShell's ScanSubExpression balances raw parentheses before parsing the
+// body. The computed expression's source never contributes literal text.
+fn ps_word_subexpression_end(raw: &str) -> Option<usize> {
+    let body = raw.strip_prefix("$(")?;
+    let mut depth = 1;
+    for (offset, byte) in body.bytes().enumerate() {
+        if byte == b'(' {
+            depth += 1;
+        } else if byte == b')' {
+            depth -= 1;
+            if depth == 0 {
+                return Some(offset + 3);
+            }
+        }
+    }
+    None
+}
+
 // Named AST holes are disjoint and sorted, and their byte offsets are relative
 // to this UTF-8 word. Quotes change lexical mode without breaking a literal run.
-pub(super) fn ps_word_static_run(raw: &str, dynamics: &[(usize, usize)]) -> u32 {
+pub(super) fn ps_word_shape(raw: &str, dynamics: &[(usize, usize)]) -> ArgShape<'static> {
     let mut quote = PsWordQuote::Bare;
     let mut offset = 0;
     let mut dynamic = 0;
+    let mut interpolated = false;
     let mut run = 0;
     let mut best = 0;
     while offset < raw.len() {
@@ -79,6 +113,7 @@ pub(super) fn ps_word_static_run(raw: &str, dynamics: &[(usize, usize)]) -> u32 
             run = 0;
             offset = end;
             dynamic += 1;
+            interpolated = true;
             continue;
         }
         let ch = raw[offset..]
@@ -102,11 +137,8 @@ pub(super) fn ps_word_static_run(raw: &str, dynamics: &[(usize, usize)]) -> u32 
         if ch == '`' {
             best = best.max(run);
             run = 0;
-            if let Some(end) = ps_word_unicode_escape_end(&raw[offset..]) {
-                offset += end;
-            } else if let Some(escaped) = raw[offset..].chars().next() {
-                offset += escaped.len_utf8();
-            }
+            offset += ps_unicode_escape_len(&raw[offset..])
+                .unwrap_or_else(|| raw[offset..].chars().next().map_or(0, char::len_utf8));
         } else if ch == '\'' && quote == PsWordQuote::Bare {
             quote = PsWordQuote::Verbatim;
         } else if ch == '"' {
@@ -121,66 +153,24 @@ pub(super) fn ps_word_static_run(raw: &str, dynamics: &[(usize, usize)]) -> u32 
                 };
             }
         } else if ch == '$'
-            && let Some(end) = ps_word_variable_end(&raw[offset - 1..])
+            && let Some(end) = ps_word_subexpression_end(&raw[offset - 1..])
+                .or_else(|| ps_word_variable_end(&raw[offset - 1..]))
         {
             best = best.max(run);
             run = 0;
             offset += end - 1;
+            interpolated = true;
         } else {
             run += 1;
         }
     }
-    narrow(best.max(run))
-}
-
-// Length of a valid backtick-Unicode escape (`u{1F600}, `u and hex digits
-// case-insensitive) in bytes, measured from after the backtick. PowerShell
-// decodes the whole sequence to one character, so the word scanner consumes
-// it as one escape. Anything else is not a Unicode escape: the caller falls
-fn ps_word_unicode_escape_end(raw: &str) -> Option<usize> {
-    let body = raw.strip_prefix('u').or_else(|| raw.strip_prefix('U'))?;
-    let hex = body.strip_prefix('{')?;
-    let close = hex.find('}')?;
-    let digits = &hex[..close];
-    if !(1..=6).contains(&digits.len()) || !digits.bytes().all(|b| b.is_ascii_hexdigit()) {
-        return None;
-    }
-    Some(1 + 1 + digits.len() + 1)
-}
-
-// Byte spans of `$variable` interpolations the grammar leaves as plain word
-// text (v$VERSION.tar.gz emits no interpolation child). Single-quoted
-// stretches stay verbatim, so dollars inside them are never dynamics.
-pub(super) fn ps_word_inline_dynamics(raw: &str) -> Vec<(usize, usize)> {
-    let mut out = Vec::new();
-    let mut offset = 0;
-    let mut verbatim = false;
-    while offset < raw.len() {
-        let ch = match raw[offset..].chars().next() {
-            Some(ch) => ch,
-            None => break,
-        };
-        if verbatim {
-            if ch == '\'' {
-                if raw[offset + 1..].starts_with('\'') {
-                    offset += 2;
-                    continue;
-                }
-                verbatim = false;
-            }
-            offset += ch.len_utf8();
-            continue;
+    if interpolated {
+        ArgShape::Concat {
+            longest_static: narrow(best.max(run)),
         }
-        if ch == '\'' {
-            verbatim = true;
-        } else if ch == '$' {
-            if let Some(end) = ps_word_variable_end(&raw[offset..]) {
-                out.push((offset, offset + end));
-                offset += end;
-                continue;
-            }
+    } else {
+        ArgShape::Str {
+            longest_static: narrow(raw.chars().count()),
         }
-        offset += ch.len_utf8();
     }
-    out
 }

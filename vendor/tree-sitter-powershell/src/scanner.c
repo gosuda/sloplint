@@ -46,109 +46,82 @@ static bool at_else_keyword(TSLexer *lexer)
     wint_t c = lexer->lookahead;
     return !(iswalnum(c) || c == '_' || c == '-');
 }
-// PowerShell horizontal whitespace that the C locale's iswspace does not
-// cover (non-breaking space and friends ride along as command extras).
-static bool is_horizontal_space(int32_t c);
+
+// Match PowerShell CharExtensions.IsWhitespace without depending on the C locale.
+// CR and LF are statement boundaries and are handled separately.
+static bool is_powershell_space(int32_t c)
+{
+    return c == ' ' || c == '\t' || c == '\v' || c == '\f' ||
+        c == 0x0085 || c == 0x00A0 || c == 0x1680 ||
+        (c >= 0x2000 && c <= 0x200A) || c == 0x2028 ||
+        c == 0x2029 || c == 0x202F || c == 0x205F || c == 0x3000;
+}
+
 static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool *valid_symbols)
 {
-    if (valid_symbols[STATEMENT_TERMINATOR]) {
-        lexer->result_symbol = STATEMENT_TERMINATOR;
-        // This token has no characters -- everything is lookahead to determine its existence
-        lexer->mark_end(lexer);
-
-        bool saw_newline = false;
-        bool saw_blank_line = false;
-        for (;;) {
-            if (lexer->lookahead == 0) return true;
-            if (lexer->lookahead == '}') return true;
-            if (lexer->lookahead == ';') return true;
-            if (lexer->lookahead == ')') return true;
-            if (lexer->lookahead == '\n') {
-                saw_blank_line = saw_blank_line || saw_newline;
-                saw_newline = true;
-            }
-            else if (lexer->lookahead == '`') {
-                // A backtick before a line break joins the lines, so it is
-                // white space here: `$x -replace "a", "b" `` newline newline `}`.
-                skip(lexer);
-                if (lexer->lookahead == '\r') skip(lexer);
-                if (lexer->lookahead != '\n') return false;
-            }
-            else if (is_horizontal_space(lexer->lookahead) || iswspace(lexer->lookahead)) {
-                // Indentation, including non-breaking spaces, carries no
-                // statement weight on its own.
-            }
-            else if (lexer->lookahead == '#') {
-                // A comment-only line carries no statement weight either:
-                // clear a pending newline (but never a recorded blank
-                // line) so a leading pipe past comments still continues
-                // the pipeline. The newline ending the comment feeds
-                // blank-line tracking as usual.
-                saw_newline = false;
-                do {
+    if (!valid_symbols[STATEMENT_TERMINATOR]) return false;
+    lexer->result_symbol = STATEMENT_TERMINATOR;
+    // The token is empty; comments and whitespace are only lookahead.
+    lexer->mark_end(lexer);
+    bool saw_newline = false;
+    bool saw_blank_line = false;
+    bool line_has_comment = false;
+    for (;;) {
+        int32_t c = lexer->lookahead;
+        if (c == 0 || c == '}' || c == ';' || c == ')') return true;
+        if (c == '\r' || c == '\n') {
+            saw_blank_line = saw_blank_line || (saw_newline && !line_has_comment);
+            saw_newline = true;
+            line_has_comment = false;
+            skip(lexer);
+            if (c == '\r' && lexer->lookahead == '\n') skip(lexer);
+            continue;
+        }
+        if (is_powershell_space(c)) {
+            skip(lexer);
+            continue;
+        }
+        if (c == '#') {
+            line_has_comment = true;
+            while (lexer->lookahead != 0 && lexer->lookahead != '\r' &&
+                   lexer->lookahead != '\n') skip(lexer);
+            continue;
+        }
+        if (c == '<') {
+            skip(lexer);
+            if (lexer->lookahead != '#') return saw_newline;
+            line_has_comment = true;
+            skip(lexer);
+            // PowerShell block comments end at the first #>, without nesting.
+            while (lexer->lookahead != 0) {
+                if (lexer->lookahead == '#') {
                     skip(lexer);
-                } while (lexer->lookahead != 0 && lexer->lookahead != '\n');
-                // Route the ending newline (or EOF) through the top of
-                // the loop so blank-line tracking sees it.
-                continue;
-            }
-            else if (lexer->lookahead == '<') {
-                skip(lexer);
-                if (lexer->lookahead != '#') {
-                    // Not a block comment: `<` behaves exactly like any
-                    // other ordinary character here (`at_else_keyword`
-                    // fails on `<` without consuming).
-                    if (saw_newline) return true;
-                    return false;
-                }
-                // Nested `<#...#>` block comments are comment content;
-                // newlines inside still feed blank-line tracking.
-                int depth = 1;
-                skip(lexer);
-                for (;;) {
-                    if (lexer->lookahead == 0) return true;
-                    if (lexer->lookahead == '\n') {
-                        saw_blank_line = saw_blank_line || saw_newline;
-                        saw_newline = true;
-                    } else if (lexer->lookahead == '#') {
+                    if (lexer->lookahead == '>') {
                         skip(lexer);
-                        if (lexer->lookahead == '>') {
-                            skip(lexer);
-                            if (--depth == 0) break;
-                        }
-                        continue;
-                    } else if (lexer->lookahead == '<') {
-                        skip(lexer);
-                        if (lexer->lookahead == '#') {
-                            skip(lexer);
-                            depth++;
-                        }
-                        continue;
+                        break;
                     }
+                } else {
                     skip(lexer);
                 }
-                saw_newline = false;
-                // Route whatever follows the comment through the top of
-                // the loop so a newline there feeds blank-line tracking.
-                continue;
             }
-            else if (!iswspace(lexer->lookahead)) {
-                // A line break ends the statement, except when the next
-                // line continues an if statement: `}` newline `else {`.
-                // A leading pipe on the next line continues the pipeline,
-                // even past comment-only lines or non-breaking-space
-                // indentation. An intervening blank line ends the statement.
-                if (saw_newline) {
-                    if (lexer->lookahead == '|' && !saw_blank_line) return false;
-                    return !at_else_keyword(lexer);
-                }
+            continue;
+        }
+        if (c == '`') {
+            skip(lexer);
+            if (lexer->lookahead == '\r') {
+                skip(lexer);
+                if (lexer->lookahead == '\n') skip(lexer);
+            } else if (lexer->lookahead == '\n') {
+                skip(lexer);
+            } else {
                 return false;
             }
-            skip(lexer);
+            continue;
         }
+        if (!saw_newline) return false;
+        if (c == '|' && !saw_blank_line) return false;
+        return !at_else_keyword(lexer);
     }
-
-    return false;
 }
 
 // A bare `-` or `--` argument: `--` ends option parsing for a native command

@@ -77,6 +77,7 @@ forms; this comparison does not execute the commands.
 
 The external scanner accepts a literal dollar before whitespace, a backslash,
 or a backtick. It leaves the following newline untouched so an expandable
+here-string can still close on that line. A leading pipe continues the previous
 statement only when no blank line intervenes. Comment-only lines and
 non-breaking-space indentation do not count as blank: the lookahead skips
 them while still rejecting an actual blank line. Blank lines before `else`
@@ -96,6 +97,26 @@ share a run. Single-quoted backticks and dollar signs remain literal; expandable
 and bare escapes end a run. Named subexpressions retain their AST boundaries.
 Variable names follow PowerShell's UTF-16 letter and decimal-digit categories,
 including the distinction between decimal digits and other numeric characters.
+
+## Comment continuation and interpolated word escapes
+
+A comment-only line does not end a pipeline before a leading pipe. The
+statement-terminator lookahead skips line and block comments and recognizes
+PowerShell's Unicode whitespace independently of the C locale. An actual
+blank line still ends continuation. Block comments end at the first `#>`;
+format marks such as U+200B are not whitespace in the PowerShell parser.
+
+A valid backtick Unicode escape is one lexical unit, including its one to
+six hexadecimal digits and closing brace. Its spelling cannot form a
+searchable literal run. The adapter also detects variables inside anonymous
+generic words such as `v$VERSION.tar.gz`, while retaining literal dollar
+signs in escaped and verbatim text. A hidden `$()` expression is one dynamic boundary, including its complete
+property chain. Non-interpolated generic words keep their existing fact shape.
+
+The continuation and literal-run Rust tests cover the PowerShell 7.7.0
+accepted and rejected forms. CLI fixtures pair short interpolated messages
+with searchable prefixes and verbatim text. Regenerate the parser and the
+upstream-relative patch with tree-sitter-cli 0.27.1 as described above.
 
 ## Multiline interpolation and parenthesized pipelines
 
