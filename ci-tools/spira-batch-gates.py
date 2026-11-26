@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 from dataclasses import asdict, dataclass
@@ -59,8 +60,8 @@ def run(command: list[str], log: Path, timeout: int = 1800) -> int:
 def regressions(label: str) -> tuple[Regression, ...]:
     if label == "30":
         return (
-            Regression("serve-read-timeout", "http3/server.lgo", "inner := &web.Server{Router: s.Router, ReadHeaderTimeout: s.ReadHeaderTimeout, ReadTimeout: s.ReadTimeout,", "inner := &web.Server{Router: s.Router, ReadHeaderTimeout: s.ReadHeaderTimeout,", "./http3", "^TestH3ServeClosesSlowBodyWithinReadTimeout$", ("--- FAIL: TestH3ServeClosesSlowBodyWithinReadTimeout",)),
-            Regression("missing-settings-code", "@logos/src/logos/net/http/h3_server.go", "h3ServerMissingSettings      = 0x10a", "h3ServerMissingSettings      = 0x100", "./http3", "^TestH3QUICMissingSettingsReportsProtocolCode$", ("want remote H3_MISSING_SETTINGS",)),
+            Regression("serve-read-timeout", "http3/server.lgo", "inner := &web.Server{Router: s.Router, ReadHeaderTimeout: s.ReadHeaderTimeout, ReadTimeout: s.ReadTimeout,", "inner := &web.Server{Router: s.Router, ReadHeaderTimeout: s.ReadHeaderTimeout,", "./http3", "^TestH3ServeTimesOutSlowBodyRead$", ("handler body read did not time out",)),
+            Regression("missing-settings-deadline", "@logos/src/logos/net/http/h3_server.go", "h3ServerSettingsTimeout  = 5 * time.Second", "h3ServerSettingsTimeout  = 8 * time.Second", "./http3", "^TestH3QUICMissingSettingsReportsProtocolCode$", ("missing SETTINGS exceeded five seconds plus one second observation tolerance",)),
         )
     if label == "38":
         return (
@@ -70,7 +71,7 @@ def regressions(label: str) -> tuple[Regression, ...]:
     if label == "39":
         return (Regression("client-deadline", "gateway/gateway_test.lgo", "Timeout: 10 * time.Second, Transport:", "Transport:", "./gateway", "^TestGatewayClientDeadlineFailsFast$", ("stalled server answered without an error",)),)
     if label == "41":
-        return (Regression("second-idle-timeout", "db/db.lgo", "merged.ConnMaxIdleTime = o.ConnMaxIdleTime", "_ = o.ConnMaxIdleTime", "./db", "^TestOpenHonorsSecondIdleTimeout$", ("second idle timeout was ignored",)),)
+        return (Regression("memory-open-cap", "db/db.lgo", "handle.SetMaxOpenConns(opts.MaxOpenConns)", "handle.SetMaxOpenConns(opts.MaxIdleConns)", "./db", "^TestMemoryPoolCapsIdleAtOpenLimit$", ("idle limit overrode the smaller open-connection cap",)),)
     if label == "42":
         return (Regression("live-unidirectional-cap", "@logos/src/logos/net/http/h3_server.go", "h3ServerUniStreams       = 100", "h3ServerUniStreams       = 101", "./http3", "^TestH3PublicCapsIncomingUniStreamsAt100$", ("101st active stream opened past the 100-stream cap",)),)
     if label == "43":
@@ -107,23 +108,18 @@ def prove(case: Regression, folder: Path) -> bool:
     finally:
         path.write_text(original)
     green = run(command, folder / f"{case.label}-green.log", case.timeout)
-    (folder / f"{case.label}-results.json").write_text(json.dumps({"command": command, "red": red, "reproduced": reproduced, "green": green}, indent=2) + "\n")
-    return reproduced and green == 0
-
-
-def memory_classification(candidate: Candidate, folder: Path) -> bool:
-    path = SOURCE / "db/db.lgo"
-    repaired = path.read_bytes()
-    command = ["logos", "test", "-race", "-count=1", "-v", "-run", "^(TestPlainFilenameMemoryQueryKeepsExpiry|TestMemoryURIFragmentKeepsRows)$", "./db"]
-    try:
-        path.write_bytes(subprocess.check_output(["git", "show", f"{candidate.head}:db/db.lgo"], cwd=SOURCE))
-        red = run(command, folder / "memory-classification-red.log", 120)
-        output = (folder / "memory-classification-red.log").read_text(errors="replace")
-        reproduced = red != 0 and all(f"--- FAIL: {name}" in output for name in ("TestPlainFilenameMemoryQueryKeepsExpiry", "TestMemoryURIFragmentKeepsRows"))
-    finally:
-        path.write_bytes(repaired)
-    green = run(command, folder / "memory-classification-green.log", 120)
-    return reproduced and green == 0
+    green_output = (folder / f"{case.label}-green.log").read_text(errors="replace")
+    expected = re.compile(case.test)
+    passed = [name for name in re.findall(r"^--- PASS: (\S+)", green_output, re.MULTILINE) if expected.fullmatch(name)]
+    skipped = [name for name in re.findall(r"^--- SKIP: (\S+)", green_output, re.MULTILINE) if expected.fullmatch(name)]
+    executed = bool(passed) and not skipped
+    result = {"command": command, "red": red, "reproduced": reproduced, "green": green, "passed": passed, "skipped": skipped}
+    (folder / f"{case.label}-results.json").write_text(json.dumps(result, indent=2) + "\n")
+    print(f"PROOF {case.label}: {json.dumps(result, sort_keys=True)}", flush=True)
+    for line in green_output.splitlines():
+        if line.startswith("--- PASS:") or line.startswith("--- SKIP:"):
+            print(line, flush=True)
+    return reproduced and green == 0 and executed
 
 
 def dashboard_proofs(folder: Path) -> dict[str, bool]:
@@ -177,7 +173,9 @@ def check(candidate: Candidate) -> dict[str, object]:
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
         files[relative] = hashlib.sha256(source.read_bytes()).hexdigest()
-    (folder / "identity.json").write_text(json.dumps({"candidate": asdict(candidate), "files": files}, indent=2) + "\n")
+    identity = {"candidate": asdict(candidate), "files": files}
+    (folder / "identity.json").write_text(json.dumps(identity, indent=2) + "\n")
+    print(f"IDENTITY {json.dumps(identity, sort_keys=True)}", flush=True)
     result: dict[str, object] = {"candidate": asdict(candidate)}
     result["gate"] = run(["just", "gate"], folder / "gate.log")
     result["eject"] = run(["just", "eject"], folder / "eject.log")
@@ -191,8 +189,6 @@ def check(candidate: Candidate) -> dict[str, object]:
         proofs: dict[str, bool] = {}
         for case in regressions(candidate.label):
             proofs[case.label] = prove(case, folder)
-        if candidate.label == "41":
-            proofs["memory-classification"] = memory_classification(candidate, folder)
         if candidate.label == "40":
             source = (SOURCE / "cmd/sqlc-gen-spira/export_test.lgo").read_text()
             proofs["immutable-forwarder"] = "func MethodOK(arg string) bool" in source and "var MethodOK" not in source
@@ -203,6 +199,7 @@ def check(candidate: Candidate) -> dict[str, object]:
     assert git("write-tree") == candidate.tree
     subprocess.run(["git", "diff", "--exit-code"], cwd=LOGOS, check=True)
     (folder / "results.json").write_text(json.dumps(result, indent=2) + "\n")
+    print(f"CANDIDATE_RESULT {json.dumps(result, sort_keys=True)}", flush=True)
     git("restore", "--source=HEAD", "--staged", "--worktree", "--", ".")
     return result
 
