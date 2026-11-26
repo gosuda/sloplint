@@ -1,0 +1,17 @@
+{
+  "base": "e7ee97e84246863766ec7465777a035134533feb",
+  "base_tree": "5d2a547a693d073ad9739311e7b653baa96a08d6",
+  "previous_base": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
+  "previous_tree": "f518b3943c6b86af53c334175309303c3d79f38b",
+  "native_cases": 2,
+  "primary_ids": [
+    "guard-complete-prefix-lf",
+    "guard-complete-prefix-crlf"
+  ],
+  "mode": "Two bounded prefix controls only: native runtime argv and exact unchanged parser trees on83f/57adc/e7ee. No Rust build, source edit, or candidate application.",
+  "proof_sha256": {
+    "prefix-boundary.py": "5177b70f84a039995ab66c3c487078cfe02e283cc842e2423ab53659b75b904c",
+    "prefix-boundary-cases.json": "1090951625fb7008a9a1f699694b6f6733f82046f456718dc4bad4284a8ee479",
+    "native-oracle-prefix.ps1": "20d2814f0c6cc257b540dbe8d2f55befe6fe75163f1549696de09e4b6d3ee1b4"
+  }
+}

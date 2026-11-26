@@ -13,8 +13,8 @@ defaults:
     shell: bash
 jobs:
   boundary:
-    runs-on: depot-ubuntu-24.04-8
-    timeout-minutes: 25
+    runs-on: depot-ubuntu-24.04-4
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -31,21 +31,26 @@ jobs:
           ref: 57adc9fff126a9826e0fb0be921c28e6cdb08391
           path: pre_source
           persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 83f73f04e7f20bf405dbf4c2de3bd5467c8010bb
+          path: old_source
+          persist-credentials: false
       - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
         with:
           version: 0.13.9
           python-version: "3.15"
           require-checksums: true
           enable-cache: false
-      - name: Reconcile external comment changes against native and both unchanged sources
-        run: uv run --no-project --python 3.15 proof/ci-tools/powershell-separator-ownership-r23/external-boundary.py
+      - name: Observe two complete dash prefixes across escaped newlines
+        run: uv run --no-project --python 3.15 proof/ci-tools/powershell-separator-ownership-r23/prefix-boundary.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
-          name: powershell-comment-external-boundary-${{ github.sha }}
+          name: powershell-comment-prefix-boundary-${{ github.sha }}
           path: |
             ${{ runner.temp }}/powershell-separator-ownership-r23/*.log
             ${{ runner.temp }}/powershell-separator-ownership-r23/*.json
-            ${{ runner.temp }}/powershell-separator-ownership-r23/external-boundary-packed.json.gz
+            ${{ runner.temp }}/powershell-separator-ownership-r23/prefix-boundary-packed.json.gz
           if-no-files-found: error
           retention-days: 7

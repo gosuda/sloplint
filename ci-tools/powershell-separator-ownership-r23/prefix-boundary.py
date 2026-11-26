@@ -1,0 +1,196 @@
+from __future__ import annotations
+
+import base64
+import gzip
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import time
+import urllib.request
+import zipfile
+from typing import cast
+
+WORKSPACE = Path(os.environ["GITHUB_WORKSPACE"])
+SOURCE = WORKSPACE / "source"
+PREVIOUS = WORKSPACE / "pre_source"
+PROOF = WORKSPACE / "proof/ci-tools/powershell-separator-ownership-r23"
+EVIDENCE = Path(os.environ["RUNNER_TEMP"]) / "powershell-separator-ownership-r23"
+EVIDENCE.mkdir(exist_ok=True)
+MANIFEST = cast(dict[str, object], json.loads((PROOF / "prefix-boundary-manifest.json").read_text()))
+ENVIRONMENT = dict(os.environ)
+ENVIRONMENT.update(RUSTUP_TOOLCHAIN="1.100.0", CARGO_INCREMENTAL="0", CARGO_BUILD_JOBS="8", CARGO_TERM_COLOR="never",
+                   CARGO_PROFILE_DEV_DEBUG="line-tables-only", CARGO_PROFILE_TEST_DEBUG="line-tables-only",
+                   SLOPLINT_REQUIRE_FS_CAPS="1")
+RESULTS: list[dict[str, object]] = []
+
+def output(args: list[str], cwd: Path = SOURCE) -> str:
+    return subprocess.check_output(args, cwd=cwd, env=ENVIRONMENT, text=True).strip()
+
+def run(name: str, args: list[str], expected: int | None = 0, cwd: Path = SOURCE, limit: int = 1200) -> str:
+    started = time.monotonic()
+    process = subprocess.Popen(args, cwd=cwd, env=ENVIRONMENT, text=True, stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT, start_new_session=True)
+    timed_out = False
+    try:
+        text, _ = process.communicate(timeout=limit)
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        os.killpg(process.pid, signal.SIGKILL)
+        text, _ = process.communicate()
+    (EVIDENCE / f"{name}.log").write_text(text)
+    RESULTS.append({"name": name, "args": args, "cwd": str(cwd), "exit": process.returncode, "expected": expected,
+                    "seconds": time.monotonic() - started, "timed_out": timed_out,
+                    "log_sha256": hashlib.sha256(text.encode()).hexdigest()})
+    (EVIDENCE / "results.json").write_text(json.dumps({"manifest": MANIFEST, "results": RESULTS}, indent=2) + "\n")
+    print(f"BASELINE_EXIT {name} {process.returncode} timed_out={timed_out}\n{text[-25000:]}", flush=True)
+    assert not timed_out and (expected is None or process.returncode == expected), (name, process.returncode, expected, timed_out)
+    return text
+
+def download(url: str, digest: str, name: str) -> Path:
+    path = EVIDENCE / name
+    with urllib.request.urlopen(url, timeout=120) as response, path.open("wb") as handle:
+        shutil.copyfileobj(response, handle)
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == digest, name
+    print("VERIFIED_DOWNLOAD " + name + " " + digest, flush=True)
+    return path
+
+def identity(source: Path, head: str, tree: str) -> dict[str, object]:
+    assert output(["git", "rev-parse", "HEAD"], source) == head
+    assert output(["git", "write-tree"], source) == tree
+    assert output(["git", "status", "--porcelain", "--untracked-files=all"], source) == ""
+    index = subprocess.check_output(["git", "ls-files", "--stage", "-z"], cwd=source)
+    count = 0
+    for entry in index.split(b"\0"):
+        if not entry:
+            continue
+        metadata, relative = entry.split(b"\t", 1)
+        mode, expected, stage = metadata.split()
+        assert stage == b"0"
+        path = source / os.fsdecode(relative)
+        if mode == b"120000":
+            content = os.fsencode(os.readlink(path))
+        else:
+            assert mode in (b"100644", b"100755")
+            assert bool(path.stat().st_mode & 0o111) == (mode == b"100755")
+            content = path.read_bytes()
+        assert hashlib.sha1(f"blob {len(content)}\0".encode() + content).hexdigest() == expected.decode(), str(path)
+        count += 1
+    record = {"head": head, "tree": tree, "tracked_blobs": count, "index_sha256": hashlib.sha256(index).hexdigest()}
+    print("UNCHANGED_SOURCE_IDENTITY " + json.dumps(record, sort_keys=True), flush=True)
+    return record
+
+for name, digest in cast(dict[str, str], MANIFEST["proof_sha256"]).items():
+    assert hashlib.sha256((PROOF / name).read_bytes()).hexdigest() == digest, name
+snapshots = [
+    ("previous", PREVIOUS, str(MANIFEST["previous_base"]), str(MANIFEST["previous_tree"])),
+    ("current", SOURCE, str(MANIFEST["base"]), str(MANIFEST["base_tree"])),
+    ("original", WORKSPACE / "old_source", "83f73f04e7f20bf405dbf4c2de3bd5467c8010bb", "703b3a5a445883598bfb7ef05c263a76d6629235"),
+]
+initial = {name: identity(source, head, tree) for name, source, head, tree in snapshots}
+archive = download("https://github.com/tree-sitter/tree-sitter/releases/download/v0.27.1/tree-sitter-linux-x64.gz",
+                   "d01042f94ba3d6827ddc9788e235f75d8366431be42bdf90ade534d960c98b7d", "tree-sitter.gz")
+binary = EVIDENCE / "tree-sitter"
+binary.write_bytes(gzip.decompress(archive.read_bytes()))
+binary.chmod(0o755)
+archive = download("https://github.com/PowerShell/PowerShell/releases/download/v7.7.0/powershell-7.7.0-linux-x64.tar.gz",
+                   "c89d9c682d2c403dfe726f3df948e359675235a5bd6fab535776de69729ca0cb", "powershell.tar.gz")
+powershell = EVIDENCE / "powershell"
+powershell.mkdir()
+run("extract-powershell", ["tar", "-xzf", str(archive), "-C", str(powershell)])
+pwsh = powershell / "pwsh"
+pwsh.chmod(0o755)
+native_bin = EVIDENCE / "native-bin"
+native_bin.mkdir()
+capture = native_bin / "Capture-Native"
+capture.write_text(f"#!{sys.executable}\nimport json\nimport sys\nprint(json.dumps({{'count': len(sys.argv) - 1, 'values': sys.argv[1:]}}, ensure_ascii=True))\n")
+capture.chmod(0o755)
+ENVIRONMENT["PATH"] = str(native_bin) + os.pathsep + ENVIRONMENT["PATH"]
+
+
+native_output = run("native-witnesses", [str(pwsh), "-NoLogo", "-NoProfile", "-File", str(PROOF / "native-oracle-prefix.ps1"), "-CasesPath", str(PROOF / "prefix-boundary-cases.json")])
+native = [json.loads(line.removeprefix("NATIVE_CONTEXT ")) for line in native_output.splitlines() if line.startswith("NATIVE_CONTEXT ")]
+cases = cast(list[dict[str, object]], json.loads((PROOF / "prefix-boundary-cases.json").read_text()))
+assert len(native) == len(cases) == MANIFEST["native_cases"]
+assert all(record["matches"] for record in native)
+assert all(record["accepted"] for record in native if record["id"] in MANIFEST["primary_ids"])
+(EVIDENCE / "native-cases.json").write_text(json.dumps(native, indent=2, sort_keys=True) + "\n")
+for record in native:
+    print("FROZEN_NATIVE " + json.dumps(record), flush=True)
+case_root = EVIDENCE / "cases"
+case_root.mkdir()
+native_by_id = {record["id"]: record for record in native}
+all_parsers: dict[str, list[dict[str, object]]] = {}
+all_queries: dict[str, list[str]] = {}
+def spans(kind: str, content: str, tree_text: str) -> list[str]:
+    encoded = content.encode()
+    lines = encoded.splitlines(keepends=True)
+    result = []
+    for match in re.finditer(rf"\({kind} \[(\d+), (\d+)\] - \[(\d+), (\d+)\]", tree_text):
+        start_row, start_column, end_row, end_column = map(int, match.groups())
+        begin = sum(map(len, lines[:start_row])) + start_column
+        finish = sum(map(len, lines[:end_row])) + end_column
+        result.append(encoded[begin:finish].decode())
+    return result
+
+
+for label, source, head, tree in snapshots:
+    library = EVIDENCE / f"parser-libraries-{label}"
+    library.mkdir()
+    ENVIRONMENT["TREE_SITTER_LIBDIR"] = str(library)
+    vendor = source / "vendor/tree-sitter-powershell"
+    records: list[dict[str, object]] = []
+    for index, case in enumerate(cases):
+        content = str(case["source"])
+        assert hashlib.sha256(content.encode()).hexdigest() == case["source_sha256"], case["id"]
+        path = case_root / f"case-{index}.ps1"
+        path.write_text(content)
+        result = subprocess.run([str(binary), "parse", str(path)], cwd=vendor, env=ENVIRONMENT, text=True,
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False, timeout=30)
+        assert result.returncode in (0, 1), (case["id"], result.returncode)
+        assert "Failed to load language" not in result.stdout
+        expected = native_by_id[case["id"]]
+        commands = spans("command", content, result.stdout)
+        record: dict[str, object] = {
+            "label": label, "id": case["id"], "exit": result.returncode,
+            "accepted": result.returncode == 0, "native_accepted": expected["accepted"],
+            "commands": commands, "native_commands": [command["text"] for command in expected["commands"]],
+            "generic_words": spans("generic_token", content, result.stdout),
+            "parameters": spans("command_parameter", content, result.stdout),
+            "target_nodes": spans("redirected_file_name", content, result.stdout),
+            "separator_nodes": spans("command_argument_sep", content, result.stdout),
+            "comments": spans("comment", content, result.stdout),
+            "arrays": spans("array_literal_expression", content, result.stdout),
+            "tree_sha256": hashlib.sha256(result.stdout.encode()).hexdigest(),
+        }
+        record["acceptance_matches"] = record["accepted"] == expected["accepted"]
+        records.append(record)
+        print("OWNERSHIP_PARSER_OBSERVATION " + json.dumps(record), flush=True)
+        if case["id"] in MANIFEST["primary_ids"]:
+            (EVIDENCE / f"{label}-{case['id']}-tree.log").write_text(result.stdout)
+            print("PRIMARY_PARSER_TREE " + label + " " + str(case["id"]) + "\n" + result.stdout, flush=True)
+    all_parsers[label] = records
+    (EVIDENCE / f"{label}-parser-cases.json").write_text(json.dumps(records, indent=2, sort_keys=True) + "\n")
+    libraries = [{"path": str(path.relative_to(EVIDENCE)), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()} for path in library.glob("*.so")]
+    assert len(libraries) == 1, libraries
+    print("ISOLATED_PARSER_LIBRARY " + json.dumps({"source": initial[label], "libraries": libraries}), flush=True)
+    assert identity(source, head, tree) == initial[label]
+
+payload = json.dumps({"manifest": MANIFEST, "sources": initial, "native": native, "parsers": all_parsers,
+                      "queries": all_queries, "results": RESULTS}, separators=(",", ":"), ensure_ascii=True).encode()
+packed = gzip.compress(payload, mtime=0)
+encoded = base64.b64encode(packed).decode()
+(EVIDENCE / "prefix-boundary-packed.json.gz").write_bytes(packed)
+(EVIDENCE / "prefix-boundary-complete.json").write_bytes(payload)
+transport = {"payload_sha256": hashlib.sha256(payload).hexdigest(), "gzip_sha256": hashlib.sha256(packed).hexdigest(),
+             "payload_bytes": len(payload), "gzip_bytes": len(packed), "base64_bytes": len(encoded)}
+(EVIDENCE / "packed-identity.json").write_text(json.dumps(transport, indent=2) + "\n")
+print("OWNERSHIP_PREFIX_BASELINE_IDENTITY " + json.dumps(transport), flush=True)
+for index in range(0, len(encoded), 24000):
+    print("OWNERSHIP_PREFIX_BASELINE_CHUNK " + json.dumps({"part": index // 24000, "data": encoded[index:index + 24000]}), flush=True)
+print("OWNERSHIP_PREFIX_BASELINE_COMPLETE " + json.dumps({"sources": initial, "native_cases": len(native), "results": RESULTS}, sort_keys=True), flush=True)
