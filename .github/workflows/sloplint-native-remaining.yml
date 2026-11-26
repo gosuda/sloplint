@@ -1,0 +1,97 @@
+name: Verify remaining Sloplint native and grammar gates
+on:
+  push:
+    branches: [ci/sloplint-native-remaining-20261126-r15]
+    paths:
+      - .github/workflows/sloplint-native-remaining.yml
+      - ci-tools/sloplint-native-r15/**
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+    working-directory: source
+jobs:
+  arm64:
+    runs-on: depot-ubuntu-24.04-arm-8
+    timeout-minutes: 60
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_BUILD_JOBS: "8"
+      CARGO_PROFILE_DEV_DEBUG: line-tables-only
+      CARGO_PROFILE_TEST_DEBUG: line-tables-only
+      CARGO_TERM_COLOR: never
+      SLOPLINT_REQUIRE_FS_CAPS: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: proof
+          persist-credentials: false
+          sparse-checkout: ci-tools/sloplint-native-r15
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 31bbd8486f485f20c93ab1511d039744339ec670
+          path: source
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          version: 0.13.9
+          python-version: "3.15"
+          require-checksums: true
+          enable-cache: false
+      - name: Install the repository's pinned toolchain
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.100.0 --profile minimal --component clippy,rustfmt
+      - name: Add the native ARM64 target
+        run: rustup target add --toolchain 1.100.0 aarch64-unknown-linux-gnu
+      - name: Run full native ARM64 gates against unchanged source
+        run: uv run --no-project --python 3.15 ../proof/ci-tools/sloplint-native-r15/verify.py arm64
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: sloplint-native-r15-arm64-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/sloplint-native-r15-arm64/*.log
+            ${{ runner.temp }}/sloplint-native-r15-arm64/*.json
+          if-no-files-found: error
+          retention-days: 7
+  lint-grammar:
+    runs-on: depot-ubuntu-24.04-4
+    timeout-minutes: 30
+    env:
+      CARGO_TERM_COLOR: never
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: proof
+          persist-credentials: false
+          sparse-checkout: ci-tools/sloplint-native-r15
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 31bbd8486f485f20c93ab1511d039744339ec670
+          path: source
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          version: 0.13.9
+          python-version: "3.15"
+          require-checksums: true
+          enable-cache: false
+      - name: Install the repository's pinned toolchain
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.100.0 --profile minimal --component clippy,rustfmt
+      - name: Run x64 lint and authoritative grammar proof
+        run: uv run --no-project --python 3.15 ../proof/ci-tools/sloplint-native-r15/verify.py lint-grammar
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: sloplint-native-r15-lint-grammar-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/sloplint-native-r15-lint-grammar/*.log
+            ${{ runner.temp }}/sloplint-native-r15-lint-grammar/*.json
+          if-no-files-found: error
+          retention-days: 7
