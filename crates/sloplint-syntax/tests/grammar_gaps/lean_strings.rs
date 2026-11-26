@@ -69,7 +69,8 @@ fn string_gap_spans_consume_the_line_ending_and_all_indentation() {
             nodes.extend(node.named_children(&mut cursor));
         }
         let start = source.find(&gap).expect("fixture contains the string gap");
-        assert_eq!(spans, [start..start + gap.len()]);
+        assert_eq!(spans.len(), 1, "one string gap, got {spans:?}");
+        assert_eq!(spans[0], start..start + gap.len());
         let analysis = run_clean("src/gap-span.lean", &source);
         let call = analysis
             .facts
