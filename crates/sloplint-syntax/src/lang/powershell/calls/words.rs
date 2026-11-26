@@ -173,12 +173,12 @@ pub(super) fn ps_word_inline_dynamics(raw: &str) -> Vec<(usize, usize)> {
         }
         if ch == '\'' {
             verbatim = true;
-        } else if ch == '$' {
-            if let Some(end) = ps_word_variable_end(&raw[offset..]) {
-                out.push((offset, offset + end));
-                offset += end;
-                continue;
-            }
+        } else if ch == '$'
+            && let Some(end) = ps_word_variable_end(&raw[offset..])
+        {
+            out.push((offset, offset + end));
+            offset += end;
+            continue;
         }
         offset += ch.len_utf8();
     }
