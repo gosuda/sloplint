@@ -57,7 +57,7 @@ diff --git a/test/melt/windows_console.ps1 b/test/melt/windows_console.ps1
 new file mode 100644
 --- /dev/null
 +++ b/test/melt/windows_console.ps1
-@@ -0,0 +1,325 @@
+@@ -0,0 +1,332 @@
 +param([Parameter(Mandatory = $true)][string]$Melt)
 +Set-StrictMode -Version Latest
 +$ErrorActionPreference = "Stop"
@@ -374,12 +374,19 @@ new file mode 100644
 +'@
 +
 +try {
-+    [IO.Directory]::CreateDirectory($root) | Out-Null
-+    [MeltConsoleProbe]::Run($executable, $root)
-+    Write-Output "PASS: native console input, redirected stdout, hidden multiline phrase, Ctrl-Z EOF, restored console mode, exact recovered seed"
-+}
-+finally {
-+    if ([IO.Directory]::Exists($root)) {
-+        Remove-Item -LiteralPath $root -Recurse -Force
++    try {
++        [IO.Directory]::CreateDirectory($root) | Out-Null
++        [MeltConsoleProbe]::Run($executable, $root)
++    }
++    finally {
++        if ([IO.Directory]::Exists($root)) {
++            Remove-Item -LiteralPath $root -Recurse -Force
++        }
 +    }
 +}
++catch {
++    # Keep the original exception visible after disposing the private console.
++    Write-Output ("FAIL: native console fixture: " + $_.Exception.ToString())
++    exit 1
++}
++Write-Output "PASS: native console input, redirected stdout, hidden multiline phrase, Ctrl-Z EOF, restored console mode, exact recovered seed"

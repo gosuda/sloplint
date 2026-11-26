@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 defaults:
   run:
@@ -48,6 +49,14 @@ jobs:
       - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
         with:
           enable-cache: false
+      - name: Fetch immutable Windows baseline evidence
+        if: runner.os == 'Windows'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/evidence"
+          curl --fail --location --retry 3 -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15110611238/zip -o "$GITHUB_WORKSPACE/evidence/previous-windows.zip"
       - name: Install rd and the pinned formatter
         working-directory: candidate
         run: |

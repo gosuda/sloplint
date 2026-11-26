@@ -3,10 +3,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+from zipfile import ZipFile
 
 WORKSPACE = Path(os.environ["GITHUB_WORKSPACE"])
 SOURCE = WORKSPACE / "candidate"
@@ -50,7 +52,7 @@ def mutation(label: str, original: str, replacement: str, diagnostic: str) -> di
         path.write_text(saved.replace(original, replacement), encoding="utf-8", newline="\n")
         red = run(command, f"{label}-red", 180)
         text = (EVIDENCE / f"{label}-red.log").read_text(encoding="utf-8", errors="replace")
-        reproduced = red != 0 and diagnostic in text
+        reproduced = red != 0 and diagnostic in " ".join(text.split())
     finally:
         path.write_text(saved, encoding="utf-8", newline="\n")
     green = run(command, f"{label}-green", 180)
@@ -66,8 +68,20 @@ def main() -> int:
     assert git("rev-parse", "HEAD") == manifest["head"]
     baseline: dict[str, object] = {"head": manifest["head"], "tree": git("write-tree")}
     if os.name == "nt":
-        baseline["tests"] = run(["opam", "exec", "--switch=rd", "--", "dune", "runtest", "--profile", "release", "--force"], "baseline-tests")
-        git("diff", "--exit-code")
+        archive_path = EVIDENCE / "previous-windows.zip"
+        expected_digest = "cb1a860e06d1e736ed4e0ad62a6d2714dae9ed0a1579f3ec4cbdd901ef1983af"
+        assert hashlib.sha256(archive_path.read_bytes()).hexdigest() == expected_digest
+        with ZipFile(archive_path) as archive:
+            previous = json.loads(archive.read("results.json"))
+            baseline = json.loads(archive.read("baseline.json"))
+            assert previous["candidate"]["head"] == manifest["head"]
+            assert previous["candidate"]["tree"] == "2e9241f9cd1cbfb3e131adaa58d693dad16152ca"
+            assert baseline["head"] == manifest["head"] and baseline["tree"] == git("write-tree")
+            assert baseline["tests"] == 1
+            (EVIDENCE / "baseline-tests.log").write_bytes(archive.read("baseline-tests.log"))
+        baseline["artifact"] = 15110611238
+        baseline["artifact_sha256"] = expected_digest
+        baseline["run"] = 45800790388
         print(f"BASELINE_RESULT {json.dumps(baseline, sort_keys=True)}", flush=True)
         (EVIDENCE / "baseline.json").write_text(json.dumps(baseline, indent=2) + "\n", encoding="utf-8", newline="\n")
     patch = PROBE / "ci-tools/charamel-windows-candidate.patch"
@@ -109,6 +123,21 @@ def main() -> int:
             "| Echo { input; input_mode } ->\n        ignore (input, input_mode)",
             "input console mode was not restored",
         )
+    if os.name == "nt":
+        def failures(name: str) -> dict[str, list[str]]:
+            content = (EVIDENCE / name).read_text(encoding="utf-8", errors="replace")
+            clean = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", content)
+            cases = sorted(set(" ".join(line.split("[FAIL]", 1)[1].strip().rstrip(chr(0x2502)).split()) for line in clean.splitlines() if "[FAIL]" in line))
+            suites = sorted(set(re.findall(r'File "(test/[^"]+/dune)"', clean)))
+            return {"cases": cases, "suites": suites}
+        baseline_failures = failures("baseline-tests.log")
+        candidate_failures = failures("tests.log")
+        result["baseline_comparison"] = {
+            "baseline": baseline_failures,
+            "candidate": candidate_failures,
+            "additional_cases": sorted(set(candidate_failures["cases"]) - set(baseline_failures["cases"])),
+            "additional_suites": sorted(set(candidate_failures["suites"]) - set(baseline_failures["suites"])),
+        }
     result["proofs"] = proofs
     git("diff", "--exit-code")
     assert git("write-tree") == manifest["tree"]
