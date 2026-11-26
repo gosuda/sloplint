@@ -6,9 +6,9 @@
   "branch": "deps/upgrade-2026-11-26",
   "base_ref": "main",
   "base_sha": "277e83b2e3d80c14f75334869b86a607c7ab3ffd",
-  "tree": "5dc64f30eee49eb60c3ed89761d42b552d21669d",
-  "patch": "remaining-elegant26-v4.patch",
-  "patch_sha256": "6055035398f5041fb7e9e4271d16b56f9ba8dddd2db2ea4a2d9fcb397749a43c",
+  "tree": "b26bf5201c63aa992f7054373a57c6ba19384ae8",
+  "patch": "remaining-elegant26-v5.patch",
+  "patch_sha256": "af9bcb0a88f14d1b8e9e605e8535125ec5eb4cf296ac926f32b0672e5c3cd954",
   "files": [
     {
       "path": ".github/workflows/ci.yml",
@@ -16,7 +16,7 @@
     },
     {
       "path": ".github/workflows/verify.yml",
-      "sha256": "52ad56c7cef0991094de0f64af4398a6f47291f976c9d845c10137c739a5ca75"
+      "sha256": "0deda453776b855b53d41ce26bbad808a0938743bf162d62394e4baf8ba7ebd3"
     },
     {
       "path": ".github/workflows/pages.yml",

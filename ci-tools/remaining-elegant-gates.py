@@ -80,9 +80,15 @@ def main() -> int:
     if mode == "full":
         commands = (
             ("workflow-lint", ["go", "run", "github.com/rhysd/actionlint/cmd/actionlint@v1.7.7", "-config-file", str(config), "-shellcheck=", "-pyflakes=", ".github/workflows/ci.yml", ".github/workflows/verify.yml", ".github/workflows/pages.yml"]),
+            ("gen-check", ["just", "gen-check"]),
             ("go-check", ["just", "go-check"]),
             ("rust-check", ["just", "rust-check"]),
-            ("slop", ["just", "slop"]),
+            ("markdown-paths", ["just", "markdown-paths"]),
+            ("build", ["just", "build"]),
+            ("oracle", ["just", "oracle", "JOBS=4"]),
+            ("parity", ["just", "parity", "JOBS=4"]),
+            ("markdown-parity", ["just", "--no-deps", "markdown-parity"]),
+            ("layered-random", ["just", "--no-deps", "layered-random-check", "JOBS=4"]),
             ("verify", ["just", "verify"]),
         )
     elif mode in ("quality", "baseline-quality"):
@@ -107,7 +113,7 @@ def main() -> int:
             ("playground-worker", ["env", "PLAYGROUND_SERVER_MODE=dev", "pnpm", "--dir", "playground", "exec", "playwright", "test", "--grep", "both engines render the default source"]),
         )
     elif mode == "house":
-        commands = (("slop", ["just", "slop"]),)
+        commands = (("slop", ["just", "slop"]), ("model", ["just", "model"]))
     elif mode == "markdown":
         commands = (("rustfmt", ["rustfmt", "--check", "--edition", "2024", "crates/elegant-mermaid-cli/src/render/markdown/links.rs"]), ("markdown-paths", ["just", "markdown-paths"]))
     elif mode == "windows":

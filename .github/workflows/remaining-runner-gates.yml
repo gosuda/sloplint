@@ -17,9 +17,318 @@ defaults:
     shell: bash
 
 jobs:
-  ssh-review-prepare:
+  elegant-full:
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 90
+    env:
+      GOENV: 'off'
+      GOCACHEPROG: ''
+      GOMAXPROCS: '4'
+      GOFLAGS: '-p=4'
+      CARGO_BUILD_JOBS: '2'
+      LEAN_NUM_THREADS: '2'
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          path: probe
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/elegant-mermaid
+          ref: 3d6bc75bf7f4c00f9a587727c1d8748894524520
+          persist-credentials: false
+          path: source
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          enable-cache: false
+      - name: Verify candidate identity
+        run: uv run --no-project --python 3.13 probe/ci-tools/remaining-elegant-gates.py prepare
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
+        with:
+          go-version-file: source/go.mod
+          cache: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '26.13.1'
+      - run: npm install --global pnpm@12.23.0
+      - name: Install the pinned Rust toolchain
+        working-directory: source
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
+        with:
+          workspaces: source
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39
+        with:
+          tool: "just@1.59.0,cargo-nextest@0.9.151,cargo-deny@0.20.2,jaq@3.2.0,wasm-bindgen@0.2.130"
+      - run: rustup target add wasm32-unknown-unknown
+        working-directory: source
+      - name: Install the pinned Lean toolchain
+        run: |
+          test "$(cat source/proofs/lean-toolchain)" = "leanprover/lean4:v4.35.0"
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/lean.tar.zst" "https://github.com/leanprover/lean4/releases/download/v4.35.0/lean-4.35.0-linux.tar.zst"
+          echo "7289597a44543246c9227b8cae501767e095ce17f6d448b95fc4a8dc97268f6d  $RUNNER_TEMP/lean.tar.zst" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/remaining-lean"
+          tar --zstd -xf "$RUNNER_TEMP/lean.tar.zst" --strip-components=1 -C "$RUNNER_TEMP/remaining-lean"
+          echo "$RUNNER_TEMP/remaining-lean/bin" >> "$GITHUB_PATH"
+      - name: Install the pinned house linter and model checker
+        working-directory: source
+        run: |
+          cargo install --git https://github.com/gosuda/sloplint --rev 72f29bae0ba1187da854e080c998b8a21f1e4640 --locked --root "$GITHUB_WORKSPACE/source/.tools/sloplint" sloplint
+          echo "$GITHUB_WORKSPACE/source/.tools/sloplint/bin" >> "$GITHUB_PATH"
+          mkdir -p .tools
+          curl --fail --location --retry 3 --output .tools/tla2tools.jar "https://github.com/tlaplus/tlaplus/releases/download/v1.7.4/tla2tools.jar"
+          echo "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88  .tools/tla2tools.jar" | sha256sum --check
+      - name: Install verification packages
+        working-directory: source
+        run: |
+          pnpm --dir playground install --frozen-lockfile
+          pnpm --dir tools/upstream-oracle install --frozen-lockfile
+          pnpm --dir playground exec playwright install --with-deps chromium
+      - name: Run full gates with recorded exit codes
+        run: |
+          export GOENV=off GOCACHEPROG=''
+          test -z "$(go env GOCACHEPROG)"
+          uv run --no-project --python 3.13 probe/ci-tools/remaining-elegant-gates.py full
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: remaining-elegant-full-${{ github.sha }}
+          path: |
+            evidence/
+          if-no-files-found: error
+          retention-days: 14
+
+  elegant-quality:
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 45
+    env:
+      GOENV: 'off'
+      GOCACHEPROG: ''
+      GOMAXPROCS: '4'
+      GOFLAGS: '-p=4'
+      CARGO_BUILD_JOBS: '2'
+      LEAN_NUM_THREADS: '2'
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          path: probe
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/elegant-mermaid
+          ref: 3d6bc75bf7f4c00f9a587727c1d8748894524520
+          persist-credentials: false
+          path: source
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          enable-cache: false
+      - name: Verify candidate identity
+        run: uv run --no-project --python 3.13 probe/ci-tools/remaining-elegant-gates.py prepare
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
+        with:
+          go-version-file: source/go.mod
+          cache: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '26.13.1'
+      - run: npm install --global pnpm@12.23.0
+      - name: Install the pinned Rust toolchain
+        working-directory: source
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
+        with:
+          workspaces: source
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39
+        with:
+          tool: "just@1.59.0,cargo-nextest@0.9.151"
+      - name: Run quality gates with recorded exit codes
+        run: |
+          export GOENV=off GOCACHEPROG=''
+          test -z "$(go env GOCACHEPROG)"
+          uv run --no-project --python 3.13 probe/ci-tools/remaining-elegant-gates.py quality
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: remaining-elegant-quality-${{ github.sha }}
+          path: |
+            evidence/
+          if-no-files-found: error
+          retention-days: 14
+
+  elegant-playground:
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 45
+    env:
+      GOENV: 'off'
+      GOCACHEPROG: ''
+      GOMAXPROCS: '4'
+      GOFLAGS: '-p=4'
+      CARGO_BUILD_JOBS: '2'
+      LEAN_NUM_THREADS: '2'
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          path: probe
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/elegant-mermaid
+          ref: 3d6bc75bf7f4c00f9a587727c1d8748894524520
+          persist-credentials: false
+          path: source
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          enable-cache: false
+      - name: Verify candidate identity
+        run: uv run --no-project --python 3.13 probe/ci-tools/remaining-elegant-gates.py prepare
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
+        with:
+          go-version-file: source/go.mod
+          cache: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '26.13.1'
+      - run: npm install --global pnpm@12.23.0
+      - name: Install the pinned Rust toolchain
+        working-directory: source
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
+        with:
+          workspaces: source
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39
+        with:
+          tool: "just@1.59.0,wasm-bindgen@0.2.130"
+      - run: rustup target add wasm32-unknown-unknown
+        working-directory: source
+      - name: Run playground gates with recorded exit codes
+        run: |
+          export GOENV=off GOCACHEPROG=''
+          test -z "$(go env GOCACHEPROG)"
+          uv run --no-project --python 3.13 probe/ci-tools/remaining-elegant-gates.py playground
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: remaining-elegant-playground-${{ github.sha }}
+          path: |
+            evidence/
+            source/playground/test-results/
+            source/playground/playwright-report/
+          if-no-files-found: error
+          retention-days: 14
+
+  elegant-windows:
+    runs-on: depot-windows-2025
+    timeout-minutes: 20
+    env:
+      GOENV: 'off'
+      GOCACHEPROG: ''
+      GOMAXPROCS: '4'
+      GOFLAGS: '-p=4'
+      CARGO_BUILD_JOBS: '2'
+      LEAN_NUM_THREADS: '2'
+      PYTHONIOENCODING: utf-8
+    steps:
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          path: probe
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/elegant-mermaid
+          ref: 3d6bc75bf7f4c00f9a587727c1d8748894524520
+          persist-credentials: false
+          path: source
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          enable-cache: false
+      - name: Verify candidate identity
+        run: uv run --no-project --python 3.13 probe/ci-tools/remaining-elegant-gates.py prepare
+      - name: Install the pinned Rust toolchain
+        working-directory: source
+        run: rustup toolchain install
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39
+        with:
+          tool: "just@1.59.0"
+      - name: Run windows gates with recorded exit codes
+        run: |
+          uv run --no-project --python 3.13 probe/ci-tools/remaining-elegant-gates.py windows
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: remaining-elegant-windows-${{ github.sha }}
+          path: |
+            evidence/
+          if-no-files-found: error
+          retention-days: 14
+
+  elegant-house:
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 30
+    env:
+      GOENV: 'off'
+      GOCACHEPROG: ''
+      GOMAXPROCS: '4'
+      GOFLAGS: '-p=4'
+      CARGO_BUILD_JOBS: '2'
+      LEAN_NUM_THREADS: '2'
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          path: probe
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/elegant-mermaid
+          ref: 3d6bc75bf7f4c00f9a587727c1d8748894524520
+          persist-credentials: false
+          path: source
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          enable-cache: false
+      - name: Verify candidate identity
+        run: uv run --no-project --python 3.13 probe/ci-tools/remaining-elegant-gates.py prepare
+      - name: Install the pinned Rust toolchain
+        working-directory: source
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
+        with:
+          workspaces: source
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39
+        with:
+          tool: "just@1.59.0"
+      - name: Install the pinned house linter and model checker
+        working-directory: source
+        run: |
+          cargo install --git https://github.com/gosuda/sloplint --rev 72f29bae0ba1187da854e080c998b8a21f1e4640 --locked --root "$GITHUB_WORKSPACE/source/.tools/sloplint" sloplint
+          echo "$GITHUB_WORKSPACE/source/.tools/sloplint/bin" >> "$GITHUB_PATH"
+          mkdir -p .tools
+          curl --fail --location --retry 3 --output .tools/tla2tools.jar "https://github.com/tlaplus/tlaplus/releases/download/v1.7.4/tla2tools.jar"
+          echo "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88  .tools/tla2tools.jar" | sha256sum --check
+      - name: Run isolated house gates with recorded exit codes
+        run: |
+          uv run --no-project --python 3.13 probe/ci-tools/remaining-elegant-gates.py house
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: remaining-elegant-house-${{ github.sha }}
+          path: |
+            evidence/
+          if-no-files-found: error
+          retention-days: 14
+
+
+  ssh-review-gates:
     runs-on: depot-ubuntu-24.04-4
-    timeout-minutes: 15
+    timeout-minutes: 30
     env:
       GOENV: 'off'
       GOCACHEPROG: ''
@@ -39,20 +348,67 @@ jobs:
           path: source
       - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
         with:
+          go-version: '1.27.4'
+          cache: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          enable-cache: false
+      - name: Prove the exact reconciliation and its regression controls
+        run: |
+          export GOENV=off GOCACHEPROG=''
+          test -z "$(go env GOCACHEPROG)"
+          uv run --no-project --python 3.13 probe/ci-tools/remaining-ssh-review-gates.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: remaining-ssh-review-gates-${{ github.sha }}
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 14
+
+  ssh-review-windows:
+    runs-on: depot-windows-2025
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      GOENV: 'off'
+      GOCACHEPROG: ''
+      GOTOOLCHAIN: local
+      PYTHONIOENCODING: utf-8
+    steps:
+      - name: Preserve the immutable patch bytes
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          path: probe
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/ssh-chat
+          ref: 86fec26e725399e4638a33e804bb5ebac1af24e4
+          persist-credentials: false
+          path: source
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
+        with:
           go-version: '1.24.4'
           cache: false
       - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
         with:
           enable-cache: false
-      - name: Format and regenerate the reviewed candidate
+      - name: Generate with plugins installed outside PATH
         run: |
-          export GOENV=off GOCACHEPROG=''
-          test -z "$(go env GOCACHEPROG)"
-          uv run --no-project --python 3.13 probe/ci-tools/remaining-ssh-review-prepare.py
+          $env:GOENV = 'off'
+          $env:GOCACHEPROG = ''
+          if ((go env GOCACHEPROG).Trim()) { throw 'GOCACHEPROG was injected' }
+          uv run --no-project --python 3.13 probe/ci-tools/remaining-ssh-windows-gates.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
-          name: remaining-ssh-review-prepare-${{ github.sha }}
-          path: evidence/
+          name: remaining-ssh-review-windows-${{ github.sha }}
+          path: |
+            evidence/*.json
+            evidence/*.log
           if-no-files-found: error
           retention-days: 14
