@@ -27,7 +27,7 @@
   {
     "id": "group-nested-block-comment",
     "source": "(Get-Date\n<# before <# nested #> after #>\n| Write-Output)\n",
-    "accepted": true
+    "accepted": false
   },
   {
     "id": "group-multiline-block-comment",
@@ -112,6 +112,26 @@
   {
     "id": "group-formfeed",
     "source": "(Get-Date\n\f| Write-Output)\n",
+    "accepted": true
+  },
+  {
+    "id": "block-before-separate-command",
+    "source": "Write-Host first\n<# note #> Write-Error $id\n",
+    "accepted": true
+  },
+  {
+    "id": "blank-before-same-line-block-pipe",
+    "source": "(Get-Date\n\n<# note #> | Write-Output)\n",
+    "accepted": false
+  },
+  {
+    "id": "same-line-comment-opener-text",
+    "source": "(Get-Date <# example <# #> | Write-Output)\n",
+    "accepted": true
+  },
+  {
+    "id": "multiline-comment-before-pipe",
+    "source": "Get-Date\n<# note\n more #>\n| Select-Object -First 1\n",
     "accepted": true
   }
 ]

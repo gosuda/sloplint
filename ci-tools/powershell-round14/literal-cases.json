@@ -210,5 +210,35 @@
     "name": "bare_literal_dollar",
     "source": "Write-Host v`$VERSION.tar.gz\n",
     "expected": "v$VERSION.tar.gz"
+  },
+  {
+    "name": "searchable_prefix_before_unicode_escape",
+    "source": "Write-Host $r/\"abcdefgh`u{1F600}x$id\"\n",
+    "expected": "__ROOT__/abcdefgh😀x__ID__"
+  },
+  {
+    "name": "searchable_prefix_before_hidden_variable",
+    "source": "Write-Host abcdefgh$VERSION.x\n",
+    "expected": "abcdefgh__VERSION__.x"
+  },
+  {
+    "name": "uppercase_escape_is_ordinary",
+    "source": "Write-Host $r/\"`U{1F600}x$id\"\n",
+    "expected": "__ROOT__/U{1F600}x__ID__"
+  },
+  {
+    "name": "escaped_quote_before_verbatim",
+    "source": "Write-Host pre`''$ReleaseName'\n",
+    "expected": "pre'$ReleaseName"
+  },
+  {
+    "name": "computed_property_is_not_literal",
+    "source": "Write-Host VersionSuffix=\"$($manifest.PrivateData.PSData.Prerelease)\"\n",
+    "expected": "VersionSuffix=__PRE__"
+  },
+  {
+    "name": "nested_expression_is_not_literal",
+    "source": "Write-Host VersionSuffix=\"$((Get-Date))\"\n",
+    "expected": "VersionSuffix=__DATE__"
   }
 ]

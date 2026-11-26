@@ -1,4 +1,4 @@
-name: Freeze the new PowerShell review witnesses
+name: Freeze the latest PowerShell review witnesses
 on:
   push:
     branches: [ci/powershell-round14-20261126]
@@ -25,7 +25,7 @@ jobs:
           sparse-checkout: ci-tools/powershell-round14
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: 82ad44d49ca3c33060f4585dc8582697f603d118
+          ref: 95f8d650552bd31fd5f5737bd9e457fec8ef8a55
           path: source
           persist-credentials: false
       - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d

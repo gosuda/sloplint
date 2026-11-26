@@ -6,6 +6,7 @@ function Write-Host { param([string]$Text) return $Text }
 function Get-Date { return '__DATE__' }
 $r = '__ROOT__'
 $VERSION = '__VERSION__'
+$manifest = @{ PrivateData = @{ PSData = @{ Prerelease = '__PRE__' } } }
 $long_root_name = '__ROOT__'
 Set-Variable -Name 'r/part' -Value '__ROOT__'
 $env:TEMP = '__ROOT__'

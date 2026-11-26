@@ -1,24 +1,26 @@
 {
-  "scope": "Read-only baseline for three new PowerShell review findings; no production correction",
-  "head": "82ad44d49ca3c33060f4585dc8582697f603d118",
-  "tree": "8c74e01941bab1b45ff77d1f83b6a898644ca236",
+  "scope": "Read-only baseline for six review findings on the updated PowerShell PR; no production correction.",
+  "head": "95f8d650552bd31fd5f5737bd9e457fec8ef8a55",
+  "tree": "6d1898959a6d9dd8158a355d80d39e4c5f8e7ebd",
   "files": {
-    "verify.py": "326398712f14eac620bac5a0753852ac2c2c4f9cf236d81e907b7fa5e4aa618f",
+    "verify.py": "d94b0b06e8647cca3ffb458da43137653f1061cfbf9535bd67de0bdb873f5145",
     "grammar-oracle.ps1": "6ead6139494a40b07b44f8ce89df0c48b7bc3035fda48312ca1ed167564c0647",
-    "grammar-cases.json": "616dba325efa5e79e3ee6d66eac23dd4542d065b964dd6e6ced0113f0cd095ee",
-    "literal-oracle.ps1": "dddf8bb229627fb3cea0af0d12bd253f99d67101e21eb90d2339d8b3979ec8ba",
-    "literal-cases.json": "ea51054c9d05bfac81c57a11bb7a274b90fd1317282bf253da62a158eb8867e7",
-    "tests.rs.txt": "f0ae52cc4b02c3d034db14767fd8af26c70d2ee0a5af18336c85822cd09b1b3c"
+    "grammar-cases.json": "a12f9963f4f8998d051ac5cf2cf9888302d5ba4ec71a75fcc4d311b2438deb6e",
+    "literal-oracle.ps1": "8bceaa20931d06609b35aaab9c107ea514d294fe36152a3c7b857ae9280f1eb6",
+    "literal-cases.json": "12238e8ece9f25a846a684f81f28ec5f4c6266dc025bf4ea0f64ee09ff71671a",
+    "tests.rs.txt": "da131fe82e09114d54bfcc9b49215c023b1dc06b60c39d78e6ca62ab44d49ddc"
   },
   "threads": [
-    "PRRT_kwDOVOMFM868bskJ",
-    "PRRT_kwDOVOMFM868bsmn",
-    "PRRT_kwDOVOMFM868bsov"
+    "PRRT_kwDOVOMFM868denq",
+    "PRRT_kwDOVOMFM868dep6",
+    "PRRT_kwDOVOMFM868desh",
+    "PRRT_kwDOVOMFM868deuo",
+    "PRRT_kwDOVOMFM868dewa",
+    "PRRT_kwDOVOMFM868deyK"
   ],
-  "prior_probe": {
-    "producer": "bc6ce97208f4f2c395a77b650275a561d21a758b",
-    "run": 45848538474,
-    "job": 140008476726,
-    "result": "Native PowerShell accepted all 23 grammar cases as recorded, then executing the mixed generic/verbatim unicode near-miss threw a native formatting exception. This is not accepted as a product baseline. The near-miss now uses an ordinary standalone verbatim literal; all three reviewed positive inputs and expected Rust failures remain unchanged."
+  "earlier_baseline": {
+    "source": "82ad44d49ca3c33060f4585dc8582697f603d118",
+    "run": "45849852839",
+    "scope": "Recorded all 23 native grammar outcomes and 32 native runtime values; two frozen Rust literal-shape tests failed as expected."
   }
 }
