@@ -98,10 +98,17 @@ def main() -> None:
     run("scanner-syntax", ["cc", "-fsyntax-only", "-std=c11", "-I", str(VENDOR / "src"), str(VENDOR / "src/scanner.c")])
     run("generate", [str(tree_sitter), "generate"], cwd=VENDOR)
     assert parser_cases(tree_sitter, cases, "candidate") == []
-    run("corpus-update", [str(tree_sitter), "test", "--update", "--include", "^(multiline-here|parenthesized-pipe)-"], cwd=VENDOR)
     corpus_path = VENDOR / "test/corpus/sloplint_multiline_boundaries.txt"
+    existing_corpus = {path: (SOURCE / path).read_bytes() for path in git("ls-files", "vendor/tree-sitter-powershell/test/corpus/*").splitlines() if SOURCE / path != corpus_path}
+    run("corpus-update", [str(tree_sitter), "test", "--update", "--include", "^(multiline-here|parenthesized-pipe)-"], cwd=VENDOR)
+    rewritten = [path for path, content in existing_corpus.items() if (SOURCE / path).read_bytes() != content]
+    (EVIDENCE / "corpus-formatter-rewrites.json").write_text(json.dumps(rewritten, indent=2) + "\n")
+    for path, content in existing_corpus.items():
+        (SOURCE / path).write_bytes(content)
     corpus_path.write_text(corpus_path.read_text().rstrip() + "\n")
     run("corpus", [str(tree_sitter), "test"], cwd=VENDOR)
+    assert all((SOURCE / path).read_bytes() == content for path, content in existing_corpus.items())
+    print("CORPUS_PRESERVED " + json.dumps({"existing_files": len(existing_corpus), "formatter_rewrites_restored": rewritten}), flush=True)
     run("rustfmt", ["rustfmt", "--edition", "2024", "crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs"])
     upstream = EVIDENCE / "upstream"
     upstream.mkdir()
