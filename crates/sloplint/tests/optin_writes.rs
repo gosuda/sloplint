@@ -375,15 +375,21 @@ fn default_agent_output_is_stable_for_threshold_and_ratchet_runs() {
         for output in [&first, &second] {
             assert!(output.status.success(), "{}", text(&output.stderr));
             let stdout = text(&output.stdout);
-            let summary = stdout.lines().find(|line| {
-                line.starts_with("summary: strictness=standard files=1 ")
-            });
-            let summary = summary.unwrap_or_else(|| {
-                panic!("default output must contain a completed agent summary: {stdout}")
-            });
-            assert!(
-                summary.contains(&format!("baselined={expected_baselined}")),
-                "{mode} mode must report baselined={expected_baselined}, got: {summary}"
+            let summary = stdout
+                .lines()
+                .find(|line| line.starts_with("summary: strictness=standard files=1 "))
+                .unwrap_or_else(|| {
+                    panic!("default output must contain a completed agent summary: {stdout}")
+                });
+            let expected = format!("baselined={expected_baselined}");
+            let baseline_fields: Vec<_> = summary
+                .split_whitespace()
+                .filter(|field| field.starts_with("baselined="))
+                .collect();
+            assert_eq!(
+                baseline_fields,
+                [expected.as_str()],
+                "{mode} mode must report exactly one {expected} field, got: {summary}"
             );
         }
         assert_eq!(first.stdout, second.stdout, "default output in {mode} mode");
