@@ -19,7 +19,7 @@
     {
       "id": "separator-only-context",
       "path": "separator-only-context.js",
-      "sha256": "d094836d1213afc0fac9efd89a36c9ccb70345c6625361fbb946b1d2e2c65c92"
+      "sha256": "a0c038815ba61614a95a143ffed43e9b86690b189078880273589dcae111b7bd"
     }
   ],
   "invariants": [
@@ -31,7 +31,8 @@
     "Keep six introduced redirect acceptance failures distinct from the older delimiter-in-target defect in the stronger exact capture test.",
     "Check old named-parameter direct comment and separator captures, and the unchanged old/current plain-word comment tree.",
     "Check all 96 indented continuations, actual public escaped-line captures, 62x5 old redirection queries, 24 old plain queries and mixed whitespace.",
-    "The 483-case native matrix contains 453 accepted and 30 rejected observations, not 483 acceptance requirements."
+    "The 483-case native matrix contains 453 accepted and 30 rejected observations, not 483 acceptance requirements.",
+    "The separator-only colon alternative is retained exactly; no colon behavior change is intended."
   ],
   "expected_source_changes": [
     "vendor/tree-sitter-powershell/grammar.js",

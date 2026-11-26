@@ -1019,22 +1019,25 @@ export default grammar({
     // extras outside it, while retaining a separated escaped-line bridge.
     _empty_command_argument_sep: ($) =>
       prec.left(
-        seq(
-          choice(
-            token(prec(2, ' ')),
-            token(prec(2, '\t')),
-            token(prec(2, '\u00A0')),
-            token(prec(2, /[\v\f\u0085\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/)),
-          ),
-          repeat(
+        choice(
+          seq(
             choice(
-              token.immediate(prec(2, ' ')),
-              token.immediate(prec(2, '\t')),
-              token.immediate(prec(2, '\u00A0')),
-              token.immediate(prec(2, /[\v\f\u0085\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/)),
-              token.immediate(/\x60\r?\n/),
+              token(prec(2, ' ')),
+              token(prec(2, '\t')),
+              token(prec(2, '\u00A0')),
+              token(prec(2, /[\v\f\u0085\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/)),
+            ),
+            repeat(
+              choice(
+                token.immediate(prec(2, ' ')),
+                token.immediate(prec(2, '\t')),
+                token.immediate(prec(2, '\u00A0')),
+                token.immediate(prec(2, /[\v\f\u0085\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/)),
+                token.immediate(/\x60\r?\n/),
+              ),
             ),
           ),
+          ':',
         ),
       ),
 
