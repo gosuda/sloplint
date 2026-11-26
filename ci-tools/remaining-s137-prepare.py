@@ -116,9 +116,20 @@ def main() -> None:
     run("upstream-remote", ["git", "remote", "add", "origin", "https://github.com/airbus-cert/tree-sitter-powershell"], cwd=upstream)
     run("upstream-fetch", ["git", "fetch", "--depth=1", "origin", "65ea6919e816a7ac142acec7ee72757f89db8439"], cwd=upstream)
     run("upstream-checkout", ["git", "checkout", "-q", "FETCH_HEAD"], cwd=upstream)
-    for path in ["grammar.js", "src/scanner.c"]:
+    patched_paths = [
+        "grammar.js",
+        "src/scanner.c",
+        "test/corpus/native_arguments.txt",
+        "test/corpus/sloplint_word_boundaries.txt",
+        "test/corpus/sloplint_multiline_boundaries.txt",
+    ]
+    for path in patched_paths:
+        (upstream / path).parent.mkdir(parents=True, exist_ok=True)
         (upstream / path).write_bytes((VENDOR / path).read_bytes())
-    patch_bytes = subprocess.check_output(["git", "-c", "diff.suppressBlankEmpty=true", "diff", "--binary", "--", "grammar.js", "src/scanner.c"], cwd=upstream)
+    run("upstream-stage-intent", ["git", "add", "--intent-to-add", "--", *patched_paths], cwd=upstream)
+    patch_bytes = subprocess.check_output(["git", "-c", "diff.suppressBlankEmpty=true", "diff", "--binary", "--", *patched_paths], cwd=upstream)
+    for path in patched_paths:
+        assert f"diff --git a/{path} b/{path}".encode() in patch_bytes, path
     (VENDOR / "sloplint-grammar.patch").write_bytes(patch_bytes)
     os.environ["GRAMMARS_TS_BIN"] = str(tree_sitter)
     os.environ["GRAMMARS_SCRATCH"] = str(EVIDENCE / "grammar-reproduction")
