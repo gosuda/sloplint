@@ -4630,20 +4630,48 @@
               "type": "CHOICE",
               "members": [
                 {
-                  "type": "STRING",
-                  "value": " "
+                  "type": "TOKEN",
+                  "content": {
+                    "type": "PREC",
+                    "value": 2,
+                    "content": {
+                      "type": "STRING",
+                      "value": " "
+                    }
+                  }
                 },
                 {
-                  "type": "STRING",
-                  "value": "\t"
+                  "type": "TOKEN",
+                  "content": {
+                    "type": "PREC",
+                    "value": 2,
+                    "content": {
+                      "type": "STRING",
+                      "value": "\t"
+                    }
+                  }
                 },
                 {
-                  "type": "STRING",
-                  "value": " "
+                  "type": "TOKEN",
+                  "content": {
+                    "type": "PREC",
+                    "value": 2,
+                    "content": {
+                      "type": "STRING",
+                      "value": " "
+                    }
+                  }
                 },
                 {
-                  "type": "PATTERN",
-                  "value": "[\\v\\f\\u0085\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]"
+                  "type": "TOKEN",
+                  "content": {
+                    "type": "PREC",
+                    "value": 2,
+                    "content": {
+                      "type": "PATTERN",
+                      "value": "[\\v\\f\\u0085\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]"
+                    }
+                  }
                 }
               ]
             }

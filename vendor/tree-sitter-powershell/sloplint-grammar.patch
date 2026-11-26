@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 1f8b448..aede9f0 100644
+index 1f8b448..c34d033 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -7,29 +7,73 @@ const PREC = {
@@ -534,7 +534,7 @@ index 1f8b448..aede9f0 100644
 
      // Use to parse command path
      path_command_name: ($) =>
-@@ -781,41 +976,84 @@ export default grammar({
+@@ -781,41 +976,97 @@ export default grammar({
        prec.right(
          choice(
            $.command_parameter,
@@ -565,8 +565,21 @@ index 1f8b448..aede9f0 100644
 +    // sloplint: command separators use PowerShell's whitespace set without
 +    // CR and LF, matching word boundaries and the external bare-dash scanner.
 +    // Format marks U+200B, U+FEFF and U+2060 remain word text.
++    // Delimiter tokens outrank word alternatives that can otherwise absorb extras.
 +    command_argument_sep: ($) =>
-+      prec.right(choice(repeat1(choice(' ', '\t', '\u00A0', /[\v\f\u0085\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/)), ':')),
++      prec.right(
++        choice(
++          repeat1(
++            choice(
++              token(prec(2, ' ')),
++              token(prec(2, '\t')),
++              token(prec(2, '\u00A0')),
++              token(prec(2, /[\v\f\u0085\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/)),
++            ),
++          ),
++          ':',
++        ),
++      ),
 
      // Adapt the grammar to have same behavior
 
@@ -634,7 +647,7 @@ index 1f8b448..aede9f0 100644
      verbatim_command_argument: ($) =>
        seq('--%', $._verbatim_command_argument_chars),
 
-@@ -827,8 +1065,10 @@ export default grammar({
+@@ -827,8 +1078,10 @@ export default grammar({
          seq($.file_redirection_operator, $.redirected_file_name),
        ),
 
@@ -646,7 +659,7 @@ index 1f8b448..aede9f0 100644
 
      // Class
      class_attribute: ($) =>
-@@ -857,13 +1097,26 @@ export default grammar({
+@@ -857,13 +1110,26 @@ export default grammar({
          '(',
          optional($.class_method_parameter_list),
          ')',
@@ -673,7 +686,7 @@ index 1f8b448..aede9f0 100644
          token(reservedWord('class')),
          $.simple_name,
          optional(seq(':', $.simple_name, repeat(seq(',', $.simple_name)))),
-@@ -884,6 +1137,7 @@ export default grammar({
+@@ -884,6 +1150,7 @@ export default grammar({
      // Enums
      enum_statement: ($) =>
        seq(
@@ -681,7 +694,7 @@ index 1f8b448..aede9f0 100644
          token(reservedWord('enum')),
          $.simple_name,
          '{',
-@@ -895,7 +1149,20 @@ export default grammar({
+@@ -895,7 +1162,20 @@ export default grammar({
        seq($.simple_name, optional(seq('=', $.integer_literal))),
 
      // Expressions
@@ -703,7 +716,7 @@ index 1f8b448..aede9f0 100644
 
      logical_expression: ($) =>
        prec.left(
-@@ -1008,7 +1275,35 @@ export default grammar({
+@@ -1008,7 +1288,35 @@ export default grammar({
      pre_decrement_expression: ($) => seq('--', $.unary_expression),
 
      cast_expression: ($) =>
@@ -740,7 +753,7 @@ index 1f8b448..aede9f0 100644
 
      attributed_variable: ($) => seq($.type_literal, $.variable),
 
-@@ -1034,7 +1329,7 @@ export default grammar({
+@@ -1034,7 +1342,7 @@ export default grammar({
          $.variable,
        ),
 
@@ -749,7 +762,7 @@ index 1f8b448..aede9f0 100644
 
      sub_expression: ($) =>
        seq('$(', field('statements', optional($.statement_list)), ')'),
-@@ -1042,8 +1337,12 @@ export default grammar({
+@@ -1042,8 +1350,12 @@ export default grammar({
      array_expression: ($) =>
        seq('@(', field('statements', optional($.statement_list)), ')'),
 
@@ -763,7 +776,7 @@ index 1f8b448..aede9f0 100644
 
      hash_literal_expression: ($) =>
        seq('@{', optional($.hash_literal_body), '}'),
-@@ -1101,11 +1400,17 @@ export default grammar({
+@@ -1101,11 +1413,17 @@ export default grammar({
          $.invokation_foreach_expression,
        ),
 
@@ -783,7 +796,7 @@ index 1f8b448..aede9f0 100644
          $.script_block_expression,
        ),
 
-@@ -1145,10 +1450,13 @@ export default grammar({
+@@ -1145,10 +1463,13 @@ export default grammar({
            $.comparison_argument_expression,
            seq(
              $.bitwise_argument_expression,
@@ -800,7 +813,7 @@ index 1f8b448..aede9f0 100644
              ),
              $.comparison_argument_expression,
            ),
-@@ -1213,32 +1521,49 @@ export default grammar({
+@@ -1213,32 +1534,49 @@ export default grammar({
 
      type_literal: ($) => seq('[', $.type_spec, ']'),
 

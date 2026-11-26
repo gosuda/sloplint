@@ -999,8 +999,21 @@ export default grammar({
     // sloplint: command separators use PowerShell's whitespace set without
     // CR and LF, matching word boundaries and the external bare-dash scanner.
     // Format marks U+200B, U+FEFF and U+2060 remain word text.
+    // Delimiter tokens outrank word alternatives that can otherwise absorb extras.
     command_argument_sep: ($) =>
-      prec.right(choice(repeat1(choice(' ', '\t', '\u00A0', /[\v\f\u0085\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/)), ':')),
+      prec.right(
+        choice(
+          repeat1(
+            choice(
+              token(prec(2, ' ')),
+              token(prec(2, '\t')),
+              token(prec(2, '\u00A0')),
+              token(prec(2, /[\v\f\u0085\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/)),
+            ),
+          ),
+          ':',
+        ),
+      ),
 
     // Adapt the grammar to have same behavior
 

@@ -52,6 +52,9 @@ regressions assert those argument counts and the protected-space controls.
 Space, tab and NBSP retain their original anonymous token names for custom
 queries. Query regressions freeze the original byte spans for single, repeated
 and mixed separator runs while the remaining native whitespace stays accepted.
+Separator tokens outrank competing word tokens, retaining the gap before
+redirected dash words and the scanner state for indented bare dashes after an
+escaped line.
 
 ## Backticks after ordinary newlines
 
@@ -196,7 +199,7 @@ The remaining local groups do not have an upstream fix in this release:
 | Case-insensitive numbers, cast operands, type names and generic ranks, bitwise and membership operators | No issue or PR identified for these changes |
 | String text and here-string escapes, statement terminators, method-block scanner | No issue or PR identified for these changes |
 
-The current patch has 2,460 lines and 44 diff hunks. It includes the
+The current patch has 2,473 lines and 44 diff hunks. It includes the
 native argument corpus along with the grammar and scanner changes.
 
 ## Round 1 grammar changes

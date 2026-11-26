@@ -188,3 +188,90 @@ fn incomplete_owned_branches_remain_syntax_errors() {
         }
     }
 }
+
+#[test]
+fn indented_bare_dashes_follow_separated_line_continuations() {
+    for (ending_name, ending) in [("lf", "\n"), ("crlf", "\r\n")] {
+        for (before_name, before) in [
+            ("space", " "),
+            ("tab", "\t"),
+            ("nbsp", "\u{a0}"),
+            ("em", "\u{2003}"),
+        ] {
+            for (indent_name, indent) in [
+                ("space", " "),
+                ("spaces", "  "),
+                ("tab", "\t"),
+                ("nbsp", "\u{a0}"),
+                ("em", "\u{2003}"),
+                ("mixed", " \t\u{a0}\u{2003}"),
+            ] {
+                for (dash_count, dashes) in [(1, "-"), (2, "--")] {
+                    let source = format!(
+                        "Capture-Native before{before}\x60{ending}{indent}{dashes} after{ending}"
+                    );
+                    let analysis = run_clean(&source);
+                    assert_eq!(analysis.facts.calls.len(), 1, "{source:?}");
+                    let count = call(&analysis, "Capture-Native").args.len();
+                    assert_eq!(count, 3, "{source:?}");
+                    println!(
+                        "NATIVE_CONTINUED_DASH_CASE continued-{ending_name}-{before_name}-{indent_name}-{dash_count} {count}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn spaced_dash_redirection_retains_its_legacy_separator_capture() {
+    let source = "Capture-Native hello > -output.log\n";
+    assert_eq!(
+        captures(
+            source,
+            "(redirected_file_name (command_argument_sep \" \" @match))"
+        ),
+        vec![(22, " ".to_owned())]
+    );
+}
+
+#[test]
+fn legacy_redirect_targets_keep_spacing_outside_the_word() {
+    for operator in [">", ">>", "2>"] {
+        for gap in [" ", "  ", "\t", "\u{a0}", " \t\u{a0} ", "\u{2003}"] {
+            // This freezes the existing query contract. Native PowerShell splits
+            // the single-dash target before ".log"; that older parser gap is separate.
+            for target in ["-output.log", "--output.log", "output.log"] {
+                let source = format!("Capture-Native hello {operator}{gap}{target}\n");
+                let byte =
+                    u32::try_from(21 + operator.len() + gap.len()).expect("small source offset");
+                assert_eq!(
+                    captures(&source, "(redirected_file_name (generic_token) @match)"),
+                    vec![(byte, target.to_owned())],
+                    "{source:?}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn mixed_native_spaces_keep_a_single_separator() {
+    for gap in [" \u{2003}", "\u{2003}\t"] {
+        let source = format!("Capture-Native hello{gap}world\n");
+        let analysis = run_clean(&source);
+        assert_eq!(call(&analysis, "Capture-Native").args.len(), 2);
+        assert_eq!(
+            captures(&source, "(command_elements (command_argument_sep) @match)"),
+            vec![(14, " ".to_owned()), (20, gap.to_owned())]
+        );
+        let source = format!("Capture-Native hello >{gap}output.log\n");
+        assert_eq!(
+            captures(
+                &source,
+                "(redirected_file_name (command_argument_sep) @match)"
+            ),
+            vec![(22, gap.to_owned())]
+        );
+    }
+}
