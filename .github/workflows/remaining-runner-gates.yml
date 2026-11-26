@@ -17,9 +17,35 @@ defaults:
     shell: bash
 
 jobs:
-  website-main-prepare:
+  website:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: website-317
+            head: c27241fe4283bc81a9b87997984b80634e4cb42a
+          - label: website-316
+            head: cb3e3590c8730c938f3ccdb56d8cf911dedcdec4
+          - label: website-315
+            head: 909f9c6eac5a8593a05ccddb0c82aa29ae760b0a
+          - label: website-314
+            head: ad2244ba955487a5db435da53c6ddd938f66d805
+          - label: website-313
+            head: 65cb860e96abc0a0036b8200fd32798e43a20b49
+          - label: website-312
+            head: 9984f6b8917e4c206faac2edf806ac0eceb4a5a8
+          - label: website-309
+            head: 4603124363c39b9f0ad205815556380761c073b4
+          - label: website-307
+            head: 47a548e4ea2373f04615dbc97af524ede87a9a20
     runs-on: depot-ubuntu-24.04-4
-    timeout-minutes: 15
+    timeout-minutes: 35
+    env:
+      GOENV: 'off'
+      GOCACHEPROG: ''
+      GOTOOLCHAIN: local
+      GOMAXPROCS: '4'
+      GOFLAGS: '-p=4'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -28,21 +54,34 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: gosuda/website
-          ref: f2082ac85d2c0e12e92a9b8a1989cc4aee36c910
+          ref: ${{ matrix.head }}
           persist-credentials: false
           path: source
+      - run: mkdir -p evidence
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
+        with:
+          go-version: '1.27.4'
+          cache: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: '26.13.1'
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: 1.4.5
       - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
         with:
           enable-cache: false
-      - name: Format the actual-main Markdown without changing its text
-        run: uv run --no-project --python 3.13 probe/ci-tools/remaining-website-main-prepare.py
+      - name: Verify exact candidate and run the repository gates
+        run: |
+          export GOENV=off GOCACHEPROG=''
+          test -z "$(go env GOCACHEPROG)"
+          uv run --no-project --python 3.13 probe/ci-tools/remaining-website-integrated-gates.py "${{ matrix.label }}"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
-          name: remaining-website-main-prepare-${{ github.sha }}
+          name: remaining-${{ matrix.label }}-${{ github.sha }}
           path: evidence/
           if-no-files-found: error
           retention-days: 14
+
+
