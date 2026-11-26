@@ -94,6 +94,8 @@ def main() -> None:
     run("generate", [str(tree_sitter), "generate"], cwd=VENDOR)
     assert parser_cases(tree_sitter, cases, "candidate") == []
     run("corpus-update", [str(tree_sitter), "test", "--update"], cwd=VENDOR)
+    corpus_path = VENDOR / "test/corpus/sloplint_multiline_boundaries.txt"
+    corpus_path.write_text(corpus_path.read_text().rstrip() + "\n")
     run("corpus", [str(tree_sitter), "test"], cwd=VENDOR)
     run("rustfmt", ["rustfmt", "--edition", "2024", "crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs"])
     upstream = EVIDENCE / "upstream"

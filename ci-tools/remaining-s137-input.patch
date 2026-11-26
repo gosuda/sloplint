@@ -3580,7 +3580,7 @@ diff --git a/vendor/tree-sitter-powershell/test/corpus/sloplint_multiline_bounda
 new file mode 100644
 --- /dev/null
 +++ b/vendor/tree-sitter-powershell/test/corpus/sloplint_multiline_boundaries.txt
-@@ -0,0 +1,319 @@
+@@ -0,0 +1,317 @@
 +====================
 +multiline-here-lf-0
 +====================
@@ -3898,8 +3898,6 @@ new file mode 100644
 +| Write-Output;;) { break }
 +
 +---
-+
-+
 diff --git a/vendor/tree-sitter-powershell/SLOPLINT.md b/vendor/tree-sitter-powershell/SLOPLINT.md
 --- a/vendor/tree-sitter-powershell/SLOPLINT.md
 +++ b/vendor/tree-sitter-powershell/SLOPLINT.md
