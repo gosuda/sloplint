@@ -1,0 +1,77 @@
+{
+  "base": "e7ee97e84246863766ec7465777a035134533feb",
+  "base_tree": "5d2a547a693d073ad9739311e7b653baa96a08d6",
+  "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+  "kind": "One bounded separated-argument guard experiment against exact current source. This diagnostic snapshot is not eligible for publication without the complete x64, ARM64, lint and authoritative source-generation gates.",
+  "stages": [
+    {
+      "id": "separated-comment-guard",
+      "file": "guard-experiment-grammar.js",
+      "sha256": "3432baacb8c4fbb7d29ac02bd3b8580988f85b1cbe795795154f90cbe3095d4d",
+      "scanner_file": "guard-experiment-scanner.c",
+      "scanner_sha256": "6dac1b1103c9364eb540b5a07eb8c89ccfe53f7c5623409321413b451ac10213"
+    }
+  ],
+  "formatted_observer_sha256": "2151f94ae80983f087bbde46e4c6b1749a522487d541289e018b3b70fd63458b",
+  "historical_node_types_sha256": "cc0ca0ff480d8278d54719e0dc7a5213018e4a39333e7f1986481972bec64404",
+  "cases": 801,
+  "query_count": 21,
+  "prefix_controls": 2,
+  "baseline": {
+    "producer": "8e21f8343fb84954514d274a65d46932b80f7b90",
+    "run": 45908737910,
+    "job": 140211698514,
+    "artifact": 15158893506,
+    "zip_sha256": "47566cdd96fd146d7209a8ee2897ec6962e2d859e76b795e2fa6a60bf90c9730",
+    "payload_sha256": "5317d091919632510e93ce933e98ea6a0fe5514b3a213d1d7fcb25b1309dbeeb",
+    "gzip_sha256": "6c4f227856e93d3f01e47b72e8a10dc896677693f4434f82096d690d681eed2f",
+    "payload_bytes": 6859705,
+    "gzip_bytes": 355067,
+    "base64_bytes": 473424,
+    "formatted_observer_sha256": "2151f94ae80983f087bbde46e4c6b1749a522487d541289e018b3b70fd63458b"
+  },
+  "historical_boundary": {
+    "producer": "0f029807a43153c6d8e97fc2a23f1cb47077e98a",
+    "run": 45907682159,
+    "job": 140208249794,
+    "artifact": 15158408204,
+    "zip_sha256": "cb2c8c723cfe341fe4b02a53129e8646dd890e07cc612279788648f955744f24",
+    "payload_sha256": "83c698351168269fead93a42f5cdc69088e7dc80ad16ffb04128843509a9b5f2",
+    "gzip_sha256": "2c479f8cbd8dc46c8159341ad156d9e05bccf00f7abe63a6ff123e754177a4f4",
+    "payload_bytes": 494578,
+    "gzip_bytes": 29622,
+    "base64_bytes": 39496,
+    "formatted_observer_sha256": "85e21f1ece01d8d06778deec011b217ae7458c3893c2336929449cefe522b3ee"
+  },
+  "prefix_boundary": {
+    "producer": "d143bde157a369c2aaaffc6fe5f38938d04e814f",
+    "run": 45910252434,
+    "job": 140216620412,
+    "artifact": 15159249262,
+    "zip_sha256": "597ef3c89aeedc4cd9963bb68ac12ff9cc94cb2d004a03ac62aef1be707b773d",
+    "payload_sha256": "f614b5ad2c7701e64bd58fd5d5d3f596eb809a87a2acb95cc264bf979ae08262",
+    "gzip_sha256": "2edcb37454b968016c6310a254afbf172710d08422decbfbe4e094603eea70b5",
+    "payload_bytes": 8494,
+    "gzip_bytes": 2237,
+    "base64_bytes": 2984
+  },
+  "proof_sha256": {
+    "guard-experiment.py": "09b8ebc3507e8d7f1b6c83ba85c5661bfa500decc7080d5b78f0fc2fd2177bc9",
+    "guard-experiment-grammar.js": "3432baacb8c4fbb7d29ac02bd3b8580988f85b1cbe795795154f90cbe3095d4d",
+    "guard-experiment-scanner.c": "6dac1b1103c9364eb540b5a07eb8c89ccfe53f7c5623409321413b451ac10213",
+    "guard-regression.rs": "3268a6893f374aa5eb2a279003d4b950b9b7adc41bef4119e1a3b2aeeae6e2c8",
+    "external-observer.rs": "43fa7b9378ca2b89a8e789ebd4d70d5a116d720509143ab619f4c8bc2120714b",
+    "external-boundary-cases.json": "c1f8af63b0bcec4ea5f7919caa5789b2da647e319adb0f310718032250d1dc06",
+    "external-boundary-cases.tsv": "3a1e3f286d87e40e9179563f767662e48ef768e8053b31a3126c7303d4d18a94",
+    "external-baseline-receipt.json": "68b7db220aded438556c1155d251b053d04a4e9fc3ae752392ceebfacccc6d11",
+    "external-baseline-packed.b64": "cad0394955173d1c3c5642ad457ae5b209d5bd40a639911010b90650e8fbddc6",
+    "guard-boundary-success-receipt.json": "fad468856d8a0c8e14b06b975860ab39814148e75d2e615846d8207742473aa5",
+    "guard-boundary-cases.json": "ec7059bfe37e0f94bbfb0d0b14192367e08b8a897647cd31fbdba27398dc695b",
+    "guard-boundary-packed.b64": "6b0e8d8430294f129d363f39cf758150645b554ac5c2f6a4a92af938cb1dfcf1",
+    "prefix-baseline-receipt.json": "ba71a347b2b3400cfb9498fd40ca66c6d46cbe6960eb4d828924aa90b2c116ff",
+    "prefix-baseline-packed.b64": "25a2bf12ccb1413f4877e54d5226e10c3bfe3fc22c3b8b1d39a6518cbf7e2188",
+    "prefix-boundary-cases.json": "f04aecafc69d71c0726ce0d48d8ce49bd08e1e634bb44dfac67d28d3ed8f2e17",
+    "baseline-packed.b64": "cfc776d2c4651a3daaddaf7d23cc076ac72b6ea6b0959187e55f54b3a35abac3",
+    "experiment-controls.json": "39502e3f9e9f874dd70f7b38a24b86bdaa2c6f5fc3d87958d275e94e53a94efc"
+  }
+}
