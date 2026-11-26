@@ -22,15 +22,20 @@ pub enum Command {
     /// Lint the project and report findings (the default).
     ///
     /// `check` writes nothing to the project tree: findings go to stdout and
-    /// the per-user cache lives outside the checkout. Every finding carries
-    /// a `fix:` line describing the change a human or agent should make;
-    /// applying it is always opt-in and never done by `check`.
+    /// the per-user cache lives outside the checkout. In the default `agent`
+    /// format every finding carries a `fix:` line describing the change a
+    /// human or agent should make (the `json` format carries the same text in
+    /// its `fix` field, and the `human` format shows it as a help
+    /// annotation); applying it is always opt-in and never done by `check`.
     Check(CheckArgs),
     /// Record the current findings as the ratchet baseline.
     ///
-    /// Writes exactly the file named by `project.baseline` and refuses an
-    /// existing file that is not a sloplint baseline. The file is replaced
-    /// atomically, never rewritten in place.
+    /// Writes exactly one file in the project tree, the file named by
+    /// `project.baseline`, and refuses an existing file that is not a
+    /// sloplint baseline. The per-user cache outside the checkout is still
+    /// read and written unless `--no-cache` is passed, even when the baseline
+    /// file is refused. The file is replaced atomically, never rewritten in
+    /// place.
     Baseline(BaselineArgs),
     /// Show the effective rule settings.
     Rules(RulesArgs),

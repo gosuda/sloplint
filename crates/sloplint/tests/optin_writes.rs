@@ -299,8 +299,14 @@ fn ratchet_cli_runs_are_stable() {
 fn help_states_the_publication_contract() {
     let (_tmp, root) = tempdir();
     for (args, needles) in [
-        (&["check", "--help"][..], &["writes nothing"][..]),
-        (&["baseline", "--help"][..], &["refuses", "atomically"][..]),
+        (
+            &["check", "--help"][..],
+            &["writes nothing", "`fix` field", "help annotation"][..],
+        ),
+        (
+            &["baseline", "--help"][..],
+            &["refuses", "atomically", "in the project tree", "--no-cache"][..],
+        ),
         (&["init", "--help"][..], &["Refuses"][..]),
     ] {
         let out = cli(&root, args);
@@ -323,9 +329,13 @@ fn readme_states_what_sloplint_writes() {
         "What sloplint writes",
         "writes nothing to the project tree",
         "never done by `check`",
-        "writes exactly one file",
+        "writes exactly one file in the project tree",
+        "unless `--no-cache` is passed",
+        "with one fewer link",
         "link counts hold",
         "byte-identical",
+        "`fix` field",
+        "help annotation",
     ] {
         assert!(readme.contains(needle), "README lacks {needle:?}");
     }
