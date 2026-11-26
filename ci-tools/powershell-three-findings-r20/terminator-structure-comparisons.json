@@ -1,0 +1,386 @@
+[
+  {
+    "stage": "baseline",
+    "id": "lf-escaped-else",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "lf-escaped-elseif",
+    "exit": 0,
+    "elseifs": 1,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "lf-comment-else",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "lf-comment-elseif",
+    "exit": 0,
+    "elseifs": 1,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "lf-indented-else",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "lf-indented-elseif",
+    "exit": 0,
+    "elseifs": 1,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "lf-two-escapes-else",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "lf-two-escapes-elseif",
+    "exit": 0,
+    "elseifs": 1,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "single-lf-attached-top",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 0,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "single-lf-attached-group",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 0,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "single-lf-separated-top",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 0,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "single-lf-separated-group",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 0,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "crlf-escaped-else",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "crlf-escaped-elseif",
+    "exit": 0,
+    "elseifs": 1,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "crlf-comment-else",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "crlf-comment-elseif",
+    "exit": 0,
+    "elseifs": 1,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "crlf-indented-else",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "crlf-indented-elseif",
+    "exit": 0,
+    "elseifs": 1,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "crlf-two-escapes-else",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "crlf-two-escapes-elseif",
+    "exit": 0,
+    "elseifs": 1,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "single-crlf-attached-top",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 0,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "single-crlf-attached-group",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 0,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "single-crlf-separated-top",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 0,
+    "matches": true
+  },
+  {
+    "stage": "baseline",
+    "id": "single-crlf-separated-group",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 0,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "lf-escaped-else",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "lf-escaped-elseif",
+    "exit": 0,
+    "elseifs": 1,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "lf-comment-else",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "lf-comment-elseif",
+    "exit": 0,
+    "elseifs": 1,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "lf-indented-else",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "lf-indented-elseif",
+    "exit": 0,
+    "elseifs": 1,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "lf-two-escapes-else",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "lf-two-escapes-elseif",
+    "exit": 0,
+    "elseifs": 1,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "single-lf-attached-top",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 0,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "single-lf-attached-group",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 0,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "single-lf-separated-top",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 0,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "single-lf-separated-group",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 0,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "crlf-escaped-else",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "crlf-escaped-elseif",
+    "exit": 0,
+    "elseifs": 1,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "crlf-comment-else",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "crlf-comment-elseif",
+    "exit": 0,
+    "elseifs": 1,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "crlf-indented-else",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "crlf-indented-elseif",
+    "exit": 0,
+    "elseifs": 1,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "crlf-two-escapes-else",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "crlf-two-escapes-elseif",
+    "exit": 0,
+    "elseifs": 1,
+    "elses": 1,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "single-crlf-attached-top",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 0,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "single-crlf-attached-group",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 0,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "single-crlf-separated-top",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 0,
+    "matches": true
+  },
+  {
+    "stage": "candidate",
+    "id": "single-crlf-separated-group",
+    "exit": 0,
+    "elseifs": 0,
+    "elses": 0,
+    "matches": true
+  }
+]

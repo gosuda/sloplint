@@ -1,0 +1,659 @@
+{
+  "schema": 1,
+  "repository": "gosuda/sloplint",
+  "pull_request": 137,
+  "branch": "fix/powershell-review-boundaries-20261126",
+  "status": "Published; all prescribed native source gates passed; all three findings replied to and explicitly resolved. Ordinary PR workflow is running.",
+  "base": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+  "original_head": "61c88ec4d492dd1ab72f76b15b84fa9434cccfaa",
+  "published_head": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+  "source_tree": "171bbe1c7137faf98fb7981f69288120cd18bdf6",
+  "commits": [
+    {
+      "id": "unicode-separators",
+      "sha": "1e5d66c085fdc842d6ab4903c0c9ca7faafee112",
+      "tree": "fd41dcbefc79f3f46aca0b4f03ae573973769a7c",
+      "parent": "61c88ec4d492dd1ab72f76b15b84fa9434cccfaa"
+    },
+    {
+      "id": "plain-unicode-escapes",
+      "sha": "4fda478b09c1b07ba9cdfd6cc5ad79437e623bac",
+      "tree": "675f9843bce34cf1aeb9626e595d2ac2d83da94c",
+      "parent": "1e5d66c085fdc842d6ab4903c0c9ca7faafee112"
+    },
+    {
+      "id": "newline-lookahead",
+      "sha": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+      "tree": "171bbe1c7137faf98fb7981f69288120cd18bdf6",
+      "parent": "4fda478b09c1b07ba9cdfd6cc5ad79437e623bac"
+    }
+  ],
+  "source_identity": {
+    "base": "61c88ec4d492dd1ab72f76b15b84fa9434cccfaa",
+    "index_sha256": "2efe050e2dc0c875054b046b8cb1b4aa57da1775ca81c0681e9f3ead00061b99",
+    "tracked_blobs": 4902,
+    "tree": "171bbe1c7137faf98fb7981f69288120cd18bdf6"
+  },
+  "changed_files_sha256": {
+    "crates/sloplint-syntax/tests/grammar_gaps.rs": "0ba66098439204b43fc2f5507f48532995f37731a80e376010fa8806237ef1c3",
+    "crates/sloplint-syntax/tests/grammar_gaps/powershell_separators.rs": "05707d51d377196c12df8378b76b2248511aad8511d5fae80a144b55836ac4c8",
+    "vendor/tree-sitter-powershell/SLOPLINT.md": "0045339bdc1f5e384de77c621999a18b09b0ff05d93d45989a95ebc71a945bc5",
+    "vendor/tree-sitter-powershell/grammar.js": "f4a5860021d789ccdfa254486a7b84a214346582fa4ae828fa227d2bcff18ecb",
+    "vendor/tree-sitter-powershell/sloplint-grammar.patch": "ad83388b2c7d1fd99c8c38eda784987d059dbcdcfae86cead51032f59575fc20",
+    "vendor/tree-sitter-powershell/src/grammar.json": "0e32560b7b871dffd076b85cfadf2c13ffe5cf069ce33afb990658f492e163a3",
+    "vendor/tree-sitter-powershell/src/node-types.json": "ca648990b2f8176572f6db33271268497af43a29384399c567acbbe217c30b7d",
+    "vendor/tree-sitter-powershell/src/parser.c": "8b14a9af5a277184c686b435d4c5ba9ba183676a43ea4546bf9f7e9b71861594",
+    "vendor/tree-sitter-powershell/src/scanner.c": "6cf21eff4827224fa3b47c969ed35525f3e0b01c7b32acc9c1a287ad5415d981",
+    "crates/sloplint-syntax/src/lang/powershell/calls/words.rs": "f21c80b312cafe9c0a8f37d1f0c988915b260535f0c3dc5bd822d6e6c2aee38a",
+    "crates/sloplint-syntax/tests/grammar_gaps/powershell_plain_escapes.rs": "78a65ce68c6e11db643c1713b862757746303cd70949c7eceb597bcededccd44",
+    "crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/m.ps1": "60d51bf955d20d36bc784c84afa82d1e32bc96dd86eae98aa1a1cff9c03e715c",
+    "crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/expected.txt": "7349f4831e13ecdd2193a43842936c8e35f957e757e04f3df07eea0691fcbdf5",
+    "crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/i.ps1": "45c894824f8251215123c2a9adf6442e21f0e13fff2face82e46ca098000e426",
+    "crates/sloplint-syntax/tests/grammar_gaps/powershell_escaped_lines.rs": "a508a254a9a16b77166a4136b9d08fbdec8ffd63ee38a890a63d007fc7b09b5d",
+    "crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs": "3e3ca6f5a6461a8022b9bbc29ad8c02c2cdea2eb4dbfff015bbed5107d078115"
+  },
+  "native_proof": {
+    "producer": "e0a750f9ac252e056c92bd885963682ba3dc495f",
+    "run": 45875733057,
+    "jobs": [
+      {
+        "id": 140102208395,
+        "name": "prepare",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 140103328225,
+        "name": "x64",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 140103328238,
+        "name": "arm64",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 140103328300,
+        "name": "lint",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "counts": {
+      "native_parser_and_structure_comparisons": 485,
+      "native_argument_captures": 190,
+      "native_literal_values": 52,
+      "powershell_regressions": 94,
+      "corpus_parses": 269,
+      "else_elseif_structures": 16
+    },
+    "packed": {
+      "payload_sha256": "7da44c043eb0d0cd6c714c56a989a2dffe3d1fdd2b9089c1ea87ca980aad5d25",
+      "gzip_sha256": "0125e7df2a07e8f776196ca6b6f52cb2baf85d5383ed66ccc25541ce41d41b3a",
+      "gzip_bytes": 646339,
+      "payload_bytes": 11541685,
+      "base64_bytes": 861788,
+      "chunks": 36
+    },
+    "artifacts": [
+      {
+        "id": 15144733307,
+        "name": "powershell-three-findings-candidate-e0a750f9ac252e056c92bd885963682ba3dc495f",
+        "size": 693340,
+        "digest": "sha256:48d9c71c051557b5d95084deb51830134abf334376b28909f7686890533ed8d3",
+        "head_sha": "e0a750f9ac252e056c92bd885963682ba3dc495f"
+      },
+      {
+        "id": 15144654689,
+        "name": "powershell-three-findings-arm64-e0a750f9ac252e056c92bd885963682ba3dc495f",
+        "size": 63369,
+        "digest": "sha256:c24e14ff20ed5b5d38f66c38679d6d4b677dd36cf4f70587136595e8670609f8",
+        "head_sha": "e0a750f9ac252e056c92bd885963682ba3dc495f"
+      },
+      {
+        "id": 15143974210,
+        "name": "powershell-three-findings-lint-e0a750f9ac252e056c92bd885963682ba3dc495f",
+        "size": 10017,
+        "digest": "sha256:adc6eb68ae622673418c3c3786dfd7dbe3e172c1872394efa42e55668e49cd5d",
+        "head_sha": "e0a750f9ac252e056c92bd885963682ba3dc495f"
+      },
+      {
+        "id": 15143879984,
+        "name": "powershell-three-findings-x64-e0a750f9ac252e056c92bd885963682ba3dc495f",
+        "size": 68903,
+        "digest": "sha256:9d2f665e08b0bb3f4a4874a5edd899600f469b42e99a1a90f1ece4b6ba5728c9",
+        "head_sha": "e0a750f9ac252e056c92bd885963682ba3dc495f"
+      }
+    ],
+    "receipts": {
+      "x64": {
+        "mode": "x64",
+        "results": [
+          {
+            "args": [
+              "rustup",
+              "toolchain",
+              "install",
+              "1.100.0",
+              "--profile",
+              "minimal",
+              "--component",
+              "rustfmt,clippy"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "5c4a350545b58a7cd7623d96848abeb542cb3374b1e2fd7fa37219ad787a6f5c",
+            "name": "rust-toolchain",
+            "seconds": 8.512929456000009,
+            "timed_out": false
+          },
+          {
+            "args": [
+              "cargo",
+              "test",
+              "--locked",
+              "-p",
+              "sloplint-syntax",
+              "--test",
+              "grammar_gaps",
+              "powershell",
+              "--",
+              "--nocapture"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "f860c39ed2e409f49bf4194af74984079f8572827b15b2d8a8e29cfc70cf9119",
+            "name": "newline-lookahead-powershell-regressions",
+            "seconds": 39.086481594000006,
+            "timed_out": false
+          },
+          {
+            "args": [
+              "cargo",
+              "clippy",
+              "--workspace",
+              "--all-targets",
+              "--locked",
+              "--target",
+              "x86_64-unknown-linux-gnu",
+              "--",
+              "-D",
+              "warnings"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "c4e6fe9fed5075cd98bc97a3a67133bbf246ce157d49f8e2c53b3efc2b6e5607",
+            "name": "clippy",
+            "seconds": 26.189686650999988,
+            "timed_out": false
+          },
+          {
+            "args": [
+              "cargo",
+              "test",
+              "--workspace",
+              "--locked",
+              "--no-fail-fast",
+              "--target",
+              "x86_64-unknown-linux-gnu"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "edf62cb7fd3215e5ec4af22b3e69c2cbf5d919cee533a5c28d0f8d4038074de6",
+            "name": "workspace",
+            "seconds": 118.44265418199998,
+            "timed_out": false
+          },
+          {
+            "args": [
+              "cargo",
+              "build",
+              "--release",
+              "--locked",
+              "--target",
+              "x86_64-unknown-linux-gnu"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "979748c0faa417135b7ab94201738bbb02424984792859eb912cad95b163ac36",
+            "name": "release",
+            "seconds": 70.51161294500002,
+            "timed_out": false
+          },
+          {
+            "args": [
+              "/home/runner/work/sloplint/sloplint/source/target/x86_64-unknown-linux-gnu/release/sloplint",
+              "check",
+              "crates",
+              "--format",
+              "agent",
+              "--strictness",
+              "standard",
+              "--mode",
+              "threshold",
+              "--fail-on",
+              "minor"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "8c42be34f3ee25e9216e2e12b54a4100df3f1559c5d19a6c55b961dc062cd0cb",
+            "name": "self-lint",
+            "seconds": 0.622561361999999,
+            "timed_out": false
+          },
+          {
+            "args": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "name": "whitespace",
+            "seconds": 0.13122981300000447,
+            "timed_out": false
+          }
+        ],
+        "source": {
+          "base": "61c88ec4d492dd1ab72f76b15b84fa9434cccfaa",
+          "index_sha256": "2efe050e2dc0c875054b046b8cb1b4aa57da1775ca81c0681e9f3ead00061b99",
+          "tracked_blobs": 4902,
+          "tree": "171bbe1c7137faf98fb7981f69288120cd18bdf6"
+        },
+        "stages_sha256": "7da44c043eb0d0cd6c714c56a989a2dffe3d1fdd2b9089c1ea87ca980aad5d25"
+      },
+      "arm64": {
+        "mode": "arm64",
+        "results": [
+          {
+            "args": [
+              "rustup",
+              "toolchain",
+              "install",
+              "1.100.0",
+              "--profile",
+              "minimal",
+              "--component",
+              "rustfmt,clippy"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "4e4ff096b0fe8dc822c90f2ea08b0fa7ed49658359f628842486c8d8be81a8fa",
+            "name": "rust-toolchain",
+            "seconds": 6.727501269000001,
+            "timed_out": false
+          },
+          {
+            "args": [
+              "cargo",
+              "clippy",
+              "--workspace",
+              "--all-targets",
+              "--locked",
+              "--target",
+              "aarch64-unknown-linux-gnu",
+              "--",
+              "-D",
+              "warnings"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "96ce095daed1862c1b914c2caaa468a0f982e1d606855e8b35e79a29aef78938",
+            "name": "clippy",
+            "seconds": 37.523557956999994,
+            "timed_out": false
+          },
+          {
+            "args": [
+              "cargo",
+              "test",
+              "--workspace",
+              "--locked",
+              "--no-fail-fast",
+              "--target",
+              "aarch64-unknown-linux-gnu"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "16219aef0b8c34c0c6b603a3f1e6072d8606b3700730f7c384a589420b42fcb4",
+            "name": "workspace",
+            "seconds": 248.951006847,
+            "timed_out": false
+          },
+          {
+            "args": [
+              "cargo",
+              "build",
+              "--release",
+              "--locked",
+              "--target",
+              "aarch64-unknown-linux-gnu"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "190e5a5059d7079829db5d53d204d7e0888c85c9489114d6808e3547f85869ef",
+            "name": "release",
+            "seconds": 70.53015595599999,
+            "timed_out": false
+          },
+          {
+            "args": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "name": "whitespace",
+            "seconds": 0.1482419440000058,
+            "timed_out": false
+          }
+        ],
+        "source": {
+          "base": "61c88ec4d492dd1ab72f76b15b84fa9434cccfaa",
+          "index_sha256": "2efe050e2dc0c875054b046b8cb1b4aa57da1775ca81c0681e9f3ead00061b99",
+          "tracked_blobs": 4902,
+          "tree": "171bbe1c7137faf98fb7981f69288120cd18bdf6"
+        },
+        "stages_sha256": "7da44c043eb0d0cd6c714c56a989a2dffe3d1fdd2b9089c1ea87ca980aad5d25"
+      },
+      "lint": {
+        "mode": "lint",
+        "results": [
+          {
+            "args": [
+              "rustup",
+              "toolchain",
+              "install",
+              "1.100.0",
+              "--profile",
+              "minimal",
+              "--component",
+              "rustfmt,clippy"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "5c4a350545b58a7cd7623d96848abeb542cb3374b1e2fd7fa37219ad787a6f5c",
+            "name": "rust-toolchain",
+            "seconds": 8.622402188999999,
+            "timed_out": false
+          },
+          {
+            "args": [
+              "cargo",
+              "fmt",
+              "--all",
+              "--check"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "name": "fmt",
+            "seconds": 1.0871804690000033,
+            "timed_out": false
+          },
+          {
+            "args": [
+              "bash",
+              "scripts/grammars.sh",
+              "check"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "name": "grammar-manifest",
+            "seconds": 0.034138189999993074,
+            "timed_out": false
+          },
+          {
+            "args": [
+              "bash",
+              "scripts/selftest-release-scripts.sh"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "f5c3b2e52b11f1cf56a28fd995f44b18a4eaacbfbcf4610161e2136f0dd0b8a4",
+            "name": "release-script-selftests",
+            "seconds": 3.3285193880000037,
+            "timed_out": false
+          },
+          {
+            "args": [
+              "tar",
+              "-xzf",
+              "/home/runner/work/_temp/powershell-three-findings-r20/cargo-deny.tar.gz",
+              "-C",
+              "/home/runner/work/_temp/powershell-three-findings-r20",
+              "cargo-deny-0.20.2-x86_64-unknown-linux-musl/cargo-deny"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "name": "extract-cargo-deny",
+            "seconds": 0.0535996730000079,
+            "timed_out": false
+          },
+          {
+            "args": [
+              "cargo",
+              "deny",
+              "check"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "f1a0fca39d4280363937aabd77783990ea6480bd9ca257816de3b68fc8efa845",
+            "name": "cargo-deny",
+            "seconds": 0.9410784330000013,
+            "timed_out": false
+          },
+          {
+            "args": [
+              "bash",
+              "scripts/grammars.sh",
+              "verify",
+              "tree-sitter-powershell"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "93bc6be910dec10365d0d1a41803046b3cac2f83c996c29ae93e38beb979780c",
+            "name": "authoritative-grammar-verify",
+            "seconds": 0.7595610409999978,
+            "timed_out": false
+          },
+          {
+            "args": [
+              "/home/runner/work/_temp/powershell-three-findings-r20/tree-sitter",
+              "test"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "6d03d5bb793e62e25ccc40e03690eeec3dab396128b19bd335b4ce8f943cbf43",
+            "name": "grammar-corpus",
+            "seconds": 15.542574038000012,
+            "timed_out": false
+          },
+          {
+            "args": [
+              "/home/runner/work/_temp/powershell-three-findings-r20/tree-sitter",
+              "generate"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "28abfc9d180779f1ccb3a72ca0e1cc9502b76bafcda8d207cedd9f498d036cdc",
+            "name": "fresh-generation",
+            "seconds": 0.33382619299999305,
+            "timed_out": false
+          },
+          {
+            "args": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "exit": 0,
+            "expected": 0,
+            "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "name": "whitespace",
+            "seconds": 0.13692720599999575,
+            "timed_out": false
+          }
+        ],
+        "source": {
+          "base": "61c88ec4d492dd1ab72f76b15b84fa9434cccfaa",
+          "index_sha256": "2efe050e2dc0c875054b046b8cb1b4aa57da1775ca81c0681e9f3ead00061b99",
+          "tracked_blobs": 4902,
+          "tree": "171bbe1c7137faf98fb7981f69288120cd18bdf6"
+        },
+        "stages_sha256": "7da44c043eb0d0cd6c714c56a989a2dffe3d1fdd2b9089c1ea87ca980aad5d25"
+      }
+    }
+  },
+  "counterfactuals": {
+    "original_baseline": {
+      "producer": "c126d8aa96e50e7f55279c854c75f25c0c000617",
+      "run": 45870222096,
+      "job": 140083400625,
+      "artifact": 15142637184,
+      "digest": "051066f0543bd7d40df8194108648453be8974bc4e288ded589e995f97be43d7",
+      "outcome": "All three primary Rust regressions and CLI fixture failed with exit 101. Native argv and literal outputs matched all 203 expectations. Two extra CRLF pipe controls contradicted their initial accepted=true expectation; corrected to native rejection without changing source bytes. Original full baseline job failed its final assertion, retained above."
+    },
+    "native_hypothesis_refinement": {
+      "producer": "5e27599d70bb306ccfe665c4470c4a41facb7ddf",
+      "run": 45871471507,
+      "job": 140087687840,
+      "artifact": 15141829534,
+      "digest": "cd60a2a1a9fe16c3c9e4551b0293a7c6c24e1355168cbd7d378a792a143c5bb5",
+      "outcome": "All 243 corrected expectations and 40 native token records verified; source unchanged."
+    },
+    "rejected_first_candidate": {
+      "producer": "58f6f32eedf61e5bc2d1ddab3dae4aaf1b3722a1",
+      "run": 45873249049,
+      "tree": "67485931a856bf4d46f79e14cd1c8885f8fa3105",
+      "artifact": 15143209008,
+      "zip_sha256": "849b9a5d5f48a25b721c3bd8e783de3625093b8a8a989b1e491066eca0959df2",
+      "stages_sha256": "a8e8d3a2073c3ce0090c0bd138c14dfdd7eea54f77d945b1b4008c9405210156",
+      "outcomes": {
+        "prepare": "All 461 native parser outcomes passed.",
+        "x64": "First two staged PowerShell suites, 190 native argv counts and CLI fixture suite passed. Final PowerShell suite exited 101 at old attached-CR callee assumption.",
+        "arm64": "Clippy passed; full workspace exited 101 in grammar_gaps. Release did not run.",
+        "lint": "All lint, provenance, corpus, generation and identity checks passed."
+      }
+    },
+    "native_boundary_controls": {
+      "producer": "2fc8f12313379a8f82f9702fd8955cfe81b2052d",
+      "run": 45874990715,
+      "job": 140099701010,
+      "cases": 24,
+      "outcome": "All native outcomes and 16 branch structures matched; baseline and candidate matched all 24 structures. Single attached CR has command token Get-Date plus backtick CR and decoded command name ending CR; separated LF/CRLF controls retain Get-Date."
+    },
+    "transport_observer_setup_failure": {
+      "producer": "f8a359032242b2e90a2d474e7f06aa779ba029a7",
+      "run": 45874488604,
+      "job": 140097992716,
+      "outcome": "ZIP/payload/gzip/file digests verified. Observer stopped before native cases because its alternate Git index was not initialized. Corrected below; no native control result is claimed for that run."
+    }
+  },
+  "reviews": {
+    "snapshot_count": 15,
+    "unresolved": [],
+    "resolutions": [
+      {
+        "thread": "PRRT_kwDOVOMFM868fgdS",
+        "comment": 4711469440,
+        "reply_id": 4712304162,
+        "is_resolved": true
+      },
+      {
+        "thread": "PRRT_kwDOVOMFM868fgfR",
+        "comment": 4711469729,
+        "reply_id": 4712304524,
+        "is_resolved": true
+      },
+      {
+        "thread": "PRRT_kwDOVOMFM868fgoO",
+        "comment": 4711470639,
+        "reply_id": 4712304832,
+        "is_resolved": true
+      }
+    ]
+  },
+  "ordinary_ci": {
+    "run": 45877442939,
+    "head_sha": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+    "status": "in_progress",
+    "conclusion": null,
+    "jobs": [
+      {
+        "id": 140107990049,
+        "name": "test (depot-ubuntu-24.04, x86_64-unknown-linux-gnu, 1)",
+        "status": "in_progress",
+        "conclusion": null
+      },
+      {
+        "id": 140107990362,
+        "name": "lint",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 140107990460,
+        "name": "test (depot-ubuntu-24.04-arm, aarch64-unknown-linux-gnu, 1)",
+        "status": "in_progress",
+        "conclusion": null
+      },
+      {
+        "id": 140107992335,
+        "name": "test-native",
+        "status": "completed",
+        "conclusion": "skipped"
+      }
+    ]
+  },
+  "source_transport": {
+    "inflater_repository": "nodeca/pako",
+    "inflater_commit": "3c06216518c259b569a5168dee867e6dabbe5160",
+    "inflater_path": "dist/pako_inflate.min.js",
+    "inflater_sha256": "fa226c8e1e3556993260e6a5c1fe94e225da59b3418a06811fdc51d308f8bb43",
+    "github_tree_reconstruction": "All three independently recreated trees match the native snapshots."
+  },
+  "retirement": {
+    "branch": "ci/powershell-three-findings-20261126-r20",
+    "parent": "e0a750f9ac252e056c92bd885963682ba3dc495f",
+    "removed_workflows": [
+      ".github/workflows/powershell-three-findings-r20.yml",
+      ".github/workflows/powershell-terminator-controls-r20.yml"
+    ],
+    "status": "Both owned workflows are removed by the commit containing this checkpoint."
+  },
+  "evidence_file_origins": {
+    "native-cases.json": {
+      "producer": "5e27599d70bb306ccfe665c4470c4a41facb7ddf",
+      "run": 45871471507,
+      "job": 140087687840,
+      "note": "All 243 corrected native expectations. The final prepare job repeated these assertions against identical input bytes."
+    },
+    "native-token-boundaries.json": {
+      "producer": "5e27599d70bb306ccfe665c4470c4a41facb7ddf",
+      "run": 45871471507,
+      "job": 140087687840,
+      "note": "Forty frozen native token records; the final prepare job required exact record equality."
+    },
+    "native-terminator-controls.json": {
+      "producer": "2fc8f12313379a8f82f9702fd8955cfe81b2052d",
+      "run": 45874990715,
+      "job": 140099701010
+    },
+    "terminator-structure-comparisons.json": {
+      "producer": "2fc8f12313379a8f82f9702fd8955cfe81b2052d",
+      "run": 45874990715,
+      "job": 140099701010,
+      "baseline_tree": "589aff2ec97f6e6f8179453ff6882fe19b3b65b2",
+      "candidate_tree": "67485931a856bf4d46f79e14cd1c8885f8fa3105",
+      "note": "The final candidate differs from this production-identical candidate only in the native-backed test correction and added controls."
+    }
+  }
+}
