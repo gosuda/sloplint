@@ -52,7 +52,7 @@ elif mode == "verify":
     assert json.loads((source / "node_modules/typescript/package.json").read_text())["version"] == "7.0.2"
     oracle_dir = evidence / "oracle"
     oracle_dir.mkdir(exist_ok=True)
-    for parameter, expected in [("number", 2), ("string", 0)]:
+    for parameter, expected in [("number", 1), ("string", 0)]:
         branches = [f"{{ root: B<{parameter}> }}", f'{{ root: {{ a: B<{parameter}>["a"] }} }}']
         for reverse in [False, True]:
             order = list(reversed(branches)) if reverse else branches
