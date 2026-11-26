@@ -1,0 +1,167 @@
+[
+  {
+    "id": "here-regex-lf",
+    "source": "$p = @\"\n^\\d+$\n\"@\nWrite-Output done\n",
+    "accepted": true
+  },
+  {
+    "id": "here-space-lf",
+    "source": "$p = @\"\n$ \n\"@\nWrite-Output done\n",
+    "accepted": true
+  },
+  {
+    "id": "here-tab-lf",
+    "source": "$p = @\"\n$\t\n\"@\nWrite-Output done\n",
+    "accepted": true
+  },
+  {
+    "id": "here-backslash-lf",
+    "source": "$p = @\"\n$\\\n\"@\nWrite-Output done\n",
+    "accepted": true
+  },
+  {
+    "id": "here-escape-lf",
+    "source": "$p = @\"\n$`n\n\"@\nWrite-Output done\n",
+    "accepted": true
+  },
+  {
+    "id": "here-escaped-dollar-lf",
+    "source": "$p = @\"\n$`$\n\"@\nWrite-Output done\n",
+    "accepted": true
+  },
+  {
+    "id": "adjacent-pipe-lf-0-false",
+    "source": "Get-Date\n| Write-Output\n",
+    "accepted": true
+  },
+  {
+    "id": "blank-pipe-lf-0-false",
+    "source": "Get-Date\n\n| Write-Output\n",
+    "accepted": false
+  },
+  {
+    "id": "adjacent-pipe-lf-1-false",
+    "source": "Get-Date\n | Write-Output\n",
+    "accepted": true
+  },
+  {
+    "id": "blank-pipe-lf-1-false",
+    "source": "Get-Date\n \n| Write-Output\n",
+    "accepted": false
+  },
+  {
+    "id": "adjacent-pipe-lf-1-false",
+    "source": "Get-Date\n\t| Write-Output\n",
+    "accepted": true
+  },
+  {
+    "id": "blank-pipe-lf-1-false",
+    "source": "Get-Date\n\t\n| Write-Output\n",
+    "accepted": false
+  },
+  {
+    "id": "blank-else-lf",
+    "source": "if ($true) { 1 }\n\nelse { 2 }\n",
+    "accepted": true
+  },
+  {
+    "id": "here-regex-crlf",
+    "source": "$p = @\"\r\n^\\d+$\r\n\"@\r\nWrite-Output done\r\n",
+    "accepted": true
+  },
+  {
+    "id": "here-space-crlf",
+    "source": "$p = @\"\r\n$ \r\n\"@\r\nWrite-Output done\r\n",
+    "accepted": true
+  },
+  {
+    "id": "here-tab-crlf",
+    "source": "$p = @\"\r\n$\t\r\n\"@\r\nWrite-Output done\r\n",
+    "accepted": true
+  },
+  {
+    "id": "here-backslash-crlf",
+    "source": "$p = @\"\r\n$\\\r\n\"@\r\nWrite-Output done\r\n",
+    "accepted": true
+  },
+  {
+    "id": "here-escape-crlf",
+    "source": "$p = @\"\r\n$`n\r\n\"@\r\nWrite-Output done\r\n",
+    "accepted": true
+  },
+  {
+    "id": "here-escaped-dollar-crlf",
+    "source": "$p = @\"\r\n$`$\r\n\"@\r\nWrite-Output done\r\n",
+    "accepted": true
+  },
+  {
+    "id": "adjacent-pipe-crlf-0-false",
+    "source": "Get-Date\r\n| Write-Output\r\n",
+    "accepted": true
+  },
+  {
+    "id": "blank-pipe-crlf-0-false",
+    "source": "Get-Date\r\n\r\n| Write-Output\r\n",
+    "accepted": false
+  },
+  {
+    "id": "adjacent-pipe-crlf-1-false",
+    "source": "Get-Date\r\n | Write-Output\r\n",
+    "accepted": true
+  },
+  {
+    "id": "blank-pipe-crlf-1-false",
+    "source": "Get-Date\r\n \r\n| Write-Output\r\n",
+    "accepted": false
+  },
+  {
+    "id": "adjacent-pipe-crlf-1-false",
+    "source": "Get-Date\r\n\t| Write-Output\r\n",
+    "accepted": true
+  },
+  {
+    "id": "blank-pipe-crlf-1-false",
+    "source": "Get-Date\r\n\t\r\n| Write-Output\r\n",
+    "accepted": false
+  },
+  {
+    "id": "blank-else-crlf",
+    "source": "if ($true) { 1 }\r\n\r\nelse { 2 }\r\n",
+    "accepted": true
+  },
+  {
+    "id": "malformed-26",
+    "source": "$p = @\"\n${name\n\"@\n",
+    "accepted": false
+  },
+  {
+    "id": "malformed-27",
+    "source": "$p = @\"\n${}\n\"@\n",
+    "accepted": false
+  },
+  {
+    "id": "malformed-28",
+    "source": "$p = @\"\n$(Get-Date\n\"@\n",
+    "accepted": false
+  },
+  {
+    "id": "crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/b.ps1",
+    "source": "function Invoke-Log($r, $id) {\n  Write-Host $r\\x\\\"$id\"\n}\n",
+    "accepted": true
+  },
+  {
+    "id": "crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/c.ps1",
+    "source": "function Invoke-Log($r, $id) {\n  Write-Host \"$r\\x\\$id\"\n}\n",
+    "accepted": true
+  },
+  {
+    "id": "crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/e.ps1",
+    "source": "function Invoke-Log($r, $id) {\n  Write-Host $r\\bin\\deploy\\\"$id\"\n}\n",
+    "accepted": true
+  },
+  {
+    "id": "crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/f.ps1",
+    "source": "function Invoke-Log($r, $id) {\n  Write-Host \"$r\\bin\\deploy\\$id\"\n}\n",
+    "accepted": true
+  }
+]
