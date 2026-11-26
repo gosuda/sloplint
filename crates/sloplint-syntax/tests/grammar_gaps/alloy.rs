@@ -3,9 +3,9 @@
 //! recovery node sets `has_error` without producing a cursor-visible error
 //! position.
 //!
-//! `vendor/tree-sitter-alloy` carries a 19-hunk self-authored patch (no
-//! upstream source exists: the grammar is unpublished and already at its
-//! upstream head), so these are not control tests against a pristine tree:
+//! `vendor/tree-sitter-alloy` carries a 19-hunk local patch over the
+//! upstream source pinned in its SLOPLINT.md. The grammar package is
+//! unpublished, so these are not control tests against a pristine tree:
 //! they pin the facts the Alloy adapter reads, and a shape regression in a
 //! re-vendor shows up as a changed fact, not only as a new error.
 
@@ -313,3 +313,4 @@ fn infix_qual_call_records_call_fact() {
             .collect::<Vec<_>>()
     );
 }
+
