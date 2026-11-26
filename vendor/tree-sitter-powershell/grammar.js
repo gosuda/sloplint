@@ -385,7 +385,10 @@ export default grammar({
           ),
           // sloplint: word that starts with a variable and continues as a
           // path, as in $env:TEMP\x.ps1 or ${root}/bin.
-          /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)[\\\/][^\&\s\u00A0\(\)\}\|;,]*/,
+          new RegExp(
+            /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)[\\\/]/.source +
+              wordTail(/[^&\s\u00A0()}|;,"'`]/.source),
+          ),
           // sloplint: bare escape sequence used as a word, as in
           // Write-Host `r`n — expandable-string content without quotes.
           new RegExp(WORD_ESC + wordTail(/[^&\s\u00A0()}|;,"'`]/.source)),
@@ -880,7 +883,7 @@ export default grammar({
     command_name: ($) =>
       seq(
         choice(
-          /[^\{\}\(\);,\|\&`"'\s\r\n\[\]\+\-\*\/\$@<\!]+/,
+          /[^\{\}\(\);,\|\&`"'\s\u00A0\r\n\[\]\+\-\*\/\$@<\!]+/,
           // tree-sitter does not allow to control lexer
           // each start keyword into _statement rule must be present here
           // https://github.com/airbus-cert/tree-sitter-powershell/issues/24
@@ -916,7 +919,8 @@ export default grammar({
         ),
         repeat(
           choice(
-            token.immediate(/[^\{\}\(\);,\|\&"'\s\r\n]+/),
+            token.immediate(/[^\{\}\(\);,\|\&`"'\s\u00A0\r\n]+/),
+            token.immediate(new RegExp(WORD_ESC)),
             seq(token.immediate('"'), $._expandable_string_literal_immediate),
             seq(token.immediate('\''), $._string_literal_immediate),
             token.immediate('""'),

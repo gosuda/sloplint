@@ -572,3 +572,26 @@ fn nbsp_separates_native_words_but_preserves_quoted_and_escaped_segments() {
         assert_eq!(call(&analysis, "git").args.len(), 4, "{source}");
     }
 }
+
+#[test]
+fn variable_paths_keep_protected_nbsp_inside_one_argument() {
+    for (source, count) in [
+        ("git add -- $env:TEMP/\"first\u{a0}part\"\n", 3),
+        ("git add -- $env:TEMP/first`\u{a0}part\n", 3),
+        ("git add -- $env:TEMP/first\u{a0}part\n", 4),
+    ] {
+        let analysis = run_clean(source);
+        assert_eq!(call(&analysis, "git").args.len(), count, "{source}");
+    }
+}
+
+#[test]
+fn nbsp_delimits_command_names_outside_protected_segments() {
+    let analysis = run_clean("git\u{a0}status\n");
+    assert_eq!(call(&analysis, "git").args.len(), 1);
+    for source in ["git\"first\u{a0}part\"\n", "git`\u{a0}status\n"] {
+        let analysis = run_clean(source);
+        assert_eq!(analysis.facts.calls.len(), 1, "{source}");
+        assert_eq!(analysis.facts.calls[0].args.len(), 0, "{source}");
+    }
+}

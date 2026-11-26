@@ -47,9 +47,11 @@ A dedicated hidden rule owns a parenthesized list after a double dash;
 aliasing that symbol preserves one array node and its parenthesized child.
 
 Regenerated grammar.json, node-types.json and parser.c with tree-sitter-cli
-0.27.1 using the command above. All 234 corpus cases pass, including the
-seven new boundary cases. Standalone parameters keep their existing node
-kind. Rust adapter regressions also assert the resulting argument counts.
+0.27.1 using the command above. All 240 corpus cases pass, including the
+thirteen new boundary cases. Standalone parameters keep their existing node
+kind. Variable-prefixed paths use the same protected word-tail segments,
+and command names delimit unquoted U+00A0 while retaining quoted and escaped
+segments. Rust adapter regressions assert the resulting argument counts.
 
 ## What v0.26.6 replaces
 
@@ -79,7 +81,7 @@ The remaining local groups do not have an upstream fix in this release:
 | Case-insensitive numbers, cast operands, type names and generic ranks, bitwise and membership operators | No issue or PR identified for these changes |
 | String text and here-string escapes, statement terminators, method-block scanner | No issue or PR identified for these changes |
 
-The current patch has 1,639 lines and 19 diff hunks. It includes the
+The current patch has 1,779 lines and 19 diff hunks. It includes the
 native argument corpus along with the grammar and scanner changes.
 
 ## Round 1 grammar changes

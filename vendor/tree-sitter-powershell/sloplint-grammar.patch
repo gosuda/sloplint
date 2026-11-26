@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 1f8b448..7e37a70 100644
+index 1f8b448..c1eb233 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -1,137 +1,180 @@
@@ -250,7 +250,7 @@ index 1f8b448..7e37a70 100644
          reservedWord('-isnot'),
          reservedWord('-isplit'),
          reservedWord('-join'),
-@@ -299,33 +350,106 @@ export default grammar({
+@@ -299,33 +350,109 @@ export default grammar({
              /[a-zA-Z0-9_]+|\?/,
            ),
          ),
@@ -290,7 +290,10 @@ index 1f8b448..7e37a70 100644
 +          ),
 +          // sloplint: word that starts with a variable and continues as a
 +          // path, as in $env:TEMP\x.ps1 or ${root}/bin.
-+          /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)[\\\/][^\&\s\u00A0\(\)\}\|;,]*/,
++          new RegExp(
++            /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)[\\\/]/.source +
++              wordTail(/[^&\s\u00A0()}|;,"'`]/.source),
++          ),
 +          // sloplint: bare escape sequence used as a word, as in
 +          // Write-Host `r`n — expandable-string content without quotes.
 +          new RegExp(WORD_ESC + wordTail(/[^&\s\u00A0()}|;,"'`]/.source)),
@@ -359,7 +362,7 @@ index 1f8b448..7e37a70 100644
        repeat1(choice(/"[^"]*"/, /&[^&]*/, /[^\|\r\n]+/)),
  
      // Grammar
-@@ -392,20 +516,27 @@ export default grammar({
+@@ -392,20 +519,27 @@ export default grammar({
            $.function_statement,
            $.class_statement,
            $.enum_statement,
@@ -387,7 +390,7 @@ index 1f8b448..7e37a70 100644
      empty_statement: ($) => prec(PREC.EMPTY, ';'),
  
      background_operator: ($) => '&',
-@@ -469,30 +600,32 @@ export default grammar({
+@@ -469,30 +603,32 @@ export default grammar({
          seq('(', $.pipeline, ')'),
          seq(reservedWord('-file'), $.switch_filename),
        ),
@@ -422,7 +425,7 @@ index 1f8b448..7e37a70 100644
          reservedWord('in'),
          $.pipeline,
          ')',
-@@ -561,51 +694,65 @@ export default grammar({
+@@ -561,51 +697,65 @@ export default grammar({
      do_statement: ($) =>
        seq(
          reservedWord('do'),
@@ -490,7 +493,29 @@ index 1f8b448..7e37a70 100644
          $.statement_block,
          choice(
            seq($.catch_clauses, optional($.finally_clause)),
-@@ -747,95 +894,155 @@ export default grammar({
+@@ -726,116 +876,177 @@ export default grammar({
+ 
+     _string_literal_immediate: ($) =>
+       seq(
+         /[^']+/,
+         '\'',
+       ),
+ 
+     command_name: ($) =>
+       seq(
+         choice(
+-          /[^\{\}\(\);,\|\&`"'\s\r\n\[\]\+\-\*\/\$@<\!]+/,
++          /[^\{\}\(\);,\|\&`"'\s\u00A0\r\n\[\]\+\-\*\/\$@<\!]+/,
+           // tree-sitter does not allow to control lexer
+           // each start keyword into _statement rule must be present here
+           // https://github.com/airbus-cert/tree-sitter-powershell/issues/24
+           new RegExp(caseInsensitive('break-')),
+           new RegExp(caseInsensitive('continue-')),
+           new RegExp(caseInsensitive('throw-')),
+           new RegExp(caseInsensitive('return-')),
+           new RegExp(caseInsensitive('exit-')),
+           new RegExp(caseInsensitive('try-')),
+           new RegExp(caseInsensitive('trap-')),
            new RegExp(caseInsensitive('if-')),
            new RegExp(caseInsensitive('function-')),
            new RegExp(caseInsensitive('filter-')),
@@ -516,7 +541,9 @@ index 1f8b448..7e37a70 100644
          ),
          repeat(
            choice(
-             token.immediate(/[^\{\}\(\);,\|\&"'\s\r\n]+/),
+-            token.immediate(/[^\{\}\(\);,\|\&"'\s\r\n]+/),
++            token.immediate(/[^\{\}\(\);,\|\&`"'\s\u00A0\r\n]+/),
++            token.immediate(new RegExp(WORD_ESC)),
              seq(token.immediate('"'), $._expandable_string_literal_immediate),
              seq(token.immediate('\''), $._string_literal_immediate),
              token.immediate('""'),
@@ -661,7 +688,7 @@ index 1f8b448..7e37a70 100644
          optional($.attribute),
          repeat($.class_attribute),
          optional($.type_literal),
-@@ -850,59 +1057,86 @@ export default grammar({
+@@ -850,59 +1061,86 @@ export default grammar({
  
      class_method_definition: ($) =>
        seq(
@@ -749,7 +776,7 @@ index 1f8b448..7e37a70 100644
              choice(
                reservedWord('-and'),
                reservedWord('-or'),
-@@ -1001,21 +1235,49 @@ export default grammar({
+@@ -1001,21 +1239,49 @@ export default grammar({
          $.pre_decrement_expression,
          $.cast_expression,
          seq(reservedWord('-split'), $.unary_expression),
@@ -800,7 +827,7 @@ index 1f8b448..7e37a70 100644
          $.element_access,
          $.invokation_expression,
          $.post_increment_expression,
-@@ -1035,22 +1297,26 @@ export default grammar({
+@@ -1035,22 +1301,26 @@ export default grammar({
        ),
  
      parenthesized_expression: ($) => seq('(', $.pipeline, ')'),
@@ -828,7 +855,7 @@ index 1f8b448..7e37a70 100644
        seq(
          $.key_expression,
          '=',
-@@ -1094,25 +1360,31 @@ export default grammar({
+@@ -1094,25 +1364,31 @@ export default grammar({
          seq(
            $._primary_expression,
            token.immediate('.'),
@@ -862,7 +889,7 @@ index 1f8b448..7e37a70 100644
          ')',
        ),
  
-@@ -1138,24 +1410,27 @@ export default grammar({
+@@ -1138,24 +1414,27 @@ export default grammar({
            ),
          ),
        ),
@@ -893,7 +920,7 @@ index 1f8b448..7e37a70 100644
        prec.left(
          choice(
            $.additive_argument_expression,
-@@ -1206,46 +1481,63 @@ export default grammar({
+@@ -1206,46 +1485,63 @@ export default grammar({
      range_argument_expression: ($) =>
        prec.left(
          choice(
@@ -1154,7 +1181,7 @@ index b46de2b..a94753f 100644
      return NULL;
  }
 diff --git a/test/corpus/native_arguments.txt b/test/corpus/native_arguments.txt
-index e91d0a4..5797c6a 100644
+index e91d0a4..6043257 100644
 --- a/test/corpus/native_arguments.txt
 +++ b/test/corpus/native_arguments.txt
 @@ -37,21 +37,21 @@ cargo test -p core -- --nocapture --test-threads=1
@@ -1301,7 +1328,7 @@ index e91d0a4..5797c6a 100644
  ---
  
  (program
-@@ -412,10 +415,335 @@ Write-Output a & Write-Output b
+@@ -412,10 +415,448 @@ Write-Output a & Write-Output b
              (generic_token)
              (command_argument_sep)))))
      (background_operator)
@@ -1637,3 +1664,116 @@ index e91d0a4..5797c6a 100644
 +          (command_elements
 +            (command_argument_sep)
 +            (command_parameter)))))))
++
++===
++Native: quoted variable path preserves NBSP
++===
++
++git add -- $env:TEMP/"first part"
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name)
++          (command_elements
++            (command_argument_sep)
++            (generic_token)
++            (command_parameter)
++            (command_argument_sep)
++            (generic_token)))))))
++
++===
++Native: escaped variable path preserves NBSP
++===
++
++git add -- $env:TEMP/first` part
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name)
++          (command_elements
++            (command_argument_sep)
++            (generic_token)
++            (command_parameter)
++            (command_argument_sep)
++            (generic_token)))))))
++
++===
++Native: unquoted variable path splits at NBSP
++===
++
++git add -- $env:TEMP/first part
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name)
++          (command_elements
++            (command_argument_sep)
++            (generic_token)
++            (command_parameter)
++            (command_argument_sep)
++            (generic_token)
++            (command_argument_sep)
++            (generic_token)))))))
++
++===
++Native: NBSP delimits command name
++===
++
++git status
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name)
++          (command_elements
++            (command_argument_sep)
++            (generic_token)))))))
++
++===
++Native: quoted command name preserves NBSP
++===
++
++git"first part"
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name))))))
++
++===
++Native: escaped command name preserves NBSP
++===
++
++git` status
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name))))))

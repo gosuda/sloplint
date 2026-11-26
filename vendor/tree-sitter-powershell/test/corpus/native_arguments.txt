@@ -747,3 +747,116 @@ Write-Output -second
           (command_elements
             (command_argument_sep)
             (command_parameter)))))))
+
+===
+Native: quoted variable path preserves NBSP
+===
+
+git add -- $env:TEMP/"first part"
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)
+            (command_parameter)
+            (command_argument_sep)
+            (generic_token)))))))
+
+===
+Native: escaped variable path preserves NBSP
+===
+
+git add -- $env:TEMP/first` part
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)
+            (command_parameter)
+            (command_argument_sep)
+            (generic_token)))))))
+
+===
+Native: unquoted variable path splits at NBSP
+===
+
+git add -- $env:TEMP/first part
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)
+            (command_parameter)
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (generic_token)))))))
+
+===
+Native: NBSP delimits command name
+===
+
+git status
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)))))))
+
+===
+Native: quoted command name preserves NBSP
+===
+
+git"first part"
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name))))))
+
+===
+Native: escaped command name preserves NBSP
+===
+
+git` status
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name))))))
