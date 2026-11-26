@@ -11,8 +11,8 @@
   "upstream_source_sha256": "350b1e5a052e2f016efa17791f3a56dfb1c849ae43df14b7d2f91fda100e3bc0",
   "proof_sha256": {
     "candidate-build.mjs": "48af351f5188ae99dc739f5ae30b88de0e3bb11cb4353864e41300d822b8fcce",
-    "repository-browser.mjs": "2187f5f10f9a310a19fdb85a0ff3725e23b52de14a351ac06fb1df935e0ac395",
-    "final-verify.py": "c708c31848cf41f761dbe48b8ee5d51caa950f9a54ea4462b71963a8d57a99b0"
+    "repository-browser.mjs": "8dd918a536ff12d248db6c44c02c0957f8625d379fb316f8c3184488030ce22b",
+    "final-verify.py": "b74ff3e7d1d3babd0c09c50d1e734868aedcd8d2f161cb079a1256f201cb3417"
   },
   "go": "1.27.4",
   "node": "26.13.1",
@@ -22,5 +22,10 @@
     "run": 45844308833,
     "artifact": 15131920439,
     "zip_sha256": "cb800c52e4cf3540b43935ed4dea01dca79b7adde4408223e3c19844fd561b9c"
+  },
+  "existing_test_correction": {
+    "source": "docs/spec/docs-public-edit.md rule 10",
+    "contract": "A viewer receives no presence; replace the stale random presence-name expectation with an empty presence assertion.",
+    "unmodified_baseline_required": true
   }
 }

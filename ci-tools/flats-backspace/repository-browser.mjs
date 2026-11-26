@@ -368,12 +368,10 @@ try {
     await publicPage.locator("#page footer.powered a").getAttribute("href"),
     "https://github.com/gosuda/flats",
   );
-  await wait(
-    async () =>
-      /^[A-Z][a-z]+ [A-Z][a-z]+$/m.test(
-        await publicPage.locator("#presence").innerText(),
-      ),
-    "random name was not assigned",
+  assert.equal(
+    await publicPage.locator("#presence").innerText(),
+    "",
+    "public viewer received editor presence",
   );
   await b.locator(".cm-content").focus();
   await b.keyboard.press("ControlOrMeta+End");

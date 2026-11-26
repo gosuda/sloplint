@@ -53,6 +53,10 @@ for phase in ("baseline", "candidate"):
     environment["FLATS_DOCS_BROWSER_EVIDENCE"] = str(screenshots)
     environment["FLATS_DOCS_BROWSER_TEST"] = "1"
     try:
+        if phase == "baseline":
+            original_result = run(browser_args, root, "unmodified-main-browser")
+            assert original_result.returncode == 1
+            assert "random name was not assigned" in original_result.stdout
         (root / "internal/apps/docs/testdata/browser_test.mjs").write_bytes((proof / "repository-browser.mjs").read_bytes())
         if phase == "candidate":
             web = root / "internal/apps/docs/_web"
