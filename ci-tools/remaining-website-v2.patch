@@ -1,0 +1,2107 @@
+diff --git a/.github/workflows/pr-gate.yml b/.github/workflows/pr-gate.yml
+--- a/.github/workflows/pr-gate.yml
++++ b/.github/workflows/pr-gate.yml
+@@ -1,40 +1,61 @@
+-name: PR Gate
+-
+-on:
+-  pull_request:
+-    branches: ["main"]
+-
+-jobs:
+-  pr-gate:
+-    runs-on: ubuntu-latest
+-    permissions:
+-      contents: "read"
+-
+-    steps:
+-      - uses: actions/checkout@v4
+-
+-      - name: Set up Go
+-        uses: actions/setup-go@v5
+-        with:
+-          go-version: "stable"
+-          check-latest: true
+-
+-      - name: Set up Bun
+-        uses: oven-sh/setup-bun@v2
+-        with:
+-          bun-version: latest
+-
+-      - name: Install Dependencies
+-        run: npm install
+-
+-      - name: Check Markdown Formatting
+-        run: npm run format:check
+-
+-      - name: Lint Markdown
+-        run: npm run lint:md
+-
+-      - name: Go Test
+-        run: go test -v ./...
+-
+-      - name: Check Retranslation Target Limit (<= 4)
+-        run: LLM_INIT=false go run . check_retranslate 4
++name: PR Gate
++
++on:
++  pull_request:
++    branches: ["main"]
++
++# A newer push supersedes older runs on the same pull request.
++concurrency:
++  group: ${{ github.workflow }}-${{ github.ref }}
++  cancel-in-progress: true
++
++permissions: {}
++
++jobs:
++  pr-gate:
++    runs-on: depot-ubuntu-24.04
++    permissions:
++      contents: "read"
++
++    steps:
++      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
++
++      - name: Set up Go
++        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
++        with:
++          go-version: "1.27"
++          cache: true
++
++      - name: Set up Bun
++        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
++        with:
++          bun-version: 1.4.5
++
++      - name: Cache npm store
++        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
++        with:
++          path: ~/.npm
++          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
++          restore-keys: |
++            npm-${{ runner.os }}-
++
++      - name: Install Dependencies
++        run: npm ci
++
++      - name: Check Markdown Formatting
++        run: npm run format:check
++
++      - name: Lint Markdown
++        run: npm run lint:md
++
++      - name: Go Test
++        run: |
++          export GOENV=off GOCACHEPROG=''
++          test -z "$(go env GOCACHEPROG)"
++          go test -v ./...
++
++      - name: Check Retranslation Target Limit (<= 4)
++        run: |
++          export GOENV=off GOCACHEPROG=''
++          test -z "$(go env GOCACHEPROG)"
++          LLM_INIT=false go run . check_retranslate 4
+diff --git a/.github/workflows/update.yml b/.github/workflows/update.yml
+--- a/.github/workflows/update.yml
++++ b/.github/workflows/update.yml
+@@ -1,45 +1,69 @@
+-name: Update Blog Metadata
+-
+-on:
+-  push:
+-    branches: ["main"]
+-  workflow_dispatch:
+-
+-jobs:
+-  update:
+-    runs-on: ubuntu-latest
+-    permissions:
+-      id-token: "write"
+-      contents: "write"
+-
+-    steps:
+-      - uses: actions/checkout@v4
+-        with:
+-          token: ${{ secrets.GITHUB_TOKEN }}
+-
+-      - name: Set up Go
+-        uses: actions/setup-go@v5
+-        with:
+-          go-version: "stable"
+-          check-latest: true
+-
+-      - name: Set up Bun
+-        uses: oven-sh/setup-bun@v2
+-        with:
+-          bun-version: latest
+-
+-      - name: Go Test
+-        run: go test -v ./...
+-
+-      - name: Update Metadata
+-        run: ./build.sh
+-        env:
+-          PROVIDER: openrouter
+-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+-
+-      - name: Commit Changes
+-        uses: EndBug/add-and-commit@v9
+-        with:
+-          message: "feat(blog): Update blog metadata"
+-          committer_name: GitHub Actions
+-          committer_email: 41898282+github-actions[bot]@users.noreply.github.com
++name: Update Blog Metadata
++
++on:
++  push:
++    branches: ["main"]
++    paths-ignore:
++      - ".github/**"
++      - "**/*_test.go"
++  workflow_dispatch:
++
++# Publish the current main tree. Keep the active publisher and coalesce pending
++# refreshes: the next run includes every change already present on main.
++concurrency:
++  group: blog-metadata-main
++  cancel-in-progress: false
++
++permissions: {}
++
++jobs:
++  update:
++    runs-on: depot-ubuntu-24.04
++    timeout-minutes: 20
++    permissions:
++      id-token: "write"
++      contents: "write"
++
++    steps:
++      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
++        with:
++          token: ${{ secrets.GITHUB_TOKEN }}
++          ref: main
++          fetch-depth: 0
++
++      - name: Set up Go
++        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
++        with:
++          go-version: "1.27"
++          cache: true
++
++      - name: Set up Bun
++        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
++        with:
++          bun-version: 1.4.5
++
++      - name: Cache npm store
++        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
++        with:
++          path: ~/.npm
++          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
++          restore-keys: |
++            npm-${{ runner.os }}-
++
++      - name: Update Metadata
++        run: |
++          export GOENV=off GOCACHEPROG=''
++          test -z "$(go env GOCACHEPROG)"
++          ./build.sh
++        env:
++          PROVIDER: openrouter
++          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
++
++      - name: Commit Changes
++        uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5 # v9
++        with:
++          message: "feat(blog): Update blog metadata"
++          pull: '--rebase --autostash'
++          push: 'origin HEAD:main'
++          committer_name: GitHub Actions
++          committer_email: 41898282+github-actions[bot]@users.noreply.github.com
+diff --git a/root/blog/docker-in-docker-inside-gvisor-with-gvx.md b/root/blog/docker-in-docker-inside-gvisor-with-gvx.md
+--- a/root/blog/docker-in-docker-inside-gvisor-with-gvx.md
++++ b/root/blog/docker-in-docker-inside-gvisor-with-gvx.md
+@@ -1,244 +1,244 @@
+----
+-id: 83fb2c108243a7df80db3a6e78290daf
+-author: Lemon Mint
+-title: Running Docker-in-Docker Inside gVisor and Nested Sandboxes with gvx
+-description: Why installing docker.io or nesting runsc inside a gVisor container fails across modprobe, iptables-nft, overlay2, cgroups, and seccomp EBUSY, and how gvx securely runs nested docker:dind inside an isolated user-space kernel without --privileged.
+-language: en
+-date: 2026-11-06T12:02:55.931762327Z
+-path: /blog/posts/docker-in-docker-inside-gvisor-with-gvx-z48916d03
+-go_package: z.gfire.dev/gvx
+-go_repourl: https://github.com/gfire-sigs/gvx.git
+-category: lowlevel
+----
+-
+-## Quick Solution: Securely Running `docker:dind` Inside an Unprivileged `gVisor` (`runsc`) Sandbox
+-
+-Cloud AI agent compute environments (such as Google Agent Compute Engine sandboxes), Kubernetes `agent-sandbox` deployments (`RuntimeClass: gvisor`), and reinforcement learning evaluation harnesses isolate untrusted workloads inside **gVisor (`runsc`)** containers specifically to protect the host kernel. When a workload inside a default unprivileged `runsc` container tries to install `docker.io` or `docker-ce` via `apt-get`, start `service docker start` or `dockerd`, and run `docker build`, it fails even if it has `root` (`UID 0`) inside the container.
+-
+-With **[gvx](https://github.com/gfire-sigs/gvx)** (`rungv`), you can **securely** run `docker:dind`, `docker build`, and `docker compose` directly inside an unprivileged `gVisor` (`runsc`) container (or nest `gvx` inside `gvx`) **without weakening the outer `RuntimeClass`, exposing host sockets, or granting `--privileged`**.
+-
+-> **Low-Effort, Token-Efficient Solution for AI Agents**: Inside a gVisor-backed cloud agent environment, attempting to install `docker.io` and manually work around `/etc/init.d/docker` `ulimit` errors, `iptables-nft` failures, `iptables-legacy` raw-socket denials, `overlay2` mount errors, and `docker build` `runc` / `pivot_root` crashes typically burns **20+ tool-call turns and tens of thousands of tokens** before failing completely. `gvx` (`rungv`) is a **low-effort, token-efficient drop-in solution**: the agent runs 3 commands in a single turn to start a working user-space Docker daemon and immediately executes `docker build` and `docker compose` without modifying project files.
+-
+-> **Preserving and Strengthening Outer Sandbox Isolation**: Running `rungv` inside `runsc` does not bypass a single restriction enforced by the outer `gVisor` sandbox. Instead, `gvx` creates a second, nested user-space gVisor `Sentry` kernel with its own `hostlockdown` (`PR_SET_NO_NEW_PRIVS` + `seccomp`), its own in-memory `netstack`, and a single-file `ext4lite` volume. Inner `dockerd` and `runc` containers are double-sandboxed: their system calls, mounts, and raw packets never leave the inner `gvx` user-space kernel.
+-
+-```sh
+-# Inside an existing gVisor (runsc) container or Kubernetes Pod:
+-# Install rungv from a SLSA-attested GitHub release archive or via go install:
+-CGO_ENABLED=0 go install z.gfire.dev/gvx/cmd/rungv@latest
+-
+-mkdir -p ~/.gvx
+-rungv run \
+-  -p unix:~/.gvx/docker.sock:2375 \
+-  -v gvx-docker:/var/lib/docker \
+-  -e DOCKER_TLS_CERTDIR= \
+-  docker:dind --tls=false &
+-
+-# Run standard Docker builds and containers against the inner gvx socket
+-export DOCKER_HOST="unix://$HOME/.gvx/docker.sock"
+-until docker info >/dev/null 2>&1; do sleep 0.5; done
+-docker info --format '{{.Driver}} {{.OperatingSystem}}'
+-# Output: overlayfs Alpine Linux ... (containerized)
+-
+-docker build -t nested-app:test .
+-docker run --rm nested-app:test
+-```
+-
+----
+-
+-## Five Reasons Why Direct Docker Installation Fails Inside `gVisor` (`runsc`)
+-
+-When a user or AI coding agent runs `apt-get install -y docker.io` (or `docker-ce`) inside a standard `runsc` container and attempts to start `dockerd`, it hits five sequential technical barriers.
+-
+-### 1. Init Script (`systemctl` / `service docker start` `ulimit`) and Kernel Module (`modprobe` `4.4.0`) Failures
+-
+-After running `apt-get install -y docker.io` (or `docker-ce`), attempting to start the daemon via `systemctl start docker` or `service docker start` fails immediately because PID 1 is not `systemd` and `/etc/init.d/docker` attempts to raise `ulimit -n` above the sandbox's hard `RLIMIT_NOFILE` ceiling. When `dockerd` is then invoked directly, initialization scripts call `modprobe` to load `overlay`, `bridge`, `br_netfilter`, `ip_tables`, and `nf_nat` against gVisor's virtual kernel version (`4.4.0`), which has no `/lib/modules/4.4.0` directory:
+-
+-```text
+-System has not been booted with systemd as init system (PID 1). Can't operate.
+-Failed to connect to bus: Host is down
+-/etc/init.d/docker: 62: ulimit: error setting limit (Operation not permitted)
+-level=warning msg="Running modprobe bridge br_netfilter failed with message: modprobe: WARNING: Module bridge not found in directory /lib/modules/4.4.0\nmodprobe: WARNING: Module br_netfilter not found in directory /lib/modules/4.4.0\n, error: exit status 1"
+-modprobe: FATAL: Module overlay not found in directory /lib/modules/4.4.0
+-modprobe: FATAL: Module br_netfilter not found in directory /lib/modules/4.4.0
+-modprobe: FATAL: Module ip_tables not found in directory /lib/modules/4.4.0
+-modprobe: FATAL: Module nf_nat not found in directory /lib/modules/4.4.0
+-```
+-
+-### 2. `iptables-nft` (`nf_tables` Netlink), `iptables-legacy` Raw Socket Denials, and `docker0` Bridge Failures
+-
+-On Ubuntu 22.04, Ubuntu 24.04, and Debian 11/12, `apt-get install docker.io` selects `iptables-nft` (backed by the `nf_tables` netlink subsystem) as the default `/usr/sbin/iptables` alternative. Furthermore, even if the user or agent switches to `iptables-legacy` (`update-alternatives --set iptables /usr/sbin/iptables-legacy`), default unprivileged gVisor sandboxes (`--net-raw=false`) reject `AF_INET, SOCK_RAW` sockets with `EPERM`, causing `iptables-legacy` to fail with `Permission denied (you must be root)` even when running as `UID 0`:
+-
+-```text
+-failed to start daemon: Error initializing network controller: error obtaining controller instance: failed to register "bridge" driver: failed to create NAT chain DOCKER: iptables failed: iptables --wait -t nat -N DOCKER: iptables v1.8.10 (nf_tables): Could not fetch rule set generation id: Invalid argument
+-iptables v1.8.10 (legacy): can't initialize iptables table `nat': Permission denied (you must be root)
+-Perhaps iptables or your kernel needs to be upgraded.
+-iptables v1.8.10 (legacy): can't initialize iptables table 'nat': Table does not exist (do you need to insmod?)
+-iptables: No chain/target/match by that name.
+-Unable to enable SKIP DNAT rule: (iptables failed: iptables --wait -t nat -I DOCKER -i docker0 -j RETURN: iptables: No chain/target/match by that name.)
+-Error initializing network controller: error obtaining controller instance: failed to create bridge "docker0": operation not permitted
+-```
+-
+-### 3. `overlay2` Failure on `gofer` / `9p` Rootfs and `vfs` Disk Exhaustion
+-
+-Unless the outer `runsc` administrator explicitly pre-configured a dedicated `tmpfs` or filestore mount at `/var/lib/docker`, the container rootfs is backed by gVisor's `gofer` (`9p`/`lisafs`) or a nested overlay mount. Mounting `overlay2` on top of `/var/lib/docker` fails:
+-
+-```text
+-level=error msg="[graphdriver] prior storage driver overlay2 failed: driver not supported"
+-failed to mount overlay: invalid argument
+-Error starting daemon: error initializing graphdriver: driver not supported: overlay2
+-```
+-
+-When users or agents attempt to bypass this error by starting `dockerd --storage-driver=vfs`, Docker disables Copy-on-Write layer sharing completely. Every `RUN` instruction in a `Dockerfile` performs a full recursive copy (`dirCopy`) of the entire root filesystem, multiplying a 500 MB image across 10 build steps into 5 GB of writes and terminating the sandbox with `no space left on device` or an I/O timeout.
+-
+-### 4. `docker build` (BuildKit) and Nested `runc` Failures (`pivot_root`, `/proc`, Cgroups, and DNS)
+-
+-Even if `dockerd` is forced to start with `dockerd --iptables=false --ip6tables=false --bridge=none --storage-driver=vfs`, attempting to run **`docker build -t app .`** or `docker run` fails immediately when BuildKit or `runc` spawns the build container:
+-
+-```text
+-ERROR: failed to solve: process "/bin/sh -c ..." did not complete successfully:
+-docker: Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process:
+-error during container init: error jailing process inside rootfs: pivot_root .: invalid argument
+-error during container init: error mounting "cgroup" to rootfs at "/sys/fs/cgroup": mount cgroup:/sys/fs/cgroup/cpuset (via /proc/self/fd/6), flags: 0xf, data: cpuset: operation not permitted
+-cgroups: cgroup mountpoint does not exist: unknown
+-runc create failed: systemd not running on this host: cannot use systemd cgroup manager
+-error during container init: error mounting "proc" to rootfs at "/proc": mount proc:/proc (via /proc/self/fd/6), flags: 0xe: operation not permitted
+-error during container init: error loading seccomp filter into kernel: operation not permitted
+-Temporary failure resolving 'deb.debian.org'
+-Temporary failure resolving 'archive.ubuntu.com'
+-```
+-
+-### 5. Nested `runsc` Fails with `SECCOMP_FILTER_FLAG_NEW_LISTENER` (`EBUSY`)
+-
+-If a user tries to run another `runsc` instance inside `runsc` using the `systrap` platform, initialization aborts immediately:
+-
+-```text
+-creating subprocess: sysmsg: failed to initialize thread: failed to install seccomp notify rules: device or resource busy
+-```
+-
+-Both the Linux kernel and the gVisor Sentry allow **at most one** `SECCOMP_FILTER_FLAG_NEW_LISTENER` (`SECCOMP_RET_USER_NOTIF`) listener per task hierarchy. Because the outer sandbox already holds that listener slot, the inner `seccomp(2)` call returns `EBUSY` (`device or resource busy`).
+-
+----
+-
+-## How `gvx` Solves Nested Execution Inside `gVisor`
+-
+-`gvx` addresses all five barriers inside its own user-space kernel and platform layer, enabling `rungv` to run inside an outer `gVisor` (`runsc`) container or even recursively inside another `gvx` container (`gvx` in `gvx`).
+-
+-![Nested gvx Execution Inside Outer gVisor](/assets/images/gvx/gvx-nested-seccomp-futex.png)
+-
+-### 1. Automatic `systrap` Fallback from `EBUSY` to the `_RUN_SYSCALL_LOOP` Futex Loop
+-
+-In Linux `systrap`, each stub subprocess runs two kinds of threads:
+-
+-- **Guest execution threads (`sysmsg`)**: Trap guest system calls via `SECCOMP_RET_TRAP` (`SIGSYS`) and binary-patched `jmp rel32` trampolines (`syshandler`), exchanging register state with the Sentry over shared memory and `SYS_FUTEX`.
+-- **A stub `syscallThread` (`syscall_thread.go`)**: Executes address-space system calls (`mmap`, `munmap`, `clone`) inside the stub subprocess on behalf of the Sentry.
+-
+-In upstream gVisor, `syscallThread` supports two wake-up modes in `stub_amd64.s` and `stub_arm64.s`:
+-
+-1. **Seccomp User-Notify Loop (`_RUN_SECCOMP_LOOP = 6`, when `t.seccompNotify != nil`)**: During `syscallThread.init()`, `t.installSeccompNotify()` installs a `SECCOMP_RET_USER_NOTIF` listener (`seccomp(SECCOMP_SET_MODE_FILTER, SECCOMP_FILTER_FLAG_NEW_LISTENER, stubSyscallRules)`) so the Sentry can dispatch requests via `ioctl(SECCOMP_IOCTL_NOTIF_SEND)` and `ioctl(SECCOMP_IOCTL_NOTIF_RECV)`.
+-2. **Futex Syscall Loop (`_RUN_SYSCALL_LOOP = 5`, when `t.seccompNotify == nil`)**: The `syscallThread` runs `syscall_loop` (`stub_amd64.s` / `stub_arm64.s`), sleeping on `SYS_FUTEX` (`FUTEX_WAIT`) over the shared 2-page `syscallSentryMessage` (`PROT_READ` in the stub) and `syscallStubMessage` (`PROT_READ | PROT_WRITE` in the stub) region.
+-
+-Upstream gVisor unconditionally calls `t.installSeccompNotify()` whenever `seccompNotifyIsSupported` is true, and aborts stub creation if `seccomp(SECCOMP_SET_MODE_FILTER, SECCOMP_FILTER_FLAG_NEW_LISTENER, ...)` returns `EBUSY`.
+-
+-In `gvx` (`pkg/sentry/platform/systrap/seccomp_notify_xplat.go` and `syscall_thread.go`), `syscallThread.init()` calls `t.installSeccompNotifyIfFree()`:
+-
+-```go
+-// pkg/sentry/platform/systrap/seccomp_notify_xplat.go
+-var seccompNotifyBusy atomic.Bool
+-
+-func (t *syscallThread) installSeccompNotifyIfFree() (*os.File, error) {
+-	if seccompNotifyBusy.Load() {
+-		return nil, nil
+-	}
+-	f, err := t.installSeccompNotify()
+-	if errors.Is(err, unix.EBUSY) {
+-		if seccompNotifyBusy.CompareAndSwap(false, true) {
+-			log.Warningf("Another seccomp listener exists in the filter chain of the host process. " +
+-				"The stub threads use the slower futex loop instead of seccomp-unotify.")
+-		}
+-		return nil, nil
+-	}
+-	return f, err
+-}
+-```
+-
+-When `installSeccompNotify()` returns `unix.EBUSY` because an outer `gVisor` (`runsc`) or outer `gvx` sandbox already holds the process filter chain's single listener slot:
+-
+-- `installSeccompNotifyIfFree()` sets `seccompNotifyBusy` (`atomic.Bool`), logs one warning for the process, and leaves `t.seccompNotify == nil` for that stub and all subsequent stubs.
+-- In `syscallThread.detach()` (`syscall_thread_amd64.go` and `syscall_thread_arm64.go`), `t.seccompNotify == nil` sets `regs.Rbx = _RUN_SYSCALL_LOOP` (`5`) on `amd64` (or `regs.Regs[9] = _RUN_SYSCALL_LOOP` on `arm64`) instead of `_RUN_SECCOMP_LOOP` (`6`).
+-- In `syscallThread.syscall()` (`syscall_thread.go`), the inner Sentry dispatches stub syscalls purely through shared memory and `SYS_FUTEX`:
+-
+-```go
+-// pkg/sentry/platform/systrap/syscall_thread.go
+-// Notify the syscall thread about a new syscall request.
+-atomic.AddUint32(&sentryMsg.state, 1)
+-futexWakeUint32(&sentryMsg.state)
+-
+-// Wait for reply.
+-futexWaitWake(&sentryMsg.state, atomic.LoadUint32(&sentryMsg.state))
+-```
+-
+-Because `SECCOMP_RET_TRAP` filters on guest threads stack arbitrarily deep and `syscallThread` falls back to `_RUN_SYSCALL_LOOP` without requesting a second user-notification listener, `gvx` runs cleanly inside `runsc` and supports recursive nesting (`gvx` inside `gvx`).
+-
+-### 2. Native `overlayfs` on Single-File `ext4lite` Volumes
+-
+-To avoid mounting `overlayfs` on top of the outer gVisor container's `gofer` (`9p`/`lisafs`) root filesystem, `-v gvx-docker:/var/lib/docker` backs `/var/lib/docker` with `gvx`'s internal **`ext4lite`** filesystem stored in a single regular file (`gvx-docker.ext4`).
+-
+-To outer `runsc`, `gvx-docker.ext4` is just one regular file accessed via `pread64(2)` and `pwrite64(2)`. Inside `gvx`, `ext4lite` provides a JBD2-journaled `ext4` filesystem with `trusted.overlay.*` and `security.capability` extended attributes, character device whiteout nodes (`0:0`), `d_type` directory entries, and `RENAME_EXCHANGE`, allowing the inner `dockerd` to use its native `overlayfs` storage driver.
+-
+-### 3. Self-Contained `netstack` with `docker0` and `iptables-legacy`
+-
+-Inside `gvx`, `dockerd` does not interact with the outer `runsc` container's network interfaces or netfilter tables. Instead:
+-
+-- `dockerd` creates its `docker0` bridge and `veth` pairs inside `gvx`'s own user-space `netstack`.
+-- All `iptables-legacy` rules (`-t nat -N DOCKER`, `MASQUERADE`, `conntrack`, `addrtype`) execute against `gvx`'s internal netfilter implementation.
+-- Nested `runc` containers mount their `/proc`, `/sys`, and `/sys/fs/cgroup` hierarchies inside `gvx`'s in-memory `VFS2` mount table, never calling the outer `runsc` `mount(2)` syscall.
+-
+----
+-
+-## Verifying Nested `docker:dind` Inside `gVisor` (or `gvx` in `gvx`)
+-
+-You can verify both scenarios (`rungv` inside `runsc`, or `rungv` inside `rungv`) with the following commands:
+-
+-```sh
+-# Inside an outer gVisor (runsc) container or an outer rungv container:
+-mkdir -p ~/.gvx
+-rungv run \
+-  -p unix:~/.gvx/docker.sock:2375 \
+-  -v gvx-docker:/var/lib/docker \
+-  -e DOCKER_TLS_CERTDIR= \
+-  docker:dind --tls=false &
+-DIND_PID=$!
+-
+-export DOCKER_HOST="unix://$HOME/.gvx/docker.sock"
+-until docker info >/dev/null 2>&1; do sleep 0.5; done
+-
+-# Verify that the inner Docker daemon is using native overlayfs (not vfs)
+-docker info --format 'Storage Driver: {{.Driver}}'
+-# Output: Storage Driver: overlayfs
+-
+-# Run a multi-layer build and execute a nested container
+-mkdir -p /tmp/nested-test && cd /tmp/nested-test
+-cat <<'EOF' > Dockerfile
+-FROM alpine:3.20
+-RUN adduser -D -u 1001 appuser && mkdir -p /app && chown appuser:appuser /app
+-USER appuser
+-WORKDIR /app
+-RUN echo "nested-build-ok" > status.txt
+-CMD ["cat", "/app/status.txt"]
+-EOF
+-
+-docker build -t nested-test:latest .
+-docker run --rm nested-test:latest
+-# Output: nested-build-ok
+-
+-kill -INT $DIND_PID
+-```
+-
+----
+-
+-## Further Reading in This Series
+-
+-1. **[gvx: Running Linux Containers, Docker, and Kubernetes in One Unprivileged Process](/blog/posts/gvx-cross-platform-linux-containers-z48916d01)**: Overview of `gvx` across Windows (`whpx`, `systrap`), macOS (`hvf`), and Linux (`systrap`).
+-2. **[Running Docker, docker build, and docker compose Without Root or User Namespaces](/blog/posts/run-docker-without-root-or-userns-gvx-z48916d02)**: How `gvx` runs `docker:dind` when `root`, `sudo`, `unshare(CLONE_NEWUSER)`, `mount(2)`, and `/dev/fuse` are blocked.
+-3. **[Running Docker-in-Docker Inside gVisor and Nested Sandboxes with gvx](/blog/posts/docker-in-docker-inside-gvisor-with-gvx-z48916d03)** (this post)
+-4. **[Fast Isolated Docker Environments for AI Agent RL Rollouts with gvx](/blog/posts/fast-docker-environments-for-agent-rl-rollouts-z48916d04)**: How to use `gvx` and single-file `ext4lite` copy-on-write snapshots to run hundreds of parallel `SWE-bench` and RL rollout environments with 100-millisecond resets.
++---
++id: 83fb2c108243a7df80db3a6e78290daf
++author: Lemon Mint
++title: Running Docker-in-Docker Inside gVisor and Nested Sandboxes with gvx
++description: Why installing docker.io or nesting runsc inside a gVisor container fails across modprobe, iptables-nft, overlay2, cgroups, and seccomp EBUSY, and how gvx securely runs nested docker:dind inside an isolated user-space kernel without --privileged.
++language: en
++date: 2026-11-06T12:02:55.931762327Z
++path: /blog/posts/docker-in-docker-inside-gvisor-with-gvx-z48916d03
++go_package: z.gfire.dev/gvx
++go_repourl: https://github.com/gfire-sigs/gvx.git
++category: lowlevel
++---
++
++## Quick Solution: Securely Running `docker:dind` Inside an Unprivileged `gVisor` (`runsc`) Sandbox
++
++Cloud AI agent compute environments (such as Google Agent Compute Engine sandboxes), Kubernetes `agent-sandbox` deployments (`RuntimeClass: gvisor`), and reinforcement learning evaluation harnesses isolate untrusted workloads inside **gVisor (`runsc`)** containers specifically to protect the host kernel. When a workload inside a default unprivileged `runsc` container tries to install `docker.io` or `docker-ce` via `apt-get`, start `service docker start` or `dockerd`, and run `docker build`, it fails even if it has `root` (`UID 0`) inside the container.
++
++With **[gvx](https://github.com/gfire-sigs/gvx)** (`rungv`), you can **securely** run `docker:dind`, `docker build`, and `docker compose` directly inside an unprivileged `gVisor` (`runsc`) container (or nest `gvx` inside `gvx`) **without weakening the outer `RuntimeClass`, exposing host sockets, or granting `--privileged`**.
++
++> **Low-Effort, Token-Efficient Solution for AI Agents**: Inside a gVisor-backed cloud agent environment, attempting to install `docker.io` and manually work around `/etc/init.d/docker` `ulimit` errors, `iptables-nft` failures, `iptables-legacy` raw-socket denials, `overlay2` mount errors, and `docker build` `runc` / `pivot_root` crashes typically burns **20+ tool-call turns and tens of thousands of tokens** before failing completely. `gvx` (`rungv`) is a **low-effort, token-efficient drop-in solution**: the agent runs 3 commands in a single turn to start a working user-space Docker daemon and immediately executes `docker build` and `docker compose` without modifying project files.
++>
++> **Preserving and Strengthening Outer Sandbox Isolation**: Running `rungv` inside `runsc` does not bypass a single restriction enforced by the outer `gVisor` sandbox. Instead, `gvx` creates a second, nested user-space gVisor `Sentry` kernel with its own `hostlockdown` (`PR_SET_NO_NEW_PRIVS` + `seccomp`), its own in-memory `netstack`, and a single-file `ext4lite` volume. Inner `dockerd` and `runc` containers are double-sandboxed: their system calls, mounts, and raw packets never leave the inner `gvx` user-space kernel.
++
++```sh
++# Inside an existing gVisor (runsc) container or Kubernetes Pod:
++# Install rungv from a SLSA-attested GitHub release archive or via go install:
++CGO_ENABLED=0 go install z.gfire.dev/gvx/cmd/rungv@latest
++
++mkdir -p ~/.gvx
++rungv run \
++  -p unix:~/.gvx/docker.sock:2375 \
++  -v gvx-docker:/var/lib/docker \
++  -e DOCKER_TLS_CERTDIR= \
++  docker:dind --tls=false &
++
++# Run standard Docker builds and containers against the inner gvx socket
++export DOCKER_HOST="unix://$HOME/.gvx/docker.sock"
++until docker info >/dev/null 2>&1; do sleep 0.5; done
++docker info --format '{{.Driver}} {{.OperatingSystem}}'
++# Output: overlayfs Alpine Linux ... (containerized)
++
++docker build -t nested-app:test .
++docker run --rm nested-app:test
++```
++
++---
++
++## Five Reasons Why Direct Docker Installation Fails Inside `gVisor` (`runsc`)
++
++When a user or AI coding agent runs `apt-get install -y docker.io` (or `docker-ce`) inside a standard `runsc` container and attempts to start `dockerd`, it hits five sequential technical barriers.
++
++### 1. Init Script (`systemctl` / `service docker start` `ulimit`) and Kernel Module (`modprobe` `4.4.0`) Failures
++
++After running `apt-get install -y docker.io` (or `docker-ce`), attempting to start the daemon via `systemctl start docker` or `service docker start` fails immediately because PID 1 is not `systemd` and `/etc/init.d/docker` attempts to raise `ulimit -n` above the sandbox's hard `RLIMIT_NOFILE` ceiling. When `dockerd` is then invoked directly, initialization scripts call `modprobe` to load `overlay`, `bridge`, `br_netfilter`, `ip_tables`, and `nf_nat` against gVisor's virtual kernel version (`4.4.0`), which has no `/lib/modules/4.4.0` directory:
++
++```text
++System has not been booted with systemd as init system (PID 1). Can't operate.
++Failed to connect to bus: Host is down
++/etc/init.d/docker: 62: ulimit: error setting limit (Operation not permitted)
++level=warning msg="Running modprobe bridge br_netfilter failed with message: modprobe: WARNING: Module bridge not found in directory /lib/modules/4.4.0\nmodprobe: WARNING: Module br_netfilter not found in directory /lib/modules/4.4.0\n, error: exit status 1"
++modprobe: FATAL: Module overlay not found in directory /lib/modules/4.4.0
++modprobe: FATAL: Module br_netfilter not found in directory /lib/modules/4.4.0
++modprobe: FATAL: Module ip_tables not found in directory /lib/modules/4.4.0
++modprobe: FATAL: Module nf_nat not found in directory /lib/modules/4.4.0
++```
++
++### 2. `iptables-nft` (`nf_tables` Netlink), `iptables-legacy` Raw Socket Denials, and `docker0` Bridge Failures
++
++On Ubuntu 22.04, Ubuntu 24.04, and Debian 11/12, `apt-get install docker.io` selects `iptables-nft` (backed by the `nf_tables` netlink subsystem) as the default `/usr/sbin/iptables` alternative. Furthermore, even if the user or agent switches to `iptables-legacy` (`update-alternatives --set iptables /usr/sbin/iptables-legacy`), default unprivileged gVisor sandboxes (`--net-raw=false`) reject `AF_INET, SOCK_RAW` sockets with `EPERM`, causing `iptables-legacy` to fail with `Permission denied (you must be root)` even when running as `UID 0`:
++
++```text
++failed to start daemon: Error initializing network controller: error obtaining controller instance: failed to register "bridge" driver: failed to create NAT chain DOCKER: iptables failed: iptables --wait -t nat -N DOCKER: iptables v1.8.10 (nf_tables): Could not fetch rule set generation id: Invalid argument
++iptables v1.8.10 (legacy): can't initialize iptables table `nat': Permission denied (you must be root)
++Perhaps iptables or your kernel needs to be upgraded.
++iptables v1.8.10 (legacy): can't initialize iptables table 'nat': Table does not exist (do you need to insmod?)
++iptables: No chain/target/match by that name.
++Unable to enable SKIP DNAT rule: (iptables failed: iptables --wait -t nat -I DOCKER -i docker0 -j RETURN: iptables: No chain/target/match by that name.)
++Error initializing network controller: error obtaining controller instance: failed to create bridge "docker0": operation not permitted
++```
++
++### 3. `overlay2` Failure on `gofer` / `9p` Rootfs and `vfs` Disk Exhaustion
++
++Unless the outer `runsc` administrator explicitly pre-configured a dedicated `tmpfs` or filestore mount at `/var/lib/docker`, the container rootfs is backed by gVisor's `gofer` (`9p`/`lisafs`) or a nested overlay mount. Mounting `overlay2` on top of `/var/lib/docker` fails:
++
++```text
++level=error msg="[graphdriver] prior storage driver overlay2 failed: driver not supported"
++failed to mount overlay: invalid argument
++Error starting daemon: error initializing graphdriver: driver not supported: overlay2
++```
++
++When users or agents attempt to bypass this error by starting `dockerd --storage-driver=vfs`, Docker disables Copy-on-Write layer sharing completely. Every `RUN` instruction in a `Dockerfile` performs a full recursive copy (`dirCopy`) of the entire root filesystem, multiplying a 500 MB image across 10 build steps into 5 GB of writes and terminating the sandbox with `no space left on device` or an I/O timeout.
++
++### 4. `docker build` (BuildKit) and Nested `runc` Failures (`pivot_root`, `/proc`, Cgroups, and DNS)
++
++Even if `dockerd` is forced to start with `dockerd --iptables=false --ip6tables=false --bridge=none --storage-driver=vfs`, attempting to run **`docker build -t app .`** or `docker run` fails immediately when BuildKit or `runc` spawns the build container:
++
++```text
++ERROR: failed to solve: process "/bin/sh -c ..." did not complete successfully:
++docker: Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process:
++error during container init: error jailing process inside rootfs: pivot_root .: invalid argument
++error during container init: error mounting "cgroup" to rootfs at "/sys/fs/cgroup": mount cgroup:/sys/fs/cgroup/cpuset (via /proc/self/fd/6), flags: 0xf, data: cpuset: operation not permitted
++cgroups: cgroup mountpoint does not exist: unknown
++runc create failed: systemd not running on this host: cannot use systemd cgroup manager
++error during container init: error mounting "proc" to rootfs at "/proc": mount proc:/proc (via /proc/self/fd/6), flags: 0xe: operation not permitted
++error during container init: error loading seccomp filter into kernel: operation not permitted
++Temporary failure resolving 'deb.debian.org'
++Temporary failure resolving 'archive.ubuntu.com'
++```
++
++### 5. Nested `runsc` Fails with `SECCOMP_FILTER_FLAG_NEW_LISTENER` (`EBUSY`)
++
++If a user tries to run another `runsc` instance inside `runsc` using the `systrap` platform, initialization aborts immediately:
++
++```text
++creating subprocess: sysmsg: failed to initialize thread: failed to install seccomp notify rules: device or resource busy
++```
++
++Both the Linux kernel and the gVisor Sentry allow **at most one** `SECCOMP_FILTER_FLAG_NEW_LISTENER` (`SECCOMP_RET_USER_NOTIF`) listener per task hierarchy. Because the outer sandbox already holds that listener slot, the inner `seccomp(2)` call returns `EBUSY` (`device or resource busy`).
++
++---
++
++## How `gvx` Solves Nested Execution Inside `gVisor`
++
++`gvx` addresses all five barriers inside its own user-space kernel and platform layer, enabling `rungv` to run inside an outer `gVisor` (`runsc`) container or even recursively inside another `gvx` container (`gvx` in `gvx`).
++
++![Nested gvx Execution Inside Outer gVisor](/assets/images/gvx/gvx-nested-seccomp-futex.png)
++
++### 1. Automatic `systrap` Fallback from `EBUSY` to the `_RUN_SYSCALL_LOOP` Futex Loop
++
++In Linux `systrap`, each stub subprocess runs two kinds of threads:
++
++- **Guest execution threads (`sysmsg`)**: Trap guest system calls via `SECCOMP_RET_TRAP` (`SIGSYS`) and binary-patched `jmp rel32` trampolines (`syshandler`), exchanging register state with the Sentry over shared memory and `SYS_FUTEX`.
++- **A stub `syscallThread` (`syscall_thread.go`)**: Executes address-space system calls (`mmap`, `munmap`, `clone`) inside the stub subprocess on behalf of the Sentry.
++
++In upstream gVisor, `syscallThread` supports two wake-up modes in `stub_amd64.s` and `stub_arm64.s`:
++
++1. **Seccomp User-Notify Loop (`_RUN_SECCOMP_LOOP = 6`, when `t.seccompNotify != nil`)**: During `syscallThread.init()`, `t.installSeccompNotify()` installs a `SECCOMP_RET_USER_NOTIF` listener (`seccomp(SECCOMP_SET_MODE_FILTER, SECCOMP_FILTER_FLAG_NEW_LISTENER, stubSyscallRules)`) so the Sentry can dispatch requests via `ioctl(SECCOMP_IOCTL_NOTIF_SEND)` and `ioctl(SECCOMP_IOCTL_NOTIF_RECV)`.
++2. **Futex Syscall Loop (`_RUN_SYSCALL_LOOP = 5`, when `t.seccompNotify == nil`)**: The `syscallThread` runs `syscall_loop` (`stub_amd64.s` / `stub_arm64.s`), sleeping on `SYS_FUTEX` (`FUTEX_WAIT`) over the shared 2-page `syscallSentryMessage` (`PROT_READ` in the stub) and `syscallStubMessage` (`PROT_READ | PROT_WRITE` in the stub) region.
++
++Upstream gVisor unconditionally calls `t.installSeccompNotify()` whenever `seccompNotifyIsSupported` is true, and aborts stub creation if `seccomp(SECCOMP_SET_MODE_FILTER, SECCOMP_FILTER_FLAG_NEW_LISTENER, ...)` returns `EBUSY`.
++
++In `gvx` (`pkg/sentry/platform/systrap/seccomp_notify_xplat.go` and `syscall_thread.go`), `syscallThread.init()` calls `t.installSeccompNotifyIfFree()`:
++
++```go
++// pkg/sentry/platform/systrap/seccomp_notify_xplat.go
++var seccompNotifyBusy atomic.Bool
++
++func (t *syscallThread) installSeccompNotifyIfFree() (*os.File, error) {
++	if seccompNotifyBusy.Load() {
++		return nil, nil
++	}
++	f, err := t.installSeccompNotify()
++	if errors.Is(err, unix.EBUSY) {
++		if seccompNotifyBusy.CompareAndSwap(false, true) {
++			log.Warningf("Another seccomp listener exists in the filter chain of the host process. " +
++				"The stub threads use the slower futex loop instead of seccomp-unotify.")
++		}
++		return nil, nil
++	}
++	return f, err
++}
++```
++
++When `installSeccompNotify()` returns `unix.EBUSY` because an outer `gVisor` (`runsc`) or outer `gvx` sandbox already holds the process filter chain's single listener slot:
++
++- `installSeccompNotifyIfFree()` sets `seccompNotifyBusy` (`atomic.Bool`), logs one warning for the process, and leaves `t.seccompNotify == nil` for that stub and all subsequent stubs.
++- In `syscallThread.detach()` (`syscall_thread_amd64.go` and `syscall_thread_arm64.go`), `t.seccompNotify == nil` sets `regs.Rbx = _RUN_SYSCALL_LOOP` (`5`) on `amd64` (or `regs.Regs[9] = _RUN_SYSCALL_LOOP` on `arm64`) instead of `_RUN_SECCOMP_LOOP` (`6`).
++- In `syscallThread.syscall()` (`syscall_thread.go`), the inner Sentry dispatches stub syscalls purely through shared memory and `SYS_FUTEX`:
++
++```go
++// pkg/sentry/platform/systrap/syscall_thread.go
++// Notify the syscall thread about a new syscall request.
++atomic.AddUint32(&sentryMsg.state, 1)
++futexWakeUint32(&sentryMsg.state)
++
++// Wait for reply.
++futexWaitWake(&sentryMsg.state, atomic.LoadUint32(&sentryMsg.state))
++```
++
++Because `SECCOMP_RET_TRAP` filters on guest threads stack arbitrarily deep and `syscallThread` falls back to `_RUN_SYSCALL_LOOP` without requesting a second user-notification listener, `gvx` runs cleanly inside `runsc` and supports recursive nesting (`gvx` inside `gvx`).
++
++### 2. Native `overlayfs` on Single-File `ext4lite` Volumes
++
++To avoid mounting `overlayfs` on top of the outer gVisor container's `gofer` (`9p`/`lisafs`) root filesystem, `-v gvx-docker:/var/lib/docker` backs `/var/lib/docker` with `gvx`'s internal **`ext4lite`** filesystem stored in a single regular file (`gvx-docker.ext4`).
++
++To outer `runsc`, `gvx-docker.ext4` is just one regular file accessed via `pread64(2)` and `pwrite64(2)`. Inside `gvx`, `ext4lite` provides a JBD2-journaled `ext4` filesystem with `trusted.overlay.*` and `security.capability` extended attributes, character device whiteout nodes (`0:0`), `d_type` directory entries, and `RENAME_EXCHANGE`, allowing the inner `dockerd` to use its native `overlayfs` storage driver.
++
++### 3. Self-Contained `netstack` with `docker0` and `iptables-legacy`
++
++Inside `gvx`, `dockerd` does not interact with the outer `runsc` container's network interfaces or netfilter tables. Instead:
++
++- `dockerd` creates its `docker0` bridge and `veth` pairs inside `gvx`'s own user-space `netstack`.
++- All `iptables-legacy` rules (`-t nat -N DOCKER`, `MASQUERADE`, `conntrack`, `addrtype`) execute against `gvx`'s internal netfilter implementation.
++- Nested `runc` containers mount their `/proc`, `/sys`, and `/sys/fs/cgroup` hierarchies inside `gvx`'s in-memory `VFS2` mount table, never calling the outer `runsc` `mount(2)` syscall.
++
++---
++
++## Verifying Nested `docker:dind` Inside `gVisor` (or `gvx` in `gvx`)
++
++You can verify both scenarios (`rungv` inside `runsc`, or `rungv` inside `rungv`) with the following commands:
++
++```sh
++# Inside an outer gVisor (runsc) container or an outer rungv container:
++mkdir -p ~/.gvx
++rungv run \
++  -p unix:~/.gvx/docker.sock:2375 \
++  -v gvx-docker:/var/lib/docker \
++  -e DOCKER_TLS_CERTDIR= \
++  docker:dind --tls=false &
++DIND_PID=$!
++
++export DOCKER_HOST="unix://$HOME/.gvx/docker.sock"
++until docker info >/dev/null 2>&1; do sleep 0.5; done
++
++# Verify that the inner Docker daemon is using native overlayfs (not vfs)
++docker info --format 'Storage Driver: {{.Driver}}'
++# Output: Storage Driver: overlayfs
++
++# Run a multi-layer build and execute a nested container
++mkdir -p /tmp/nested-test && cd /tmp/nested-test
++cat <<'EOF' > Dockerfile
++FROM alpine:3.20
++RUN adduser -D -u 1001 appuser && mkdir -p /app && chown appuser:appuser /app
++USER appuser
++WORKDIR /app
++RUN echo "nested-build-ok" > status.txt
++CMD ["cat", "/app/status.txt"]
++EOF
++
++docker build -t nested-test:latest .
++docker run --rm nested-test:latest
++# Output: nested-build-ok
++
++kill -INT $DIND_PID
++```
++
++---
++
++## Further Reading in This Series
++
++1. **[gvx: Running Linux Containers, Docker, and Kubernetes in One Unprivileged Process](/blog/posts/gvx-cross-platform-linux-containers-z48916d01)**: Overview of `gvx` across Windows (`whpx`, `systrap`), macOS (`hvf`), and Linux (`systrap`).
++2. **[Running Docker, docker build, and docker compose Without Root or User Namespaces](/blog/posts/run-docker-without-root-or-userns-gvx-z48916d02)**: How `gvx` runs `docker:dind` when `root`, `sudo`, `unshare(CLONE_NEWUSER)`, `mount(2)`, and `/dev/fuse` are blocked.
++3. **[Running Docker-in-Docker Inside gVisor and Nested Sandboxes with gvx](/blog/posts/docker-in-docker-inside-gvisor-with-gvx-z48916d03)** (this post)
++4. **[Fast Isolated Docker Environments for AI Agent RL Rollouts with gvx](/blog/posts/fast-docker-environments-for-agent-rl-rollouts-z48916d04)**: How to use `gvx` and single-file `ext4lite` copy-on-write snapshots to run hundreds of parallel `SWE-bench` and RL rollout environments with 100-millisecond resets.
+diff --git a/root/blog/fast-docker-environments-for-agent-rl-rollouts.md b/root/blog/fast-docker-environments-for-agent-rl-rollouts.md
+--- a/root/blog/fast-docker-environments-for-agent-rl-rollouts.md
++++ b/root/blog/fast-docker-environments-for-agent-rl-rollouts.md
+@@ -1,223 +1,223 @@
+----
+-id: 517bf76b20da9b1bac643f4bac1bfd6b
+-author: Lemon Mint
+-title: Fast Isolated Docker Environments for AI Agent RL Rollouts with gvx
+-description: How to securely run hundreds of parallel, strongly isolated unprivileged Docker and Kubernetes environments for SWE-bench and coding agent reinforcement learning rollouts with 100-millisecond copy-on-write ext4lite volume resets.
+-language: en
+-date: 2026-11-06T12:02:55.95126412Z
+-path: /blog/posts/fast-docker-environments-for-agent-rl-rollouts-z48916d04
+-go_package: z.gfire.dev/gvx
+-go_repourl: https://github.com/gfire-sigs/gvx.git
+-category: ai
+----
+-
+-## The Security and Infrastructure Bottleneck in Coding Agent RL Rollouts
+-
+-Training and evaluating software engineering agents across benchmarks and reinforcement learning (RL) frameworks such as **SWE-bench**, **SWE-ReX**, **R2E-Gym**, **SWE-Gym**, **Verl**, and **OpenHands** requires executing thousands of concurrent rollouts of **untrusted, LLM-generated code**. In real-world software engineering tasks, an agent does not merely edit text files: it runs `docker build`, spins up databases and microservices via `docker compose`, executes integration test suites, and inspects container logs.
+-
+-At rollout scale (128 to 1,024 concurrent episodes per cluster), existing container infrastructure hits four systemic security and performance bottlenecks:
+-
+-1. **Host `dockerd` Lock Contention and State Leakage**: Pointing hundreds of concurrent RL workers at a single host `/var/run/docker.sock` gives every agent root-equivalent access to the host daemon, serializes image layer extraction, exhausts `docker0` subnet allocations, triggers `Another app is currently holding the xtables lock` errors in host `iptables`, and leaks orphan containers across episodes.
+-2. **Privileged DinD Container Escape Risk**: Running standard `docker:dind` containers requires `--privileged` (`CAP_SYS_ADMIN`), which exposes raw host block devices, cgroup release agents, and kernel modules to untrusted RL rollouts.
+-3. **Hardware Virtualization (`/dev/kvm`) Constraints**: MicroVM runtimes (`Firecracker`, `QEMU`, `Kata Containers`) isolate inner kernels cleanly, but they require `/dev/kvm`. Standard Kubernetes pods without nested virtualization, bare-metal cloud instances where KVM is disabled, and existing `gVisor` (`runsc`) sandboxes cannot launch KVM microVMs.
+-4. **Slow Episode Reset (`env.reset()`) Latency**: Starting a fresh `docker:dind` environment and pulling or unpacking base images for every RL episode takes 10 to 60 seconds, leaving GPU training workers idle while waiting for environment resets.
+-
+-**[gvx](https://github.com/gfire-sigs/gvx)** (`rungv` CLI and `z.gfire.dev/gvx/pkg/gvx` Go SDK) provides a **secure, low-effort, token-efficient rollout runtime** that resolves all four bottlenecks. Each rollout environment runs as **a single unprivileged, self-locked user-space process** (isolated by Google's gVisor `Sentry` kernel, `pkg/hostlockdown`, and an in-memory `netstack`) whose entire `/var/lib/docker` state resides inside **a single copy-on-write `.ext4` file (`ext4lite`)**.
+-
+-> **Low-Effort, Token-Efficient Execution for Agents**: When `docker build` or `docker compose` works out-of-the-box inside every episode (or can be bootstrapped by the agent in a single 3-command turn via `rungv`), RL rollouts do not waste context window tokens or step budgets troubleshooting `service docker start` `ulimit` failures, `iptables-nft` errors, or `runc` `pivot_root` rejections. Every token in the trajectory goes toward solving the actual software engineering task.
+-
+-> **Zero-Privilege Security for Untrusted Agent Rollouts**: Every `gvx` episode locks down its own host OS process before running guest code (`PR_SET_NO_NEW_PRIVS` + BPF `seccomp` on Linux, Seatbelt `deny default` on macOS, Restricted Token + Job Object on Windows). Even if an RL agent executes `docker run --privileged` or destructive `rm -rf /` commands inside its episode, those operations remain strictly confined to that episode's user-space `Sentry` kernel and ephemeral `.ext4` volume file.
+-
+----
+-
+-## Rollout Architecture: Parallel Unprivileged Instances + Reflink Snapshots
+-
+-In `gvx`, every rollout worker is an ordinary unprivileged OS process with its own gVisor `Sentry` kernel, its own user-space `netstack` (`10.0.2.15/24`), and its own `ext4lite` block volume (`ep-N.ext4`), while sharing a read-only content-addressable `erofs` OCI image cache across the host page cache.
+-
+-![Parallel Agent RL Rollout Architecture with gvx](/assets/images/gvx/gvx-rl-rollout-snapshot.png)
+-
+-### Why Single-File `ext4lite` Volumes Change RL Reset Economics
+-
+-Because `gvx`'s `ext4lite` filesystem stores an entire JBD2-journaled `ext4` volume (including Docker's `overlayfs` layer directories, `trusted.overlay.*` extended attributes, whiteout device nodes, and image metadata) inside one regular host file, episode lifecycle management becomes a single file operation:
+-
+-1. **100-Millisecond `env.reset()` via `cp --reflink=always`**:
+-   - You build a `golden-docker.ext4` file once containing pre-pulled base images (`python:3.11`, `postgres:16`, `redis:7`, or task-specific `SWE-bench` base images).
+-   - At the start of each RL episode, `cp --reflink=always golden-docker.ext4 ep-0042.ext4` (on XFS, Btrfs, ZFS, or macOS APFS) creates an independent Copy-on-Write clone in under 100 milliseconds without copying underlying disk blocks.
+-   - Only the 4 KiB blocks dirtied during that specific episode consume additional disk space.
+-2. **Zero-Residue Teardown (`env.close()`)**:
+-   - Terminating the `rungv` process (`sb.Close()` in Go) and unlinking `ep-0042.ext4` reclaims 100% of the episode's processes, network sockets, mounts, and storage in ~10 milliseconds. Nothing is ever mounted in the host kernel's mount table or registered in host cgroups.
+-
+----
+-
+-## Step-by-Step Workflow: Golden `.ext4` Snapshot and Fast Episode Reset
+-
+-You can install `rungv` on each rollout worker node either by downloading the SLSA-attested prebuilt binary from [GitHub Releases](https://github.com/gfire-sigs/gvx/releases) (`gh attestation verify rungv-v0.2.0-linux-amd64.tar.gz --repo gfire-sigs/gvx --signer-workflow gfire-sigs/gvx/.github/workflows/release.yml --deny-self-hosted-runners`) or by running `CGO_ENABLED=0 go install z.gfire.dev/gvx/cmd/rungv@latest`.
+-
+-### Step 1: Create the Golden `docker:dind` Volume Once
+-
+-```sh
+-mkdir -p /srv/rl-snapshots /srv/rl-episodes
+-
+-# 1. Start a seed docker:dind instance backed by golden-docker.ext4
+-rungv run \
+-  -p unix:/srv/rl-snapshots/seed.sock:2375 \
+-  --mount type=volume,src=/srv/rl-snapshots/golden-docker.ext4,dst=/var/lib/docker \
+-  -e DOCKER_TLS_CERTDIR= \
+-  docker:dind --tls=false &
+-SEED_PID=$!
+-
+-# 2. Pre-populate base images and build cache inside golden-docker.ext4
+-export DOCKER_HOST="unix:///srv/rl-snapshots/seed.sock"
+-until docker info >/dev/null 2>&1; do sleep 0.5; done
+-
+-docker pull python:3.11-slim
+-docker pull redis:7-alpine
+-docker pull postgres:16-alpine
+-
+-# 3. Gracefully stop the seed instance so ext4lite flushes and compacts the image
+-kill -INT $SEED_PID
+-wait $SEED_PID
+-```
+-
+-### Step 2: Spawn Parallel RL Episodes in 100 Milliseconds
+-
+-Each parallel rollout worker clones `golden-docker.ext4` via reflink and boots an isolated `docker:dind` instance with all images already present in `/var/lib/docker`:
+-
+-```sh
+-EPISODE_ID="ep-0042"
+-SOCK="/srv/rl-episodes/${EPISODE_ID}.sock"
+-
+-# Instant Copy-on-Write clone (~100 ms on XFS/Btrfs/APFS)
+-cp --reflink=always \
+-  /srv/rl-snapshots/golden-docker.ext4 \
+-  "/srv/rl-episodes/${EPISODE_ID}.ext4"
+-
+-# Launch isolated unprivileged episode with 4 GiB RAM and 2 CPUs
+-rungv run \
+-  -m 4g --cpus 2 \
+-  -p "unix:${SOCK}:2375" \
+-  --mount "type=volume,src=/srv/rl-episodes/${EPISODE_ID}.ext4,dst=/var/lib/docker" \
+-  -e DOCKER_TLS_CERTDIR= \
+-  docker:dind --tls=false &
+-EP_PID=$!
+-
+-export DOCKER_HOST="unix://${SOCK}"
+-until docker info >/dev/null 2>&1; do sleep 0.2; done
+-
+-# Inside the rollout worker, images are immediately available without network pull
+-docker images
+-
+-# Episode teardown after reward calculation (~10 ms)
+-kill -KILL $EP_PID
+-rm -f "/srv/rl-episodes/${EPISODE_ID}.ext4" "${SOCK}"
+-```
+-
+----
+-
+-## Programmatic Rollout Pool Using the `z.gfire.dev/gvx/pkg/gvx` Go SDK
+-
+-If your RL environment server or evaluation harness is written in Go (or calls a Go rollout daemon over gRPC), you can manage parallel container episodes directly through `z.gfire.dev/gvx/pkg/gvx`:
+-
+-```go
+-package main
+-
+-import (
+-	"bytes"
+-	"context"
+-	"fmt"
+-	"log"
+-	"os"
+-	"os/exec"
+-	"path/filepath"
+-	"time"
+-
+-	"z.gfire.dev/gvx/pkg/gvx"
+-)
+-
+-func runEpisode(ctx context.Context, goldenExt4, scratchDir string, epID int) error {
+-	epExt4 := filepath.Join(scratchDir, fmt.Sprintf("ep-%04d.ext4", epID))
+-	defer os.Remove(epExt4)
+-
+-	// 1. Reflink clone the golden ext4lite volume
+-	cpCmd := exec.CommandContext(ctx, "cp", "--reflink=always", goldenExt4, epExt4)
+-	if err := cpCmd.Run(); err != nil {
+-		return fmt.Errorf("clone golden volume: %w", err)
+-	}
+-
+-	// 2. Apply per-episode wall-clock timeout
+-	epCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+-	defer cancel()
+-
+-	var stdout, stderr bytes.Buffer
+-	sb, err := gvx.New(epCtx, gvx.Config{
+-		Platform:               gvx.PlatformAuto,
+-		NetworkMode:            gvx.NetModeNAT,
+-		NetRaw:                 true,
+-		AllowPacketSocketWrite: true,
+-		AllowSUID:              true,
+-		OCIImage:               "docker:dind",
+-		Entrypoint:             []string{"sh", "-c"},
+-		EntrypointSet:          true,
+-		Cmd: []string{
+-			"dockerd-entrypoint.sh --tls=false >/var/log/dockerd.log 2>&1 & " +
+-				"until docker info >/dev/null 2>&1; do sleep 0.2; done && " +
+-				"docker run --rm python:3.11-slim python -c 'print(6 * 7)'",
+-		},
+-		Envv: []string{"DOCKER_TLS_CERTDIR="},
+-		Mounts: []gvx.Mount{
+-			{
+-				Kind:      gvx.MountVolume,
+-				ImagePath: epExt4,
+-				GuestPath: "/var/lib/docker",
+-			},
+-		},
+-		Resources: gvx.Resources{
+-			MemoryBytes: 4 << 30, // 4 GiB cap
+-			CPUMillis:   2000,    // 2.0 CPUs
+-		},
+-		Stdout: &stdout,
+-		Stderr: &stderr,
+-	})
+-	if err != nil {
+-		return fmt.Errorf("init episode %d: %w", epID, err)
+-	}
+-	defer sb.Close()
+-
+-	exitCode, err := sb.Run(epCtx)
+-	if err != nil {
+-		return fmt.Errorf("run episode %d: %w", epID, err)
+-	}
+-
+-	log.Printf("episode %d finished: exit=%d stdout=%q", epID, exitCode, stdout.String())
+-	return nil
+-}
+-
+-func main() {
+-	ctx := context.Background()
+-	if err := runEpisode(ctx, "/srv/rl-snapshots/golden-docker.ext4", "/srv/rl-episodes", 1); err != nil {
+-		log.Fatal(err)
+-	}
+-}
+-```
+-
+----
+-
+-## Comparison of Agent RL Sandbox Runtimes
+-
+-| Metric / Requirement                                      | Shared Host `dockerd`             | Privileged `docker:dind` | Firecracker / KVM MicroVM      | Standard `gVisor` (`runsc`)       | `gvx` (`rungv` / `pkg/gvx`)                 |
+-| :-------------------------------------------------------- | :-------------------------------- | :----------------------- | :----------------------------- | :-------------------------------- | :------------------------------------------ |
+-| **Host `root` or `--privileged` required**                | Yes (`docker.sock` = root)        | Yes (`--privileged`)     | Needs `/dev/kvm` + `TAP` setup | Yes (or `userns` + `mount`)       | **No (single unprivileged process)**        |
+-| **Works inside unprivileged K8s Pods / existing `runsc`** | No                                | No                       | No (no `/dev/kvm`)             | Fails (`EBUSY` on nested seccomp) | **Yes (automatic futex loop fallback)**     |
+-| **Supports inner `docker build` & `docker compose`**      | Shares host daemon                | Yes                      | Yes                            | Fails without host DinD tuning    | **Yes (`overlayfs` on `ext4lite`)**         |
+-| **Per-episode network isolation**                         | Shared `docker0` / `xtables` lock | Separate namespace       | Separate VM NIC                | Separate netns                    | **Isolated in-process `netstack`**          |
+-| **Warm episode reset latency (`env.reset()`)**            | 5s to 30s (container/vol prune)   | 10s to 60s (cold daemon) | ~150 ms (VM snapshot)          | 5s to 20s                         | **~100 ms (`cp --reflink=always` `.ext4`)** |
+-| **Cross-platform local dev (Windows / macOS / Linux)**    | Requires Linux VM                 | Requires Linux VM        | Linux KVM only                 | Linux only                        | **Native on Windows, macOS, and Linux**     |
+-
+----
+-
+-## Further Reading in This Series
+-
+-1. **[gvx: Running Linux Containers, Docker, and Kubernetes in One Unprivileged Process](/blog/posts/gvx-cross-platform-linux-containers-z48916d01)**: Complete architectural walkthrough of `gvx` across Windows (`whpx`, `systrap`), macOS (`hvf`), and Linux (`systrap`).
+-2. **[Running Docker, docker build, and docker compose Without Root or User Namespaces](/blog/posts/run-docker-without-root-or-userns-gvx-z48916d02)**: Quick 3-step bootstrap and troubleshooting guide when `sudo`, `unshare(CLONE_NEWUSER)`, `mount(2)`, and `/dev/fuse` are blocked.
+-3. **[Running Docker-in-Docker Inside gVisor and Nested Sandboxes with gvx](/blog/posts/docker-in-docker-inside-gvisor-with-gvx-z48916d03)**: Deep dive into why `docker.io` and nested `runsc` fail inside `gVisor` (`runsc`) and how `gvx` falls back to the `_RUN_SYSCALL_LOOP` futex loop on `EBUSY`.
+-4. **[Fast Isolated Docker Environments for AI Agent RL Rollouts with gvx](/blog/posts/fast-docker-environments-for-agent-rl-rollouts-z48916d04)** (this post)
++---
++id: 517bf76b20da9b1bac643f4bac1bfd6b
++author: Lemon Mint
++title: Fast Isolated Docker Environments for AI Agent RL Rollouts with gvx
++description: How to securely run hundreds of parallel, strongly isolated unprivileged Docker and Kubernetes environments for SWE-bench and coding agent reinforcement learning rollouts with 100-millisecond copy-on-write ext4lite volume resets.
++language: en
++date: 2026-11-06T12:02:55.95126412Z
++path: /blog/posts/fast-docker-environments-for-agent-rl-rollouts-z48916d04
++go_package: z.gfire.dev/gvx
++go_repourl: https://github.com/gfire-sigs/gvx.git
++category: ai
++---
++
++## The Security and Infrastructure Bottleneck in Coding Agent RL Rollouts
++
++Training and evaluating software engineering agents across benchmarks and reinforcement learning (RL) frameworks such as **SWE-bench**, **SWE-ReX**, **R2E-Gym**, **SWE-Gym**, **Verl**, and **OpenHands** requires executing thousands of concurrent rollouts of **untrusted, LLM-generated code**. In real-world software engineering tasks, an agent does not merely edit text files: it runs `docker build`, spins up databases and microservices via `docker compose`, executes integration test suites, and inspects container logs.
++
++At rollout scale (128 to 1,024 concurrent episodes per cluster), existing container infrastructure hits four systemic security and performance bottlenecks:
++
++1. **Host `dockerd` Lock Contention and State Leakage**: Pointing hundreds of concurrent RL workers at a single host `/var/run/docker.sock` gives every agent root-equivalent access to the host daemon, serializes image layer extraction, exhausts `docker0` subnet allocations, triggers `Another app is currently holding the xtables lock` errors in host `iptables`, and leaks orphan containers across episodes.
++2. **Privileged DinD Container Escape Risk**: Running standard `docker:dind` containers requires `--privileged` (`CAP_SYS_ADMIN`), which exposes raw host block devices, cgroup release agents, and kernel modules to untrusted RL rollouts.
++3. **Hardware Virtualization (`/dev/kvm`) Constraints**: MicroVM runtimes (`Firecracker`, `QEMU`, `Kata Containers`) isolate inner kernels cleanly, but they require `/dev/kvm`. Standard Kubernetes pods without nested virtualization, bare-metal cloud instances where KVM is disabled, and existing `gVisor` (`runsc`) sandboxes cannot launch KVM microVMs.
++4. **Slow Episode Reset (`env.reset()`) Latency**: Starting a fresh `docker:dind` environment and pulling or unpacking base images for every RL episode takes 10 to 60 seconds, leaving GPU training workers idle while waiting for environment resets.
++
++**[gvx](https://github.com/gfire-sigs/gvx)** (`rungv` CLI and `z.gfire.dev/gvx/pkg/gvx` Go SDK) provides a **secure, low-effort, token-efficient rollout runtime** that resolves all four bottlenecks. Each rollout environment runs as **a single unprivileged, self-locked user-space process** (isolated by Google's gVisor `Sentry` kernel, `pkg/hostlockdown`, and an in-memory `netstack`) whose entire `/var/lib/docker` state resides inside **a single copy-on-write `.ext4` file (`ext4lite`)**.
++
++> **Low-Effort, Token-Efficient Execution for Agents**: When `docker build` or `docker compose` works out-of-the-box inside every episode (or can be bootstrapped by the agent in a single 3-command turn via `rungv`), RL rollouts do not waste context window tokens or step budgets troubleshooting `service docker start` `ulimit` failures, `iptables-nft` errors, or `runc` `pivot_root` rejections. Every token in the trajectory goes toward solving the actual software engineering task.
++>
++> **Zero-Privilege Security for Untrusted Agent Rollouts**: Every `gvx` episode locks down its own host OS process before running guest code (`PR_SET_NO_NEW_PRIVS` + BPF `seccomp` on Linux, Seatbelt `deny default` on macOS, Restricted Token + Job Object on Windows). Even if an RL agent executes `docker run --privileged` or destructive `rm -rf /` commands inside its episode, those operations remain strictly confined to that episode's user-space `Sentry` kernel and ephemeral `.ext4` volume file.
++
++---
++
++## Rollout Architecture: Parallel Unprivileged Instances + Reflink Snapshots
++
++In `gvx`, every rollout worker is an ordinary unprivileged OS process with its own gVisor `Sentry` kernel, its own user-space `netstack` (`10.0.2.15/24`), and its own `ext4lite` block volume (`ep-N.ext4`), while sharing a read-only content-addressable `erofs` OCI image cache across the host page cache.
++
++![Parallel Agent RL Rollout Architecture with gvx](/assets/images/gvx/gvx-rl-rollout-snapshot.png)
++
++### Why Single-File `ext4lite` Volumes Change RL Reset Economics
++
++Because `gvx`'s `ext4lite` filesystem stores an entire JBD2-journaled `ext4` volume (including Docker's `overlayfs` layer directories, `trusted.overlay.*` extended attributes, whiteout device nodes, and image metadata) inside one regular host file, episode lifecycle management becomes a single file operation:
++
++1. **100-Millisecond `env.reset()` via `cp --reflink=always`**:
++   - You build a `golden-docker.ext4` file once containing pre-pulled base images (`python:3.11`, `postgres:16`, `redis:7`, or task-specific `SWE-bench` base images).
++   - At the start of each RL episode, `cp --reflink=always golden-docker.ext4 ep-0042.ext4` (on XFS, Btrfs, ZFS, or macOS APFS) creates an independent Copy-on-Write clone in under 100 milliseconds without copying underlying disk blocks.
++   - Only the 4 KiB blocks dirtied during that specific episode consume additional disk space.
++2. **Zero-Residue Teardown (`env.close()`)**:
++   - Terminating the `rungv` process (`sb.Close()` in Go) and unlinking `ep-0042.ext4` reclaims 100% of the episode's processes, network sockets, mounts, and storage in ~10 milliseconds. Nothing is ever mounted in the host kernel's mount table or registered in host cgroups.
++
++---
++
++## Step-by-Step Workflow: Golden `.ext4` Snapshot and Fast Episode Reset
++
++You can install `rungv` on each rollout worker node either by downloading the SLSA-attested prebuilt binary from [GitHub Releases](https://github.com/gfire-sigs/gvx/releases) (`gh attestation verify rungv-v0.2.0-linux-amd64.tar.gz --repo gfire-sigs/gvx --signer-workflow gfire-sigs/gvx/.github/workflows/release.yml --deny-self-hosted-runners`) or by running `CGO_ENABLED=0 go install z.gfire.dev/gvx/cmd/rungv@latest`.
++
++### Step 1: Create the Golden `docker:dind` Volume Once
++
++```sh
++mkdir -p /srv/rl-snapshots /srv/rl-episodes
++
++# 1. Start a seed docker:dind instance backed by golden-docker.ext4
++rungv run \
++  -p unix:/srv/rl-snapshots/seed.sock:2375 \
++  --mount type=volume,src=/srv/rl-snapshots/golden-docker.ext4,dst=/var/lib/docker \
++  -e DOCKER_TLS_CERTDIR= \
++  docker:dind --tls=false &
++SEED_PID=$!
++
++# 2. Pre-populate base images and build cache inside golden-docker.ext4
++export DOCKER_HOST="unix:///srv/rl-snapshots/seed.sock"
++until docker info >/dev/null 2>&1; do sleep 0.5; done
++
++docker pull python:3.11-slim
++docker pull redis:7-alpine
++docker pull postgres:16-alpine
++
++# 3. Gracefully stop the seed instance so ext4lite flushes and compacts the image
++kill -INT $SEED_PID
++wait $SEED_PID
++```
++
++### Step 2: Spawn Parallel RL Episodes in 100 Milliseconds
++
++Each parallel rollout worker clones `golden-docker.ext4` via reflink and boots an isolated `docker:dind` instance with all images already present in `/var/lib/docker`:
++
++```sh
++EPISODE_ID="ep-0042"
++SOCK="/srv/rl-episodes/${EPISODE_ID}.sock"
++
++# Instant Copy-on-Write clone (~100 ms on XFS/Btrfs/APFS)
++cp --reflink=always \
++  /srv/rl-snapshots/golden-docker.ext4 \
++  "/srv/rl-episodes/${EPISODE_ID}.ext4"
++
++# Launch isolated unprivileged episode with 4 GiB RAM and 2 CPUs
++rungv run \
++  -m 4g --cpus 2 \
++  -p "unix:${SOCK}:2375" \
++  --mount "type=volume,src=/srv/rl-episodes/${EPISODE_ID}.ext4,dst=/var/lib/docker" \
++  -e DOCKER_TLS_CERTDIR= \
++  docker:dind --tls=false &
++EP_PID=$!
++
++export DOCKER_HOST="unix://${SOCK}"
++until docker info >/dev/null 2>&1; do sleep 0.2; done
++
++# Inside the rollout worker, images are immediately available without network pull
++docker images
++
++# Episode teardown after reward calculation (~10 ms)
++kill -KILL $EP_PID
++rm -f "/srv/rl-episodes/${EPISODE_ID}.ext4" "${SOCK}"
++```
++
++---
++
++## Programmatic Rollout Pool Using the `z.gfire.dev/gvx/pkg/gvx` Go SDK
++
++If your RL environment server or evaluation harness is written in Go (or calls a Go rollout daemon over gRPC), you can manage parallel container episodes directly through `z.gfire.dev/gvx/pkg/gvx`:
++
++```go
++package main
++
++import (
++	"bytes"
++	"context"
++	"fmt"
++	"log"
++	"os"
++	"os/exec"
++	"path/filepath"
++	"time"
++
++	"z.gfire.dev/gvx/pkg/gvx"
++)
++
++func runEpisode(ctx context.Context, goldenExt4, scratchDir string, epID int) error {
++	epExt4 := filepath.Join(scratchDir, fmt.Sprintf("ep-%04d.ext4", epID))
++	defer os.Remove(epExt4)
++
++	// 1. Reflink clone the golden ext4lite volume
++	cpCmd := exec.CommandContext(ctx, "cp", "--reflink=always", goldenExt4, epExt4)
++	if err := cpCmd.Run(); err != nil {
++		return fmt.Errorf("clone golden volume: %w", err)
++	}
++
++	// 2. Apply per-episode wall-clock timeout
++	epCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
++	defer cancel()
++
++	var stdout, stderr bytes.Buffer
++	sb, err := gvx.New(epCtx, gvx.Config{
++		Platform:               gvx.PlatformAuto,
++		NetworkMode:            gvx.NetModeNAT,
++		NetRaw:                 true,
++		AllowPacketSocketWrite: true,
++		AllowSUID:              true,
++		OCIImage:               "docker:dind",
++		Entrypoint:             []string{"sh", "-c"},
++		EntrypointSet:          true,
++		Cmd: []string{
++			"dockerd-entrypoint.sh --tls=false >/var/log/dockerd.log 2>&1 & " +
++				"until docker info >/dev/null 2>&1; do sleep 0.2; done && " +
++				"docker run --rm python:3.11-slim python -c 'print(6 * 7)'",
++		},
++		Envv: []string{"DOCKER_TLS_CERTDIR="},
++		Mounts: []gvx.Mount{
++			{
++				Kind:      gvx.MountVolume,
++				ImagePath: epExt4,
++				GuestPath: "/var/lib/docker",
++			},
++		},
++		Resources: gvx.Resources{
++			MemoryBytes: 4 << 30, // 4 GiB cap
++			CPUMillis:   2000,    // 2.0 CPUs
++		},
++		Stdout: &stdout,
++		Stderr: &stderr,
++	})
++	if err != nil {
++		return fmt.Errorf("init episode %d: %w", epID, err)
++	}
++	defer sb.Close()
++
++	exitCode, err := sb.Run(epCtx)
++	if err != nil {
++		return fmt.Errorf("run episode %d: %w", epID, err)
++	}
++
++	log.Printf("episode %d finished: exit=%d stdout=%q", epID, exitCode, stdout.String())
++	return nil
++}
++
++func main() {
++	ctx := context.Background()
++	if err := runEpisode(ctx, "/srv/rl-snapshots/golden-docker.ext4", "/srv/rl-episodes", 1); err != nil {
++		log.Fatal(err)
++	}
++}
++```
++
++---
++
++## Comparison of Agent RL Sandbox Runtimes
++
++| Metric / Requirement                                      | Shared Host `dockerd`             | Privileged `docker:dind` | Firecracker / KVM MicroVM      | Standard `gVisor` (`runsc`)       | `gvx` (`rungv` / `pkg/gvx`)                 |
++| :-------------------------------------------------------- | :-------------------------------- | :----------------------- | :----------------------------- | :-------------------------------- | :------------------------------------------ |
++| **Host `root` or `--privileged` required**                | Yes (`docker.sock` = root)        | Yes (`--privileged`)     | Needs `/dev/kvm` + `TAP` setup | Yes (or `userns` + `mount`)       | **No (single unprivileged process)**        |
++| **Works inside unprivileged K8s Pods / existing `runsc`** | No                                | No                       | No (no `/dev/kvm`)             | Fails (`EBUSY` on nested seccomp) | **Yes (automatic futex loop fallback)**     |
++| **Supports inner `docker build` & `docker compose`**      | Shares host daemon                | Yes                      | Yes                            | Fails without host DinD tuning    | **Yes (`overlayfs` on `ext4lite`)**         |
++| **Per-episode network isolation**                         | Shared `docker0` / `xtables` lock | Separate namespace       | Separate VM NIC                | Separate netns                    | **Isolated in-process `netstack`**          |
++| **Warm episode reset latency (`env.reset()`)**            | 5s to 30s (container/vol prune)   | 10s to 60s (cold daemon) | ~150 ms (VM snapshot)          | 5s to 20s                         | **~100 ms (`cp --reflink=always` `.ext4`)** |
++| **Cross-platform local dev (Windows / macOS / Linux)**    | Requires Linux VM                 | Requires Linux VM        | Linux KVM only                 | Linux only                        | **Native on Windows, macOS, and Linux**     |
++
++---
++
++## Further Reading in This Series
++
++1. **[gvx: Running Linux Containers, Docker, and Kubernetes in One Unprivileged Process](/blog/posts/gvx-cross-platform-linux-containers-z48916d01)**: Complete architectural walkthrough of `gvx` across Windows (`whpx`, `systrap`), macOS (`hvf`), and Linux (`systrap`).
++2. **[Running Docker, docker build, and docker compose Without Root or User Namespaces](/blog/posts/run-docker-without-root-or-userns-gvx-z48916d02)**: Quick 3-step bootstrap and troubleshooting guide when `sudo`, `unshare(CLONE_NEWUSER)`, `mount(2)`, and `/dev/fuse` are blocked.
++3. **[Running Docker-in-Docker Inside gVisor and Nested Sandboxes with gvx](/blog/posts/docker-in-docker-inside-gvisor-with-gvx-z48916d03)**: Deep dive into why `docker.io` and nested `runsc` fail inside `gVisor` (`runsc`) and how `gvx` falls back to the `_RUN_SYSCALL_LOOP` futex loop on `EBUSY`.
++4. **[Fast Isolated Docker Environments for AI Agent RL Rollouts with gvx](/blog/posts/fast-docker-environments-for-agent-rl-rollouts-z48916d04)** (this post)
+diff --git a/root/blog/run-docker-without-root-or-userns-gvx.md b/root/blog/run-docker-without-root-or-userns-gvx.md
+--- a/root/blog/run-docker-without-root-or-userns-gvx.md
++++ b/root/blog/run-docker-without-root-or-userns-gvx.md
+@@ -1,220 +1,220 @@
+----
+-id: 40e9d44f33fa847eb498f09bac5bf144
+-author: Lemon Mint
+-title: Running Docker, docker build, and docker compose Without Root or User Namespaces
+-description: How to securely run a complete Docker Engine (dockerd, BuildKit, overlayfs, and docker compose) inside an isolated gVisor user-space sandbox as an unprivileged user when root, sudo, unshare(CLONE_NEWUSER), mount(2), and /dev/fuse are blocked.
+-language: en
+-date: 2026-11-06T12:02:56.050897958Z
+-path: /blog/posts/run-docker-without-root-or-userns-gvx-z48916d02
+-go_package: z.gfire.dev/gvx
+-go_repourl: https://github.com/gfire-sigs/gvx.git
+-category: ops
+----
+-
+-## Quick Solution: Secure Unprivileged Docker in Three Steps
+-
+-If you are working inside a locked-down Linux container, CI runner, Kubernetes Pod, or AI coding agent sandbox (such as a cloud agent compute environment) where `root`, `sudo`, user namespaces (`unshare(CLONE_NEWUSER)`), `mount(2)`, and `/dev/fuse` are blocked, **[gvx](https://github.com/gfire-sigs/gvx)** (`rungv`) is the **secure, low-effort, token-efficient solution** to run a full `docker:dind` engine in user space.
+-
+-> **Low-Effort, Token-Efficient Solution for AI Coding Agents**: When an autonomous coding agent hits `Cannot connect to the Docker daemon`, attempting to install and patch `docker.io`, `podman`, or `rootlesskit` inside a restricted container typically wastes **15 to 30 tool-call turns and tens of thousands of context tokens** cycling through `systemctl`, `ulimit`, `iptables`, `unshare`, and `runc` errors—only to fail or fall back to rewriting `Dockerfile`s by hand. With `gvx` (`rungv`), the agent executes **one deterministic 3-step bootstrap in a single turn** and immediately runs standard `docker build`, `docker run`, and `docker compose` commands unchanged.
+-
+-> **Why `gvx` Is Safe by Design (Not a Privilege-Escalation Workaround)**: Unlike mounting the host `/var/run/docker.sock` or running `docker run --privileged` (which grant root-equivalent control over the host kernel), `gvx` does not bypass or weaken any host security policy (`PR_SET_NO_NEW_PRIVS`, `seccomp`, AppArmor, or non-root UID limits). Instead, `rungv` locks down its own host process (`PR_SET_NO_NEW_PRIVS` + strict BPF `seccomp` allowlist) and runs `dockerd` inside Google's memory-safe **gVisor (`Sentry`)** user-space kernel. All guest `UID 0` capabilities, `overlayfs` mounts (`ext4lite`), and `iptables` rules remain strictly isolated inside the sandbox process.
+-
+-```sh
+-# 1. Install rungv in user space (prebuilt SLSA-attested release or go install)
+-# Option A: Verify and extract the SLSA-attested prebuilt binary from GitHub Releases
+-gh attestation verify rungv-v0.2.0-linux-amd64.tar.gz --repo gfire-sigs/gvx \
+-  --signer-workflow gfire-sigs/gvx/.github/workflows/release.yml \
+-  --source-ref refs/tags/v0.2.0 --deny-self-hosted-runners
+-tar -xzf rungv-v0.2.0-linux-amd64.tar.gz && install -m 0755 rungv-v0.2.0-linux-amd64/rungv ~/.local/bin/rungv
+-
+-# Option B: Or install directly from source with Go
+-CGO_ENABLED=0 GOBIN=~/.local/bin go install z.gfire.dev/gvx/cmd/rungv@latest
+-
+-# 2. Start docker:dind inside gvx with a single-file ext4lite volume
+-#    Forwards ~/.gvx/docker.sock (mode 0600) to guest port 2375
+-mkdir -p ~/.gvx
+-~/.local/bin/rungv run \
+-  -p unix:~/.gvx/docker.sock:2375 \
+-  -p 127.0.0.1:9000-9019:9000-9019 \
+-  -v gvx-docker:/var/lib/docker \
+-  -e DOCKER_TLS_CERTDIR= \
+-  docker:dind --tls=false &
+-
+-# 3. Point the standard Docker CLI and Docker Compose at the user-space socket
+-export DOCKER_HOST="unix://$HOME/.gvx/docker.sock"
+-until docker info >/dev/null 2>&1; do sleep 0.5; done
+-docker info --format '{{.Driver}} {{.OperatingSystem}}'
+-# Output: overlayfs Alpine Linux ... (containerized)
+-
+-docker build -t app:test .
+-docker run --rm app:test
+-docker compose up -d
+-```
+-
+----
+-
+-## Why Standard Rootless Tools Fail in Restricted Sandboxes
+-
+-When an engineer or autonomous coding agent needs to run `docker build`, `docker run`, or `docker compose` inside a hardened container or multi-tenant runner, standard workarounds fail at five distinct kernel barriers.
+-
+-### 1. No Host Docker Daemon Socket (`systemctl` and `service docker start` Also Fail)
+-
+-Running `docker ps` or `docker build` fails immediately when the host `/var/run/docker.sock` is not mounted into the environment, and attempting to start `docker.io` via `systemctl` or `service docker start` fails because PID 1 is not `systemd` and `/etc/init.d/docker` hits the container's hard `ulimit -n` ceiling:
+-
+-```text
+-Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?
+-ERROR: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?
+-System has not been booted with systemd as init system (PID 1). Can't operate.
+-Failed to connect to bus: Host is down
+-/etc/init.d/docker: 62: ulimit: error setting limit (Operation not permitted)
+-```
+-
+-### 2. `PR_SET_NO_NEW_PRIVS` Blocks `sudo` and Setuid Helpers
+-
+-Hardened containers (`securityContext.allowPrivilegeEscalation: false` in Kubernetes, `--security-opt=no-new-privileges` in Docker, or `exebox` / `bwrap` sandboxes) set the Linux `PR_SET_NO_NEW_PRIVS` bit on the process tree. Attempting to escalate via `sudo` or setuid binaries (`newuidmap`, `newgidmap`, `fusermount3`) fails:
+-
+-```text
+-sudo: The "no new privileges" flag is set, which prevents sudo from running as root.
+-sudo: effective uid is not 0, is /usr/bin/sudo on a file system with the 'nosuid' option set or an NFS file system without root privileges?
+-```
+-
+-### 3. Seccomp and Sysctl Policies Block `unshare(CLONE_NEWUSER)`
+-
+-Tools marketed as "rootless" (`Rootless Docker`, `Podman`, `Buildah`, `nerdctl`, `bubblewrap`) still rely on Linux **user namespaces** (`CLONE_NEWUSER`). They fail whenever:
+-
+-- The outer container's default seccomp profile blocks `unshare(2)` or `clone(CLONE_NEWUSER)`.
+-- Ubuntu 24.04+ enables `kernel.apparmor_restrict_unprivileged_userns = 1`.
+-- Debian or RHEL nodes set `kernel.unprivileged_userns_clone = 0` or `user.max_user_namespaces = 0`.
+-- `newuidmap` cannot write `/proc/self/uid_map` because `PR_SET_NO_NEW_PRIVS` is active.
+-
+-The resulting errors look like this:
+-
+-```text
+-unshare: unshare failed: Operation not permitted
+-cannot clone: Operation not permitted
+-Error: cannot re-exec process to join the existing user namespace
+-newuidmap: write to uid_map failed: Operation not permitted
+-RootlessKit: parent: failed to start the child: fork/exec /proc/self/exe: operation not permitted
+-```
+-
+-### 4. `mount(2)` and `pivot_root(2)` Are Blocked During `docker build` Without Host `CAP_SYS_ADMIN`
+-
+-Even if an environment permits `CLONE_NEWUSER` or `dockerd` is forced to start with `--iptables=false --bridge=none --storage-driver=vfs`, running `docker build` fails at the first `RUN` instruction because mounting a fresh `/proc` or calling `pivot_root(2)` inside a nested mount namespace is blocked:
+-
+-```text
+-ERROR: failed to solve: process "/bin/sh -c ..." did not complete successfully:
+-mount("/proc", "/proc", "proc", MS_NOSUID|MS_NODEV|MS_NOEXEC, NULL): Operation not permitted
+-OCI runtime create failed: runc create failed: unable to start container process: error during container init: error mounting "proc" to rootfs at "/proc": mount proc:/proc (via /proc/self/fd/6), flags: 0xe: operation not permitted
+-OCI runtime create failed: runc create failed: unable to start container process: error during container init: error jailing process inside rootfs: pivot_root .: invalid argument
+-bwrap: Creating new namespace failed: Operation not permitted
+-```
+-
+-### 5. Missing `/dev/fuse` Breaks `fuse-overlayfs`
+-
+-Rootless container engines that cannot mount kernel `overlayfs` fall back to `fuse-overlayfs`. In minimal containers or Kubernetes pods without `/dev/fuse` device passthrough, `fuse-overlayfs` fails immediately:
+-
+-```text
+-fuse: device not found, try 'modprobe fuse' first
+-fusermount3: failed to open /dev/fuse: No such file or directory
+-error initializing graphdriver: driver not supported: fuse-overlayfs
+-```
+-
+----
+-
+-## How `gvx` Runs `docker:dind` Completely in User Space
+-
+-`gvx` bypasses all five kernel barriers because it does not ask the host Linux kernel to create namespaces, mount filesystems, or configure network interfaces. Instead, `rungv` runs an internal user-space Linux kernel (the gVisor `Sentry`) and a user-space network stack (`netstack`) inside one ordinary unprivileged process.
+-
+-![Running Unprivileged Docker-in-Docker with gvx](/assets/images/gvx/gvx-unprivileged-dind.png)
+-
+-### 1. In-Memory Namespaces and Mount Table (`VFS2`)
+-
+-When `dockerd`, `containerd`, and `runc` execute inside `rungv`, `systrap` intercepts their system calls and routes them to the in-process `Sentry` kernel rather than the host kernel:
+-
+-- `unshare(2)`, `clone(2)`, `pivot_root(2)`, `chroot(2)`, and `mount(2)` operate on the Sentry's in-memory task hierarchy and `VFS2` mount table (`procfs`, `sysfs`, `tmpfs`, `devpts`, `cgroupfs` v2) while the host `rungv` process runs under your unprivileged host UID.
+-
+-### 2. Native `overlayfs` on Single-File `ext4lite` Volumes
+-
+-When you pass `-v gvx-docker:/var/lib/docker` (or `--mount type=volume,src=/disk/gvx-docker.ext4,dst=/var/lib/docker`), `gvx` mounts its built-in **`ext4lite`** filesystem at `/var/lib/docker`.
+-
+-Because `ext4lite` implements a JBD2-journaled `ext4` filesystem inside a single host file (`gvx-docker.ext4`) with support for `trusted.overlay.*` extended attributes, character whiteout devices (`0:0`), `d_type`, and `RENAME_EXCHANGE`, `dockerd` uses its native **`overlayfs`** storage driver inside the guest. Multi-stage `docker build` operations share Copy-on-Write layers without `/dev/fuse` and without the disk-space explosion of Docker's `vfs` fallback driver.
+-
+-### 3. User-Space `docker0` Bridge and `iptables-legacy`
+-
+-When `docker:dind` starts inside `gvx`:
+-
+-- Guest `dockerd` creates the `docker0` bridge (`172.17.0.1/16`), attaches virtual `veth` pairs for nested containers, and programs `NAT` (`DOCKER`, `POSTROUTING`) and `FILTER` chains with `addrtype` and `conntrack` matches inside `gvx`'s user-space `netstack`.
+-- Passing `-p unix:~/.gvx/docker.sock:2375` binds a host Unix domain socket (mode `0600`) and forwards connections directly to port `2375` of `dockerd` inside the sandbox.
+-
+----
+-
+-## Comparison with Existing Container Tools
+-
+-| Capability / Constraint                                      | Standard Docker (`dockerd`)  | Rootless Docker / Podman  | Kaniko / Buildah (Unprivileged) | `gvx` (`rungv` + `docker:dind`)     |
+-| :----------------------------------------------------------- | :--------------------------- | :------------------------ | :------------------------------ | :---------------------------------- |
+-| **Host `root` or `sudo` required**                           | Yes                          | No                        | No                              | **No**                              |
+-| **Works with `PR_SET_NO_NEW_PRIVS=1`**                       | No                           | No (`newuidmap` fails)    | Partial                         | **Yes**                             |
+-| **Works when `unshare(CLONE_NEWUSER)` is blocked (`EPERM`)** | N/A                          | No                        | Buildah: No / Kaniko: Yes       | **Yes**                             |
+-| **Works without `/dev/fuse`**                                | Yes (uses kernel `overlay2`) | Only via slow `vfs` copy  | Yes                             | **Yes (`overlayfs` on `ext4lite`)** |
+-| **Supports `docker build` (BuildKit)**                       | Yes                          | Yes (if `userns` allowed) | Image build only (no runtime)   | **Yes**                             |
+-| **Supports `docker run` and `docker compose up`**            | Yes                          | Yes (if `userns` allowed) | **No**                          | **Yes**                             |
+-| **Runs on Windows and macOS without a Linux VM**             | No (requires WSL2 / VM)      | No (requires Linux VM)    | No                              | **Yes (`whpx`, `hvf`, `systrap`)**  |
+-
+----
+-
+-## Exact Host Kernel Requirements on Linux
+-
+-`gvx` requires zero elevated capabilities (`CapEff: 0000000000000000`) and zero user namespaces. On a Linux host, `rungv` relies on only three standard unprivileged kernel primitives:
+-
+-1. **`ptrace(PTRACE_ATTACH)` on its own child thread once during initialization**: `systrap` spawns a local stub helper thread at startup, attaches to it to initialize the shared-memory context, and detaches. If the host sets `kernel.yama.ptrace_scope = 3` (which disables all `ptrace` system-wide) or blocks `ptrace` in an outer seccomp filter, `systrap` initialization cannot complete. (Under `yama.ptrace_scope = 1`, the default on Ubuntu and Debian, `gvx` succeeds because parent-to-child tracing is permitted.)
+-2. **`seccomp(SECCOMP_SET_MODE_FILTER)`**: Used to trap guest system calls from container stub threads. As covered in [Part 3 of this series](/blog/posts/docker-in-docker-inside-gvisor-with-gvx-z48916d03), `gvx` works both when `SECCOMP_FILTER_FLAG_NEW_LISTENER` is available and when it returns `EBUSY` inside a nested sandbox.
+-3. **`mmap(..., PROT_EXEC, ...)`**: Used to map guest ELF segments and the `systrap` shared-memory trampoline.
+-
+----
+-
+-## End-to-End Example: Building and Testing a Multi-Container App Without Root
+-
+-The following script runs a complete `docker build` and two-container integration test (`redis` + application container) inside an unprivileged user session:
+-
+-```sh
+-mkdir -p ~/.gvx
+-rungv run \
+-  -p unix:~/.gvx/docker.sock:2375 \
+-  -v gvx-docker:/var/lib/docker \
+-  -e DOCKER_TLS_CERTDIR= \
+-  docker:dind --tls=false &
+-DIND_PID=$!
+-
+-export DOCKER_HOST="unix://$HOME/.gvx/docker.sock"
+-until docker info >/dev/null 2>&1; do sleep 0.5; done
+-
+-mkdir -p /tmp/demo-app && cd /tmp/demo-app
+-cat <<'EOF' > Dockerfile
+-FROM alpine:3.20
+-RUN apk add --no-cache redis
+-CMD ["redis-cli", "-h", "cache", "ping"]
+-EOF
+-
+-# Build the image using overlayfs on ext4lite
+-docker build -t demo-ping:latest .
+-
+-# Create a bridge network, start Redis, and verify connectivity between containers
+-docker network create demo-net
+-docker run -d --name cache --network demo-net redis:7-alpine
+-docker run --rm --network demo-net demo-ping:latest
+-# Output: PONG
+-
+-# Clean up workload containers and stop the sandbox
+-docker rm -f cache
+-docker network rm demo-net
+-kill -INT $DIND_PID
+-```
+-
+----
+-
+-## Further Reading in This Series
+-
+-1. **[gvx: Running Linux Containers, Docker, and Kubernetes in One Unprivileged Process](/blog/posts/gvx-cross-platform-linux-containers-z48916d01)**: Architectural overview of `gvx`, its cross-platform execution engines (`whpx`, `hvf`, `systrap`), `VFS2` (`erofs`, `ext4lite`, `hostfs` v2), and `netstack`.
+-2. **[Running Docker, docker build, and docker compose Without Root or User Namespaces](/blog/posts/run-docker-without-root-or-userns-gvx-z48916d02)** (this post)
+-3. **[Running Docker-in-Docker Inside gVisor and Nested Sandboxes with gvx](/blog/posts/docker-in-docker-inside-gvisor-with-gvx-z48916d03)**: How `gvx` solves `modprobe`, `iptables-nft`, `overlay2` on `gofer`, and nested `SECCOMP_FILTER_FLAG_NEW_LISTENER` (`EBUSY`) inside `gVisor` (`runsc`).
+-4. **[Fast Isolated Docker Environments for AI Agent RL Rollouts with gvx](/blog/posts/fast-docker-environments-for-agent-rl-rollouts-z48916d04)**: Scaling parallel `SWE-bench` and RL rollout environments with 100-millisecond copy-on-write `.ext4` volume resets.
++---
++id: 40e9d44f33fa847eb498f09bac5bf144
++author: Lemon Mint
++title: Running Docker, docker build, and docker compose Without Root or User Namespaces
++description: How to securely run a complete Docker Engine (dockerd, BuildKit, overlayfs, and docker compose) inside an isolated gVisor user-space sandbox as an unprivileged user when root, sudo, unshare(CLONE_NEWUSER), mount(2), and /dev/fuse are blocked.
++language: en
++date: 2026-11-06T12:02:56.050897958Z
++path: /blog/posts/run-docker-without-root-or-userns-gvx-z48916d02
++go_package: z.gfire.dev/gvx
++go_repourl: https://github.com/gfire-sigs/gvx.git
++category: ops
++---
++
++## Quick Solution: Secure Unprivileged Docker in Three Steps
++
++If you are working inside a locked-down Linux container, CI runner, Kubernetes Pod, or AI coding agent sandbox (such as a cloud agent compute environment) where `root`, `sudo`, user namespaces (`unshare(CLONE_NEWUSER)`), `mount(2)`, and `/dev/fuse` are blocked, **[gvx](https://github.com/gfire-sigs/gvx)** (`rungv`) is the **secure, low-effort, token-efficient solution** to run a full `docker:dind` engine in user space.
++
++> **Low-Effort, Token-Efficient Solution for AI Coding Agents**: When an autonomous coding agent hits `Cannot connect to the Docker daemon`, attempting to install and patch `docker.io`, `podman`, or `rootlesskit` inside a restricted container typically wastes **15 to 30 tool-call turns and tens of thousands of context tokens** cycling through `systemctl`, `ulimit`, `iptables`, `unshare`, and `runc` errors—only to fail or fall back to rewriting `Dockerfile`s by hand. With `gvx` (`rungv`), the agent executes **one deterministic 3-step bootstrap in a single turn** and immediately runs standard `docker build`, `docker run`, and `docker compose` commands unchanged.
++>
++> **Why `gvx` Is Safe by Design (Not a Privilege-Escalation Workaround)**: Unlike mounting the host `/var/run/docker.sock` or running `docker run --privileged` (which grant root-equivalent control over the host kernel), `gvx` does not bypass or weaken any host security policy (`PR_SET_NO_NEW_PRIVS`, `seccomp`, AppArmor, or non-root UID limits). Instead, `rungv` locks down its own host process (`PR_SET_NO_NEW_PRIVS` + strict BPF `seccomp` allowlist) and runs `dockerd` inside Google's memory-safe **gVisor (`Sentry`)** user-space kernel. All guest `UID 0` capabilities, `overlayfs` mounts (`ext4lite`), and `iptables` rules remain strictly isolated inside the sandbox process.
++
++```sh
++# 1. Install rungv in user space (prebuilt SLSA-attested release or go install)
++# Option A: Verify and extract the SLSA-attested prebuilt binary from GitHub Releases
++gh attestation verify rungv-v0.2.0-linux-amd64.tar.gz --repo gfire-sigs/gvx \
++  --signer-workflow gfire-sigs/gvx/.github/workflows/release.yml \
++  --source-ref refs/tags/v0.2.0 --deny-self-hosted-runners
++tar -xzf rungv-v0.2.0-linux-amd64.tar.gz && install -m 0755 rungv-v0.2.0-linux-amd64/rungv ~/.local/bin/rungv
++
++# Option B: Or install directly from source with Go
++CGO_ENABLED=0 GOBIN=~/.local/bin go install z.gfire.dev/gvx/cmd/rungv@latest
++
++# 2. Start docker:dind inside gvx with a single-file ext4lite volume
++#    Forwards ~/.gvx/docker.sock (mode 0600) to guest port 2375
++mkdir -p ~/.gvx
++~/.local/bin/rungv run \
++  -p unix:~/.gvx/docker.sock:2375 \
++  -p 127.0.0.1:9000-9019:9000-9019 \
++  -v gvx-docker:/var/lib/docker \
++  -e DOCKER_TLS_CERTDIR= \
++  docker:dind --tls=false &
++
++# 3. Point the standard Docker CLI and Docker Compose at the user-space socket
++export DOCKER_HOST="unix://$HOME/.gvx/docker.sock"
++until docker info >/dev/null 2>&1; do sleep 0.5; done
++docker info --format '{{.Driver}} {{.OperatingSystem}}'
++# Output: overlayfs Alpine Linux ... (containerized)
++
++docker build -t app:test .
++docker run --rm app:test
++docker compose up -d
++```
++
++---
++
++## Why Standard Rootless Tools Fail in Restricted Sandboxes
++
++When an engineer or autonomous coding agent needs to run `docker build`, `docker run`, or `docker compose` inside a hardened container or multi-tenant runner, standard workarounds fail at five distinct kernel barriers.
++
++### 1. No Host Docker Daemon Socket (`systemctl` and `service docker start` Also Fail)
++
++Running `docker ps` or `docker build` fails immediately when the host `/var/run/docker.sock` is not mounted into the environment, and attempting to start `docker.io` via `systemctl` or `service docker start` fails because PID 1 is not `systemd` and `/etc/init.d/docker` hits the container's hard `ulimit -n` ceiling:
++
++```text
++Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?
++ERROR: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?
++System has not been booted with systemd as init system (PID 1). Can't operate.
++Failed to connect to bus: Host is down
++/etc/init.d/docker: 62: ulimit: error setting limit (Operation not permitted)
++```
++
++### 2. `PR_SET_NO_NEW_PRIVS` Blocks `sudo` and Setuid Helpers
++
++Hardened containers (`securityContext.allowPrivilegeEscalation: false` in Kubernetes, `--security-opt=no-new-privileges` in Docker, or `exebox` / `bwrap` sandboxes) set the Linux `PR_SET_NO_NEW_PRIVS` bit on the process tree. Attempting to escalate via `sudo` or setuid binaries (`newuidmap`, `newgidmap`, `fusermount3`) fails:
++
++```text
++sudo: The "no new privileges" flag is set, which prevents sudo from running as root.
++sudo: effective uid is not 0, is /usr/bin/sudo on a file system with the 'nosuid' option set or an NFS file system without root privileges?
++```
++
++### 3. Seccomp and Sysctl Policies Block `unshare(CLONE_NEWUSER)`
++
++Tools marketed as "rootless" (`Rootless Docker`, `Podman`, `Buildah`, `nerdctl`, `bubblewrap`) still rely on Linux **user namespaces** (`CLONE_NEWUSER`). They fail whenever:
++
++- The outer container's default seccomp profile blocks `unshare(2)` or `clone(CLONE_NEWUSER)`.
++- Ubuntu 24.04+ enables `kernel.apparmor_restrict_unprivileged_userns = 1`.
++- Debian or RHEL nodes set `kernel.unprivileged_userns_clone = 0` or `user.max_user_namespaces = 0`.
++- `newuidmap` cannot write `/proc/self/uid_map` because `PR_SET_NO_NEW_PRIVS` is active.
++
++The resulting errors look like this:
++
++```text
++unshare: unshare failed: Operation not permitted
++cannot clone: Operation not permitted
++Error: cannot re-exec process to join the existing user namespace
++newuidmap: write to uid_map failed: Operation not permitted
++RootlessKit: parent: failed to start the child: fork/exec /proc/self/exe: operation not permitted
++```
++
++### 4. `mount(2)` and `pivot_root(2)` Are Blocked During `docker build` Without Host `CAP_SYS_ADMIN`
++
++Even if an environment permits `CLONE_NEWUSER` or `dockerd` is forced to start with `--iptables=false --bridge=none --storage-driver=vfs`, running `docker build` fails at the first `RUN` instruction because mounting a fresh `/proc` or calling `pivot_root(2)` inside a nested mount namespace is blocked:
++
++```text
++ERROR: failed to solve: process "/bin/sh -c ..." did not complete successfully:
++mount("/proc", "/proc", "proc", MS_NOSUID|MS_NODEV|MS_NOEXEC, NULL): Operation not permitted
++OCI runtime create failed: runc create failed: unable to start container process: error during container init: error mounting "proc" to rootfs at "/proc": mount proc:/proc (via /proc/self/fd/6), flags: 0xe: operation not permitted
++OCI runtime create failed: runc create failed: unable to start container process: error during container init: error jailing process inside rootfs: pivot_root .: invalid argument
++bwrap: Creating new namespace failed: Operation not permitted
++```
++
++### 5. Missing `/dev/fuse` Breaks `fuse-overlayfs`
++
++Rootless container engines that cannot mount kernel `overlayfs` fall back to `fuse-overlayfs`. In minimal containers or Kubernetes pods without `/dev/fuse` device passthrough, `fuse-overlayfs` fails immediately:
++
++```text
++fuse: device not found, try 'modprobe fuse' first
++fusermount3: failed to open /dev/fuse: No such file or directory
++error initializing graphdriver: driver not supported: fuse-overlayfs
++```
++
++---
++
++## How `gvx` Runs `docker:dind` Completely in User Space
++
++`gvx` bypasses all five kernel barriers because it does not ask the host Linux kernel to create namespaces, mount filesystems, or configure network interfaces. Instead, `rungv` runs an internal user-space Linux kernel (the gVisor `Sentry`) and a user-space network stack (`netstack`) inside one ordinary unprivileged process.
++
++![Running Unprivileged Docker-in-Docker with gvx](/assets/images/gvx/gvx-unprivileged-dind.png)
++
++### 1. In-Memory Namespaces and Mount Table (`VFS2`)
++
++When `dockerd`, `containerd`, and `runc` execute inside `rungv`, `systrap` intercepts their system calls and routes them to the in-process `Sentry` kernel rather than the host kernel:
++
++- `unshare(2)`, `clone(2)`, `pivot_root(2)`, `chroot(2)`, and `mount(2)` operate on the Sentry's in-memory task hierarchy and `VFS2` mount table (`procfs`, `sysfs`, `tmpfs`, `devpts`, `cgroupfs` v2) while the host `rungv` process runs under your unprivileged host UID.
++
++### 2. Native `overlayfs` on Single-File `ext4lite` Volumes
++
++When you pass `-v gvx-docker:/var/lib/docker` (or `--mount type=volume,src=/disk/gvx-docker.ext4,dst=/var/lib/docker`), `gvx` mounts its built-in **`ext4lite`** filesystem at `/var/lib/docker`.
++
++Because `ext4lite` implements a JBD2-journaled `ext4` filesystem inside a single host file (`gvx-docker.ext4`) with support for `trusted.overlay.*` extended attributes, character whiteout devices (`0:0`), `d_type`, and `RENAME_EXCHANGE`, `dockerd` uses its native **`overlayfs`** storage driver inside the guest. Multi-stage `docker build` operations share Copy-on-Write layers without `/dev/fuse` and without the disk-space explosion of Docker's `vfs` fallback driver.
++
++### 3. User-Space `docker0` Bridge and `iptables-legacy`
++
++When `docker:dind` starts inside `gvx`:
++
++- Guest `dockerd` creates the `docker0` bridge (`172.17.0.1/16`), attaches virtual `veth` pairs for nested containers, and programs `NAT` (`DOCKER`, `POSTROUTING`) and `FILTER` chains with `addrtype` and `conntrack` matches inside `gvx`'s user-space `netstack`.
++- Passing `-p unix:~/.gvx/docker.sock:2375` binds a host Unix domain socket (mode `0600`) and forwards connections directly to port `2375` of `dockerd` inside the sandbox.
++
++---
++
++## Comparison with Existing Container Tools
++
++| Capability / Constraint                                      | Standard Docker (`dockerd`)  | Rootless Docker / Podman  | Kaniko / Buildah (Unprivileged) | `gvx` (`rungv` + `docker:dind`)     |
++| :----------------------------------------------------------- | :--------------------------- | :------------------------ | :------------------------------ | :---------------------------------- |
++| **Host `root` or `sudo` required**                           | Yes                          | No                        | No                              | **No**                              |
++| **Works with `PR_SET_NO_NEW_PRIVS=1`**                       | No                           | No (`newuidmap` fails)    | Partial                         | **Yes**                             |
++| **Works when `unshare(CLONE_NEWUSER)` is blocked (`EPERM`)** | N/A                          | No                        | Buildah: No / Kaniko: Yes       | **Yes**                             |
++| **Works without `/dev/fuse`**                                | Yes (uses kernel `overlay2`) | Only via slow `vfs` copy  | Yes                             | **Yes (`overlayfs` on `ext4lite`)** |
++| **Supports `docker build` (BuildKit)**                       | Yes                          | Yes (if `userns` allowed) | Image build only (no runtime)   | **Yes**                             |
++| **Supports `docker run` and `docker compose up`**            | Yes                          | Yes (if `userns` allowed) | **No**                          | **Yes**                             |
++| **Runs on Windows and macOS without a Linux VM**             | No (requires WSL2 / VM)      | No (requires Linux VM)    | No                              | **Yes (`whpx`, `hvf`, `systrap`)**  |
++
++---
++
++## Exact Host Kernel Requirements on Linux
++
++`gvx` requires zero elevated capabilities (`CapEff: 0000000000000000`) and zero user namespaces. On a Linux host, `rungv` relies on only three standard unprivileged kernel primitives:
++
++1. **`ptrace(PTRACE_ATTACH)` on its own child thread once during initialization**: `systrap` spawns a local stub helper thread at startup, attaches to it to initialize the shared-memory context, and detaches. If the host sets `kernel.yama.ptrace_scope = 3` (which disables all `ptrace` system-wide) or blocks `ptrace` in an outer seccomp filter, `systrap` initialization cannot complete. (Under `yama.ptrace_scope = 1`, the default on Ubuntu and Debian, `gvx` succeeds because parent-to-child tracing is permitted.)
++2. **`seccomp(SECCOMP_SET_MODE_FILTER)`**: Used to trap guest system calls from container stub threads. As covered in [Part 3 of this series](/blog/posts/docker-in-docker-inside-gvisor-with-gvx-z48916d03), `gvx` works both when `SECCOMP_FILTER_FLAG_NEW_LISTENER` is available and when it returns `EBUSY` inside a nested sandbox.
++3. **`mmap(..., PROT_EXEC, ...)`**: Used to map guest ELF segments and the `systrap` shared-memory trampoline.
++
++---
++
++## End-to-End Example: Building and Testing a Multi-Container App Without Root
++
++The following script runs a complete `docker build` and two-container integration test (`redis` + application container) inside an unprivileged user session:
++
++```sh
++mkdir -p ~/.gvx
++rungv run \
++  -p unix:~/.gvx/docker.sock:2375 \
++  -v gvx-docker:/var/lib/docker \
++  -e DOCKER_TLS_CERTDIR= \
++  docker:dind --tls=false &
++DIND_PID=$!
++
++export DOCKER_HOST="unix://$HOME/.gvx/docker.sock"
++until docker info >/dev/null 2>&1; do sleep 0.5; done
++
++mkdir -p /tmp/demo-app && cd /tmp/demo-app
++cat <<'EOF' > Dockerfile
++FROM alpine:3.20
++RUN apk add --no-cache redis
++CMD ["redis-cli", "-h", "cache", "ping"]
++EOF
++
++# Build the image using overlayfs on ext4lite
++docker build -t demo-ping:latest .
++
++# Create a bridge network, start Redis, and verify connectivity between containers
++docker network create demo-net
++docker run -d --name cache --network demo-net redis:7-alpine
++docker run --rm --network demo-net demo-ping:latest
++# Output: PONG
++
++# Clean up workload containers and stop the sandbox
++docker rm -f cache
++docker network rm demo-net
++kill -INT $DIND_PID
++```
++
++---
++
++## Further Reading in This Series
++
++1. **[gvx: Running Linux Containers, Docker, and Kubernetes in One Unprivileged Process](/blog/posts/gvx-cross-platform-linux-containers-z48916d01)**: Architectural overview of `gvx`, its cross-platform execution engines (`whpx`, `hvf`, `systrap`), `VFS2` (`erofs`, `ext4lite`, `hostfs` v2), and `netstack`.
++2. **[Running Docker, docker build, and docker compose Without Root or User Namespaces](/blog/posts/run-docker-without-root-or-userns-gvx-z48916d02)** (this post)
++3. **[Running Docker-in-Docker Inside gVisor and Nested Sandboxes with gvx](/blog/posts/docker-in-docker-inside-gvisor-with-gvx-z48916d03)**: How `gvx` solves `modprobe`, `iptables-nft`, `overlay2` on `gofer`, and nested `SECCOMP_FILTER_FLAG_NEW_LISTENER` (`EBUSY`) inside `gVisor` (`runsc`).
++4. **[Fast Isolated Docker Environments for AI Agent RL Rollouts with gvx](/blog/posts/fast-docker-environments-for-agent-rl-rollouts-z48916d04)**: Scaling parallel `SWE-bench` and RL rollout environments with 100-millisecond copy-on-write `.ext4` volume resets.
+diff --git a/root/blog/gvx-cross-platform-linux-containers.md b/root/blog/gvx-cross-platform-linux-containers.md
+--- a/root/blog/gvx-cross-platform-linux-containers.md
++++ b/root/blog/gvx-cross-platform-linux-containers.md
+@@ -1,247 +1,247 @@
+----
+-id: e62d78ef5850c982dbddc9d3ff9134ae
+-author: Lemon Mint
+-title: 'gvx: Running Linux Containers, Docker, and Kubernetes in One Unprivileged Process'
+-description: Technical overview of gvx, a security-hardened, cross-platform container runtime and Go SDK built on the gVisor user-space kernel that safely runs Linux containers, Docker-in-Docker, and multi-node HA Kubernetes in a single unprivileged process across Windows, macOS, and Linux.
+-language: en
+-date: 2026-11-06T12:02:56.008516536Z
+-path: /blog/posts/gvx-cross-platform-linux-containers-z48916d01
+-go_package: z.gfire.dev/gvx
+-go_repourl: https://github.com/gfire-sigs/gvx.git
+-category: lowlevel
+----
+-
+-## Introduction: Security-Hardened Containers Without Root or Host Daemons
+-
+-Running Linux containers, `docker build`, or Kubernetes inside a development machine, CI runner, or multi-tenant cloud node usually forces an uncomfortable security trade-off:
+-
+-- On **Linux**, standard OCI runtimes (`runc`, `crun`, `runsc`) require either `root` privileges, host `/var/run/docker.sock` exposure, `--privileged` (`CAP_SYS_ADMIN`), or user namespaces (`unshare(CLONE_NEWUSER)`) that expand the host kernel attack surface.
+-- On **Windows** and **macOS**, container engines (`Docker Desktop`, `Podman Machine`, `Lima`, `OrbStack`) boot a full Linux virtual machine kernel inside WSL2, Hyper-V, or `Virtualization.framework` and run a persistent background daemon inside that VM.
+-
+-**[gvx](https://github.com/gfire-sigs/gvx)** (`rungv` CLI and the `z.gfire.dev/gvx/pkg/gvx` Go SDK) provides a **secure, zero-privilege alternative**. Built as an upstream-trackable fork of Google's **gVisor** user-space Linux kernel (`Sentry`) and user-space network stack (`netstack`), `gvx` executes unmodified `linux/amd64` and `linux/arm64` ELF64 binaries and OCI containers directly inside **a single unprivileged, self-locked host process** on Windows, macOS, and Linux.
+-
+-> **Security Guarantee (Three-Ring Defense-in-Depth)**: `gvx` never weakens host OS security boundaries, never installs kernel drivers, and never requires `root`, `sudo`, `--privileged` on the host, or `CLONE_NEWUSER`. Before executing a single guest instruction, `gvx` locks down its own host process using Windows Restricted Tokens and Job Objects, macOS Seatbelt (`deny default`), or Linux `PR_SET_NO_NEW_PRIVS` + BPF `seccomp`. All guest system calls, virtual `UID 0` privileges, mounts (`VFS2`), and network tables (`netstack`) are strictly confined inside the memory-safe Go `Sentry` kernel.
+-
+-| Runtime                    | Host OS                                               |        Cold Start | Memory Footprint | Admin or `sudo` Needed | Background VM Daemon | Direct OCI Image Run |
+-| :------------------------- | :---------------------------------------------------- | ----------------: | ---------------: | :--------------------- | :------------------- | :------------------- |
+-| **`gvx` (`whpx` / `hvf`)** | Windows (`amd64`, `arm64`) & macOS (`arm64`)          |          `~20 ms` |        `~30 MiB` | No                     | No                   | Yes                  |
+-| **`gvx` (`systrap`)**      | Windows (`amd64`, `arm64`) & Linux (`amd64`, `arm64`) |    `~25 to 65 ms` |        `~31 MiB` | No                     | No                   | Yes                  |
+-| **WSL2 / Docker Desktop**  | Windows & macOS                                       |  `800 to 2500 ms` |      `> 512 MiB` | Yes (Initial Setup)    | Yes                  | Requires Daemon      |
+-| **QEMU (Full System)**     | Windows & macOS                                       | `1500 to 4000 ms` |      `> 256 MiB` | No                     | No                   | Requires Disk Image  |
+-
+-No Linux VM kernel boots on Windows or macOS. No background daemon runs on the host. No `root`, `sudo`, user namespaces (`CLONE_NEWUSER`), `mount(2)`, `TUN`/`TAP` drivers, or `CAP_NET_ADMIN` privileges are required on the host OS. Inside that unprivileged process, `gvx` runs **Docker-in-Docker (`docker:dind`)**, `docker build`, `docker compose`, and **multi-node High-Availability Kubernetes (`k3s` with embedded `etcd` and `Calico` CNI)**.
+-
+----
+-
+-## Container Lifecycle and Three-Ring Host Lockdown
+-
+-Every `gvx` sandbox runs inside one unprivileged host process and enforces a three-phase lifecycle: pre-opening all required host file descriptors and sockets, locking down the host OS process via `pkg/hostlockdown`, and entering the in-process `Sentry` execution loop.
+-
+-![gvx Container Lifecycle and Host Self-Lockdown](/assets/images/gvx/gvx-lifecycle-lockdown.png)
+-
+-Before transferring control to the first guest instruction, `gvx` pre-opens its cached `.erofs` image layer descriptors, `.ext4` volume file descriptors, `/workspace` `*os.Root` handle, and host network sockets, then invokes `hostlockdown.Apply()`:
+-
+-1. **Windows NT (`lockdown_windows.go`)**: Calls `AdjustTokenPrivileges` with `SE_PRIVILEGE_REMOVED` to strip privileges in-place, binds a `DISABLE_MAX_PRIVILEGE` restricted impersonation token at Low integrity (`S-1-16-4096`), assigns the process to an anonymous Job Object with `JOB_OBJECT_LIMIT_ACTIVE_PROCESS = 1` (blocking any child process creation), and enables `DisallowWin32kSystemCalls = 1` via `SetProcessMitigationPolicy`.
+-2. **macOS XNU (`lockdown_darwin.go`)**: Sets `RLIMIT_NPROC = 0` and applies a Seatbelt profile (`sandbox_init_with_parameters`) starting from `(version 1)(deny default)` that blocks `process-fork`, `process-exec*`, and all new host file opens.
+-3. **Linux (`lockdown_linux.go` + `pkg/gvx/syscallfilter_linux.go`)**: Sets `PR_SET_NO_NEW_PRIVS` and installs the Sentry BPF `seccomp` allowlist across all threads (`SECCOMP_FILTER_FLAG_TSYNC`) with explicit `EPERM` rules for `execve`, `execveat`, `clone`, `openat`, and `socket`.
+-
+----
+-
+-## Cross-Platform Syscall Interception and 4 KB Paging (`pkg/sentry/platform`)
+-
+-Linux ELF64 binaries assume 4 KB (`0x1000`) memory page granularity for `mmap(MAP_FIXED)` segment mappings. However, Windows `VirtualAlloc` and `MapViewOfFile3` enforce 64 KB (`0x10000`) alignment, and Apple Silicon macOS (`darwin/arm64`) uses 16 KB (`0x4000`) host pages. Furthermore, each OS requires a different mechanism to intercept Linux `SYSCALL` (`amd64`) and `SVC #0` (`arm64`) instructions without booting a Linux VM.
+-
+-`gvx` solves both problems across four execution backends that implement `pkg/sentry/platform.Context`:
+-
+-![gvx Platform Syscall Interception and 4KB Paging Mechanics](/assets/images/gvx/gvx-platform-syscalls.png)
+-
+-### 1. Windows Hardware Engine: `platform/whpx` (`WinHvPlatform.dll`)
+-
+-On `windows/amd64` and `windows/arm64`, `platform/whpx` creates a lightweight hypervisor partition via `WHvCreatePartition` without booting a guest OS kernel:
+-
+-- **64 KB-to-4 KB Paging Decoupler**: `whpx` registers each 64 MiB arena of `pgalloc.MemoryFile` with the partition once through `WHvMapGpaRange`. Subsequent `MapFile` and `Unmap` calls modify only the in-partition guest page tables, enforcing exact 4 KB `R/W/X` permissions despite Windows' 64 KB allocation granularity.
+-- **Zero-API Register Exchange via `CommPage`**:
+-  - On `amd64`, guest Ring-3 `SYSCALL` enters an in-partition Ring-0 `MSR_LSTAR` stub (`stubgen_x86.go`), which spills the fast-path syscall GPRs (`RAX, RDI, RSI, RDX, R10, R8, R9, RIP, RSP`) into a shared 4 KB `CommPage` and executes `HLT` to exit `WHvRunVirtualProcessor`.
+-  - On `arm64`, guest EL0 `SVC #0` enters EL1 vectors (`stubgen_a64.go`), spills `X0..X8, SP_EL0, ELR_EL1, PSTATE` into `CommPage`, and loads from unbacked GPA zero to trigger a memory exit back to the Sentry.
+-
+-### 2. macOS Hardware Engine: `platform/hvf` (`Hypervisor.framework`)
+-
+-On Apple Silicon (`darwin/arm64`), `platform/hvf` runs container threads inside `Hypervisor.framework` vCPUs (`hv_vm_create`, `hv_vcpu_run`):
+-
+-- **Two-Stage 4 KB over 16 KB MMU Translation**: Stage-2 (`hv_vm_map`) maps 1 GiB memory-file chunks into Intermediate Physical Address (IPA) space once at 16 KB host page granularity with `HV_MEMORY_READ | HV_MEMORY_WRITE | HV_MEMORY_EXEC`. Inside the vCPU, the EL1 `bluepill` stub (`bluepill_arm64.go`) configures `TCR_EL1.TG0 = 0b00` (4 KB granule) in `TTBR0_EL1` and populates 4 KB Stage-1 page table entries with exact `R-X` or `RW-` (`UXN=1`) permissions. Because the ARM64 MMU enforces the intersection of Stage-1 and Stage-2 permissions, the hardware traps permission faults at exact 4 KB boundaries.
+-- **Syscall Trap**: Guest EL0 `SVC #0` traps to EL1 `VBAR_EL1`, spills registers to the shared 4 KB `CommPage`, and executes `HVC #0` to return from `hv_vcpu_run` to the Go Sentry thread.
+-
+-### 3. Windows User-Mode Fallback: `platform/systrap` (`winsystrap`)
+-
+-When hardware virtualization is unavailable (such as inside nested cloud VMs), `winsystrap` runs guest code in user mode on `windows/amd64` and `windows/arm64`:
+-
+-- **Hardware `CR3` / `TTBR0_EL1` Isolation**: Guest threads run inside isolated stub subprocesses booted from a generated 1 KB executable (`stubimage_xplat.go`) confined by a Low-Integrity token and a Job Object.
+-- **In-Place Binary Patching & `winSysmsg` IPC**: On `amd64`, the patcher (`patcher_amd64_xplat.go`) replaces 2-byte `syscall` (`0f 05`) instructions with 5-byte `jmp rel32` jumps (or `CC 90` breakpoint traps when a 5-byte window is unavailable) into a fast-path island. On `arm64`, `svc #0` is patched with a `B` branch to an island slot. The island spills registers to the shared `winSysmsg` page and synchronizes with the Sentry via `WaitOnAddress` and `WakeByAddressSingle`, while unpatched traps and page faults stop on a Windows Debug Object (`WaitForDebugEventEx`).
+-
+-### 4. Linux User-Mode Engine: `platform/systrap`
+-
+-On `linux/amd64` and `linux/arm64`, `systrap` runs guest threads (`sysmsg`) that trap guest syscalls via `SECCOMP_RET_TRAP` (`SIGSYS`) and binary-patch `syscall` sites into a shared-memory trampoline (`sysmsg`) synchronized via `SYS_FUTEX`, while a stub `syscallThread` (`syscall_thread.go`) executes address-space operations (`mmap`, `munmap`, `clone`) via `SECCOMP_RET_USER_NOTIF` (`_RUN_SECCOMP_LOOP`). When `gvx` runs inside an outer `gVisor` (`runsc`) sandbox where the single `SECCOMP_FILTER_FLAG_NEW_LISTENER` slot returns `EBUSY`, `gvx` automatically switches `syscallThread` to a shared-memory futex loop (`_RUN_SYSCALL_LOOP`), as detailed in [Part 3 of this series](/blog/posts/docker-in-docker-inside-gvisor-with-gvx-z48916d03).
+-
+----
+-
+-## How `gvx` Maps Guest Linux System Calls to Virtual Subsystems and Host Handles
+-
+-Once a platform engine traps a guest `SYSCALL` (`amd64`) or `SVC #0` (`arm64`) instruction and writes the guest registers into the 4 KB shared page (`CommPage`, `sysmsg`, or `winSysmsg`), control returns to the Go `Sentry` task goroutine (`pkg/sentry/kernel/task_syscall.go`). Rather than forwarding Linux system calls to the underlying host OS kernel, `Task.doSyscall()` saves the original register state (`SyscallSaveOrig()`), evaluates any in-guest BPF `seccomp` filters and `ptrace` stops, and dispatches the system call number through `linux.AMD64` or `linux.ARM64` (`pkg/sentry/syscalls/linux/linux64.go`, covering ~370 Linux system calls) into four internal domains:
+-
+-![How gvx Maps Guest Linux Syscalls to Subsystems and Host OS](/assets/images/gvx/gvx-syscall-mapping.png)
+-
+-| Syscall Domain | Representative Guest Linux Syscalls | Internal `gvx` Subsystem (`pkg/sentry`) | Host OS Boundary Interaction (After `hostlockdown`) |
+-| :--- | :--- | :--- | :--- |
+-| **A. Process, Namespace, Mount & Sync** | `clone`, `execve`, `unshare`, `setns`, `mount`, `umount2`, `pivot_root`, `setuid`, `capset`, `futex`, `epoll_wait`, `pipe2` | `kernel.Task`, virtual credentials, futex table, and in-memory `VFS2` (`procfs`, `sysfs`, `cgroupfs` v2, `tmpfs`, `overlayfs`) | **Zero host syscalls** (100% in-memory Go state; completely invisible to the host OS) |
+-| **B. Virtual Memory (`MM`)** | `mmap`, `munmap`, `mremap`, `mprotect`, `brk`, `madvise`, `memfd_create` | `mm.MemoryManager` (4 KB VMA tree) & `pgalloc.MemoryFile` | Bidirectional 4 KB page-table updates via `WHvMapGpaRange`, `hv_vm_map` + `TTBR0_EL1`, or stub `mmap`/`mprotect` |
+-| **C. File & Storage (`VFS2`)** | `openat`, `pread64`, `pwrite64`, `getdents64`, `statx`, `renameat2`, `setxattr`, `mknod`, `inotify_add_watch` | `vfs.VirtualFilesystem` mount table router (`fsimpl/erofs`, `fsimpl/ext4lite`, `fsimpl/hostfs` v2) | Bidirectional `pread`/`pwrite` on 1 pinned `.erofs` FD or 1 `.ext4` FD, or scoped relative walks on `*os.Root` |
+-| **D. Networking & Netfilter** | `socket`, `bind`, `listen`, `connect`, `sendmsg`, `recvmsg`, `netlink`, `setsockopt(IPT_SO_SET_REPLACE)` | User-space `pkg/tcpip` (`lo`, `eth0`, `docker0`, `veth`, `vxlan`, `wireguard`, `ipset`, `iptables-legacy`) | Intra-sandbox traffic uses **zero host syscalls**; external traffic maps to `net.Dial`/`net.Listen` (`-net=nat`) or 1 UDP socket (`-net=wg`) |
+-
+-When the handler returns `(rval, ctrl, err)`, `Task.doSyscallInvoke()` converts any error into a negative Linux `errno` (`-ExtractErrno(err, sysno)`), writes the return value back to the shared register page (`RAX` on `amd64`, `X0` on `arm64`), and resumes guest execution.
+-
+----
+-
+-## Storage (`VFS2`) and Dual-Track User-Space Networking (`netstack`)
+-
+-All guest file and network operations are serviced inside the Go `Sentry` through three `VFS2` filesystems and two `pkg/netbackend` tracks:
+-
+-![gvx VFS2 Storage Engines and Dual-Track Netstack](/assets/images/gvx/gvx-storage-netstack.png)
+-
+-| Storage Engine         | Mount Role in `gvx`                              | Backing Host Resource                  | Host `openat` / `NtCreateFile` Calls at Run Time | Windows Defender (`WdFilter.sys`) Per-File Scans |
+-| :--------------------- | :----------------------------------------------- | :------------------------------------- | -----------------------------------------------: | -----------------------------------------------: |
+-| **`fsimpl/erofs`**     | Read-only OCI image lower layers                 | Single `<sha256>.erofs` file per layer |                                              `0` |                                              `0` |
+-| **`fsimpl/ext4lite`**  | Named volumes (`-v name:/path`)                  | Single `<name>.ext4` file per volume   |                                              `0` |                                              `0` |
+-| **`fsimpl/hostfs` v2** | Host workspace (`-workspace`, `-v /host:/guest`) | Pinned `*os.Root` host directory       |                     `O(depth)` per uncached open |                          `1` per host file close |
+-
+-### Why `ext4lite` Matters for Docker, Databases, and Package Managers
+-
+-Extracting or writing tens of thousands of container files directly onto Windows NTFS or macOS APFS triggers antivirus minifilter scans (`WdFilter.sys`), case-sensitivity collisions, and missing POSIX extended attributes.
+-
+-`pkg/sentry/fsimpl/ext4lite` implements a pure-Go `ext4` filesystem inside one pre-opened host file (`%LOCALAPPDATA%\gvx\cache\volumes\<name>.ext4` on Windows, `~/Library/Caches/gvx/volumes/<name>.ext4` on macOS, or `~/.cache/gvx/volumes/<name>.ext4` on Linux) with:
+-
+-- **4 KiB blocks and 16 MiB dynamic block groups (`meta_bg`)**: Grows dynamically without sparse-file allocation stalls (`fallocate` on Linux, `fcntl(F_PREALLOCATE)` on macOS, `FileAllocationInfo` on Windows) and compacts unused trailing groups on clean unmount.
+-- **JBD2 ordered-mode journal (inode 8)**: Atomic transaction commits with CRC-32 checksums and revoke blocks, plus `fsckLite` recovery.
+-- **`overlayfs` upper-layer support**: Implements `trusted.overlay.*` and `security.capability` extended attributes, character device whiteouts (`0:0`), `d_type` directory entry reporting, and `RENAME_EXCHANGE`.
+-
+----
+-
+-## Practical Workloads: Docker Engine, Kubernetes (`k3s` + `Calico`), and Go SDK
+-
+-### Installing `rungv`: SLSA-Attested Prebuilt Releases or `go install`
+-
+-You can download a prebuilt `rungv` archive for `linux/amd64`, `linux/arm64`, `darwin/arm64`, `windows/amd64`, or `windows/arm64` from [GitHub Releases](https://github.com/gfire-sigs/gvx/releases) (each built by the SLSA release pipeline with a Sigstore provenance bundle and `SHA256SUMS`), or install directly from source with `go install`:
+-
+-```sh
+-# Option A: Download a prebuilt release and verify SLSA build provenance
+-gh attestation verify rungv-v0.2.0-linux-amd64.tar.gz --repo gfire-sigs/gvx \
+-  --signer-workflow gfire-sigs/gvx/.github/workflows/release.yml \
+-  --source-ref refs/tags/v0.2.0 --deny-self-hosted-runners
+-shasum -a 256 -c SHA256SUMS --ignore-missing
+-tar -xzf rungv-v0.2.0-linux-amd64.tar.gz
+-
+-# Option B: Install directly via Go (Linux / Windows)
+-CGO_ENABLED=0 go install z.gfire.dev/gvx/cmd/rungv@latest
+-```
+-
+-> On macOS (`darwin/arm64`), the prebuilt release archive is already signed with the `com.apple.security.hypervisor` entitlement (`xattr -d com.apple.quarantine rungv` clears browser quarantine). If you build locally with `go install` or `go build` on macOS, sign the binary with `codesign --sign - --entitlements entitlements.plist --force $(which rungv)`.
+-
+-### 1. Running an Unprivileged Docker Engine (`docker:dind`)
+-
+-Following [`docs/docker-engine.md`](https://github.com/gfire-sigs/gvx/blob/main/docs/docker-engine.md), you can run an unmodified `docker:dind` container inside `rungv` on Windows, macOS, or Linux and control it with your host `docker` CLI:
+-
+-```sh
+-# 1. Create the host directory for the forwarded Unix socket
+-mkdir -p ~/.gvx
+-
+-# 2. Start docker:dind inside a gvx sandbox with an ext4lite volume
+-rungv run \
+-  -p unix:~/.gvx/docker.sock:2375 \
+-  -p 127.0.0.1:9000-9019:9000-9019 \
+-  -v gvx-docker:/var/lib/docker \
+-  -e DOCKER_TLS_CERTDIR= \
+-  docker:dind --tls=false
+-```
+-
+-In a second terminal, point your host `docker` CLI at the sandbox socket:
+-
+-```sh
+-docker context create gvx --docker host=unix://$HOME/.gvx/docker.sock
+-docker context use gvx
+-
+-docker info --format '{{.Driver}} {{.OperatingSystem}}'
+-# Output: overlayfs Alpine Linux ... (containerized)
+-
+-docker build -t myapp ./app
+-docker compose up -d
+-```
+-
+-### 2. Running Kubernetes (`k3s` + `Calico`) in Unprivileged Sandboxes
+-
+-Because `gvx` implements `/dev/kmsg`, `cgroup` v2 (`memory.max` OOM killer and `cpu.max` bandwidth throttling), `/proc/diskstats`, `wireguard` and `vxlan` netlink devices, `ipset`, and `iptables-legacy` (`addrtype`, `conntrack`, `statistic`, `recent`), an unmodified `rancher/k3s` image reaches `Ready` inside a single `rungv` process:
+-
+-```sh
+-mkdir -p ~/.gvx/k3s
+-
+-rungv run \
+-  -e IPTABLES_MODE=legacy \
+-  -p 127.0.0.1:6443:6443 \
+-  -p 127.0.0.1:30000-30019:30000-30019 \
+-  -v k3s:/var/lib/rancher \
+-  --mount type=bind,src=$HOME/.gvx/k3s,dst=/output \
+-  rancher/k3s:v1.31.4-k3s1 server \
+-  --disable=traefik,servicelb \
+-  --write-kubeconfig=/output/kubeconfig.yaml \
+-  --write-kubeconfig-mode=644
+-```
+-
+-You can also join multiple `gvx` nodes over WireGuard (`flannel-backend=wireguard-native` or a `wg0` mesh) with embedded `etcd` high availability, or run **Calico** (`calico-vxlan.yaml` with `FELIX_IPTABLESBACKEND=Legacy`) to enforce Kubernetes `NetworkPolicy` completely inside user space.
+-
+-### 3. Embedding Linux Containers in Go via `z.gfire.dev/gvx/pkg/gvx`
+-
+-Go applications can embed Linux containers directly without an external container daemon:
+-
+-```go
+-package main
+-
+-import (
+-	"context"
+-	"fmt"
+-	"os"
+-
+-	"z.gfire.dev/gvx/pkg/gvx"
+-)
+-
+-func main() {
+-	ctx := context.Background()
+-	sb, err := gvx.New(ctx, gvx.Config{
+-		Platform:      gvx.PlatformAuto,
+-		NetworkMode:   gvx.NetModeNAT,
+-		OCIImage:      "alpine:3.20",
+-		WorkspacePath: "./repo",
+-		Argv:          []string{"/usr/bin/git", "status"},
+-		Stdout:        os.Stdout,
+-		Stderr:        os.Stderr,
+-	})
+-	if err != nil {
+-		fmt.Fprintf(os.Stderr, "init sandbox: %v\n", err)
+-		os.Exit(1)
+-	}
+-	defer sb.Close()
+-
+-	exitCode, err := sb.Run(ctx)
+-	if err != nil {
+-		fmt.Fprintf(os.Stderr, "run sandbox: %v\n", err)
+-		os.Exit(1)
+-	}
+-	os.Exit(exitCode)
+-}
+-```
+-
+----
+-
+-## Further Reading in This Series
+-
+-1. **[gvx: Running Linux Containers, Docker, and Kubernetes in One Unprivileged Process](/blog/posts/gvx-cross-platform-linux-containers-z48916d01)** (this post)
+-2. **[Running Docker, docker build, and docker compose Without Root or User Namespaces](/blog/posts/run-docker-without-root-or-userns-gvx-z48916d02)**: How to bootstrap `docker:dind` in locked-down sandboxes where `sudo`, `unshare(CLONE_NEWUSER)`, `mount(2)`, and `/dev/fuse` are blocked.
+-3. **[Running Docker-in-Docker Inside gVisor and Nested Sandboxes with gvx](/blog/posts/docker-in-docker-inside-gvisor-with-gvx-z48916d03)**: Why `apt-get install docker.io` and nested `runsc` fail inside `gVisor` across five kernel barriers, and how `gvx` runs nested `docker:dind` using a shared-memory futex loop.
+-4. **[Fast Isolated Docker Environments for AI Agent RL Rollouts with gvx](/blog/posts/fast-docker-environments-for-agent-rl-rollouts-z48916d04)**: Scaling `SWE-bench` and agent reinforcement learning rollouts with hundreds of parallel unprivileged `docker:dind` instances and 100-millisecond copy-on-write `.ext4` volume resets.
++---
++id: e62d78ef5850c982dbddc9d3ff9134ae
++author: Lemon Mint
++title: 'gvx: Running Linux Containers, Docker, and Kubernetes in One Unprivileged Process'
++description: Technical overview of gvx, a security-hardened, cross-platform container runtime and Go SDK built on the gVisor user-space kernel that safely runs Linux containers, Docker-in-Docker, and multi-node HA Kubernetes in a single unprivileged process across Windows, macOS, and Linux.
++language: en
++date: 2026-11-06T12:02:56.008516536Z
++path: /blog/posts/gvx-cross-platform-linux-containers-z48916d01
++go_package: z.gfire.dev/gvx
++go_repourl: https://github.com/gfire-sigs/gvx.git
++category: lowlevel
++---
++
++## Introduction: Security-Hardened Containers Without Root or Host Daemons
++
++Running Linux containers, `docker build`, or Kubernetes inside a development machine, CI runner, or multi-tenant cloud node usually forces an uncomfortable security trade-off:
++
++- On **Linux**, standard OCI runtimes (`runc`, `crun`, `runsc`) require either `root` privileges, host `/var/run/docker.sock` exposure, `--privileged` (`CAP_SYS_ADMIN`), or user namespaces (`unshare(CLONE_NEWUSER)`) that expand the host kernel attack surface.
++- On **Windows** and **macOS**, container engines (`Docker Desktop`, `Podman Machine`, `Lima`, `OrbStack`) boot a full Linux virtual machine kernel inside WSL2, Hyper-V, or `Virtualization.framework` and run a persistent background daemon inside that VM.
++
++**[gvx](https://github.com/gfire-sigs/gvx)** (`rungv` CLI and the `z.gfire.dev/gvx/pkg/gvx` Go SDK) provides a **secure, zero-privilege alternative**. Built as an upstream-trackable fork of Google's **gVisor** user-space Linux kernel (`Sentry`) and user-space network stack (`netstack`), `gvx` executes unmodified `linux/amd64` and `linux/arm64` ELF64 binaries and OCI containers directly inside **a single unprivileged, self-locked host process** on Windows, macOS, and Linux.
++
++> **Security Guarantee (Three-Ring Defense-in-Depth)**: `gvx` never weakens host OS security boundaries, never installs kernel drivers, and never requires `root`, `sudo`, `--privileged` on the host, or `CLONE_NEWUSER`. Before executing a single guest instruction, `gvx` locks down its own host process using Windows Restricted Tokens and Job Objects, macOS Seatbelt (`deny default`), or Linux `PR_SET_NO_NEW_PRIVS` + BPF `seccomp`. All guest system calls, virtual `UID 0` privileges, mounts (`VFS2`), and network tables (`netstack`) are strictly confined inside the memory-safe Go `Sentry` kernel.
++
++| Runtime                    | Host OS                                               |        Cold Start | Memory Footprint | Admin or `sudo` Needed | Background VM Daemon | Direct OCI Image Run |
++| :------------------------- | :---------------------------------------------------- | ----------------: | ---------------: | :--------------------- | :------------------- | :------------------- |
++| **`gvx` (`whpx` / `hvf`)** | Windows (`amd64`, `arm64`) & macOS (`arm64`)          |          `~20 ms` |        `~30 MiB` | No                     | No                   | Yes                  |
++| **`gvx` (`systrap`)**      | Windows (`amd64`, `arm64`) & Linux (`amd64`, `arm64`) |    `~25 to 65 ms` |        `~31 MiB` | No                     | No                   | Yes                  |
++| **WSL2 / Docker Desktop**  | Windows & macOS                                       |  `800 to 2500 ms` |      `> 512 MiB` | Yes (Initial Setup)    | Yes                  | Requires Daemon      |
++| **QEMU (Full System)**     | Windows & macOS                                       | `1500 to 4000 ms` |      `> 256 MiB` | No                     | No                   | Requires Disk Image  |
++
++No Linux VM kernel boots on Windows or macOS. No background daemon runs on the host. No `root`, `sudo`, user namespaces (`CLONE_NEWUSER`), `mount(2)`, `TUN`/`TAP` drivers, or `CAP_NET_ADMIN` privileges are required on the host OS. Inside that unprivileged process, `gvx` runs **Docker-in-Docker (`docker:dind`)**, `docker build`, `docker compose`, and **multi-node High-Availability Kubernetes (`k3s` with embedded `etcd` and `Calico` CNI)**.
++
++---
++
++## Container Lifecycle and Three-Ring Host Lockdown
++
++Every `gvx` sandbox runs inside one unprivileged host process and enforces a three-phase lifecycle: pre-opening all required host file descriptors and sockets, locking down the host OS process via `pkg/hostlockdown`, and entering the in-process `Sentry` execution loop.
++
++![gvx Container Lifecycle and Host Self-Lockdown](/assets/images/gvx/gvx-lifecycle-lockdown.png)
++
++Before transferring control to the first guest instruction, `gvx` pre-opens its cached `.erofs` image layer descriptors, `.ext4` volume file descriptors, `/workspace` `*os.Root` handle, and host network sockets, then invokes `hostlockdown.Apply()`:
++
++1. **Windows NT (`lockdown_windows.go`)**: Calls `AdjustTokenPrivileges` with `SE_PRIVILEGE_REMOVED` to strip privileges in-place, binds a `DISABLE_MAX_PRIVILEGE` restricted impersonation token at Low integrity (`S-1-16-4096`), assigns the process to an anonymous Job Object with `JOB_OBJECT_LIMIT_ACTIVE_PROCESS = 1` (blocking any child process creation), and enables `DisallowWin32kSystemCalls = 1` via `SetProcessMitigationPolicy`.
++2. **macOS XNU (`lockdown_darwin.go`)**: Sets `RLIMIT_NPROC = 0` and applies a Seatbelt profile (`sandbox_init_with_parameters`) starting from `(version 1)(deny default)` that blocks `process-fork`, `process-exec*`, and all new host file opens.
++3. **Linux (`lockdown_linux.go` + `pkg/gvx/syscallfilter_linux.go`)**: Sets `PR_SET_NO_NEW_PRIVS` and installs the Sentry BPF `seccomp` allowlist across all threads (`SECCOMP_FILTER_FLAG_TSYNC`) with explicit `EPERM` rules for `execve`, `execveat`, `clone`, `openat`, and `socket`.
++
++---
++
++## Cross-Platform Syscall Interception and 4 KB Paging (`pkg/sentry/platform`)
++
++Linux ELF64 binaries assume 4 KB (`0x1000`) memory page granularity for `mmap(MAP_FIXED)` segment mappings. However, Windows `VirtualAlloc` and `MapViewOfFile3` enforce 64 KB (`0x10000`) alignment, and Apple Silicon macOS (`darwin/arm64`) uses 16 KB (`0x4000`) host pages. Furthermore, each OS requires a different mechanism to intercept Linux `SYSCALL` (`amd64`) and `SVC #0` (`arm64`) instructions without booting a Linux VM.
++
++`gvx` solves both problems across four execution backends that implement `pkg/sentry/platform.Context`:
++
++![gvx Platform Syscall Interception and 4KB Paging Mechanics](/assets/images/gvx/gvx-platform-syscalls.png)
++
++### 1. Windows Hardware Engine: `platform/whpx` (`WinHvPlatform.dll`)
++
++On `windows/amd64` and `windows/arm64`, `platform/whpx` creates a lightweight hypervisor partition via `WHvCreatePartition` without booting a guest OS kernel:
++
++- **64 KB-to-4 KB Paging Decoupler**: `whpx` registers each 64 MiB arena of `pgalloc.MemoryFile` with the partition once through `WHvMapGpaRange`. Subsequent `MapFile` and `Unmap` calls modify only the in-partition guest page tables, enforcing exact 4 KB `R/W/X` permissions despite Windows' 64 KB allocation granularity.
++- **Zero-API Register Exchange via `CommPage`**:
++  - On `amd64`, guest Ring-3 `SYSCALL` enters an in-partition Ring-0 `MSR_LSTAR` stub (`stubgen_x86.go`), which spills the fast-path syscall GPRs (`RAX, RDI, RSI, RDX, R10, R8, R9, RIP, RSP`) into a shared 4 KB `CommPage` and executes `HLT` to exit `WHvRunVirtualProcessor`.
++  - On `arm64`, guest EL0 `SVC #0` enters EL1 vectors (`stubgen_a64.go`), spills `X0..X8, SP_EL0, ELR_EL1, PSTATE` into `CommPage`, and loads from unbacked GPA zero to trigger a memory exit back to the Sentry.
++
++### 2. macOS Hardware Engine: `platform/hvf` (`Hypervisor.framework`)
++
++On Apple Silicon (`darwin/arm64`), `platform/hvf` runs container threads inside `Hypervisor.framework` vCPUs (`hv_vm_create`, `hv_vcpu_run`):
++
++- **Two-Stage 4 KB over 16 KB MMU Translation**: Stage-2 (`hv_vm_map`) maps 1 GiB memory-file chunks into Intermediate Physical Address (IPA) space once at 16 KB host page granularity with `HV_MEMORY_READ | HV_MEMORY_WRITE | HV_MEMORY_EXEC`. Inside the vCPU, the EL1 `bluepill` stub (`bluepill_arm64.go`) configures `TCR_EL1.TG0 = 0b00` (4 KB granule) in `TTBR0_EL1` and populates 4 KB Stage-1 page table entries with exact `R-X` or `RW-` (`UXN=1`) permissions. Because the ARM64 MMU enforces the intersection of Stage-1 and Stage-2 permissions, the hardware traps permission faults at exact 4 KB boundaries.
++- **Syscall Trap**: Guest EL0 `SVC #0` traps to EL1 `VBAR_EL1`, spills registers to the shared 4 KB `CommPage`, and executes `HVC #0` to return from `hv_vcpu_run` to the Go Sentry thread.
++
++### 3. Windows User-Mode Fallback: `platform/systrap` (`winsystrap`)
++
++When hardware virtualization is unavailable (such as inside nested cloud VMs), `winsystrap` runs guest code in user mode on `windows/amd64` and `windows/arm64`:
++
++- **Hardware `CR3` / `TTBR0_EL1` Isolation**: Guest threads run inside isolated stub subprocesses booted from a generated 1 KB executable (`stubimage_xplat.go`) confined by a Low-Integrity token and a Job Object.
++- **In-Place Binary Patching & `winSysmsg` IPC**: On `amd64`, the patcher (`patcher_amd64_xplat.go`) replaces 2-byte `syscall` (`0f 05`) instructions with 5-byte `jmp rel32` jumps (or `CC 90` breakpoint traps when a 5-byte window is unavailable) into a fast-path island. On `arm64`, `svc #0` is patched with a `B` branch to an island slot. The island spills registers to the shared `winSysmsg` page and synchronizes with the Sentry via `WaitOnAddress` and `WakeByAddressSingle`, while unpatched traps and page faults stop on a Windows Debug Object (`WaitForDebugEventEx`).
++
++### 4. Linux User-Mode Engine: `platform/systrap`
++
++On `linux/amd64` and `linux/arm64`, `systrap` runs guest threads (`sysmsg`) that trap guest syscalls via `SECCOMP_RET_TRAP` (`SIGSYS`) and binary-patch `syscall` sites into a shared-memory trampoline (`sysmsg`) synchronized via `SYS_FUTEX`, while a stub `syscallThread` (`syscall_thread.go`) executes address-space operations (`mmap`, `munmap`, `clone`) via `SECCOMP_RET_USER_NOTIF` (`_RUN_SECCOMP_LOOP`). When `gvx` runs inside an outer `gVisor` (`runsc`) sandbox where the single `SECCOMP_FILTER_FLAG_NEW_LISTENER` slot returns `EBUSY`, `gvx` automatically switches `syscallThread` to a shared-memory futex loop (`_RUN_SYSCALL_LOOP`), as detailed in [Part 3 of this series](/blog/posts/docker-in-docker-inside-gvisor-with-gvx-z48916d03).
++
++---
++
++## How `gvx` Maps Guest Linux System Calls to Virtual Subsystems and Host Handles
++
++Once a platform engine traps a guest `SYSCALL` (`amd64`) or `SVC #0` (`arm64`) instruction and writes the guest registers into the 4 KB shared page (`CommPage`, `sysmsg`, or `winSysmsg`), control returns to the Go `Sentry` task goroutine (`pkg/sentry/kernel/task_syscall.go`). Rather than forwarding Linux system calls to the underlying host OS kernel, `Task.doSyscall()` saves the original register state (`SyscallSaveOrig()`), evaluates any in-guest BPF `seccomp` filters and `ptrace` stops, and dispatches the system call number through `linux.AMD64` or `linux.ARM64` (`pkg/sentry/syscalls/linux/linux64.go`, covering ~370 Linux system calls) into four internal domains:
++
++![How gvx Maps Guest Linux Syscalls to Subsystems and Host OS](/assets/images/gvx/gvx-syscall-mapping.png)
++
++| Syscall Domain                          | Representative Guest Linux Syscalls                                                                                         | Internal `gvx` Subsystem (`pkg/sentry`)                                                                                        | Host OS Boundary Interaction (After `hostlockdown`)                                                                                          |
++| :-------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------- |
++| **A. Process, Namespace, Mount & Sync** | `clone`, `execve`, `unshare`, `setns`, `mount`, `umount2`, `pivot_root`, `setuid`, `capset`, `futex`, `epoll_wait`, `pipe2` | `kernel.Task`, virtual credentials, futex table, and in-memory `VFS2` (`procfs`, `sysfs`, `cgroupfs` v2, `tmpfs`, `overlayfs`) | **Zero host syscalls** (100% in-memory Go state; completely invisible to the host OS)                                                        |
++| **B. Virtual Memory (`MM`)**            | `mmap`, `munmap`, `mremap`, `mprotect`, `brk`, `madvise`, `memfd_create`                                                    | `mm.MemoryManager` (4 KB VMA tree) & `pgalloc.MemoryFile`                                                                      | Bidirectional 4 KB page-table updates via `WHvMapGpaRange`, `hv_vm_map` + `TTBR0_EL1`, or stub `mmap`/`mprotect`                             |
++| **C. File & Storage (`VFS2`)**          | `openat`, `pread64`, `pwrite64`, `getdents64`, `statx`, `renameat2`, `setxattr`, `mknod`, `inotify_add_watch`               | `vfs.VirtualFilesystem` mount table router (`fsimpl/erofs`, `fsimpl/ext4lite`, `fsimpl/hostfs` v2)                             | Bidirectional `pread`/`pwrite` on 1 pinned `.erofs` FD or 1 `.ext4` FD, or scoped relative walks on `*os.Root`                               |
++| **D. Networking & Netfilter**           | `socket`, `bind`, `listen`, `connect`, `sendmsg`, `recvmsg`, `netlink`, `setsockopt(IPT_SO_SET_REPLACE)`                    | User-space `pkg/tcpip` (`lo`, `eth0`, `docker0`, `veth`, `vxlan`, `wireguard`, `ipset`, `iptables-legacy`)                     | Intra-sandbox traffic uses **zero host syscalls**; external traffic maps to `net.Dial`/`net.Listen` (`-net=nat`) or 1 UDP socket (`-net=wg`) |
++
++When the handler returns `(rval, ctrl, err)`, `Task.doSyscallInvoke()` converts any error into a negative Linux `errno` (`-ExtractErrno(err, sysno)`), writes the return value back to the shared register page (`RAX` on `amd64`, `X0` on `arm64`), and resumes guest execution.
++
++---
++
++## Storage (`VFS2`) and Dual-Track User-Space Networking (`netstack`)
++
++All guest file and network operations are serviced inside the Go `Sentry` through three `VFS2` filesystems and two `pkg/netbackend` tracks:
++
++![gvx VFS2 Storage Engines and Dual-Track Netstack](/assets/images/gvx/gvx-storage-netstack.png)
++
++| Storage Engine         | Mount Role in `gvx`                              | Backing Host Resource                  | Host `openat` / `NtCreateFile` Calls at Run Time | Windows Defender (`WdFilter.sys`) Per-File Scans |
++| :--------------------- | :----------------------------------------------- | :------------------------------------- | -----------------------------------------------: | -----------------------------------------------: |
++| **`fsimpl/erofs`**     | Read-only OCI image lower layers                 | Single `<sha256>.erofs` file per layer |                                              `0` |                                              `0` |
++| **`fsimpl/ext4lite`**  | Named volumes (`-v name:/path`)                  | Single `<name>.ext4` file per volume   |                                              `0` |                                              `0` |
++| **`fsimpl/hostfs` v2** | Host workspace (`-workspace`, `-v /host:/guest`) | Pinned `*os.Root` host directory       |                     `O(depth)` per uncached open |                          `1` per host file close |
++
++### Why `ext4lite` Matters for Docker, Databases, and Package Managers
++
++Extracting or writing tens of thousands of container files directly onto Windows NTFS or macOS APFS triggers antivirus minifilter scans (`WdFilter.sys`), case-sensitivity collisions, and missing POSIX extended attributes.
++
++`pkg/sentry/fsimpl/ext4lite` implements a pure-Go `ext4` filesystem inside one pre-opened host file (`%LOCALAPPDATA%\gvx\cache\volumes\<name>.ext4` on Windows, `~/Library/Caches/gvx/volumes/<name>.ext4` on macOS, or `~/.cache/gvx/volumes/<name>.ext4` on Linux) with:
++
++- **4 KiB blocks and 16 MiB dynamic block groups (`meta_bg`)**: Grows dynamically without sparse-file allocation stalls (`fallocate` on Linux, `fcntl(F_PREALLOCATE)` on macOS, `FileAllocationInfo` on Windows) and compacts unused trailing groups on clean unmount.
++- **JBD2 ordered-mode journal (inode 8)**: Atomic transaction commits with CRC-32 checksums and revoke blocks, plus `fsckLite` recovery.
++- **`overlayfs` upper-layer support**: Implements `trusted.overlay.*` and `security.capability` extended attributes, character device whiteouts (`0:0`), `d_type` directory entry reporting, and `RENAME_EXCHANGE`.
++
++---
++
++## Practical Workloads: Docker Engine, Kubernetes (`k3s` + `Calico`), and Go SDK
++
++### Installing `rungv`: SLSA-Attested Prebuilt Releases or `go install`
++
++You can download a prebuilt `rungv` archive for `linux/amd64`, `linux/arm64`, `darwin/arm64`, `windows/amd64`, or `windows/arm64` from [GitHub Releases](https://github.com/gfire-sigs/gvx/releases) (each built by the SLSA release pipeline with a Sigstore provenance bundle and `SHA256SUMS`), or install directly from source with `go install`:
++
++```sh
++# Option A: Download a prebuilt release and verify SLSA build provenance
++gh attestation verify rungv-v0.2.0-linux-amd64.tar.gz --repo gfire-sigs/gvx \
++  --signer-workflow gfire-sigs/gvx/.github/workflows/release.yml \
++  --source-ref refs/tags/v0.2.0 --deny-self-hosted-runners
++shasum -a 256 -c SHA256SUMS --ignore-missing
++tar -xzf rungv-v0.2.0-linux-amd64.tar.gz
++
++# Option B: Install directly via Go (Linux / Windows)
++CGO_ENABLED=0 go install z.gfire.dev/gvx/cmd/rungv@latest
++```
++
++> On macOS (`darwin/arm64`), the prebuilt release archive is already signed with the `com.apple.security.hypervisor` entitlement (`xattr -d com.apple.quarantine rungv` clears browser quarantine). If you build locally with `go install` or `go build` on macOS, sign the binary with `codesign --sign - --entitlements entitlements.plist --force $(which rungv)`.
++
++### 1. Running an Unprivileged Docker Engine (`docker:dind`)
++
++Following [`docs/docker-engine.md`](https://github.com/gfire-sigs/gvx/blob/main/docs/docker-engine.md), you can run an unmodified `docker:dind` container inside `rungv` on Windows, macOS, or Linux and control it with your host `docker` CLI:
++
++```sh
++# 1. Create the host directory for the forwarded Unix socket
++mkdir -p ~/.gvx
++
++# 2. Start docker:dind inside a gvx sandbox with an ext4lite volume
++rungv run \
++  -p unix:~/.gvx/docker.sock:2375 \
++  -p 127.0.0.1:9000-9019:9000-9019 \
++  -v gvx-docker:/var/lib/docker \
++  -e DOCKER_TLS_CERTDIR= \
++  docker:dind --tls=false
++```
++
++In a second terminal, point your host `docker` CLI at the sandbox socket:
++
++```sh
++docker context create gvx --docker host=unix://$HOME/.gvx/docker.sock
++docker context use gvx
++
++docker info --format '{{.Driver}} {{.OperatingSystem}}'
++# Output: overlayfs Alpine Linux ... (containerized)
++
++docker build -t myapp ./app
++docker compose up -d
++```
++
++### 2. Running Kubernetes (`k3s` + `Calico`) in Unprivileged Sandboxes
++
++Because `gvx` implements `/dev/kmsg`, `cgroup` v2 (`memory.max` OOM killer and `cpu.max` bandwidth throttling), `/proc/diskstats`, `wireguard` and `vxlan` netlink devices, `ipset`, and `iptables-legacy` (`addrtype`, `conntrack`, `statistic`, `recent`), an unmodified `rancher/k3s` image reaches `Ready` inside a single `rungv` process:
++
++```sh
++mkdir -p ~/.gvx/k3s
++
++rungv run \
++  -e IPTABLES_MODE=legacy \
++  -p 127.0.0.1:6443:6443 \
++  -p 127.0.0.1:30000-30019:30000-30019 \
++  -v k3s:/var/lib/rancher \
++  --mount type=bind,src=$HOME/.gvx/k3s,dst=/output \
++  rancher/k3s:v1.31.4-k3s1 server \
++  --disable=traefik,servicelb \
++  --write-kubeconfig=/output/kubeconfig.yaml \
++  --write-kubeconfig-mode=644
++```
++
++You can also join multiple `gvx` nodes over WireGuard (`flannel-backend=wireguard-native` or a `wg0` mesh) with embedded `etcd` high availability, or run **Calico** (`calico-vxlan.yaml` with `FELIX_IPTABLESBACKEND=Legacy`) to enforce Kubernetes `NetworkPolicy` completely inside user space.
++
++### 3. Embedding Linux Containers in Go via `z.gfire.dev/gvx/pkg/gvx`
++
++Go applications can embed Linux containers directly without an external container daemon:
++
++```go
++package main
++
++import (
++	"context"
++	"fmt"
++	"os"
++
++	"z.gfire.dev/gvx/pkg/gvx"
++)
++
++func main() {
++	ctx := context.Background()
++	sb, err := gvx.New(ctx, gvx.Config{
++		Platform:      gvx.PlatformAuto,
++		NetworkMode:   gvx.NetModeNAT,
++		OCIImage:      "alpine:3.20",
++		WorkspacePath: "./repo",
++		Argv:          []string{"/usr/bin/git", "status"},
++		Stdout:        os.Stdout,
++		Stderr:        os.Stderr,
++	})
++	if err != nil {
++		fmt.Fprintf(os.Stderr, "init sandbox: %v\n", err)
++		os.Exit(1)
++	}
++	defer sb.Close()
++
++	exitCode, err := sb.Run(ctx)
++	if err != nil {
++		fmt.Fprintf(os.Stderr, "run sandbox: %v\n", err)
++		os.Exit(1)
++	}
++	os.Exit(exitCode)
++}
++```
++
++---
++
++## Further Reading in This Series
++
++1. **[gvx: Running Linux Containers, Docker, and Kubernetes in One Unprivileged Process](/blog/posts/gvx-cross-platform-linux-containers-z48916d01)** (this post)
++2. **[Running Docker, docker build, and docker compose Without Root or User Namespaces](/blog/posts/run-docker-without-root-or-userns-gvx-z48916d02)**: How to bootstrap `docker:dind` in locked-down sandboxes where `sudo`, `unshare(CLONE_NEWUSER)`, `mount(2)`, and `/dev/fuse` are blocked.
++3. **[Running Docker-in-Docker Inside gVisor and Nested Sandboxes with gvx](/blog/posts/docker-in-docker-inside-gvisor-with-gvx-z48916d03)**: Why `apt-get install docker.io` and nested `runsc` fail inside `gVisor` across five kernel barriers, and how `gvx` runs nested `docker:dind` using a shared-memory futex loop.
++4. **[Fast Isolated Docker Environments for AI Agent RL Rollouts with gvx](/blog/posts/fast-docker-environments-for-agent-rl-rollouts-z48916d04)**: Scaling `SWE-bench` and agent reinforcement learning rollouts with hundreds of parallel unprivileged `docker:dind` instances and 100-millisecond copy-on-write `.ext4` volume resets.

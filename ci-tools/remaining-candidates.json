@@ -7,19 +7,33 @@
     "branch": "dependabot/go_modules/github.com/tdewolff/minify/v2-2.25.0",
     "base_ref": "main",
     "base_sha": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-    "tree": "1d7ff077682b2a44e5d74f0e90383e1eff4376e9",
-    "patch": "website-ci.patch",
-    "patch_sha256": "6a6dfb9a9841fd2c41eead51522f1d44527d5f7848032b037876d63f2c67163e",
+    "tree": "9d3f81d798716d1eae6e37322dd569f71520c208",
+    "patch": "remaining-website-v2.patch",
+    "patch_sha256": "59981cc31db620811ba50aa80171fcae15039252a87ff8a021bfa690f15eb57a",
     "files": [
       {
         "path": ".github/workflows/pr-gate.yml",
-        "blob": "8a04f9e6d2033de322176e7f82472b4ac96e2fc1",
-        "sha256": "fe991850cf0ca2b4360c51b1838f73114dd9364405c1f872b99a1d70467dbdd5"
+        "sha256": "7e72eacbbfe8293fe408d99a0356c61cb6ed5053eeeaaca1645078cc8adffe0b"
       },
       {
         "path": ".github/workflows/update.yml",
-        "blob": "b75b36c012bb75b810fe99d4279819f40edc2576",
-        "sha256": "8a871ab1bf3c8ee31ca82e174a323f7be345928fa110b2901390f7853c134e52"
+        "sha256": "529589767b85c762b615bde31e531a5d384953d4cf1ef977121f513ca8dc9282"
+      },
+      {
+        "path": "root/blog/docker-in-docker-inside-gvisor-with-gvx.md",
+        "sha256": "e0d1ec23ab2186c187c18451a96e9fba60ddccf28c6cfe1472c9c4437b8d353b"
+      },
+      {
+        "path": "root/blog/fast-docker-environments-for-agent-rl-rollouts.md",
+        "sha256": "597dced77cd2221487ba37f035884fcbd5c2dccf71fe7b4f76e8683bc6960b0d"
+      },
+      {
+        "path": "root/blog/run-docker-without-root-or-userns-gvx.md",
+        "sha256": "5f17b7f4976572febf9e81b61a8ad27d0a9a8ec3ecc1f625ac96663b71703f6e"
+      },
+      {
+        "path": "root/blog/gvx-cross-platform-linux-containers.md",
+        "sha256": "24850fc6879d3edaeab4c32cf301cdd5a69051bfe9f71d3735267af03007efbd"
       }
     ]
   },
@@ -31,19 +45,33 @@
     "branch": "dependabot/npm_and_yarn/npm_and_yarn-af3e3560b6",
     "base_ref": "main",
     "base_sha": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-    "tree": "cc65fb952e8a54d499145ff045de4aba7f5659dc",
-    "patch": "website-ci.patch",
-    "patch_sha256": "6a6dfb9a9841fd2c41eead51522f1d44527d5f7848032b037876d63f2c67163e",
+    "tree": "51b443a25d938acdd09991fd8f63902c484afb68",
+    "patch": "remaining-website-v2.patch",
+    "patch_sha256": "59981cc31db620811ba50aa80171fcae15039252a87ff8a021bfa690f15eb57a",
     "files": [
       {
         "path": ".github/workflows/pr-gate.yml",
-        "blob": "8a04f9e6d2033de322176e7f82472b4ac96e2fc1",
-        "sha256": "fe991850cf0ca2b4360c51b1838f73114dd9364405c1f872b99a1d70467dbdd5"
+        "sha256": "7e72eacbbfe8293fe408d99a0356c61cb6ed5053eeeaaca1645078cc8adffe0b"
       },
       {
         "path": ".github/workflows/update.yml",
-        "blob": "b75b36c012bb75b810fe99d4279819f40edc2576",
-        "sha256": "8a871ab1bf3c8ee31ca82e174a323f7be345928fa110b2901390f7853c134e52"
+        "sha256": "529589767b85c762b615bde31e531a5d384953d4cf1ef977121f513ca8dc9282"
+      },
+      {
+        "path": "root/blog/docker-in-docker-inside-gvisor-with-gvx.md",
+        "sha256": "e0d1ec23ab2186c187c18451a96e9fba60ddccf28c6cfe1472c9c4437b8d353b"
+      },
+      {
+        "path": "root/blog/fast-docker-environments-for-agent-rl-rollouts.md",
+        "sha256": "597dced77cd2221487ba37f035884fcbd5c2dccf71fe7b4f76e8683bc6960b0d"
+      },
+      {
+        "path": "root/blog/run-docker-without-root-or-userns-gvx.md",
+        "sha256": "5f17b7f4976572febf9e81b61a8ad27d0a9a8ec3ecc1f625ac96663b71703f6e"
+      },
+      {
+        "path": "root/blog/gvx-cross-platform-linux-containers.md",
+        "sha256": "24850fc6879d3edaeab4c32cf301cdd5a69051bfe9f71d3735267af03007efbd"
       }
     ]
   },
@@ -55,19 +83,33 @@
     "branch": "dependabot/npm_and_yarn/markdownlint-cli2-0.24.1",
     "base_ref": "main",
     "base_sha": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-    "tree": "152e3ead07a35924abe7a99c4069ee0a8af89cd0",
-    "patch": "website-ci.patch",
-    "patch_sha256": "6a6dfb9a9841fd2c41eead51522f1d44527d5f7848032b037876d63f2c67163e",
+    "tree": "736c8a7bddeef3c1ff13c9a47918ce1469911494",
+    "patch": "remaining-website-v2.patch",
+    "patch_sha256": "59981cc31db620811ba50aa80171fcae15039252a87ff8a021bfa690f15eb57a",
     "files": [
       {
         "path": ".github/workflows/pr-gate.yml",
-        "blob": "8a04f9e6d2033de322176e7f82472b4ac96e2fc1",
-        "sha256": "fe991850cf0ca2b4360c51b1838f73114dd9364405c1f872b99a1d70467dbdd5"
+        "sha256": "7e72eacbbfe8293fe408d99a0356c61cb6ed5053eeeaaca1645078cc8adffe0b"
       },
       {
         "path": ".github/workflows/update.yml",
-        "blob": "b75b36c012bb75b810fe99d4279819f40edc2576",
-        "sha256": "8a871ab1bf3c8ee31ca82e174a323f7be345928fa110b2901390f7853c134e52"
+        "sha256": "529589767b85c762b615bde31e531a5d384953d4cf1ef977121f513ca8dc9282"
+      },
+      {
+        "path": "root/blog/docker-in-docker-inside-gvisor-with-gvx.md",
+        "sha256": "e0d1ec23ab2186c187c18451a96e9fba60ddccf28c6cfe1472c9c4437b8d353b"
+      },
+      {
+        "path": "root/blog/fast-docker-environments-for-agent-rl-rollouts.md",
+        "sha256": "597dced77cd2221487ba37f035884fcbd5c2dccf71fe7b4f76e8683bc6960b0d"
+      },
+      {
+        "path": "root/blog/run-docker-without-root-or-userns-gvx.md",
+        "sha256": "5f17b7f4976572febf9e81b61a8ad27d0a9a8ec3ecc1f625ac96663b71703f6e"
+      },
+      {
+        "path": "root/blog/gvx-cross-platform-linux-containers.md",
+        "sha256": "24850fc6879d3edaeab4c32cf301cdd5a69051bfe9f71d3735267af03007efbd"
       }
     ]
   },
@@ -79,19 +121,33 @@
     "branch": "dependabot/npm_and_yarn/caniuse-lite-1.0.30001826",
     "base_ref": "main",
     "base_sha": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-    "tree": "78c1910368bd0adff54c5665417be7bc08eaeb41",
-    "patch": "website-ci.patch",
-    "patch_sha256": "6a6dfb9a9841fd2c41eead51522f1d44527d5f7848032b037876d63f2c67163e",
+    "tree": "b5e48a9c514ff1543e6764f69b729563a5abe6f6",
+    "patch": "remaining-website-v2.patch",
+    "patch_sha256": "59981cc31db620811ba50aa80171fcae15039252a87ff8a021bfa690f15eb57a",
     "files": [
       {
         "path": ".github/workflows/pr-gate.yml",
-        "blob": "8a04f9e6d2033de322176e7f82472b4ac96e2fc1",
-        "sha256": "fe991850cf0ca2b4360c51b1838f73114dd9364405c1f872b99a1d70467dbdd5"
+        "sha256": "7e72eacbbfe8293fe408d99a0356c61cb6ed5053eeeaaca1645078cc8adffe0b"
       },
       {
         "path": ".github/workflows/update.yml",
-        "blob": "b75b36c012bb75b810fe99d4279819f40edc2576",
-        "sha256": "8a871ab1bf3c8ee31ca82e174a323f7be345928fa110b2901390f7853c134e52"
+        "sha256": "529589767b85c762b615bde31e531a5d384953d4cf1ef977121f513ca8dc9282"
+      },
+      {
+        "path": "root/blog/docker-in-docker-inside-gvisor-with-gvx.md",
+        "sha256": "e0d1ec23ab2186c187c18451a96e9fba60ddccf28c6cfe1472c9c4437b8d353b"
+      },
+      {
+        "path": "root/blog/fast-docker-environments-for-agent-rl-rollouts.md",
+        "sha256": "597dced77cd2221487ba37f035884fcbd5c2dccf71fe7b4f76e8683bc6960b0d"
+      },
+      {
+        "path": "root/blog/run-docker-without-root-or-userns-gvx.md",
+        "sha256": "5f17b7f4976572febf9e81b61a8ad27d0a9a8ec3ecc1f625ac96663b71703f6e"
+      },
+      {
+        "path": "root/blog/gvx-cross-platform-linux-containers.md",
+        "sha256": "24850fc6879d3edaeab4c32cf301cdd5a69051bfe9f71d3735267af03007efbd"
       }
     ]
   },
@@ -103,19 +159,33 @@
     "branch": "dependabot/npm_and_yarn/prettier-3.10.1",
     "base_ref": "main",
     "base_sha": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-    "tree": "1ba02a161056b6dcd81922f718b41ba1ac47bdca",
-    "patch": "website-ci.patch",
-    "patch_sha256": "6a6dfb9a9841fd2c41eead51522f1d44527d5f7848032b037876d63f2c67163e",
+    "tree": "37acdeb7114f6da39fb8699cd9ca500caf9b51b1",
+    "patch": "remaining-website-v2.patch",
+    "patch_sha256": "59981cc31db620811ba50aa80171fcae15039252a87ff8a021bfa690f15eb57a",
     "files": [
       {
         "path": ".github/workflows/pr-gate.yml",
-        "blob": "8a04f9e6d2033de322176e7f82472b4ac96e2fc1",
-        "sha256": "fe991850cf0ca2b4360c51b1838f73114dd9364405c1f872b99a1d70467dbdd5"
+        "sha256": "7e72eacbbfe8293fe408d99a0356c61cb6ed5053eeeaaca1645078cc8adffe0b"
       },
       {
         "path": ".github/workflows/update.yml",
-        "blob": "b75b36c012bb75b810fe99d4279819f40edc2576",
-        "sha256": "8a871ab1bf3c8ee31ca82e174a323f7be345928fa110b2901390f7853c134e52"
+        "sha256": "529589767b85c762b615bde31e531a5d384953d4cf1ef977121f513ca8dc9282"
+      },
+      {
+        "path": "root/blog/docker-in-docker-inside-gvisor-with-gvx.md",
+        "sha256": "e0d1ec23ab2186c187c18451a96e9fba60ddccf28c6cfe1472c9c4437b8d353b"
+      },
+      {
+        "path": "root/blog/fast-docker-environments-for-agent-rl-rollouts.md",
+        "sha256": "597dced77cd2221487ba37f035884fcbd5c2dccf71fe7b4f76e8683bc6960b0d"
+      },
+      {
+        "path": "root/blog/run-docker-without-root-or-userns-gvx.md",
+        "sha256": "5f17b7f4976572febf9e81b61a8ad27d0a9a8ec3ecc1f625ac96663b71703f6e"
+      },
+      {
+        "path": "root/blog/gvx-cross-platform-linux-containers.md",
+        "sha256": "24850fc6879d3edaeab4c32cf301cdd5a69051bfe9f71d3735267af03007efbd"
       }
     ]
   },
@@ -127,19 +197,97 @@
     "branch": "dependabot/go_modules/github.com/a-h/templ-0.3.1118",
     "base_ref": "main",
     "base_sha": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-    "tree": "5b270b6d189dac06030701a6010f9d6aa17ac713",
-    "patch": "website-ci.patch",
-    "patch_sha256": "6a6dfb9a9841fd2c41eead51522f1d44527d5f7848032b037876d63f2c67163e",
+    "tree": "c131eac817f2f8d2d867bf6bde0bd301699514fc",
+    "patch": "remaining-website312-v2.patch",
+    "patch_sha256": "8bf98456cc7f3021bd4a1eda5791122f5bd335293f1e41d5c19eb0ad43258cdc",
     "files": [
       {
         "path": ".github/workflows/pr-gate.yml",
-        "blob": "8a04f9e6d2033de322176e7f82472b4ac96e2fc1",
-        "sha256": "fe991850cf0ca2b4360c51b1838f73114dd9364405c1f872b99a1d70467dbdd5"
+        "sha256": "7e72eacbbfe8293fe408d99a0356c61cb6ed5053eeeaaca1645078cc8adffe0b"
       },
       {
         "path": ".github/workflows/update.yml",
-        "blob": "b75b36c012bb75b810fe99d4279819f40edc2576",
-        "sha256": "8a871ab1bf3c8ee31ca82e174a323f7be345928fa110b2901390f7853c134e52"
+        "sha256": "529589767b85c762b615bde31e531a5d384953d4cf1ef977121f513ca8dc9282"
+      },
+      {
+        "path": "root/blog/docker-in-docker-inside-gvisor-with-gvx.md",
+        "sha256": "e0d1ec23ab2186c187c18451a96e9fba60ddccf28c6cfe1472c9c4437b8d353b"
+      },
+      {
+        "path": "root/blog/fast-docker-environments-for-agent-rl-rollouts.md",
+        "sha256": "597dced77cd2221487ba37f035884fcbd5c2dccf71fe7b4f76e8683bc6960b0d"
+      },
+      {
+        "path": "root/blog/run-docker-without-root-or-userns-gvx.md",
+        "sha256": "5f17b7f4976572febf9e81b61a8ad27d0a9a8ec3ecc1f625ac96663b71703f6e"
+      },
+      {
+        "path": "root/blog/gvx-cross-platform-linux-containers.md",
+        "sha256": "24850fc6879d3edaeab4c32cf301cdd5a69051bfe9f71d3735267af03007efbd"
+      },
+      {
+        "path": "view/home/contribute_templ.go",
+        "sha256": "683fc149b30d44517f9d93f46966f53f2f4cbc1dc44b1155ab5f13e974382315"
+      },
+      {
+        "path": "view/home/hero_templ.go",
+        "sha256": "3876aec25ce9757a959c63b0cd57eaa88e2c8c6d6f142befa75ea429be8b2b06"
+      },
+      {
+        "path": "view/home/posts_templ.go",
+        "sha256": "55d26c88f30502d5325cac3bca457c4c8cb2c54c9e7b4823ab90f6f2b076106e"
+      },
+      {
+        "path": "view/home/projects_templ.go",
+        "sha256": "62992e514d44133613cc4ebc065084a7859ffa2064e9e1ed8adb3bccaf4633e5"
+      },
+      {
+        "path": "view/home/stats_templ.go",
+        "sha256": "3683cfbcb719a10a2d75bc0a502cef5b8e23d2b31fb4a147757c16a216ced830"
+      },
+      {
+        "path": "view/index_templ.go",
+        "sha256": "001e86ab1bc38ff523436a1d0e86619dac75901d0edda46c7f7d809323b4a0da"
+      },
+      {
+        "path": "view/layout/footer_templ.go",
+        "sha256": "3777eb802af0e2065e4711bc856ebc5dff886cba2a7fb5fdb5f0b2d2279e7801"
+      },
+      {
+        "path": "view/layout/head_templ.go",
+        "sha256": "9f5a58fd407ebd367001cc627f1762d66b20492999be228aa88587983a72045e"
+      },
+      {
+        "path": "view/layout/header_templ.go",
+        "sha256": "c9ba998963a9b7663d9ca0d24317d26b5df3d8d8ac26dd08af04fa87bb0f9c3d"
+      },
+      {
+        "path": "view/post/article_templ.go",
+        "sha256": "eb7d68410115207eb58e2e3c200c2482ac921b6c6d4d7addc30bdf1bbf77f1a5"
+      },
+      {
+        "path": "view/post_templ.go",
+        "sha256": "241bc224b4150a56c92f78780a2b28d76ac065f1539a1d35915bbbe271b72034"
+      },
+      {
+        "path": "view/sitemap_templ.go",
+        "sha256": "b3de6a4e26a6f914374b51b33a54d0aeef16c57e2fbdb4c9db564a643db8bf98"
+      },
+      {
+        "path": "view/ui/badge_templ.go",
+        "sha256": "cee74163cedf863178d3e6528e960dc1a2b70eb9285afbf14628e1bc41fd01d5"
+      },
+      {
+        "path": "view/ui/button_templ.go",
+        "sha256": "f2bcec9ded1a2f92935f6f537b15950df959d1c340996f1c890f26c0c5cc8c15"
+      },
+      {
+        "path": "view/ui/card_templ.go",
+        "sha256": "faea28d78ca3bae772487b935f8c6aa7bf8f4c6ad04fd0c85a230795531c87af"
+      },
+      {
+        "path": "view/ui/icon_templ.go",
+        "sha256": "823b7d6b23f6e61b16068f1c03418f17fb38b08ee8420e186656520715183178"
       }
     ]
   },
@@ -151,19 +299,33 @@
     "branch": "dependabot/go_modules/golang.org/x/image-0.48.0",
     "base_ref": "main",
     "base_sha": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-    "tree": "50a2c0e1c61a73205dfbade4cca950b03ff2eb0d",
-    "patch": "website-ci.patch",
-    "patch_sha256": "6a6dfb9a9841fd2c41eead51522f1d44527d5f7848032b037876d63f2c67163e",
+    "tree": "7fdd3665df135beb0ab4206c9e32cdfd366e86c7",
+    "patch": "remaining-website-v2.patch",
+    "patch_sha256": "59981cc31db620811ba50aa80171fcae15039252a87ff8a021bfa690f15eb57a",
     "files": [
       {
         "path": ".github/workflows/pr-gate.yml",
-        "blob": "8a04f9e6d2033de322176e7f82472b4ac96e2fc1",
-        "sha256": "fe991850cf0ca2b4360c51b1838f73114dd9364405c1f872b99a1d70467dbdd5"
+        "sha256": "7e72eacbbfe8293fe408d99a0356c61cb6ed5053eeeaaca1645078cc8adffe0b"
       },
       {
         "path": ".github/workflows/update.yml",
-        "blob": "b75b36c012bb75b810fe99d4279819f40edc2576",
-        "sha256": "8a871ab1bf3c8ee31ca82e174a323f7be345928fa110b2901390f7853c134e52"
+        "sha256": "529589767b85c762b615bde31e531a5d384953d4cf1ef977121f513ca8dc9282"
+      },
+      {
+        "path": "root/blog/docker-in-docker-inside-gvisor-with-gvx.md",
+        "sha256": "e0d1ec23ab2186c187c18451a96e9fba60ddccf28c6cfe1472c9c4437b8d353b"
+      },
+      {
+        "path": "root/blog/fast-docker-environments-for-agent-rl-rollouts.md",
+        "sha256": "597dced77cd2221487ba37f035884fcbd5c2dccf71fe7b4f76e8683bc6960b0d"
+      },
+      {
+        "path": "root/blog/run-docker-without-root-or-userns-gvx.md",
+        "sha256": "5f17b7f4976572febf9e81b61a8ad27d0a9a8ec3ecc1f625ac96663b71703f6e"
+      },
+      {
+        "path": "root/blog/gvx-cross-platform-linux-containers.md",
+        "sha256": "24850fc6879d3edaeab4c32cf301cdd5a69051bfe9f71d3735267af03007efbd"
       }
     ]
   },
@@ -175,19 +337,33 @@
     "branch": "dependabot/npm_and_yarn/tailwindcss/cli-4.3.5",
     "base_ref": "main",
     "base_sha": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-    "tree": "469141caec25331ec4b0d35bd4c2382a1f6baff5",
-    "patch": "website-ci.patch",
-    "patch_sha256": "6a6dfb9a9841fd2c41eead51522f1d44527d5f7848032b037876d63f2c67163e",
+    "tree": "83144707f8f8409b4fe49ff0ea9efc79d444944b",
+    "patch": "remaining-website-v2.patch",
+    "patch_sha256": "59981cc31db620811ba50aa80171fcae15039252a87ff8a021bfa690f15eb57a",
     "files": [
       {
         "path": ".github/workflows/pr-gate.yml",
-        "blob": "8a04f9e6d2033de322176e7f82472b4ac96e2fc1",
-        "sha256": "fe991850cf0ca2b4360c51b1838f73114dd9364405c1f872b99a1d70467dbdd5"
+        "sha256": "7e72eacbbfe8293fe408d99a0356c61cb6ed5053eeeaaca1645078cc8adffe0b"
       },
       {
         "path": ".github/workflows/update.yml",
-        "blob": "b75b36c012bb75b810fe99d4279819f40edc2576",
-        "sha256": "8a871ab1bf3c8ee31ca82e174a323f7be345928fa110b2901390f7853c134e52"
+        "sha256": "529589767b85c762b615bde31e531a5d384953d4cf1ef977121f513ca8dc9282"
+      },
+      {
+        "path": "root/blog/docker-in-docker-inside-gvisor-with-gvx.md",
+        "sha256": "e0d1ec23ab2186c187c18451a96e9fba60ddccf28c6cfe1472c9c4437b8d353b"
+      },
+      {
+        "path": "root/blog/fast-docker-environments-for-agent-rl-rollouts.md",
+        "sha256": "597dced77cd2221487ba37f035884fcbd5c2dccf71fe7b4f76e8683bc6960b0d"
+      },
+      {
+        "path": "root/blog/run-docker-without-root-or-userns-gvx.md",
+        "sha256": "5f17b7f4976572febf9e81b61a8ad27d0a9a8ec3ecc1f625ac96663b71703f6e"
+      },
+      {
+        "path": "root/blog/gvx-cross-platform-linux-containers.md",
+        "sha256": "24850fc6879d3edaeab4c32cf301cdd5a69051bfe9f71d3735267af03007efbd"
       }
     ]
   }

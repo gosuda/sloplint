@@ -1,0 +1,34 @@
+{
+  "label": "elegant-mermaid-26",
+  "repository": "gosuda/elegant-mermaid",
+  "number": 26,
+  "head": "3d6bc75bf7f4c00f9a587727c1d8748894524520",
+  "branch": "deps/upgrade-2026-11-26",
+  "base_ref": "main",
+  "base_sha": "277e83b2e3d80c14f75334869b86a607c7ab3ffd",
+  "tree": "364a75320772b14d6fd34c1ba1b3449c02656629",
+  "patch": "remaining-elegant26.patch",
+  "patch_sha256": "afc3271e288ad689d02f1d263a01e0f4f7ffaf94c0c4dcd0b0c7c3bb9192edf7",
+  "files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "45853fba5193b574d9aa8e8beb2919c947a49304a2390e402cb76e5341a92a8e"
+    },
+    {
+      "path": ".github/workflows/verify.yml",
+      "sha256": "52ad56c7cef0991094de0f64af4398a6f47291f976c9d845c10137c739a5ca75"
+    },
+    {
+      "path": ".github/workflows/pages.yml",
+      "sha256": "9c17d08c902b3583504badb742687431c7c829ad10f3059f4fad78994e550e28"
+    },
+    {
+      "path": "tools/upstream-oracle/package.json",
+      "sha256": "b670dbcc795515ff5ed24b8301c9bdac0a539eea7e7171f5f7d58426b3557fa5"
+    },
+    {
+      "path": "tools/upstream-oracle/pnpm-lock.yaml",
+      "sha256": "f68a71acf5642257fc93b93fbd2de766ba51a2d136dbb49d4bf5a30b7e076252"
+    }
+  ]
+}

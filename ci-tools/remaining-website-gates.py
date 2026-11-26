@@ -77,6 +77,8 @@ def main() -> int:
         ("translation-limit", ["env", "LLM_INIT=false", "go", "run", ".", "check_retranslate", "4"]),
     )
     results = {name: run(command, name) for name, command in commands}
+    if candidate["number"] == 312:
+        results["templ-regeneration"] = run(["go", "run", "github.com/a-h/templ/cmd/templ@v0.3.1118", "generate"], "templ-regeneration")
     results["worktree-clean"] = run(["git", "diff", "--exit-code"], "worktree-clean", 30)
     results["candidate-tree"] = 0 if git("write-tree") == candidate["tree"] else 1
     (EVIDENCE / "results.json").write_text(json.dumps(results, indent=2) + "\n")
