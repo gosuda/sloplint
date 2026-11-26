@@ -2,9 +2,9 @@
   "base": "61c88ec4d492dd1ab72f76b15b84fa9434cccfaa",
   "base_tree": "589aff2ec97f6e6f8179453ff6882fe19b3b65b2",
   "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
-  "mode": "Three staged repairs. Native oracles, 461 parser comparisons, independent x64, ARM64 and lint gates; all original tracked blobs verified before and after.",
+  "mode": "Final candidate: native input hypotheses and branch controls frozen; the original attached-CR input keeps an exact native-name regression, while the intended continuation control starts at a token boundary. Full x64, ARM64, and lint gates.",
   "proof_sha256": {
-    "verify.py": "719e59c5e954c8a4719553c51d1b25b192cf9cc08dfb235b8a3ab6399223141a",
+    "verify.py": "71f4bd12e5da616b379eac2c85bb2bac6085575df131de0f6cf5b7e710d64258",
     "frozen-elements.json": "54f459fcddda24d6a04ec621f31784a145e30437cddb94c59065f24ff2842d42",
     "cases.json": "70fc8831ceb47b66d4421a500b3a632a69adbb0ac4bd521b38cffd8255a04e98",
     "native-oracle.ps1": "cb1d34d29ed3fd73fa535a3b38689f8be8576600e2b329aeca559b61c69f6292",
@@ -14,9 +14,11 @@
     "preserved-literal-oracle.ps1": "8bceaa20931d06609b35aaab9c107ea514d294fe36152a3c7b857ae9280f1eb6",
     "token-cases.json": "c51cb52596632b43443bf2f79dcdc21bdb0a85dab3d5468fd802c4de35bad79b",
     "token-oracle.ps1": "438a05a95ba585dec15ed00a73f6c5187c44d7bc1df32990a341b9a472996bca",
-    "authored-stages.json": "2f4a86c8ae672e784f8c887c3d309c213e702264230daa275a84858b428ad763",
+    "authored-stages.json": "fcf3e6d93d3b4255591a01a791bf0a633e369176fccb4a2fdcf93454a59f9eec",
     "token-expected.json": "91d3db55c886ea1bbf37c44377e73dd0a34c6d03ffc17a925689278ed2b7a7aa",
-    "token-parser-cases.json": "6ed75b48d91d1d1a2c8221c43896caacde3de402cb0181a9347eb424aecda024"
+    "token-parser-cases.json": "6ed75b48d91d1d1a2c8221c43896caacde3de402cb0181a9347eb424aecda024",
+    "terminator-parser-cases.json": "c096a8ff4c56af01fa66883d4948ebe2e38cbac0a919b6a2f12fe9db4b0e2da8",
+    "terminator-native-expected.json": "35b2e3bb17ded486a61dd72f67ce56d4537ef86f89725cab9f768985412d862f"
   },
   "threads": [
     "PRRT_kwDOVOMFM868fgdS",
@@ -42,5 +44,31 @@
     "artifact": 15141829534,
     "digest": "cd60a2a1a9fe16c3c9e4551b0293a7c6c24e1355168cbd7d378a792a143c5bb5",
     "outcome": "All 243 corrected expectations and 40 native token records verified; source unchanged."
+  },
+  "native_parser_cases": 485,
+  "previous_stage_trees": {
+    "unicode-separators": "fd41dcbefc79f3f46aca0b4f03ae573973769a7c",
+    "plain-unicode-escapes": "675f9843bce34cf1aeb9626e595d2ac2d83da94c"
+  },
+  "previous_candidate": {
+    "producer": "58f6f32eedf61e5bc2d1ddab3dae4aaf1b3722a1",
+    "run": 45873249049,
+    "tree": "67485931a856bf4d46f79e14cd1c8885f8fa3105",
+    "artifact": 15143209008,
+    "zip_sha256": "849b9a5d5f48a25b721c3bd8e783de3625093b8a8a989b1e491066eca0959df2",
+    "stages_sha256": "a8e8d3a2073c3ce0090c0bd138c14dfdd7eea54f77d945b1b4008c9405210156",
+    "outcomes": {
+      "prepare": "All 461 native parser outcomes passed.",
+      "x64": "First two staged PowerShell suites, 190 native argv counts and CLI fixture suite passed. Final PowerShell suite exited 101 at old attached-CR callee assumption.",
+      "arm64": "Clippy passed; full workspace exited 101 in grammar_gaps. Release did not run.",
+      "lint": "All lint, provenance, corpus, generation and identity checks passed."
+    }
+  },
+  "native_terminator_controls": {
+    "producer": "2fc8f12313379a8f82f9702fd8955cfe81b2052d",
+    "run": 45874990715,
+    "job": 140099701010,
+    "cases": 24,
+    "outcome": "All native outcomes and 16 branch structures matched; baseline and candidate matched all 24 structures. Single attached CR has command token Get-Date plus backtick CR and decoded command name ending CR; separated LF/CRLF controls retain Get-Date."
   }
 }

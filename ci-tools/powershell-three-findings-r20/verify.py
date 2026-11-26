@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import gzip
 import hashlib
 import json
@@ -187,6 +188,8 @@ def prepare() -> None:
         output(["git", "add", "--", *sorted(changed)], env=INDEX_ENVIRONMENT)
         tree = output(["git", "write-tree"], env=INDEX_ENVIRONMENT)
         identity = full_identity(tree, changed)
+        if name in ("unicode-separators", "plain-unicode-escapes"):
+            assert tree == cast(dict[str, str], MANIFEST["previous_stage_trees"])[name]
         delta: list[dict[str, str]] = []
         for relative in sorted(changed):
             content = (SOURCE / relative).read_text()
@@ -205,16 +208,26 @@ def prepare() -> None:
     (EVIDENCE / "stages.json").write_bytes(data)
     digest = hashlib.sha256(data).hexdigest()
     print("CANDIDATE_ARTIFACT_SHA256 " + digest, flush=True)
-    for stage in stages:
-        for item in cast(list[dict[str, str]], stage["elements"]):
-            content = item["content"]
-            size = 16000
-            for part, offset in enumerate(range(0, len(content), size)):
-                print("CANDIDATE_SOURCE_CHUNK " + json.dumps({"stage": stage["id"], "path": item["path"], "sha256": item["sha256"],
-                      "part": part, "parts": (len(content) + size - 1) // size, "content": content[offset:offset + size]}), flush=True)
+    packed = gzip.compress(data, mtime=0)
+    encoded = base64.b64encode(packed).decode("ascii")
+    (EVIDENCE / "stages.json.gz").write_bytes(packed)
+    print("PACKED_SOURCE_IDENTITY " + json.dumps({"payload_sha256": digest,
+          "gzip_sha256": hashlib.sha256(packed).hexdigest(), "gzip_bytes": len(packed),
+          "payload_bytes": len(data), "base64_bytes": len(encoded),
+          "chunks": (len(encoded) + 23999) // 24000}), flush=True)
+    for part, offset in enumerate(range(0, len(encoded), 24000)):
+        print("PACKED_SOURCE_CHUNK " + json.dumps({"part": part, "content": encoded[offset:offset + 24000]}), flush=True)
     cases = cast(list[dict[str, object]], json.loads((PROOF / "preserved-grammar-cases.json").read_text()))
     cases += cast(list[dict[str, object]], json.loads((PROOF / "cases.json").read_text()))
     cases += cast(list[dict[str, object]], json.loads((PROOF / "token-parser-cases.json").read_text()))
+    controls = cast(list[dict[str, object]], json.loads((PROOF / "terminator-parser-cases.json").read_text()))
+    observed = cast(list[dict[str, object]], json.loads((PROOF / "terminator-native-expected.json").read_text()))
+    assert len(controls) == len(observed) == 24
+    for case, record in zip(controls, observed, strict=True):
+        assert case["source"] == record["source"] and case["accepted"] == record["accepted"]
+        assert sum(item["clauses"] - 1 for item in cast(list[dict[str, int]], record["branches"])) == case["elseifs"]
+        assert sum(int(item["has_else"]) for item in cast(list[dict[str, bool]], record["branches"])) == case["elses"]
+    cases += controls
     case_root = EVIDENCE / "cases"
     case_root.mkdir(exist_ok=True)
     results: list[dict[str, object]] = []
@@ -224,20 +237,24 @@ def prepare() -> None:
         if "source_sha256" in case:
             assert hashlib.sha256(content.encode()).hexdigest() == case["source_sha256"], case["id"]
         path.write_text(content)
-        process = subprocess.run([str(binary), "parse", "--quiet", str(path)], cwd=VENDOR, env=ENVIRONMENT,
+        process = subprocess.run([str(binary), "parse", str(path)], cwd=VENDOR, env=ENVIRONMENT,
                                  text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False, timeout=30)
         assert "Failed to load language" not in process.stdout
         record = {"id": case["id"], "exit": process.returncode, "accepted": process.returncode == 0, "expected": case["accepted"]}
+        if "elseifs" in case:
+            record["structure_matches"] = (
+                len(re.findall(r"\(elseif_clause ", process.stdout)) == case["elseifs"]
+                and len(re.findall(r"\(else_clause ", process.stdout)) == case["elses"])
         results.append(record)
-        if record["accepted"] != record["expected"]:
+        if record["accepted"] != record["expected"] or not record.get("structure_matches", True):
             print("PARSER_MISMATCH " + json.dumps(record) + "\n" + process.stdout, flush=True)
     (EVIDENCE / "parser-cases.json").write_text(json.dumps(results, indent=2) + "\n")
-    assert len(results) == 461
-    assert all(item["accepted"] == item["expected"] for item in results)
+    assert len(results) == 485
+    assert all(item["accepted"] == item["expected"] and item.get("structure_matches", True) for item in results)
     assert full_identity(str(stages[-1]["tree"]), set(cast(list[str], stages[-1]["paths"]))) == stages[-1]["identity"]
     with Path(os.environ["GITHUB_OUTPUT"]).open("a") as handle:
         handle.write(f"stages_sha256={digest}\n")
-    print("CANDIDATE_PREPARED " + str(stages[-1]["tree"]) + " native_parser_cases=461", flush=True)
+    print("CANDIDATE_PREPARED " + str(stages[-1]["tree"]) + " native_parser_cases=485", flush=True)
 
 def apply_stage(stage: dict[str, object]) -> None:
     apply_elements(cast(list[dict[str, str]], stage["elements"]))
@@ -256,17 +273,14 @@ def validate(mode: str) -> None:
     regressions = ["cargo", "test", "--locked", "-p", "sloplint-syntax", "--test", "grammar_gaps", "powershell", "--", "--nocapture"]
     for stage in stages:
         apply_stage(stage)
-        if mode == "x64":
+        if mode == "x64" and stage["id"] == "newline-lookahead":
             text = run(str(stage["id"]) + "-powershell-regressions", regressions)
-            if stage["id"] == "unicode-separators":
-                native = cast(list[dict[str, object]], json.loads((EVIDENCE / "transfer/native-cases.json").read_text()))
-                expected = {str(item["id"]): item["native_count"] for item in native if item["kind"] == "arguments"}
-                observed = re.findall(r"NATIVE_ARGUMENT_CASE ([^\s]+) (\d+)", text)
-                counts = {name: int(count) for name, count in observed}
-                assert len(expected) == 190 and len(observed) == 190 and counts == expected, (len(counts), len(expected))
-                print("NATIVE_ARGUMENT_COUNTS_MATCH 190", flush=True)
-            if stage["id"] == "plain-unicode-escapes":
-                run("positive-and-near-miss-cli-fixtures", ["cargo", "test", "--locked", "-p", "sloplint", "--test", "fixtures", "fixtures_match_expected", "--", "--exact", "--nocapture"])
+            native = cast(list[dict[str, object]], json.loads((EVIDENCE / "transfer/native-cases.json").read_text()))
+            expected = {str(item["id"]): item["native_count"] for item in native if item["kind"] == "arguments"}
+            observed = re.findall(r"NATIVE_ARGUMENT_CASE ([^\s]+) (\d+)", text)
+            counts = {name: int(count) for name, count in observed}
+            assert len(expected) == 190 and len(observed) == 190 and counts == expected, (len(counts), len(expected))
+            print("NATIVE_ARGUMENT_COUNTS_MATCH 190", flush=True)
         assert full_identity(str(stage["tree"]), set(cast(list[str], stage["paths"]))) == stage["identity"]
     final = stages[-1]
     if mode in ("x64", "arm64"):

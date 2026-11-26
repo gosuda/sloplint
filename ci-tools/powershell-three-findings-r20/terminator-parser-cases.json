@@ -1,0 +1,194 @@
+[
+  {
+    "id": "terminator-lf-escaped-else",
+    "source": "if ($true) { Write-Output yes }\n`\nelse { Write-Output no }\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "source_sha256": "9e9f86bb1fedb6d664f72fc1902a54e355b4326f7985cafc53568c70d751019b"
+  },
+  {
+    "id": "terminator-lf-escaped-elseif",
+    "source": "if ($true) { Write-Output yes }\n`\nelseif ($false) { Write-Output maybe } else { Write-Output no }\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "source_sha256": "1830baa1c48db7691c9edd80aee909015631406611964028afd093a73f405de6"
+  },
+  {
+    "id": "terminator-lf-comment-else",
+    "source": "if ($true) { Write-Output yes }\n# note\n`\nelse { Write-Output no }\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "source_sha256": "163317ab60ed716a4ddd9e2bd0ed23325f4201780a7430a2f7b71b2b931ec2e6"
+  },
+  {
+    "id": "terminator-lf-comment-elseif",
+    "source": "if ($true) { Write-Output yes }\n# note\n`\nelseif ($false) { Write-Output maybe } else { Write-Output no }\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "source_sha256": "8b5d0438e2d13fb18a98fcb9cb95f0e670b8a412d28e94ebddcb3b722f84e487"
+  },
+  {
+    "id": "terminator-lf-indented-else",
+    "source": "if ($true) { Write-Output yes }\n  `\nelse { Write-Output no }\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "source_sha256": "b6d6614406031a8c9358cf63b7f96a1e067e28858cc0bf597525f23f93add370"
+  },
+  {
+    "id": "terminator-lf-indented-elseif",
+    "source": "if ($true) { Write-Output yes }\n  `\nelseif ($false) { Write-Output maybe } else { Write-Output no }\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "source_sha256": "99267653e6ef48c96b37044c5e9c081e4bb76de1155dec6183dd80f5826bd85c"
+  },
+  {
+    "id": "terminator-lf-two-escapes-else",
+    "source": "if ($true) { Write-Output yes }\n`\n`\nelse { Write-Output no }\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "source_sha256": "469df6095a8fdbd971126b03abd6f3bd2b570ddbf697a99930c00ea22ccaae78"
+  },
+  {
+    "id": "terminator-lf-two-escapes-elseif",
+    "source": "if ($true) { Write-Output yes }\n`\n`\nelseif ($false) { Write-Output maybe } else { Write-Output no }\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "source_sha256": "2a1529f81f00797c943a3cc0ea566c830785b61223595bfcf0298577dfeb0ee5"
+  },
+  {
+    "id": "terminator-single-lf-attached-top",
+    "source": "Get-Date`\n| Write-Output\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 0,
+    "source_sha256": "5a86f97f2c5a1857e4e6f164be4c163865d57ba883bec81dc6b64f7954e08e0f"
+  },
+  {
+    "id": "terminator-single-lf-attached-group",
+    "source": "(Get-Date`\n| Write-Output)\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 0,
+    "source_sha256": "e07b8461a87317399bddb9519b513468e006d20f25563166270e01dc87166d44"
+  },
+  {
+    "id": "terminator-single-lf-separated-top",
+    "source": "Get-Date `\n| Write-Output\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 0,
+    "source_sha256": "51acd7c4c83bd8f079dcee6de729518a18acf677abaecdd63c929889c6280693"
+  },
+  {
+    "id": "terminator-single-lf-separated-group",
+    "source": "(Get-Date `\n| Write-Output)\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 0,
+    "source_sha256": "11363e8586324d8f5d4db9805258fa9957a73bbe91162b04c2ce5cf81754091d"
+  },
+  {
+    "id": "terminator-crlf-escaped-else",
+    "source": "if ($true) { Write-Output yes }\r\n`\r\nelse { Write-Output no }\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "source_sha256": "52e567e12f811f1c2b2a6f86ad2003246f9efd11110a284754c62c0b062931a8"
+  },
+  {
+    "id": "terminator-crlf-escaped-elseif",
+    "source": "if ($true) { Write-Output yes }\r\n`\r\nelseif ($false) { Write-Output maybe } else { Write-Output no }\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "source_sha256": "93118edf88ac22795faa8ba1ab029f4623565786647900bf2c39601ae609252a"
+  },
+  {
+    "id": "terminator-crlf-comment-else",
+    "source": "if ($true) { Write-Output yes }\r\n# note\r\n`\r\nelse { Write-Output no }\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "source_sha256": "32e969153ddb0db5376fddb8a282577132205617620964912b7c3e151ae2af3d"
+  },
+  {
+    "id": "terminator-crlf-comment-elseif",
+    "source": "if ($true) { Write-Output yes }\r\n# note\r\n`\r\nelseif ($false) { Write-Output maybe } else { Write-Output no }\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "source_sha256": "c9f83a33905ed166cba61af8caf9effb2a14314439f61ddf529d668bdb6a4b76"
+  },
+  {
+    "id": "terminator-crlf-indented-else",
+    "source": "if ($true) { Write-Output yes }\r\n  `\r\nelse { Write-Output no }\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "source_sha256": "d543855609284f56c2ddee5a7725278128dcf178a98558aeb17ec5ab61042aa4"
+  },
+  {
+    "id": "terminator-crlf-indented-elseif",
+    "source": "if ($true) { Write-Output yes }\r\n  `\r\nelseif ($false) { Write-Output maybe } else { Write-Output no }\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "source_sha256": "d44c042e7c818f0ca3cf2167d72c8cc8aa84b414abf02c035b573098cc41fbf3"
+  },
+  {
+    "id": "terminator-crlf-two-escapes-else",
+    "source": "if ($true) { Write-Output yes }\r\n`\r\n`\r\nelse { Write-Output no }\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "source_sha256": "11617597423023a78db1f86037359a8436c15e8d07bc5f1eec546074be79c7b1"
+  },
+  {
+    "id": "terminator-crlf-two-escapes-elseif",
+    "source": "if ($true) { Write-Output yes }\r\n`\r\n`\r\nelseif ($false) { Write-Output maybe } else { Write-Output no }\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "source_sha256": "065c80a1000c4591187fd4081f68c4f717e2e6ad87a72e390452ae3042e15b9a"
+  },
+  {
+    "id": "terminator-single-crlf-attached-top",
+    "source": "Get-Date`\r\n| Write-Output\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 0,
+    "source_sha256": "484de33883abe673844bebdc84eddd779346b62ade3d536f5667858fe9ab662b"
+  },
+  {
+    "id": "terminator-single-crlf-attached-group",
+    "source": "(Get-Date`\r\n| Write-Output)\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 0,
+    "source_sha256": "a7820ba007de93cc40ead772b95d6f43c23b238165071514e871ec462a1e1f83"
+  },
+  {
+    "id": "terminator-single-crlf-separated-top",
+    "source": "Get-Date `\r\n| Write-Output\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 0,
+    "source_sha256": "6e55a6fa8cdde4d1483399086d6a596e719df76d7673bf5a3486e357dddc90ca"
+  },
+  {
+    "id": "terminator-single-crlf-separated-group",
+    "source": "(Get-Date `\r\n| Write-Output)\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 0,
+    "source_sha256": "e2c9d5bf36468fe9cf0f7e120a30e3f05ad40749ee088369200d289df0caaf3e"
+  }
+]
