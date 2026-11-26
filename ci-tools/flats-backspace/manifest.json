@@ -1,0 +1,20 @@
+{
+  "repo": "gosuda/flats",
+  "purpose": "Read-only native browser witness; no candidate source repair or stage acceptance",
+  "sources": [
+    {
+      "name": "main",
+      "head": "72a25911d41dbe8d7e59d2e3694d4520a26e8e58",
+      "tree": "9c5687b485e707cd9590a707f0e6fdc59e95b57d"
+    },
+    {
+      "name": "pr272",
+      "head": "ee49a47179b2df82a70015b0978468b1fbd69e28",
+      "tree": "cdaccf79235cd2ab6fb7e95d464551a65243fa8e"
+    }
+  ],
+  "driver_sha256": "e291d141a2bd4443e1d95d5a567d95f63624d0a85c925f34e2508c7d74ecb006",
+  "go": "1.27.4",
+  "node": "26.13.1",
+  "playwright": "1.65.1"
+}
