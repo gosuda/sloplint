@@ -6,9 +6,9 @@
   "branch": "deps/upgrade-2026-11-26",
   "base_ref": "main",
   "base_sha": "277e83b2e3d80c14f75334869b86a607c7ab3ffd",
-  "tree": "eb867320528f953f4d6f845854fa9afd4604f7d4",
-  "patch": "remaining-elegant26-v3.patch",
-  "patch_sha256": "40886d66c6820154fcdfeb845596ede049fde5b49cdf3ec93547b29dd9414c6b",
+  "tree": "5dc64f30eee49eb60c3ed89761d42b552d21669d",
+  "patch": "remaining-elegant26-v4.patch",
+  "patch_sha256": "6055035398f5041fb7e9e4271d16b56f9ba8dddd2db2ea4a2d9fcb397749a43c",
   "files": [
     {
       "path": ".github/workflows/ci.yml",
@@ -33,6 +33,10 @@
     {
       "path": "crates/elegant-mermaid-cli/src/render/markdown/links.rs",
       "sha256": "836afa9171a24d684565af1f3253736eb41592af2dae13f85cea06f8c92aa6ef"
+    },
+    {
+      "path": "playground/src/routes/+page.svelte",
+      "sha256": "eada892ac2338bece4a881a7e6935dc373d3f9c793e205e6c96d8336ad5877b0"
     }
   ]
 }

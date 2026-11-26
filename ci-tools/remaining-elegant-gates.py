@@ -20,6 +20,11 @@ def git(*args: str) -> str:
 
 def run(command: list[str], name: str, timeout: int = 3600) -> int:
     path = EVIDENCE / f"{name}.log"
+    if os.name != "nt" and name in ("slop", "verify"):
+        cpus = sorted(os.sched_getaffinity(0))[:2]
+        command = ["taskset", "--cpu-list", ",".join(str(cpu) for cpu in cpus), *command]
+    cgroup = Path("/sys/fs/cgroup")
+    before = {name: (cgroup / name).read_text() for name in ("memory.max", "memory.events") if (cgroup / name).is_file()}
     with path.open("w", encoding="utf-8") as output:
         process = subprocess.Popen(command, cwd=SOURCE, stdout=output, stderr=subprocess.STDOUT, start_new_session=os.name != "nt")
         try:
@@ -35,6 +40,11 @@ def run(command: list[str], name: str, timeout: int = 3600) -> int:
                     os.killpg(process.pid, signal.SIGKILL)
             process.wait(timeout=15)
             code = 124
+    after = {name: (cgroup / name).read_text() for name in ("memory.max", "memory.events") if (cgroup / name).is_file()}
+    resources = {"name": name, "command": command, "before": before, "after": after}
+    with (EVIDENCE / "executions.jsonl").open("a", encoding="utf-8") as log:
+        log.write(json.dumps(resources) + "\n")
+    print("RESOURCE " + json.dumps(resources), flush=True)
     print(f"RESULT {name}: {code}", flush=True)
     if code:
         print(path.read_text(encoding="utf-8", errors="replace")[-12000:], flush=True)
@@ -63,7 +73,7 @@ def main() -> int:
     os.environ["GOENV"] = "off"
     os.environ["GOCACHEPROG"] = ""
     os.environ["BASE_PATH"] = "/elegant-mermaid"
-    if mode not in ("windows", "baseline", "markdown"):
+    if mode not in ("windows", "baseline", "markdown", "house"):
         assert subprocess.check_output(["go", "env", "GOCACHEPROG"], cwd=SOURCE, text=True).strip() == ""
     config = EVIDENCE / "actionlint.yaml"
     config.write_text("self-hosted-runner:\n  labels: [depot-ubuntu-24.04, depot-ubuntu-24.04-8, depot-windows-2025]\n")
@@ -96,6 +106,8 @@ def main() -> int:
             ("playground-browser", ["pnpm", "--dir", "playground", "exec", "playwright", "test"]),
             ("playground-worker", ["env", "PLAYGROUND_SERVER_MODE=dev", "pnpm", "--dir", "playground", "exec", "playwright", "test", "--grep", "both engines render the default source"]),
         )
+    elif mode == "house":
+        commands = (("slop", ["just", "slop"]),)
     elif mode == "markdown":
         commands = (("rustfmt", ["rustfmt", "--check", "--edition", "2024", "crates/elegant-mermaid-cli/src/render/markdown/links.rs"]), ("markdown-paths", ["just", "markdown-paths"]))
     elif mode == "windows":
