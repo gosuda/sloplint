@@ -2,7 +2,7 @@
   "repository": "gosuda/sloplint",
   "pull_request": 137,
   "branch": "fix/powershell-review-boundaries-20261126",
-  "state": "Published additively; all native source gates passed; three targeted review threads resolved; ordinary PR workflow is being monitored.",
+  "state": "r21 source repair and ordinary CI complete; four later r22 findings remain separately active",
   "source_base": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
   "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
   "candidate": {
@@ -305,7 +305,7 @@
     "ordinary_conclusion": "success",
     "retired_probe": "3a2ede51f89777df54121ca9e65d572bb497826f"
   },
-  "recorded_utc": "2026-11-26 19:39:00 UTC",
+  "recorded_utc": "2026-11-26 20:15:08 UTC",
   "publication": {
     "head": "83f73f04e7f20bf405dbf4c2de3bd5467c8010bb",
     "tree": "703b3a5a445883598bfb7ef05c263a76d6629235",
@@ -792,14 +792,56 @@
   "ordinary_ci": {
     "id": 45884920364,
     "head": "83f73f04e7f20bf405dbf4c2de3bd5467c8010bb",
-    "status": "in_progress",
-    "conclusion": null,
-    "html_url": "https://github.com/gosuda/sloplint/actions/runs/45884920364"
+    "status": "completed",
+    "conclusion": "success",
+    "html_url": "https://github.com/gosuda/sloplint/actions/runs/45884920364",
+    "jobs": [
+      {
+        "id": 140133122789,
+        "name": "lint",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 140133122904,
+        "name": "test (depot-ubuntu-24.04, x86_64-unknown-linux-gnu, 1)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 140133123039,
+        "name": "test (depot-ubuntu-24.04-arm, aarch64-unknown-linux-gnu, 1)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 140133124929,
+        "name": "test-native",
+        "status": "completed",
+        "conclusion": "skipped"
+      }
+    ]
   },
   "retirement": {
     "branch": "ci/powershell-assignment-followup-20261126-r21",
     "parent": "7d0ce6a2ed4c22e43985e241b6c8d78040536675",
     "removed_workflow": ".github/workflows/powershell-assignment-followup-r21.yml",
-    "method": "Additive commit; no ref deletion or force update."
+    "method": "Additive commit; no ref deletion or force update.",
+    "verified_head": "bd31bc6746d6cb73eba6d579aa10ad5a2074e684",
+    "workflow_remains_absent": true
+  },
+  "later_review": {
+    "head": "83f73f04e7f20bf405dbf4c2de3bd5467c8010bb",
+    "unresolved_threads": [
+      "PRRT_kwDOVOMFM868ien1",
+      "PRRT_kwDOVOMFM868ieo7",
+      "PRRT_kwDOVOMFM868ieqJ",
+      "PRRT_kwDOVOMFM868iema"
+    ],
+    "owner": "r22",
+    "probe_branch": "ci/powershell-context-boundaries-20261126-r22",
+    "producer": "a263043efec225686eb474da637742e1129eabdc",
+    "run": 45888591536,
+    "note": "These four findings arrived after r21's three reviewed changes and remain unresolved while the independent native baseline runs."
   }
 }
