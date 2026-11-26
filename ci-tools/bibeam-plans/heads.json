@@ -1,0 +1,97 @@
+[
+  {
+    "number": 24,
+    "head": "adf65e044ad1440f374b9c2ce2a516751c16e359",
+    "branch": "ci/depot-macos-latest"
+  },
+  {
+    "number": 23,
+    "head": "d101f08647b42e2780897440349e0f5e03df194b",
+    "branch": "dependabot/cargo/cmov-0.5.4"
+  },
+  {
+    "number": 22,
+    "head": "7ec0ade905518fb1f24d5aff9a05dec1bfc12e21",
+    "branch": "dependabot/cargo/hickory-resolver-0.26.2"
+  },
+  {
+    "number": 21,
+    "head": "822273e3fa420eac051d086b1ac7961b9d2f50d8",
+    "branch": "dependabot/cargo/quinn-proto-0.11.19"
+  },
+  {
+    "number": 20,
+    "head": "d2c691541a06cb767750c2203b8fa68e666bfb5f",
+    "branch": "dependabot/cargo/rustls-0.23.46"
+  },
+  {
+    "number": 19,
+    "head": "5f448a85e18792bd3288ebdc1e0dcf5f89fdadcc",
+    "branch": "dependabot/github_actions/actions/checkout-7"
+  },
+  {
+    "number": 18,
+    "head": "365af537a9c12b122945fed4d9bba339bce405af",
+    "branch": "dependabot/cargo/uuid-1.23.3"
+  },
+  {
+    "number": 17,
+    "head": "44fce64e5730fef0a5ceff19fffab0f35a49f039",
+    "branch": "dependabot/cargo/time-0.3.49"
+  },
+  {
+    "number": 16,
+    "head": "ad167fcf7b99ae5b2015356e006db80f9ab4086a",
+    "branch": "dependabot/github_actions/codecov/codecov-action-7"
+  },
+  {
+    "number": 14,
+    "head": "a9a980c69ef310e9125dc903453e9c9bdd4add9f",
+    "branch": "dependabot/cargo/reqwest-0.13.4"
+  },
+  {
+    "number": 13,
+    "head": "d81b2c83e7cda86d04d88cd70588438923e63470",
+    "branch": "dependabot/cargo/hyper-1.10.1"
+  },
+  {
+    "number": 12,
+    "head": "572d89c7cde068265f0ffdef2e23b025b5894ee1",
+    "branch": "dependabot/cargo/pkarr-6.0.1"
+  },
+  {
+    "number": 11,
+    "head": "d4230a27b7b2d813fc624510d08a3e3bfc066950",
+    "branch": "dependabot/cargo/tower-http-0.6.11"
+  },
+  {
+    "number": 10,
+    "head": "2fc240d020ff61c1b923af36c868309dcb0f6879",
+    "branch": "dependabot/cargo/mimalloc-0.1.52"
+  },
+  {
+    "number": 9,
+    "head": "9d2b4390c91a9bfdf12993f00af58d4ef9b3adb7",
+    "branch": "dependabot/cargo/dashmap-6.2.1"
+  },
+  {
+    "number": 8,
+    "head": "cd20c89184c3ca66f318b31b0ee0e224c748bfbd",
+    "branch": "dependabot/cargo/serde_json-1.0.150"
+  },
+  {
+    "number": 5,
+    "head": "16b3105fa685ac54719bde03ab996edb07fa8767",
+    "branch": "dependabot/cargo/axum-server-0.8.0"
+  },
+  {
+    "number": 2,
+    "head": "dce8bb89bc4fd7fd72bebd974edf8ce555fd4eff",
+    "branch": "dependabot/github_actions/actions/upload-artifact-7"
+  },
+  {
+    "number": 1,
+    "head": "5ee461f86ce14e6480d55862825bf737fc56f0a7",
+    "branch": "dependabot/github_actions/actions/download-artifact-8"
+  }
+]

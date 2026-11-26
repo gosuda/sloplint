@@ -1,0 +1,47 @@
+name: Verify BiBeam release runner plans
+on:
+  push:
+    branches: [ci/bibeam-runner-plan-20261126-r8]
+    paths: [.github/workflows/bibeam-runner-plans.yml, ci-tools/bibeam-plans/**]
+permissions:
+  contents: read
+jobs:
+  plans:
+    runs-on: depot-ubuntu-24.04-4
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: probe
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/BiBeam
+          ref: adf65e044ad1440f374b9c2ce2a516751c16e359
+          path: source
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          version: "0.13.9"
+          python-version: "3.15"
+          require-checksums: true
+          enable-cache: false
+      - name: Install pinned cargo-dist
+        run: |
+          curl --fail --silent --show-error --location --retry 3 --output "$RUNNER_TEMP/dist.tar.xz" https://github.com/axodotdev/cargo-dist/releases/download/v0.31.0/cargo-dist-x86_64-unknown-linux-gnu.tar.xz
+          printf '%s  %s\n' cd355dab0b4c02fb59038fef87655550021d07f45f1d82f947a34ef98560abb8 "$RUNNER_TEMP/dist.tar.xz" | sha256sum --check --strict
+          tar -xJf "$RUNNER_TEMP/dist.tar.xz" -C "$RUNNER_TEMP"
+          install "$RUNNER_TEMP/cargo-dist-x86_64-unknown-linux-gnu/dist" "$HOME/.cargo/bin/dist"
+          dist --version
+      - name: Resolve every maintained release matrix
+        run: uv run --no-project --python 3.15 probe/ci-tools/bibeam-plans/verify.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: bibeam-runner-plans-${{ github.sha }}
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 7
