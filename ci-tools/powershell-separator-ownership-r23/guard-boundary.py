@@ -13,6 +13,7 @@ import subprocess
 import sys
 import time
 import urllib.request
+import zipfile
 from typing import cast
 
 WORKSPACE = Path(os.environ["GITHUB_WORKSPACE"])
@@ -111,6 +112,50 @@ capture = native_bin / "Capture-Native"
 capture.write_text(f"#!{sys.executable}\nimport json\nimport sys\nprint(json.dumps({{'count': len(sys.argv) - 1, 'values': sys.argv[1:]}}, ensure_ascii=True))\n")
 capture.chmod(0o755)
 ENVIRONMENT["PATH"] = str(native_bin) + os.pathsep + ENVIRONMENT["PATH"]
+
+
+failure_root = EVIDENCE / "failed-baseline"
+archives = [path for path in failure_root.rglob("*") if path.is_file() and zipfile.is_zipfile(path)]
+assert len(archives) == 1
+archive = archives[0]
+assert hashlib.sha256(archive.read_bytes()).hexdigest() == "3491cb4e240d43bfc1dc11795a0afd02f76844cb41d5ea3267b206e289de5b4a"
+with zipfile.ZipFile(archive) as handle:
+    def member(name: str) -> bytes:
+        matches = [entry for entry in handle.namelist() if Path(entry).name == name]
+        assert len(matches) == 1, name
+        return handle.read(matches[0])
+    saved = json.loads(member("results.json"))
+    failed = next(result for result in saved["results"] if result["name"] == "native-witnesses")
+    assert failed["exit"] == 1 and failed["expected"] == 0 and not failed["timed_out"]
+    original_log = member("native-witnesses.log")
+    assert hashlib.sha256(original_log).hexdigest() == failed["log_sha256"]
+    original = [json.loads(line.removeprefix("NATIVE_CONTEXT ")) for line in original_log.decode().splitlines() if line.startswith("NATIVE_CONTEXT ")]
+assert len(original) == 63
+before = json.loads((PROOF / "guard-boundary-before-cases.json").read_text())
+after = json.loads((PROOF / "guard-boundary-cases.json").read_text())
+assert saved["manifest"]["proof_sha256"]["guard-boundary-cases.json"] == hashlib.sha256((PROOF / "guard-boundary-before-cases.json").read_bytes()).hexdigest()
+for name in ("guard-boundary-cases.tsv", "guard-boundary-modules.json", "native-oracle.ps1"):
+    assert saved["manifest"]["proof_sha256"][name] == MANIFEST["proof_sha256"][name], name
+corrections = []
+for old, new, actual in zip(before, after, original, strict=True):
+    assert old["id"] == new["id"] == actual["id"]
+    assert old["source_sha256"] == new["source_sha256"] == actual["source_sha256"]
+    if old == new:
+        assert actual["matches"]
+        continue
+    assert not actual["matches"] and old["id"].endswith("-array")
+    assert {key: value for key, value in old.items() if key != "expected_values"} == {key: value for key, value in new.items() if key != "expected_values"}
+    assert actual["accepted"] and actual["native_count"] == 2
+    assert new["expected_values"] == actual["native_values"]
+    assert new["argument_sources"] == [node["text"] for node in actual["argument_nodes"]]
+    record = {"id": old["id"], "source_sha256": old["source_sha256"], "before_expected_values": old["expected_values"],
+              "after_expected_values": new["expected_values"], "actual_native": actual}
+    corrections.append(record)
+    print("BOUNDARY_EXPECTATION_CORRECTION " + json.dumps(record), flush=True)
+assert len(corrections) == 6
+(EVIDENCE / "observer-correction.json").write_text(json.dumps({"failed_producer": "bd88e818128fca3332205eb4bb895cd164c960d4",
+    "failed_run": 45907185583, "artifact": 15158213198, "failed_result": failed,
+    "native_log_sha256": failed["log_sha256"], "corrections": corrections}, indent=2) + "\n")
 
 native_output = run("native-witnesses", [str(pwsh), "-NoLogo", "-NoProfile", "-File", str(PROOF / "native-oracle.ps1"), "-CasesPath", str(PROOF / "guard-boundary-cases.json")])
 native = [json.loads(line.removeprefix("NATIVE_CONTEXT ")) for line in native_output.splitlines() if line.startswith("NATIVE_CONTEXT ")]

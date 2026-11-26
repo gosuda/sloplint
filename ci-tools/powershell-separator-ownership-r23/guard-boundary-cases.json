@@ -328,8 +328,7 @@
     "scope": "word-list",
     "expected_values": [
       "hi",
-      "-​first",
-      "second"
+      "-​first,second"
     ],
     "argument_sources": [
       "hi",
@@ -377,8 +376,7 @@
     "scope": "word-list",
     "expected_values": [
       "hi",
-      "--​first",
-      "second"
+      "--​first,second"
     ],
     "argument_sources": [
       "hi",
@@ -426,8 +424,7 @@
     "scope": "word-list",
     "expected_values": [
       "hi",
-      "-﻿first",
-      "second"
+      "-﻿first,second"
     ],
     "argument_sources": [
       "hi",
@@ -475,8 +472,7 @@
     "scope": "word-list",
     "expected_values": [
       "hi",
-      "--﻿first",
-      "second"
+      "--﻿first,second"
     ],
     "argument_sources": [
       "hi",
@@ -524,8 +520,7 @@
     "scope": "word-list",
     "expected_values": [
       "hi",
-      "-⁠first",
-      "second"
+      "-⁠first,second"
     ],
     "argument_sources": [
       "hi",
@@ -573,8 +568,7 @@
     "scope": "word-list",
     "expected_values": [
       "hi",
-      "--⁠first",
-      "second"
+      "--⁠first,second"
     ],
     "argument_sources": [
       "hi",

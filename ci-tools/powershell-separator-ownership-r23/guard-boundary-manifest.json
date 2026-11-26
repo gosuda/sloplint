@@ -26,10 +26,19 @@
     "comment-guard-wj-2-escaped"
   ],
   "proof_sha256": {
-    "guard-boundary.py": "1f0578cbeebc272c0060dadda4a9388aeb7891797ce48aafe6c62f187d30adfe",
-    "guard-boundary-cases.json": "0a9d160138fa78e7466c8612cd7f91669432493380664cd149b1138d88a9bcc5",
+    "guard-boundary.py": "7ca680e77d10c4bf404c11a87ee8b7cc323422c15a914d590560753160c29347",
+    "guard-boundary-cases.json": "ec7059bfe37e0f94bbfb0d0b14192367e08b8a897647cd31fbdba27398dc695b",
     "guard-boundary-cases.tsv": "a301a4c819fac945087c0ff7af5fb26ce74bf8cae0e558a0842466ee86f5edc8",
     "guard-boundary-modules.json": "16cc104c1f2b22f902af362831b5ea6ed3667a1145f0cb4ec2b575bdadd2398f",
-    "native-oracle.ps1": "521d82f956d0192f33e5b2ba51996ef20b16590957c16172d51298e6fe3dffcd"
+    "native-oracle.ps1": "521d82f956d0192f33e5b2ba51996ef20b16590957c16172d51298e6fe3dffcd",
+    "guard-boundary-before-cases.json": "0a9d160138fa78e7466c8612cd7f91669432493380664cd149b1138d88a9bcc5"
+  },
+  "observer_correction": {
+    "producer": "bd88e818128fca3332205eb4bb895cd164c960d4",
+    "run": 45907185583,
+    "job": 140206622415,
+    "artifact": 15158213198,
+    "zip_sha256": "3491cb4e240d43bfc1dc11795a0afd02f76844cb41d5ea3267b206e289de5b4a",
+    "change": "Only six expected-values arrays change from three entries to the exact two native argv values. Source hashes, all other case fields, source TSV, oracle and public query module remain unchanged. The exact prior failed artifact supplies all six binding observations before the corrected fresh native run."
   }
 }
