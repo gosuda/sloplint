@@ -238,6 +238,11 @@ fn check_cli_writes_nothing_and_keeps_hard_links() {
     let before = snapshot(&root);
     let first = cli(&root, &["check", "--no-cache"]);
     let second = cli(&root, &["check", "--no-cache"]);
+    assert!(
+        first.status.success(),
+        "a clean check run must succeed, not just exit alike: {}",
+        text(&first.stderr)
+    );
     assert_eq!(
         snapshot(&root),
         before,
@@ -274,6 +279,11 @@ fn ratchet_cli_runs_are_stable() {
     let run = |args: &[&str]| cli(&root, args);
     let first = run(&["check", "--no-cache", "--mode", "ratchet"]);
     let second = run(&["check", "--no-cache", "--mode", "ratchet"]);
+    assert!(
+        first.status.success(),
+        "a stable ratchet run must succeed, not just exit alike: {}",
+        text(&first.stderr)
+    );
     assert_eq!(
         (first.status.code(), second.status.code()),
         (first.status.code(), first.status.code()),
