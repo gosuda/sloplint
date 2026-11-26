@@ -115,17 +115,29 @@ jobs:
     # Per-target clippy stays on the native runners: dependency build
     # scripts such as blake3's pass Apple-only cc flags to the host
     # compiler, so cross-target clippy from Linux fails. Split from the
-    # test cells so every native job stays under 5 minutes execution.
+    # test cells so each native job stays under 5 minutes execution.
+    # The only target_arch-dependent code in the workspace is one const
+    # in the syntax tests (verified by grep; no workspace build.rs emits
+    # cfgs), so the Intel cell lints just that package while the other
+    # cells lint the whole workspace for their triple.
     runs-on: ${{ matrix.runs_on }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { runs_on: macos-26-intel, target: x86_64-apple-darwin }
-          - { runs_on: macos-26, target: aarch64-apple-darwin }
-          - { runs_on: windows-2025, target: x86_64-pc-windows-msvc }
-          - { runs_on: windows-11-arm, target: aarch64-pc-windows-msvc }
+          - runs_on: macos-26-intel
+            target: x86_64-apple-darwin
+            clippy: -p sloplint-syntax --all-targets
+          - runs_on: macos-26
+            target: aarch64-apple-darwin
+            clippy: --workspace --all-targets
+          - runs_on: windows-2025
+            target: x86_64-pc-windows-msvc
+            clippy: --workspace --all-targets
+          - runs_on: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            clippy: --workspace --all-targets
     env:
       CARGO_INCREMENTAL: "0"
       CARGO_PROFILE_DEV_DEBUG: line-tables-only
@@ -137,15 +149,19 @@ jobs:
           persist-credentials: false
       - name: Add target unless preinstalled
         run: |
-          rustup target list --installed | grep -qx '${{ matrix.target }}' ||
-            rustup target add ${{ matrix.target }}
+          target='${{ matrix.target }}'
+          found=
+          for d in "$HOME"/.rustup/toolchains/*/lib/rustlib/"$target"; do
+            [ -d "$d" ] && found=1 && break
+          done
+          [ -n "$found" ] || rustup target add "$target"
       - name: Preserve vendor dependency fingerprints
         run: TZ=UTC find vendor -exec touch -t 200001010000 {} +
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           shared-key: ${{ matrix.target }}
       - name: Clippy for the native target
-        run: cargo clippy --workspace --all-targets --locked --target ${{ matrix.target }} -- -D warnings
+        run: cargo clippy ${{ matrix.clippy }} --locked --target ${{ matrix.target }} -- -D warnings
 
   test-native:
     # Native runners prove only what they alone can prove: the platform
@@ -185,8 +201,12 @@ jobs:
           persist-credentials: false
       - name: Add target unless preinstalled
         run: |
-          rustup target list --installed | grep -qx '${{ matrix.target }}' ||
-            rustup target add ${{ matrix.target }}
+          target='${{ matrix.target }}'
+          found=
+          for d in "$HOME"/.rustup/toolchains/*/lib/rustlib/"$target"; do
+            [ -d "$d" ] && found=1 && break
+          done
+          [ -n "$found" ] || rustup target add "$target"
       - name: Preserve vendor dependency fingerprints
         id: vendor
         run: TZ=UTC find vendor -exec touch -t 200001010000 {} +
