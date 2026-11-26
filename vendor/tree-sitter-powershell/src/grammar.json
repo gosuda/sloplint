@@ -2509,36 +2509,54 @@
             "name": "statement_block"
           },
           {
-            "type": "FIELD",
-            "name": "elseif_clauses",
-            "content": {
-              "type": "CHOICE",
-              "members": [
-                {
-                  "type": "SYMBOL",
-                  "name": "elseif_clauses"
-                },
-                {
-                  "type": "BLANK"
-                }
-              ]
-            }
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "_elseif_branch"
+                  },
+                  {
+                    "type": "FIELD",
+                    "name": "elseif_clauses",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "elseif_clauses"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
           },
           {
-            "type": "FIELD",
-            "name": "else_clause",
-            "content": {
-              "type": "CHOICE",
-              "members": [
-                {
-                  "type": "SYMBOL",
-                  "name": "else_clause"
-                },
-                {
-                  "type": "BLANK"
-                }
-              ]
-            }
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "_else_branch"
+                  },
+                  {
+                    "type": "FIELD",
+                    "name": "else_clause",
+                    "content": {
+                      "type": "SYMBOL",
+                      "name": "else_clause"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
           }
         ]
       }
@@ -2547,11 +2565,29 @@
       "type": "PREC_LEFT",
       "value": 0,
       "content": {
-        "type": "REPEAT1",
-        "content": {
-          "type": "SYMBOL",
-          "name": "elseif_clause"
-        }
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "SYMBOL",
+            "name": "elseif_clause"
+          },
+          {
+            "type": "REPEAT",
+            "content": {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_elseif_branch"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "elseif_clause"
+                }
+              ]
+            }
+          }
+        ]
       }
     },
     "elseif_clause": {
@@ -7379,6 +7415,14 @@
     {
       "type": "SYMBOL",
       "name": "_here_string_newline"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_else_branch"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_elseif_branch"
     }
   ],
   "inline": [],

@@ -9,7 +9,9 @@ enum TOKEN_TYPE {
     BARE_DASHES,
     METHOD_BLOCK_HEAD,
     LOOSE_DOLLAR,
-    HERE_STRING_NEWLINE
+    HERE_STRING_NEWLINE,
+    ELSE_BRANCH,
+    ELSEIF_BRANCH
 };
 
 /* --- API --- */
@@ -28,25 +30,6 @@ bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer,
 
 static void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
 
-// sloplint: true when the lookahead starts the keyword `else` or `elseif`,
-// as a whole word. The lookahead is consumed; the caller has already marked
-// the end of the zero-width terminator token.
-static bool at_else_keyword(TSLexer *lexer)
-{
-    static const char word[] = "else";
-    for (int i = 0; word[i] != 0; i++) {
-        if (towlower(lexer->lookahead) != (wint_t)word[i]) return false;
-        skip(lexer);
-    }
-    if (towlower(lexer->lookahead) == 'i') {
-        skip(lexer);
-        if (towlower(lexer->lookahead) != 'f') return false;
-        skip(lexer);
-    }
-    wint_t c = lexer->lookahead;
-    return !(iswalnum(c) || c == '_' || c == '-');
-}
-
 // Match PowerShell CharExtensions.IsWhitespace without depending on the C locale.
 // CR and LF are statement boundaries and are handled separately.
 static bool is_powershell_space(int32_t c)
@@ -57,18 +40,50 @@ static bool is_powershell_space(int32_t c)
         c == 0x2029 || c == 0x202F || c == 0x205F || c == 0x3000;
 }
 
+// Native keyword lookup occurs only after the complete generic token.
+// Punctuation such as '.', '/', '#', quotes and format marks stays in the word.
+static bool ends_powershell_word(int32_t c)
+{
+    return c == 0 || is_powershell_space(c) || c == '\r' || c == '\n' ||
+        c == '&' || c == '(' || c == ')' || c == ',' || c == ';' ||
+        c == '{' || c == '|' || c == '}';
+}
+
+// Consume lookahead only. The callback owns the zero-width token's mark_end.
+static bool scan_conditional_branch(TSLexer *lexer, const bool *valid_symbols)
+{
+    static const char word[] = "else";
+    for (int i = 0; word[i] != 0; i++) {
+        int32_t c = lexer->lookahead;
+        if (c >= 'A' && c <= 'Z') c += 'a' - 'A';
+        if (c != word[i]) return false;
+        skip(lexer);
+    }
+    enum TOKEN_TYPE symbol = ELSE_BRANCH;
+    if (lexer->lookahead == 'i' || lexer->lookahead == 'I') {
+        skip(lexer);
+        if (lexer->lookahead != 'f' && lexer->lookahead != 'F') return false;
+        skip(lexer);
+        symbol = ELSEIF_BRANCH;
+    }
+    if (!valid_symbols[symbol] || !ends_powershell_word(lexer->lookahead)) return false;
+    lexer->result_symbol = symbol;
+    return true;
+}
+
 static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool *valid_symbols)
 {
-    if (!valid_symbols[STATEMENT_TERMINATOR]) return false;
+    bool terminator_valid = valid_symbols[STATEMENT_TERMINATOR];
+    bool branch_valid = valid_symbols[ELSE_BRANCH] || valid_symbols[ELSEIF_BRANCH];
+    if (!terminator_valid && !branch_valid) return false;
     lexer->result_symbol = STATEMENT_TERMINATOR;
-    // The token is empty; comments and whitespace are only lookahead.
-    lexer->mark_end(lexer);
+    // Comments and whitespace are lookahead; the callback marked the empty token.
     bool saw_newline = false;
     bool pipe_continuation_blocked = false;
     bool line_has_comment = false;
     for (;;) {
         int32_t c = lexer->lookahead;
-        if (c == 0 || c == '}' || c == ';' || c == ')') return true;
+        if (c == 0 || c == '}' || c == ';' || c == ')') return terminator_valid;
         if (c == '\r' || c == '\n') {
             pipe_continuation_blocked = pipe_continuation_blocked || (saw_newline && !line_has_comment);
             saw_newline = true;
@@ -89,7 +104,7 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool 
         }
         if (c == '<') {
             skip(lexer);
-            if (lexer->lookahead != '#') return saw_newline;
+            if (lexer->lookahead != '#') return terminator_valid && saw_newline;
             line_has_comment = true;
             skip(lexer);
             // PowerShell block comments end at the first #>, without nesting.
@@ -107,7 +122,7 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool 
             continue;
         }
         if (c == '`') {
-            // A later escape blocks a leading pipe; else still belongs to its if.
+            // A later escape blocks a leading pipe, without hiding branch lookahead.
             pipe_continuation_blocked = pipe_continuation_blocked || saw_newline;
             skip(lexer);
             if (lexer->lookahead == '\r') {
@@ -116,13 +131,13 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool 
             } else if (lexer->lookahead == '\n') {
                 skip(lexer);
             } else {
-                return saw_newline;
+                return terminator_valid && saw_newline;
             }
             continue;
         }
-        if (!saw_newline) return false;
-        if (c == '|' && !pipe_continuation_blocked) return false;
-        return !at_else_keyword(lexer);
+        if (branch_valid && scan_conditional_branch(lexer, valid_symbols)) return true;
+        if (!terminator_valid || !saw_newline) return false;
+        return c != '|' || pipe_continuation_blocked;
     }
 }
 
@@ -137,7 +152,6 @@ static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_sy
 {
     if (!valid_symbols[BARE_DASHES]) return false;
 
-    while (is_powershell_space(lexer->lookahead)) skip(lexer);
     if (lexer->lookahead != '-') return false;
     lexer->advance(lexer, false);
     if (lexer->lookahead == '-') lexer->advance(lexer, false);
@@ -240,10 +254,16 @@ bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer,
         (lexer->lookahead == '.' || lexer->lookahead == ':')) {
         return scan_method_block_head(lexer);
     }
-    if (scan_loose_dollar(payload, lexer, valid_symbols)) return true;
-    // The statement terminator consumes nothing, so it must be tried last: when
-    // both are valid, a `--` has to win over the empty terminator.
-    if (scan_bare_dashes(payload, lexer, valid_symbols)) return true;
+    if (valid_symbols[LOOSE_DOLLAR] && lexer->lookahead == '$') {
+        return scan_loose_dollar(payload, lexer, valid_symbols);
+    }
+    // Keep empty boundary tokens at callback entry, before shared lookahead.
+    lexer->mark_end(lexer);
+    while (is_powershell_space(lexer->lookahead)) skip(lexer);
+    // A failed consuming probe must return to tree-sitter before another probe.
+    if (valid_symbols[BARE_DASHES] && lexer->lookahead == '-') {
+        return scan_bare_dashes(payload, lexer, valid_symbols);
+    }
     return scan_statement_terminator(payload, lexer, valid_symbols);
 }
 

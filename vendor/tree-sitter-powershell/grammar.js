@@ -39,6 +39,8 @@ export default grammar({
     $._method_block_head,
     $._loose_dollar,
     $._here_string_newline,
+    $._else_branch,
+    $._elseif_branch,
   ],
 
   extras: ($) => [
@@ -586,12 +588,13 @@ export default grammar({
           $._statement_terminator,
           ')',
           $.statement_block,
-          field('elseif_clauses', optional($.elseif_clauses)),
-          field('else_clause', optional($.else_clause)),
+          optional(seq($._elseif_branch, field('elseif_clauses', $.elseif_clauses))),
+          optional(seq($._else_branch, field('else_clause', $.else_clause))),
         ),
       ),
 
-    elseif_clauses: ($) => prec.left(repeat1($.elseif_clause)),
+    elseif_clauses: ($) =>
+      prec.left(seq($.elseif_clause, repeat(seq($._elseif_branch, $.elseif_clause)))),
 
     elseif_clause: ($) =>
       seq(

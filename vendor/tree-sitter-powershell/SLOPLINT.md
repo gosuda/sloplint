@@ -32,7 +32,7 @@ and loses every other finding for that file.
   `bash scripts/grammars.sh verify tree-sitter-powershell` checks the result
   against the vendored files. Run `tree-sitter test` in the vendor directory
   to include the sloplint corpus.
-- The regenerated parser uses ABI 15 and has 2,017 states.
+- The regenerated parser uses ABI 15 and has 2,039 states.
 
 ## Native Unicode argument separators
 
@@ -58,12 +58,18 @@ and mixed separator runs while the remaining native whitespace stays accepted.
 Leading-pipe lookahead stops at a backtick after an ordinary newline.
 An escape on the following line cannot reconnect the preceding pipeline.
 The scanner records that boundary while continuing lookahead for an `else`
-or `elseif` branch. Assignment-valued conditionals, including hashtable values,
-keep their branches after escaped lines. An escape of an ordinary character
+or `elseif` branch. Hidden external guards are valid only where the grammar
+owns those branches; they leave the public clause nodes, fields and keyword
+ranges intact. The lookahead uses native complete-token boundaries, so
+`else.exe` and an ordinary command named `else` start separate statements.
+Assignment-valued conditionals, including hashtable values, keep their branches
+after escaped lines. An escape of an ordinary character
 starts the next statement when a newline has already occurred.
 Attached command fragments retain an escaped CR, so the remaining LF is
 visible to that lookahead. Whitespace-separated LF and CRLF continuations
-remain valid. Native parser and tokenizer controls cover top-level and
+with indented bare-dash arguments remain valid. Bare dashes without indentation
+after the escaped line are an older grammar limitation. Native parser and
+tokenizer controls cover top-level and
 grouped pipelines, mixed newline forms, comments, and indentation.
 
 ## Native argument follow-up
@@ -190,7 +196,7 @@ The remaining local groups do not have an upstream fix in this release:
 | Case-insensitive numbers, cast operands, type names and generic ranks, bitwise and membership operators | No issue or PR identified for these changes |
 | String text and here-string escapes, statement terminators, method-block scanner | No issue or PR identified for these changes |
 
-The current patch has 2,355 lines and 49 diff hunks. It includes the
+The current patch has 2,460 lines and 44 diff hunks. It includes the
 native argument corpus along with the grammar and scanner changes.
 
 ## Round 1 grammar changes
