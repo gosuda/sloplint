@@ -1,0 +1,88 @@
+{
+  "scope": "Test-only trailing diagram widget coverage for PR273",
+  "base": "4c3e0652b6d1a93c4d4a8cac93b79beaf315f2cc",
+  "tree": "6eec14666cf6b71d56f686a7f7709b0527d53b8f",
+  "actual_main": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
+  "path": "internal/apps/docs/testdata/browser_test.mjs",
+  "author_model": "gpt-6.2-astra",
+  "design": "63f8d62557caea32a07c077f432c4f0e1f85d18a/ci-tools/flats-review/D3.md",
+  "design_review": "28143b7a1a3549a61a0b1ca6837c13e69b764af9/ci-tools/flats-review/D3-review.md",
+  "implementation_review": "b490f862eda77ff7cf4052d86b6489096f09b603/ci-tools/flats-review/editor-implementation-review.md",
+  "testing_review": "b2b60fdd08e54acac19f8f09aaeb83f278a10218/ci-tools/flats-review/editor-testing-review.md",
+  "budgets": {
+    "design_correction_impact": "3/3",
+    "invocation_retries": "1/2",
+    "implementation_corrections": "0/3",
+    "testing_corrections": "1/3"
+  },
+  "mandatory_boundaries": [
+    "No production, bundle, dependency or specification changes",
+    "All18 existing keyboard/native cases retain exact fixtures and assertions",
+    "New fixture renders an active block widget after the final source line",
+    "Trusted native deleteContentBackward and exact resulting text on two independent clients",
+    "Saved convergence and original fixture restoration remain",
+    "Earlier implementation approval requires eligible carry-forward review; exact corrected candidate needs testing re-review",
+    "No maintained PR write or thread resolution before coordinator stage acceptance"
+  ],
+  "native_plan": [
+    "Pinned public source and source identity checks",
+    "Locked install/build and unchanged production/bundle bytes",
+    "Actual repository TestBrowserCollaboration with new widget fixture",
+    "Existing18 plus two new mode cases",
+    "Affected syntax and TestBuildInputs",
+    "Source cleanup/identity and recorded exits"
+  ],
+  "state": "Development probe prepared; approvals pending",
+  "candidate_tree": "a69d8921b76864c72c9062f3651d8cc605400242",
+  "manifest": {
+    "scope": "Development evidence for test-only trailing diagram widget coverage; no new implementation or final-testing acceptance claimed",
+    "base_head": "4c3e0652b6d1a93c4d4a8cac93b79beaf315f2cc",
+    "base_tree": "6eec14666cf6b71d56f686a7f7709b0527d53b8f",
+    "actual_main": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
+    "candidate_tree": "a69d8921b76864c72c9062f3651d8cc605400242",
+    "test_path": "internal/apps/docs/testdata/browser_test.mjs",
+    "base_test_sha256": "8dd918a536ff12d248db6c44c02c0957f8625d379fb316f8c3184488030ce22b",
+    "candidate_test_sha256": "ac0db385af24e1a44292ecb8e61aa59a37eb21cfea571f4079016620a419da6f",
+    "patch_sha256": "92f5696705f2568ec1b13be1222ab0190b43818e4dae82f8ba9436c8022f833b",
+    "helper_sha256": "20086da6c5d7ca93f23482e1df1c6b339aaacc092ae7d4121c62629ba35c51fe",
+    "workflow_sha256": "ec4a2889b5d006f22408ea13e3581fbd02743e3dd5ccb1889d370f6852b392da",
+    "unchanged_files": [
+      {
+        "path": "internal/apps/docs/_web/build.mjs",
+        "sha256": "48af351f5188ae99dc739f5ae30b88de0e3bb11cb4353864e41300d822b8fcce"
+      },
+      {
+        "path": "internal/apps/docs/dist/BUILD-INPUTS.sha256",
+        "sha256": "16e2752336d671a09673167440a7ea2ed2a7858179ef02b958a79f75866a9ec5"
+      },
+      {
+        "path": "internal/apps/docs/dist/server.js",
+        "sha256": "ce0529d2450ebd6907929f1d0958f892924f4850c12e75bbd08fc0ae507c9553"
+      }
+    ],
+    "coverage": {
+      "existing_cases": 18,
+      "new_cases": 2,
+      "precondition": "Rendered active diagram widget is the immediate sibling after the final source line",
+      "native": "Real document.execCommand delete with trusted deleteContentBackward; no synthetic delete event",
+      "convergence": "Two independent clients and Saved status; original fixture restored before remaining collaboration suite"
+    },
+    "review_status": {
+      "implementation_carry_forward": "pending eligible independent review",
+      "testing_review": "pending exact corrected candidate review",
+      "design": "Accepted D3 remains unchanged",
+      "budgets": {
+        "design_correction_impact": "3/3",
+        "invocation_retries": "1/2",
+        "implementation_corrections": "0/3",
+        "testing_corrections": "1/3"
+      }
+    },
+    "source_limits": [
+      "Only browser_test.mjs changes",
+      "Production, build inputs, generated bundle and dependency bytes unchanged",
+      "No maintained PR or review-thread writes",
+      "Flats Unit B remains stopped"
+    ]
+  }
+}
