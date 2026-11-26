@@ -9,9 +9,23 @@ use crate::hooks::{Container, slice};
 #[derive(Default)]
 pub(crate) struct MemberStates {
     before: RefCell<HashMap<usize, Option<bool>>>,
+    macro_locals: RefCell<HashMap<usize, bool>>,
 }
 
 impl MemberStates {
+    pub(crate) fn macro_body_is_local(
+        &self,
+        body: Node<'_>,
+        compute: impl FnOnce() -> bool,
+    ) -> bool {
+        if let Some(known) = self.macro_locals.borrow().get(&body.id()).copied() {
+            return known;
+        }
+        let local = compute();
+        self.macro_locals.borrow_mut().insert(body.id(), local);
+        local
+    }
+
     pub(crate) fn state_before(
         &self,
         container: Node<'_>,
