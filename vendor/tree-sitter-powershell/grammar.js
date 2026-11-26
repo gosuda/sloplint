@@ -982,6 +982,10 @@ export default grammar({
           ),
           $.redirection,
           $.stop_parsing,
+          // sloplint: an inline comment is a command element of its own, so
+          // it stays a direct child of command elements instead of being
+          // parented under a whitespace separator that spans it.
+          $.comment,
         ),
       ),
 

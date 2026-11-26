@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 1f8b448..c34d033 100644
+index 1f8b448d..84795736 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -7,29 +7,73 @@ const PREC = {
@@ -534,7 +534,7 @@ index 1f8b448..c34d033 100644
 
      // Use to parse command path
      path_command_name: ($) =>
-@@ -781,41 +976,97 @@ export default grammar({
+@@ -781,41 +976,101 @@ export default grammar({
        prec.right(
          choice(
            $.command_parameter,
@@ -545,6 +545,10 @@ index 1f8b448..c34d033 100644
 +          ),
            $.redirection,
            $.stop_parsing,
++          // sloplint: an inline comment is a command element of its own, so
++          // it stays a direct child of command elements instead of being
++          // parented under a whitespace separator that spans it.
++          $.comment,
          ),
        ),
 
@@ -647,7 +651,7 @@ index 1f8b448..c34d033 100644
      verbatim_command_argument: ($) =>
        seq('--%', $._verbatim_command_argument_chars),
 
-@@ -827,8 +1078,10 @@ export default grammar({
+@@ -827,8 +1082,10 @@ export default grammar({
          seq($.file_redirection_operator, $.redirected_file_name),
        ),
 
@@ -659,7 +663,7 @@ index 1f8b448..c34d033 100644
 
      // Class
      class_attribute: ($) =>
-@@ -857,13 +1110,26 @@ export default grammar({
+@@ -857,13 +1114,26 @@ export default grammar({
          '(',
          optional($.class_method_parameter_list),
          ')',
@@ -686,7 +690,7 @@ index 1f8b448..c34d033 100644
          token(reservedWord('class')),
          $.simple_name,
          optional(seq(':', $.simple_name, repeat(seq(',', $.simple_name)))),
-@@ -884,6 +1150,7 @@ export default grammar({
+@@ -884,6 +1154,7 @@ export default grammar({
      // Enums
      enum_statement: ($) =>
        seq(
@@ -694,7 +698,7 @@ index 1f8b448..c34d033 100644
          token(reservedWord('enum')),
          $.simple_name,
          '{',
-@@ -895,7 +1162,20 @@ export default grammar({
+@@ -895,7 +1166,20 @@ export default grammar({
        seq($.simple_name, optional(seq('=', $.integer_literal))),
 
      // Expressions
@@ -716,7 +720,7 @@ index 1f8b448..c34d033 100644
 
      logical_expression: ($) =>
        prec.left(
-@@ -1008,7 +1288,35 @@ export default grammar({
+@@ -1008,7 +1292,35 @@ export default grammar({
      pre_decrement_expression: ($) => seq('--', $.unary_expression),
 
      cast_expression: ($) =>
@@ -753,7 +757,7 @@ index 1f8b448..c34d033 100644
 
      attributed_variable: ($) => seq($.type_literal, $.variable),
 
-@@ -1034,7 +1342,7 @@ export default grammar({
+@@ -1034,7 +1346,7 @@ export default grammar({
          $.variable,
        ),
 
@@ -762,7 +766,7 @@ index 1f8b448..c34d033 100644
 
      sub_expression: ($) =>
        seq('$(', field('statements', optional($.statement_list)), ')'),
-@@ -1042,8 +1350,12 @@ export default grammar({
+@@ -1042,8 +1354,12 @@ export default grammar({
      array_expression: ($) =>
        seq('@(', field('statements', optional($.statement_list)), ')'),
 
@@ -776,7 +780,7 @@ index 1f8b448..c34d033 100644
 
      hash_literal_expression: ($) =>
        seq('@{', optional($.hash_literal_body), '}'),
-@@ -1101,11 +1413,17 @@ export default grammar({
+@@ -1101,11 +1417,17 @@ export default grammar({
          $.invokation_foreach_expression,
        ),
 
@@ -796,7 +800,7 @@ index 1f8b448..c34d033 100644
          $.script_block_expression,
        ),
 
-@@ -1145,10 +1463,13 @@ export default grammar({
+@@ -1145,10 +1467,13 @@ export default grammar({
            $.comparison_argument_expression,
            seq(
              $.bitwise_argument_expression,
@@ -813,7 +817,7 @@ index 1f8b448..c34d033 100644
              ),
              $.comparison_argument_expression,
            ),
-@@ -1213,32 +1534,49 @@ export default grammar({
+@@ -1213,32 +1538,49 @@ export default grammar({
 
      type_literal: ($) => seq('[', $.type_spec, ']'),
 
@@ -877,7 +881,7 @@ index 1f8b448..c34d033 100644
 
      attribute_name: ($) => $.type_spec,
 diff --git a/src/scanner.c b/src/scanner.c
-index b46de2b..d30125a 100644
+index b46de2b0..d30125a1 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
 @@ -6,7 +6,12 @@
@@ -1155,7 +1159,7 @@ index b46de2b..d30125a 100644
  }
 
 diff --git a/test/corpus/native_arguments.txt b/test/corpus/native_arguments.txt
-index e91d0a4..6043257 100644
+index e91d0a4f..60432570 100644
 --- a/test/corpus/native_arguments.txt
 +++ b/test/corpus/native_arguments.txt
 @@ -44,7 +44,7 @@ cargo test -p core -- --nocapture --test-threads=1
@@ -1668,9 +1672,9 @@ index e91d0a4..6043257 100644
 +      (pipeline_chain
 +        (command
 +          (command_name))))))
-diff --git a/test/corpus/sloplint_multiline_boundaries.txt b/test/corpus/sloplint_multiline_boundaries.txt
+diff --git a/b/test/corpus/sloplint_multiline_boundaries.txt b/test/corpus/sloplint_multiline_boundaries.txt
 new file mode 100644
-index 0000000..2466b75
+index 00000000..2466b751
 --- /dev/null
 +++ b/test/corpus/sloplint_multiline_boundaries.txt
 @@ -0,0 +1,680 @@
@@ -2354,9 +2358,9 @@ index 0000000..2466b75
 +| Write-Output;;) { break }
 +
 +---
-diff --git a/test/corpus/sloplint_word_boundaries.txt b/test/corpus/sloplint_word_boundaries.txt
+diff --git a/b/test/corpus/sloplint_word_boundaries.txt b/test/corpus/sloplint_word_boundaries.txt
 new file mode 100644
-index 0000000..8ba60b5
+index 00000000..8ba60b50
 --- /dev/null
 +++ b/test/corpus/sloplint_word_boundaries.txt
 @@ -0,0 +1,111 @@
