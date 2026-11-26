@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "scope": "Retire completed temporary Flats development verification",
+  "branch": "ci/flats-sheet-fast-20261126-r14",
+  "source_head": "e91c70fa5888f1373e9ea3b0748f270935cd5d26",
+  "producer": "3078c3423dba33f3b1aa891876a15c0b08f71a32",
+  "run": 45850625018,
+  "url": "https://github.com/gosuda/sloplint/actions/runs/45850625018",
+  "status": "completed",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "id": 140015716302,
+      "name": "fast",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "removed": [
+    ".github/workflows/flats-sheet-fast.yml",
+    "ci-tools/flats-sheet-fast/actionlint.yaml",
+    "ci-tools/flats-sheet-fast/artifacts.json",
+    "ci-tools/flats-sheet-fast/inspect.py",
+    "ci-tools/flats-sheet-fast/manifest.json",
+    "ci-tools/flats-sheet-fast/verify.py"
+  ],
+  "source_publication": "No maintained Flats branch was updated by this retirement.",
+  "limits": "The old spreadsheet candidate did not pass all mandatory gates and was not published. Its design correction budget remains exhausted. The maintained PR was subsequently integrated with main by an external actor; these historical probes do not prove that new head.",
+  "retired_at": "2026-11-26T17:25:15.927Z"
+}
