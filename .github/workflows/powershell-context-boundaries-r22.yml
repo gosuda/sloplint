@@ -1,0 +1,54 @@
+name: Freeze PowerShell context boundary witnesses
+on:
+  push:
+    branches: [ci/powershell-context-boundaries-20261126-r22]
+    paths:
+      - .github/workflows/powershell-context-boundaries-r22.yml
+      - ci-tools/powershell-context-boundaries-r22/**
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+jobs:
+  baseline:
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: proof
+          persist-credentials: false
+          sparse-checkout: ci-tools/powershell-context-boundaries-r22
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 83f73f04e7f20bf405dbf4c2de3bd5467c8010bb
+          path: source
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 3071f522049cbe2d440bc68ca20e8887fdbdaa9a
+          path: pre_source
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 61c88ec4d492dd1ab72f76b15b84fa9434cccfaa
+          path: legacy_source
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          version: 0.13.9
+          python-version: "3.15"
+          require-checksums: true
+          enable-cache: false
+      - name: Freeze native and source witnesses without production edits
+        run: uv run --no-project --python 3.15 proof/ci-tools/powershell-context-boundaries-r22/verify.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: powershell-context-baseline-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/powershell-context-boundaries-r22/*.log
+            ${{ runner.temp }}/powershell-context-boundaries-r22/*.json
+          if-no-files-found: error
+          retention-days: 7

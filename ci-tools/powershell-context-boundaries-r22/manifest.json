@@ -1,0 +1,35 @@
+{
+  "base": "83f73f04e7f20bf405dbf4c2de3bd5467c8010bb",
+  "base_tree": "703b3a5a445883598bfb7ef05c263a76d6629235",
+  "pre_base": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+  "pre_tree": "171bbe1c7137faf98fb7981f69288120cd18bdf6",
+  "legacy_base": "61c88ec4d492dd1ab72f76b15b84fa9434cccfaa",
+  "legacy_tree": "589aff2ec97f6e6f8179453ff6882fe19b3b65b2",
+  "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+  "native_cases": 442,
+  "proof_sha256": {
+    "verify.py": "f72753fbe56ff40f12eba14c36a2aad811cd39c49be9596ff5a47c247b295f14",
+    "native-oracle.ps1": "0d4d5560040c21044a1d20558682f67a51f9c3aa9da5cfa9297ca3b20ccd8a8c",
+    "cases.json": "b8f84e56a7a16452223ce9bd5ab4e2907304a9ce034e34b15c94fdd1efea1023",
+    "frozen-modules.json": "773724b18c7968bcedf2ed945614e576b04ecaa2ccee82ab88a19fd2481530b6"
+  },
+  "trace_cases": [
+    "continued-lf-space-spaces-2",
+    "continued-lf-space-spaces-1",
+    "continued-crlf-space-spaces-2",
+    "redirect-out-space-dash",
+    "redirect-out-space-plain",
+    "redirect-out-mixed-dash",
+    "branch-lf-block-ordinary-else-exe",
+    "branch-lf-block-ordinary-else-block",
+    "branch-lf-block-assigned-else-block",
+    "branch-lf-block-assigned-else-exe"
+  ],
+  "threads": [
+    "PRRT_kwDOVOMFM868ien1",
+    "PRRT_kwDOVOMFM868ieo7",
+    "PRRT_kwDOVOMFM868ieqJ",
+    "PRRT_kwDOVOMFM868iema"
+  ],
+  "mode": "Observe native PowerShell and three immutable parsers, record actual public-API regression exits and query spans without assuming hypotheses pass, temporarily trace scanner callbacks, and restore every original source blob."
+}
