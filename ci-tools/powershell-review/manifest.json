@@ -1,9 +1,9 @@
 {
   "repo": "gosuda/sloplint",
-  "head": "a348ebf00e3de3d28311d05d8ce338405a98c5b3",
-  "base": "d0ac6b35a4ac4e81ec04e7ac9edbf37cb09bd2ad",
-  "tree": "0b2ef6af1cb7a914e32602143fd0a694d6120785",
-  "patch_sha256": "507b564a94869375bdad302bd8ca9af72d700e0cb9ebcb9f521595a0451deaa3",
+  "head": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+  "base": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+  "tree": "1722b3956e2333888e85ad37a9c39c35b2404d5f",
+  "patch_sha256": "105387759cb5001e73d1a6227c1bc2aded78f705d3fb66e434b59e51ce6d663b",
   "files": {
     "crates/sloplint-core/src/text.rs": "4c0c02bd851771d1e8c808b3cd14a2a37415ce9011257ebf11c0685a1514aff7",
     "crates/sloplint-syntax/src/lang/powershell/calls.rs": "c452b251a7ec569e9dee88849d60d9443222d11d73e5d430aa6e1741995ad67d",
@@ -15,7 +15,7 @@
     "crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/f.ps1": "a075efa049ceb165a8d63fbe259fbe3098ffb157ddc7112e11fd507384c634c4",
     "crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/expected.txt": "62c78becd1b1915486b72024b9a4f710ed99f9463ff6f6c4f7e1ac19e3b261d7",
     "crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/expected.txt": "5b5ba3b1b009408314bbcbd3cd202f456aa51bf7e254fdfd56d76f02664bcd90",
-    "vendor/tree-sitter-powershell/sloplint-grammar.patch": "41756e991edae4a88a2982a4d5ac3e974fd2c24f2519bb3db89745b08ce5dde5",
-    "vendor/tree-sitter-powershell/SLOPLINT.md": "67554c8ae5eae5386fd4b3e447d76e44bd8b85f0bc5a82484c5481e7661b0994"
+    "vendor/tree-sitter-powershell/sloplint-grammar.patch": "a2cf45f85e58b4953dd90548647a0f67672d48d6ce81a08b8f5d9d964ba7d2ab",
+    "vendor/tree-sitter-powershell/SLOPLINT.md": "d284bdceb72ff25c9e870f31080c26b5029ec0bca1341783aad33176e5a70231"
   }
 }

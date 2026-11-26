@@ -1,585 +1,55 @@
 diff --git a/crates/sloplint-core/src/text.rs b/crates/sloplint-core/src/text.rs
 --- a/crates/sloplint-core/src/text.rs
 +++ b/crates/sloplint-core/src/text.rs
-@@ -48,291 +48,304 @@
+@@ -48,9 +48,13 @@
  }
  
  pub fn longest_static_chunk(segments: &[&str]) -> u32 {
--    segments
--        .iter()
--        .map(|segment| longest_in_segment(segment))
--        .max()
--        .unwrap_or(0)
--}
--
--/// Longest static run inside a LoGOs `$"..."` literal body (the text between
--/// `$"` and the closing quote), using the same hole rules as the
--/// tree-sitter-logos external scanner: `{expr}` holes nest, and quotes,
--/// comments, escapes and nested `$"..."` literals inside a hole never end
--/// it early. Only the literal runs between holes are measured.
--pub fn longest_static_chunk_interp(inner: &str) -> u32 {
--    longest_static_chunk(&interp_literal_runs(inner))
--}
--
--fn interp_literal_runs(inner: &str) -> Vec<&str> {
--    let bytes = inner.as_bytes();
--    let mut runs = Vec::new();
--    let mut start = 0usize;
--    let mut i = 0usize;
--    while i < bytes.len() {
--        match bytes[i] {
--            b'{' => {
--                if bytes.get(i + 1) == Some(&b'{') {
--                    i += 2;
--                    continue;
--                }
--                if start < i {
--                    runs.push(&inner[start..i]);
--                }
--                i = skip_interp_hole(bytes, i + 1);
--                start = i;
--            }
--            b'\\' => {
--                i += 1;
--                if i < bytes.len() {
--                    i += utf8_len(bytes[i]);
--                }
--            }
--            _ => {
--                i += utf8_len(bytes[i]);
--            }
--        }
--    }
--    if start < inner.len() {
--        runs.push(&inner[start..]);
--    }
--    runs
--}
--
--fn skip_interp_hole(bytes: &[u8], mut i: usize) -> usize {
--    let mut nesting = 1u32;
--    while i < bytes.len() {
--        match bytes[i] {
--            b'{' => {
--                nesting += 1;
--                i += 1;
--            }
--            b'}' => {
--                nesting -= 1;
--                i += 1;
--                if nesting == 0 {
--                    return i;
--                }
--            }
--            b'/' => {
--                if bytes.get(i + 1) == Some(&b'/') {
--                    i += 2;
--                    while i < bytes.len() && bytes[i] != b'\n' {
--                        i += utf8_len(bytes[i]);
--                    }
--                } else if bytes.get(i + 1) == Some(&b'*') {
--                    i += 2;
--                    let mut prev = 0u8;
--                    while i < bytes.len() {
--                        let c = bytes[i];
--                        i += 1;
--                        if prev == b'*' && c == b'/' {
--                            break;
--                        }
--                        prev = c;
--                    }
--                } else {
--                    i += 1;
--                }
--            }
--            b'"' | b'\'' | b'`' => {
--                i = skip_quoted_bytes(bytes, i);
--            }
--            b'$' => {
--                if bytes.get(i + 1) == Some(&b'"') {
--                    i = skip_interp_body(bytes, i + 2);
--                } else {
--                    i += 1;
--                }
--            }
--            b'\\' => {
--                i += 1;
--                if i < bytes.len() {
--                    i += utf8_len(bytes[i]);
--                }
--            }
--            _ => {
--                i += utf8_len(bytes[i]);
--            }
--        }
--    }
--    i
--}
--
--fn skip_quoted_bytes(bytes: &[u8], mut i: usize) -> usize {
--    let quote = bytes[i];
--    i += 1;
--    while i < bytes.len() {
--        let c = bytes[i];
--        if c == b'\\' && quote != b'`' {
--            i += 1;
--            if i < bytes.len() {
--                i += utf8_len(bytes[i]);
--            }
--            continue;
--        }
--        i += utf8_len(c);
--        if c == quote {
--            break;
--        }
--    }
--    i
--}
--
--fn skip_interp_body(bytes: &[u8], mut i: usize) -> usize {
--    while i < bytes.len() {
--        match bytes[i] {
--            b'"' => return i + 1,
--            b'\\' => {
--                i += 1;
--                if i < bytes.len() {
--                    i += utf8_len(bytes[i]);
--                }
--            }
--            b'{' => {
--                if bytes.get(i + 1) == Some(&b'{') {
--                    i += 2;
--                } else {
--                    i = skip_interp_hole(bytes, i + 1);
--                }
--            }
--            _ => {
--                i += utf8_len(bytes[i]);
--            }
--        }
--    }
--    i
--}
--
--struct Scan {
--    best: u32,
--    run: u32,
--    i: usize,
--}
--
--impl Scan {
--    fn step(&mut self, bytes: &[u8]) {
--        match bytes[self.i] {
--            b'\\' => self.escape(bytes),
--            b'{' => self.brace(bytes),
--            b'}' if bytes.get(self.i + 1) == Some(&b'}') => {
--                self.run += 1;
--                self.i += 2;
--            }
--            b'%' => self.percent(bytes),
--            b => {
--                self.run += 1;
--                self.i += utf8_len(b);
--            }
--        }
--    }
--
--    fn escape(&mut self, bytes: &[u8]) {
--        self.break_run();
--        self.i += 1;
--        if self.i < bytes.len() {
--            self.i = (self.i + utf8_len(bytes[self.i])).min(bytes.len());
--        }
--    }
--
--    fn brace(&mut self, bytes: &[u8]) {
--        if bytes.get(self.i + 1) == Some(&b'{') {
--            self.run += 1;
--            self.i += 2;
--            return;
--        }
--        self.break_run();
--        self.i += 1;
--        while self.i < bytes.len() && bytes[self.i] != b'}' {
--            self.i += 1;
--        }
--        if self.i < bytes.len() {
--            self.i += 1;
--        }
--    }
--
--    fn percent(&mut self, bytes: &[u8]) {
--        if bytes.get(self.i + 1) == Some(&b'%') {
--            self.run += 1;
--            self.i += 2;
--            return;
--        }
--        if let Some(width) = printf_width(&bytes[self.i + 1..]) {
--            self.break_run();
--            self.i += 1 + width;
--            return;
--        }
--        self.run += 1;
--        self.i += 1;
--    }
--
--    fn break_run(&mut self) {
--        self.best = self.best.max(self.run);
--        self.run = 0;
--    }
--}
--
--fn longest_in_segment(segment: &str) -> u32 {
--    let bytes = segment.as_bytes();
--    let mut scan = Scan {
--        best: 0,
--        run: 0,
--        i: 0,
--    };
--    while scan.i < bytes.len() {
--        scan.step(bytes);
--    }
--    scan.best.max(scan.run)
--}
--
--fn utf8_len(first: u8) -> usize {
--    if first < 0x80 {
--        1
--    } else if first & 0xE0 == 0xC0 {
--        2
--    } else if first & 0xF0 == 0xE0 {
--        3
--    } else {
--        4
--    }
--}
--
--fn printf_width(bytes: &[u8]) -> Option<usize> {
--    let mut i = 0usize;
--    while i < bytes.len() && matches!(bytes[i], b'-' | b'+' | b' ' | b'#' | b'0') {
--        i += 1;
--    }
--    while i < bytes.len() && bytes[i].is_ascii_digit() {
--        i += 1;
--    }
--    if i < bytes.len() && bytes[i] == b'.' {
--        i += 1;
--        while i < bytes.len() && bytes[i].is_ascii_digit() {
--            i += 1;
--        }
--    }
--    (i < bytes.len() && bytes[i].is_ascii_alphabetic()).then_some(i + 1)
--}
--
--#[cfg(test)]
--mod tests {
--    use super::*;
--    use proptest::prelude::*;
--    use std::path::Path;
--
--    #[test]
--    fn chunks_break_at_placeholders_and_escapes() {
--        assert_eq!(longest_static_chunk(&[]), 0);
--        assert_eq!(longest_static_chunk(&["hello world"]), 11);
--        assert_eq!(longest_static_chunk(&["failed: {err}"]), 8);
--        assert_eq!(longest_static_chunk(&["code {{x}} done"]), 13);
--        assert_eq!(longest_static_chunk(&["%s of %d items"]), 6);
--        assert_eq!(longest_static_chunk(&["100%% done"]), 9);
--        assert_eq!(longest_static_chunk(&["a\\nb"]), 1);
--        assert_eq!(longest_static_chunk(&["%5.2f|tail"]), 5);
--        assert_eq!(longest_static_chunk(&["50% off", "plain"]), 5);
--    }
--
 +    longest_static_chunk_with_escape(segments, b'\\')
 +}
 +
 +pub fn longest_static_chunk_with_escape(segments: &[&str], escape: u8) -> u32 {
-+    segments
-+        .iter()
+     segments
+         .iter()
+-        .map(|segment| longest_in_segment(segment))
 +        .map(|segment| longest_in_segment(segment, escape))
-+        .max()
-+        .unwrap_or(0)
-+}
-+
-+/// Longest static run inside a LoGOs `$"..."` literal body (the text between
-+/// `$"` and the closing quote), using the same hole rules as the
-+/// tree-sitter-logos external scanner: `{expr}` holes nest, and quotes,
-+/// comments, escapes and nested `$"..."` literals inside a hole never end
-+/// it early. Only the literal runs between holes are measured.
-+pub fn longest_static_chunk_interp(inner: &str) -> u32 {
-+    longest_static_chunk(&interp_literal_runs(inner))
-+}
-+
-+fn interp_literal_runs(inner: &str) -> Vec<&str> {
-+    let bytes = inner.as_bytes();
-+    let mut runs = Vec::new();
-+    let mut start = 0usize;
-+    let mut i = 0usize;
-+    while i < bytes.len() {
-+        match bytes[i] {
-+            b'{' => {
-+                if bytes.get(i + 1) == Some(&b'{') {
-+                    i += 2;
-+                    continue;
-+                }
-+                if start < i {
-+                    runs.push(&inner[start..i]);
-+                }
-+                i = skip_interp_hole(bytes, i + 1);
-+                start = i;
-+            }
-+            b'\\' => {
-+                i += 1;
-+                if i < bytes.len() {
-+                    i += utf8_len(bytes[i]);
-+                }
-+            }
-+            _ => {
-+                i += utf8_len(bytes[i]);
-+            }
-+        }
-+    }
-+    if start < inner.len() {
-+        runs.push(&inner[start..]);
-+    }
-+    runs
-+}
-+
-+fn skip_interp_hole(bytes: &[u8], mut i: usize) -> usize {
-+    let mut nesting = 1u32;
-+    while i < bytes.len() {
-+        match bytes[i] {
-+            b'{' => {
-+                nesting += 1;
-+                i += 1;
-+            }
-+            b'}' => {
-+                nesting -= 1;
-+                i += 1;
-+                if nesting == 0 {
-+                    return i;
-+                }
-+            }
-+            b'/' => {
-+                if bytes.get(i + 1) == Some(&b'/') {
-+                    i += 2;
-+                    while i < bytes.len() && bytes[i] != b'\n' {
-+                        i += utf8_len(bytes[i]);
-+                    }
-+                } else if bytes.get(i + 1) == Some(&b'*') {
-+                    i += 2;
-+                    let mut prev = 0u8;
-+                    while i < bytes.len() {
-+                        let c = bytes[i];
-+                        i += 1;
-+                        if prev == b'*' && c == b'/' {
-+                            break;
-+                        }
-+                        prev = c;
-+                    }
-+                } else {
-+                    i += 1;
-+                }
-+            }
-+            b'"' | b'\'' | b'`' => {
-+                i = skip_quoted_bytes(bytes, i);
-+            }
-+            b'$' => {
-+                if bytes.get(i + 1) == Some(&b'"') {
-+                    i = skip_interp_body(bytes, i + 2);
-+                } else {
-+                    i += 1;
-+                }
-+            }
-+            b'\\' => {
-+                i += 1;
-+                if i < bytes.len() {
-+                    i += utf8_len(bytes[i]);
-+                }
-+            }
-+            _ => {
-+                i += utf8_len(bytes[i]);
-+            }
-+        }
-+    }
-+    i
-+}
-+
-+fn skip_quoted_bytes(bytes: &[u8], mut i: usize) -> usize {
-+    let quote = bytes[i];
-+    i += 1;
-+    while i < bytes.len() {
-+        let c = bytes[i];
-+        if c == b'\\' && quote != b'`' {
-+            i += 1;
-+            if i < bytes.len() {
-+                i += utf8_len(bytes[i]);
-+            }
-+            continue;
-+        }
-+        i += utf8_len(c);
-+        if c == quote {
-+            break;
-+        }
-+    }
-+    i
-+}
-+
-+fn skip_interp_body(bytes: &[u8], mut i: usize) -> usize {
-+    while i < bytes.len() {
-+        match bytes[i] {
-+            b'"' => return i + 1,
-+            b'\\' => {
-+                i += 1;
-+                if i < bytes.len() {
-+                    i += utf8_len(bytes[i]);
-+                }
-+            }
-+            b'{' => {
-+                if bytes.get(i + 1) == Some(&b'{') {
-+                    i += 2;
-+                } else {
-+                    i = skip_interp_hole(bytes, i + 1);
-+                }
-+            }
-+            _ => {
-+                i += utf8_len(bytes[i]);
-+            }
-+        }
-+    }
-+    i
-+}
-+
-+struct Scan {
-+    best: u32,
-+    run: u32,
-+    i: usize,
-+}
-+
-+impl Scan {
+         .max()
+         .unwrap_or(0)
+ }
+@@ -211,9 +215,9 @@
+ }
+ 
+ impl Scan {
+-    fn step(&mut self, bytes: &[u8]) {
 +    fn step(&mut self, bytes: &[u8], escape: u8) {
-+        match bytes[self.i] {
+         match bytes[self.i] {
+-            b'\\' => self.escape(bytes),
 +            byte if byte == escape => self.escape(bytes),
-+            b'{' => self.brace(bytes),
-+            b'}' if bytes.get(self.i + 1) == Some(&b'}') => {
-+                self.run += 1;
-+                self.i += 2;
-+            }
-+            b'%' => self.percent(bytes),
-+            b => {
-+                self.run += 1;
-+                self.i += utf8_len(b);
-+            }
-+        }
-+    }
-+
-+    fn escape(&mut self, bytes: &[u8]) {
-+        self.break_run();
-+        self.i += 1;
-+        if self.i < bytes.len() {
-+            self.i = (self.i + utf8_len(bytes[self.i])).min(bytes.len());
-+        }
-+    }
-+
-+    fn brace(&mut self, bytes: &[u8]) {
-+        if bytes.get(self.i + 1) == Some(&b'{') {
-+            self.run += 1;
-+            self.i += 2;
-+            return;
-+        }
-+        self.break_run();
-+        self.i += 1;
-+        while self.i < bytes.len() && bytes[self.i] != b'}' {
-+            self.i += 1;
-+        }
-+        if self.i < bytes.len() {
-+            self.i += 1;
-+        }
-+    }
-+
-+    fn percent(&mut self, bytes: &[u8]) {
-+        if bytes.get(self.i + 1) == Some(&b'%') {
-+            self.run += 1;
-+            self.i += 2;
-+            return;
-+        }
-+        if let Some(width) = printf_width(&bytes[self.i + 1..]) {
-+            self.break_run();
-+            self.i += 1 + width;
-+            return;
-+        }
-+        self.run += 1;
-+        self.i += 1;
-+    }
-+
-+    fn break_run(&mut self) {
-+        self.best = self.best.max(self.run);
-+        self.run = 0;
-+    }
-+}
-+
+             b'{' => self.brace(bytes),
+             b'}' if bytes.get(self.i + 1) == Some(&b'}') => {
+                 self.run += 1;
+@@ -272,7 +276,7 @@
+     }
+ }
+ 
+-fn longest_in_segment(segment: &str) -> u32 {
 +fn longest_in_segment(segment: &str, escape: u8) -> u32 {
-+    let bytes = segment.as_bytes();
-+    let mut scan = Scan {
-+        best: 0,
-+        run: 0,
-+        i: 0,
-+    };
-+    while scan.i < bytes.len() {
+     let bytes = segment.as_bytes();
+     let mut scan = Scan {
+         best: 0,
+@@ -280,7 +284,7 @@
+         i: 0,
+     };
+     while scan.i < bytes.len() {
+-        scan.step(bytes);
 +        scan.step(bytes, escape);
-+    }
-+    scan.best.max(scan.run)
-+}
-+
-+fn utf8_len(first: u8) -> usize {
-+    if first < 0x80 {
-+        1
-+    } else if first & 0xE0 == 0xC0 {
-+        2
-+    } else if first & 0xF0 == 0xE0 {
-+        3
-+    } else {
-+        4
-+    }
-+}
-+
-+fn printf_width(bytes: &[u8]) -> Option<usize> {
-+    let mut i = 0usize;
-+    while i < bytes.len() && matches!(bytes[i], b'-' | b'+' | b' ' | b'#' | b'0') {
-+        i += 1;
-+    }
-+    while i < bytes.len() && bytes[i].is_ascii_digit() {
-+        i += 1;
-+    }
-+    if i < bytes.len() && bytes[i] == b'.' {
-+        i += 1;
-+        while i < bytes.len() && bytes[i].is_ascii_digit() {
-+            i += 1;
-+        }
-+    }
-+    (i < bytes.len() && bytes[i].is_ascii_alphabetic()).then_some(i + 1)
-+}
-+
-+#[cfg(test)]
-+mod tests {
-+    use super::*;
-+    use proptest::prelude::*;
-+    use std::path::Path;
-+
-+    #[test]
-+    fn chunks_break_at_placeholders_and_escapes() {
-+        assert_eq!(longest_static_chunk(&[]), 0);
-+        assert_eq!(longest_static_chunk(&["hello world"]), 11);
-+        assert_eq!(longest_static_chunk(&["failed: {err}"]), 8);
-+        assert_eq!(longest_static_chunk(&["code {{x}} done"]), 13);
-+        assert_eq!(longest_static_chunk(&["%s of %d items"]), 6);
-+        assert_eq!(longest_static_chunk(&["100%% done"]), 9);
-+        assert_eq!(longest_static_chunk(&["a\\nb"]), 1);
-+        assert_eq!(longest_static_chunk(&["%5.2f|tail"]), 5);
-+        assert_eq!(longest_static_chunk(&["50% off", "plain"]), 5);
-+    }
-+
-+    #[test]
+     }
+     scan.best.max(scan.run)
+ }
+@@ -334,6 +338,15 @@
+     }
+ 
+     #[test]
 +    fn powershell_chunks_keep_backslashes_and_break_at_backticks() {
 +        assert_eq!(
 +            longest_static_chunk_with_escape(&[r"\bin\deploy\"], b'`'),
@@ -588,411 +58,43 @@ diff --git a/crates/sloplint-core/src/text.rs b/crates/sloplint-core/src/text.rs
 +        assert_eq!(longest_static_chunk_with_escape(&["ab`ncd"], b'`'), 2);
 +        assert_eq!(longest_static_chunk_with_escape(&["ab``cd"], b'`'), 2);
 +    }
-     #[test]
++    #[test]
      fn interp_chunks_measure_only_literal_runs() {
          assert_eq!(longest_static_chunk_interp("service started: {name}"), 17);
+         assert_eq!(longest_static_chunk_interp("{n /* } explanation */}"), 0);
 diff --git a/crates/sloplint-syntax/src/lang/powershell/calls.rs b/crates/sloplint-syntax/src/lang/powershell/calls.rs
 --- a/crates/sloplint-syntax/src/lang/powershell/calls.rs
 +++ b/crates/sloplint-syntax/src/lang/powershell/calls.rs
-@@ -1,203 +1,203 @@
+@@ -1,5 +1,5 @@
  use sloplint_core::facts::{Arg, ArgShape, CallKind};
 -use sloplint_core::text::longest_static_chunk;
--use tree_sitter::Node;
--
--use crate::hooks::{
--    CallHead, Cx, any_named_child, child_by_field, find_named_child, first_named_child,
--    first_named_child_matching, first_of_kind, named_children, narrow, slice, text, trimmed,
--};
--
--use super::funcs::{ps_var_name, single_named};
--
--fn ps_string_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
--    let fallback = narrow(text(cx, n).chars().count().saturating_sub(2));
--    let Some(inner) = first_of_kind(
--        n,
--        &[
--            "expandable_string_literal",
--            "expandable_here_string_literal",
--            "verbatim_here_string_characters",
--        ],
--    ) else {
--        return ArgShape::Str {
--            longest_static: fallback,
--        };
--    };
--    if inner.kind() == "verbatim_here_string_characters" {
--        return ArgShape::Str {
--            longest_static: ps_verbatim_here_len(text(cx, inner)),
--        };
--    }
--    if inner.kind() == "expandable_here_string_literal" {
--        return ArgShape::Concat {
--            longest_static: ps_static_run(cx, inner),
--        };
--    }
--    let interpolated = any_named_child(inner, |c| {
--        c.kind() == "variable" || c.kind() == "sub_expression"
--    });
--    if interpolated {
--        return ArgShape::Concat {
--            longest_static: ps_static_run(cx, inner),
--        };
--    }
--    let raw = text(cx, inner);
--    let body = raw
--        .strip_prefix('"')
--        .and_then(|s| s.strip_suffix('"'))
--        .unwrap_or(raw);
--    ArgShape::Str {
--        longest_static: longest_static_chunk(&[body]),
--    }
--}
--
--fn ps_verbatim_here_len(raw: &str) -> u32 {
--    let start = raw.find('\n').map(|i| i + 1).unwrap_or(raw.len());
--    let end = raw.rfind("'@").unwrap_or(start).min(raw.len());
--    let start = start.min(end);
--    narrow(raw.get(start..end).map_or(0, |body| {
--        body.trim_end_matches(['\r', '\n']).chars().count()
--    }))
--}
--
--fn ps_static_run(cx: &Cx<'_, '_>, inner: Node<'_>) -> u32 {
--    let dynamics: Vec<Node<'_>> = named_children(inner)
--        .into_iter()
--        .filter(|c| c.kind() == "variable" || c.kind() == "sub_expression")
--        .collect();
--    let raw = text(cx, inner);
--    let mut start = inner.start_byte().saturating_add(1);
--    let mut end = inner.end_byte().saturating_sub(1);
--    if raw.starts_with("@\"") {
--        if let Some(nl) = raw.find('\n') {
--            start = inner.start_byte() + nl + 1;
--        }
--        if let Some(close) = raw.rfind("\"@") {
--            let before = slice(cx.src, inner.start_byte(), inner.start_byte() + close);
--            end = inner.start_byte() + before.trim_end_matches(['\r', '\n']).len();
--        }
--    }
--    let mut gaps: Vec<&str> = Vec::new();
--    let mut cursor = start.min(end);
--    for dynamic in &dynamics {
--        gaps.push(slice(
--            cx.src,
--            cursor.min(dynamic.start_byte()),
--            dynamic.start_byte(),
--        ));
--        cursor = cursor.max(dynamic.end_byte());
--    }
--    gaps.push(slice(cx.src, cursor.min(end), end));
--    longest_static_chunk(&gaps)
--}
--
--fn ps_concat_static(cx: &Cx<'_, '_>, n: Node<'_>) -> u32 {
--    let mut best = 0;
--    let mut stack = vec![n];
--    while let Some(current) = stack.pop() {
--        match current.kind() {
--            "string_literal" => {
--                let run = match ps_string_shape(cx, current) {
--                    ArgShape::Str { longest_static } | ArgShape::Concat { longest_static } => {
--                        longest_static
--                    }
--                    _ => 0,
--                };
--                best = best.max(run);
--            }
--            "parenthesized_expression"
--            | "sub_expression"
--            | "script_block_expression"
--            | "array_expression" => {}
--            _ => stack.extend(named_children(current)),
--        }
--    }
--    best
--}
--
--fn ps_collection_shape(n: Node<'_>) -> ArgShape<'static> {
--    if subtree_has_kind(n, "script_block_expression") {
--        ArgShape::CodeBody
--    } else {
--        ArgShape::Collection
--    }
--}
--
--fn ps_array_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
--    let inner = unwrap_operand(n);
--    if inner.kind() == "string_literal" {
--        ps_string_shape(cx, inner)
--    } else if inner.kind() == "array_literal_expression"
--        && first_of_kind(inner, &["generic_token"]).is_some()
--    {
--        ArgShape::Other
--    } else if inner.named_child_count() > 1 {
--        ps_collection_shape(inner)
--    } else {
--        ArgShape::Other
--    }
--}
--
--pub(crate) fn ps_arg_value(n: Node<'_>) -> Node<'_> {
--    let mut node = n;
--    for _ in 0..16 {
--        if !matches!(
--            node.kind(),
--            "argument_expression"
--                | "logical_argument_expression"
--                | "bitwise_argument_expression"
--                | "comparison_argument_expression"
--                | "additive_argument_expression"
--                | "multiplicative_argument_expression"
--                | "format_argument_expression"
--                | "range_argument_expression"
--                | "logical_expression"
--                | "bitwise_expression"
--                | "comparison_expression"
--                | "additive_expression"
--                | "multiplicative_expression"
--                | "format_expression"
--                | "range_expression"
--                | "unary_expression"
--                | "array_literal_expression"
--                | "parenthesized_expression"
--                | "pipeline"
--                | "pipeline_chain"
--        ) {
--            break;
--        }
--        let Some(one) = single_named(node) else {
--            break;
--        };
--        node = one;
--    }
--    node
--}
--
--fn ps_generic_static(cx: &Cx<'_, '_>, node: Node<'_>) -> u32 {
--    let mut dynamics = Vec::new();
--    let mut stack = vec![node];
--    while let Some(current) = stack.pop() {
--        if current.kind() == "variable" || current.kind() == "sub_expression" {
--            dynamics.push(current);
--        } else {
--            stack.extend(named_children(current));
--        }
--    }
--    dynamics.sort_by_key(|d| d.start_byte());
--    let end = node.end_byte();
--    let mut gaps = Vec::new();
--    let mut cursor = node.start_byte();
--    for dynamic in &dynamics {
--        gaps.push(slice(
--            cx.src,
--            cursor.min(dynamic.start_byte()),
--            dynamic.start_byte(),
--        ));
--        cursor = cursor.max(dynamic.end_byte());
--    }
--    gaps.push(slice(cx.src, cursor.min(end), end));
--    longest_static_chunk(&gaps)
 +use sloplint_core::text::longest_static_chunk_with_escape;
-+use tree_sitter::Node;
-+
-+use crate::hooks::{
-+    CallHead, Cx, any_named_child, child_by_field, find_named_child, first_named_child,
-+    first_named_child_matching, first_of_kind, named_children, narrow, slice, text, trimmed,
-+};
-+
-+use super::funcs::{ps_var_name, single_named};
-+
-+fn ps_string_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
-+    let fallback = narrow(text(cx, n).chars().count().saturating_sub(2));
-+    let Some(inner) = first_of_kind(
-+        n,
-+        &[
-+            "expandable_string_literal",
-+            "expandable_here_string_literal",
-+            "verbatim_here_string_characters",
-+        ],
-+    ) else {
-+        return ArgShape::Str {
-+            longest_static: fallback,
-+        };
-+    };
-+    if inner.kind() == "verbatim_here_string_characters" {
-+        return ArgShape::Str {
-+            longest_static: ps_verbatim_here_len(text(cx, inner)),
-+        };
-+    }
-+    if inner.kind() == "expandable_here_string_literal" {
-+        return ArgShape::Concat {
-+            longest_static: ps_static_run(cx, inner),
-+        };
-+    }
-+    let interpolated = any_named_child(inner, |c| {
-+        c.kind() == "variable" || c.kind() == "sub_expression"
-+    });
-+    if interpolated {
-+        return ArgShape::Concat {
-+            longest_static: ps_static_run(cx, inner),
-+        };
-+    }
-+    let raw = text(cx, inner);
-+    let body = raw
-+        .strip_prefix('"')
-+        .and_then(|s| s.strip_suffix('"'))
-+        .unwrap_or(raw);
-+    ArgShape::Str {
+ use tree_sitter::Node;
+ 
+ use crate::hooks::{
+@@ -47,7 +47,7 @@
+         .and_then(|s| s.strip_suffix('"'))
+         .unwrap_or(raw);
+     ArgShape::Str {
+-        longest_static: longest_static_chunk(&[body]),
 +        longest_static: longest_static_chunk_with_escape(&[body], b'`'),
-+    }
-+}
-+
-+fn ps_verbatim_here_len(raw: &str) -> u32 {
-+    let start = raw.find('\n').map(|i| i + 1).unwrap_or(raw.len());
-+    let end = raw.rfind("'@").unwrap_or(start).min(raw.len());
-+    let start = start.min(end);
-+    narrow(raw.get(start..end).map_or(0, |body| {
-+        body.trim_end_matches(['\r', '\n']).chars().count()
-+    }))
-+}
-+
-+fn ps_static_run(cx: &Cx<'_, '_>, inner: Node<'_>) -> u32 {
-+    let dynamics: Vec<Node<'_>> = named_children(inner)
-+        .into_iter()
-+        .filter(|c| c.kind() == "variable" || c.kind() == "sub_expression")
-+        .collect();
-+    let raw = text(cx, inner);
-+    let mut start = inner.start_byte().saturating_add(1);
-+    let mut end = inner.end_byte().saturating_sub(1);
-+    if raw.starts_with("@\"") {
-+        if let Some(nl) = raw.find('\n') {
-+            start = inner.start_byte() + nl + 1;
-+        }
-+        if let Some(close) = raw.rfind("\"@") {
-+            let before = slice(cx.src, inner.start_byte(), inner.start_byte() + close);
-+            end = inner.start_byte() + before.trim_end_matches(['\r', '\n']).len();
-+        }
-+    }
-+    let mut gaps: Vec<&str> = Vec::new();
-+    let mut cursor = start.min(end);
-+    for dynamic in &dynamics {
-+        gaps.push(slice(
-+            cx.src,
-+            cursor.min(dynamic.start_byte()),
-+            dynamic.start_byte(),
-+        ));
-+        cursor = cursor.max(dynamic.end_byte());
-+    }
-+    gaps.push(slice(cx.src, cursor.min(end), end));
+     }
+ }
+ 
+@@ -88,7 +88,7 @@
+         cursor = cursor.max(dynamic.end_byte());
+     }
+     gaps.push(slice(cx.src, cursor.min(end), end));
+-    longest_static_chunk(&gaps)
 +    longest_static_chunk_with_escape(&gaps, b'`')
-+}
-+
-+fn ps_concat_static(cx: &Cx<'_, '_>, n: Node<'_>) -> u32 {
-+    let mut best = 0;
-+    let mut stack = vec![n];
-+    while let Some(current) = stack.pop() {
-+        match current.kind() {
-+            "string_literal" => {
-+                let run = match ps_string_shape(cx, current) {
-+                    ArgShape::Str { longest_static } | ArgShape::Concat { longest_static } => {
-+                        longest_static
-+                    }
-+                    _ => 0,
-+                };
-+                best = best.max(run);
-+            }
-+            "parenthesized_expression"
-+            | "sub_expression"
-+            | "script_block_expression"
-+            | "array_expression" => {}
-+            _ => stack.extend(named_children(current)),
-+        }
-+    }
-+    best
-+}
-+
-+fn ps_collection_shape(n: Node<'_>) -> ArgShape<'static> {
-+    if subtree_has_kind(n, "script_block_expression") {
-+        ArgShape::CodeBody
-+    } else {
-+        ArgShape::Collection
-+    }
-+}
-+
-+fn ps_array_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
-+    let inner = unwrap_operand(n);
-+    if inner.kind() == "string_literal" {
-+        ps_string_shape(cx, inner)
-+    } else if inner.kind() == "array_literal_expression"
-+        && first_of_kind(inner, &["generic_token"]).is_some()
-+    {
-+        ArgShape::Other
-+    } else if inner.named_child_count() > 1 {
-+        ps_collection_shape(inner)
-+    } else {
-+        ArgShape::Other
-+    }
-+}
-+
-+pub(crate) fn ps_arg_value(n: Node<'_>) -> Node<'_> {
-+    let mut node = n;
-+    for _ in 0..16 {
-+        if !matches!(
-+            node.kind(),
-+            "argument_expression"
-+                | "logical_argument_expression"
-+                | "bitwise_argument_expression"
-+                | "comparison_argument_expression"
-+                | "additive_argument_expression"
-+                | "multiplicative_argument_expression"
-+                | "format_argument_expression"
-+                | "range_argument_expression"
-+                | "logical_expression"
-+                | "bitwise_expression"
-+                | "comparison_expression"
-+                | "additive_expression"
-+                | "multiplicative_expression"
-+                | "format_expression"
-+                | "range_expression"
-+                | "unary_expression"
-+                | "array_literal_expression"
-+                | "parenthesized_expression"
-+                | "pipeline"
-+                | "pipeline_chain"
-+        ) {
-+            break;
-+        }
-+        let Some(one) = single_named(node) else {
-+            break;
-+        };
-+        node = one;
-+    }
-+    node
-+}
-+
-+fn ps_generic_static(cx: &Cx<'_, '_>, node: Node<'_>) -> u32 {
-+    let mut dynamics = Vec::new();
-+    let mut stack = vec![node];
-+    while let Some(current) = stack.pop() {
-+        if current.kind() == "variable" || current.kind() == "sub_expression" {
-+            dynamics.push(current);
-+        } else {
-+            stack.extend(named_children(current));
-+        }
-+    }
-+    dynamics.sort_by_key(|d| d.start_byte());
-+    let end = node.end_byte();
-+    let mut gaps = Vec::new();
-+    let mut cursor = node.start_byte();
-+    for dynamic in &dynamics {
-+        gaps.push(slice(
-+            cx.src,
-+            cursor.min(dynamic.start_byte()),
-+            dynamic.start_byte(),
-+        ));
-+        cursor = cursor.max(dynamic.end_byte());
-+    }
-+    gaps.push(slice(cx.src, cursor.min(end), end));
+ }
+ 
+ fn ps_concat_static(cx: &Cx<'_, '_>, n: Node<'_>) -> u32 {
+@@ -197,7 +197,7 @@
+         cursor = cursor.max(dynamic.end_byte());
+     }
+     gaps.push(slice(cx.src, cursor.min(end), end));
+-    longest_static_chunk(&gaps)
 +    longest_static_chunk_with_escape(&gaps, b'`')
  }
  
@@ -1000,253 +102,56 @@ diff --git a/crates/sloplint-syntax/src/lang/powershell/calls.rs b/crates/slopli
 diff --git a/vendor/tree-sitter-powershell/src/scanner.c b/vendor/tree-sitter-powershell/src/scanner.c
 --- a/vendor/tree-sitter-powershell/src/scanner.c
 +++ b/vendor/tree-sitter-powershell/src/scanner.c
-@@ -54,126 +54,130 @@
+@@ -54,12 +54,16 @@
          lexer->mark_end(lexer);
  
          bool saw_newline = false;
--        for (;;) {
--            if (lexer->lookahead == 0) return true;
--            if (lexer->lookahead == '}') return true;
--            if (lexer->lookahead == ';') return true;
--            if (lexer->lookahead == ')') return true;
--            if (lexer->lookahead == '\n') saw_newline = true;
--            else if (lexer->lookahead == '`') {
--                // A backtick before a line break joins the lines, so it is
--                // white space here: `$x -replace "a", "b" `` newline newline `}`.
--                skip(lexer);
--                if (lexer->lookahead == '\r') skip(lexer);
--                if (lexer->lookahead != '\n') return false;
--            }
--            else if (!iswspace(lexer->lookahead)) {
--                // A line break ends the statement, except when the next
--                // line continues an if statement: `}` newline `else {`.
--                // A leading pipe continues the pipeline: `hello` newline `| Out-String`.
--                if (saw_newline) {
--                    if (lexer->lookahead == '|') return false;
--                    return !at_else_keyword(lexer);
--                }
--                return false;
--            }
--            skip(lexer);
--        }
--    }
--
--    return false;
--}
--
--// A bare `-` or `--` argument: `--` ends option parsing for a native command
--// (`git log -- path`, `cargo test -- --nocapture`) and `-` names stdin
--// (`tar -xf -`). `--` is also the decrement operator and `-` the unary minus,
--// so the lexer cannot tell them apart by length or precedence: the token is
--// recognised only when the dashes are followed by whitespace, `(` or `{`,
--// a command separator, or the end of the command.
--// sloplint: PowerShell treats non-breaking and zero-width spaces as
--// horizontal whitespace (see grammar extras). The external scanner skips
--// exactly those plus ASCII space and tab, never line breaks, so a `--`
--// after ` \u00A0` is still an option terminator.
--static bool is_horizontal_space(int32_t c)
--{
--    return c == ' ' || c == '\t' || c == 0x00A0 || c == 0xFEFF || c == 0x200B || c == 0x2060;
--}
--
--static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_symbols)
--{
--    if (!valid_symbols[BARE_DASHES]) return false;
--
--    while (is_horizontal_space(lexer->lookahead)) skip(lexer);
--    if (lexer->lookahead != '-') return false;
--    lexer->advance(lexer, false);
--    if (lexer->lookahead == '-') lexer->advance(lexer, false);
--    lexer->mark_end(lexer);
--
--    switch (lexer->lookahead) {
--        case 0:
--        case ' ':
--        case '\t':
--        case 0x00A0:
--        case 0xFEFF:
--        case 0x200B:
--        case 0x2060:
--        case '\r':
--        case '\n':
--        case ';':
--        case '|':
--        case '&':
--        case '(':
--        case ')':
--        case '{':
--        case '}':
--            lexer->result_symbol = BARE_DASHES;
--            return true;
--        default:
--            return false;
--    }
--}
--
--/* --- API Implementation --- */
--
--// sloplint: `.Name` or `::Name` when `{` follows the name at once, as in
--// $a.Where{ $_ }. The token ends before the brace. Anything else is left to
--// the internal lexer, which re-reads the input from the start.
--static bool scan_method_block_head(TSLexer *lexer)
--{
--    if (lexer->lookahead == ':') {
--        lexer->advance(lexer, false);
--        if (lexer->lookahead != ':') return false;
--        lexer->advance(lexer, false);
--    } else if (lexer->lookahead == '.') {
--        lexer->advance(lexer, false);
--    } else {
--        return false;
--    }
--    if (!(iswalpha(lexer->lookahead) || lexer->lookahead == '_')) return false;
--    while (iswalnum(lexer->lookahead) || lexer->lookahead == '_') {
--        lexer->advance(lexer, false);
--    }
--    if (lexer->lookahead != '{') return false;
--    lexer->mark_end(lexer);
--    lexer->result_symbol = METHOD_BLOCK_HEAD;
--    return true;
--}
--// sloplint: a lone `$` inside an expandable string, when it does not open
--// `${`, `$(` or a variable. The internal lexer cannot express `$` not
--// followed by `{` (no lookahead), so an external token covers the lone case.
--// `${name` without `}` and `${}` then have no valid token and raise an error
--// as PowerShell does. A `$` that could open a longer `$` token (variable,
--// sub-expression, `$` escape or `$` whitespace) is left to the internal lexer
--// so the longer match wins, as before.
--static bool scan_loose_dollar(void *payload, TSLexer *lexer, const bool *valid_symbols)
--{
--    if (!valid_symbols[LOOSE_DOLLAR]) return false;
--    if (lexer->lookahead != '$') return false;
--    lexer->advance(lexer, false);
--    int32_t next = lexer->lookahead;
--    if (next == '{' || next == '(') return false;
--    if (next == '$' || next == '^' || next == '?' || next == '`') return false;
--    if (next == '\\' || iswspace(next)) return false;
 +        bool saw_blank_line = false;
-+        for (;;) {
-+            if (lexer->lookahead == 0) return true;
-+            if (lexer->lookahead == '}') return true;
-+            if (lexer->lookahead == ';') return true;
-+            if (lexer->lookahead == ')') return true;
+         for (;;) {
+             if (lexer->lookahead == 0) return true;
+             if (lexer->lookahead == '}') return true;
+             if (lexer->lookahead == ';') return true;
+             if (lexer->lookahead == ')') return true;
+-            if (lexer->lookahead == '\n') saw_newline = true;
 +            if (lexer->lookahead == '\n') {
 +                saw_blank_line = saw_blank_line || saw_newline;
 +                saw_newline = true;
 +            }
-+            else if (lexer->lookahead == '`') {
-+                // A backtick before a line break joins the lines, so it is
-+                // white space here: `$x -replace "a", "b" `` newline newline `}`.
-+                skip(lexer);
-+                if (lexer->lookahead == '\r') skip(lexer);
-+                if (lexer->lookahead != '\n') return false;
-+            }
-+            else if (!iswspace(lexer->lookahead)) {
-+                // A line break ends the statement, except when the next
-+                // line continues an if statement: `}` newline `else {`.
+             else if (lexer->lookahead == '`') {
+                 // A backtick before a line break joins the lines, so it is
+                 // white space here: `$x -replace "a", "b" `` newline newline `}`.
+@@ -70,9 +74,10 @@
+             else if (!iswspace(lexer->lookahead)) {
+                 // A line break ends the statement, except when the next
+                 // line continues an if statement: `}` newline `else {`.
+-                // A leading pipe continues the pipeline: `hello` newline `| Out-String`.
 +                // A leading pipe on the next line continues the pipeline.
 +                // An intervening blank line ends the statement.
-+                if (saw_newline) {
+                 if (saw_newline) {
+-                    if (lexer->lookahead == '|') return false;
 +                    if (lexer->lookahead == '|' && !saw_blank_line) return false;
-+                    return !at_else_keyword(lexer);
-+                }
-+                return false;
-+            }
-+            skip(lexer);
-+        }
-+    }
-+
-+    return false;
-+}
-+
-+// A bare `-` or `--` argument: `--` ends option parsing for a native command
-+// (`git log -- path`, `cargo test -- --nocapture`) and `-` names stdin
-+// (`tar -xf -`). `--` is also the decrement operator and `-` the unary minus,
-+// so the lexer cannot tell them apart by length or precedence: the token is
-+// recognised only when the dashes are followed by whitespace, `(` or `{`,
-+// a command separator, or the end of the command.
-+// sloplint: PowerShell treats non-breaking and zero-width spaces as
-+// horizontal whitespace (see grammar extras). The external scanner skips
-+// exactly those plus ASCII space and tab, never line breaks, so a `--`
-+// after ` \u00A0` is still an option terminator.
-+static bool is_horizontal_space(int32_t c)
-+{
-+    return c == ' ' || c == '\t' || c == 0x00A0 || c == 0xFEFF || c == 0x200B || c == 0x2060;
-+}
-+
-+static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_symbols)
-+{
-+    if (!valid_symbols[BARE_DASHES]) return false;
-+
-+    while (is_horizontal_space(lexer->lookahead)) skip(lexer);
-+    if (lexer->lookahead != '-') return false;
-+    lexer->advance(lexer, false);
-+    if (lexer->lookahead == '-') lexer->advance(lexer, false);
-+    lexer->mark_end(lexer);
-+
-+    switch (lexer->lookahead) {
-+        case 0:
-+        case ' ':
-+        case '\t':
-+        case 0x00A0:
-+        case 0xFEFF:
-+        case 0x200B:
-+        case 0x2060:
-+        case '\r':
-+        case '\n':
-+        case ';':
-+        case '|':
-+        case '&':
-+        case '(':
-+        case ')':
-+        case '{':
-+        case '}':
-+            lexer->result_symbol = BARE_DASHES;
-+            return true;
-+        default:
-+            return false;
-+    }
-+}
-+
-+/* --- API Implementation --- */
-+
-+// sloplint: `.Name` or `::Name` when `{` follows the name at once, as in
-+// $a.Where{ $_ }. The token ends before the brace. Anything else is left to
-+// the internal lexer, which re-reads the input from the start.
-+static bool scan_method_block_head(TSLexer *lexer)
-+{
-+    if (lexer->lookahead == ':') {
-+        lexer->advance(lexer, false);
-+        if (lexer->lookahead != ':') return false;
-+        lexer->advance(lexer, false);
-+    } else if (lexer->lookahead == '.') {
-+        lexer->advance(lexer, false);
-+    } else {
-+        return false;
-+    }
-+    if (!(iswalpha(lexer->lookahead) || lexer->lookahead == '_')) return false;
-+    while (iswalnum(lexer->lookahead) || lexer->lookahead == '_') {
-+        lexer->advance(lexer, false);
-+    }
-+    if (lexer->lookahead != '{') return false;
-+    lexer->mark_end(lexer);
-+    lexer->result_symbol = METHOD_BLOCK_HEAD;
-+    return true;
-+}
-+// sloplint: a lone `$` inside an expandable string, when it does not open
-+// `${`, `$(` or a variable. The internal lexer cannot express `$` not
-+// followed by `{` (no lookahead), so an external token covers the lone case.
-+// `${name` without `}` and `${}` then have no valid token and raise an error
+                     return !at_else_keyword(lexer);
+                 }
+                 return false;
+@@ -162,9 +167,9 @@
+ // `${`, `$(` or a variable. The internal lexer cannot express `$` not
+ // followed by `{` (no lookahead), so an external token covers the lone case.
+ // `${name` without `}` and `${}` then have no valid token and raise an error
+-// as PowerShell does. A `$` that could open a longer `$` token (variable,
+-// sub-expression, `$` escape or `$` whitespace) is left to the internal lexer
+-// so the longer match wins, as before.
 +// as PowerShell does. Variables and sub-expressions stay with the internal
 +// lexer. A plain dollar before whitespace, a backslash or a backtick ends
 +// here, leaving the following here-string closing newline untouched.
-+static bool scan_loose_dollar(void *payload, TSLexer *lexer, const bool *valid_symbols)
-+{
-+    if (!valid_symbols[LOOSE_DOLLAR]) return false;
-+    if (lexer->lookahead != '$') return false;
-+    lexer->advance(lexer, false);
-+    int32_t next = lexer->lookahead;
-+    if (next == '{' || next == '(') return false;
+ static bool scan_loose_dollar(void *payload, TSLexer *lexer, const bool *valid_symbols)
+ {
+     if (!valid_symbols[LOOSE_DOLLAR]) return false;
+@@ -172,8 +177,7 @@
+     lexer->advance(lexer, false);
+     int32_t next = lexer->lookahead;
+     if (next == '{' || next == '(') return false;
+-    if (next == '$' || next == '^' || next == '?' || next == '`') return false;
+-    if (next == '\\' || iswspace(next)) return false;
 +    if (next == '$' || next == '^' || next == '?') return false;
      if (iswalnum(next) || next == '_') return false;
      lexer->mark_end(lexer);
@@ -1254,235 +159,18 @@ diff --git a/vendor/tree-sitter-powershell/src/scanner.c b/vendor/tree-sitter-po
 diff --git a/crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs b/crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs
 --- a/crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs
 +++ b/crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs
-@@ -1,115 +1,169 @@
+@@ -1,5 +1,7 @@
  //! Argument boundaries retain protected text and validate interpolation.
  
--use super::powershell::{call, run, run_clean};
--
--#[test]
--fn command_comma_lists_keep_parameter_words_and_parenthesized_items_together() {
--    for source in [
--        "Write-Output --:first,-second\n",
--        "Write-Output --:first, -second\n",
--    ] {
--        let analysis = run_clean(source);
--        assert_eq!(call(&analysis, "Write-Output").args.len(), 1, "{source}");
--    }
--    let analysis = run_clean("Write-Output --(Get-Date), (Get-Date)\n");
--    assert_eq!(
--        call(&analysis, "Write-Output").args.len(),
--        2,
--        "the end-of-options marker and one array argument"
--    );
--}
--
--#[test]
--fn nbsp_separates_native_words_but_preserves_quoted_and_escaped_segments() {
--    for source in [
--        "git add --\u{a0}first.txt\u{a0}second.txt\n",
--        "git add --\u{a0}--format=zip\u{a0}second.txt\n",
--        "git add --\u{a0}\"first\u{a0}part\"\u{a0}second.txt\n",
--        "git add --\u{a0}first`\u{a0}part\u{a0}second.txt\n",
--    ] {
--        let analysis = run_clean(source);
--        assert_eq!(call(&analysis, "git").args.len(), 4, "{source}");
--    }
--}
--
--#[test]
--fn variable_paths_keep_protected_nbsp_inside_one_argument() {
--    for (source, count) in [
--        ("git add -- $env:TEMP/\"first\u{a0}part\"\n", 3),
--        ("git add -- $env:TEMP/first`\u{a0}part\n", 3),
--        ("git add -- $env:TEMP/first\u{a0}part\n", 4),
--    ] {
--        let analysis = run_clean(source);
--        assert_eq!(call(&analysis, "git").args.len(), count, "{source}");
--    }
--}
--
--#[test]
--fn nbsp_delimits_command_names_outside_protected_segments() {
--    let analysis = run_clean("git\u{a0}status\n");
--    assert_eq!(call(&analysis, "git").args.len(), 1);
--    for source in ["git\"first\u{a0}part\"\n", "git`\u{a0}status\n"] {
--        let analysis = run_clean(source);
--        assert_eq!(analysis.facts.calls.len(), 1, "{source}");
--        assert_eq!(analysis.facts.calls[0].args.len(), 0, "{source}");
--    }
--}
--
--#[test]
--fn variable_paths_parse_expandable_quoted_subexpressions() {
--    for source in [
--        "Copy-Item $PSScriptRoot/\"$(Get-Date)\" $dest\n",
--        "Copy-Item $PSScriptRoot/\"file$.txt\" $dest\n",
--        "Copy-Item $PSScriptRoot/\"#1.zip\" $dest\n",
--        "Copy-Item $PSScriptRoot/\"`$(Get-Date\" $dest\n",
--        "Copy-Item $PSScriptRoot/\"$(Get-Date -Format 'yyyy')\" $dest\n",
--        "Copy-Item $PSScriptRoot/\"first\u{a0}$(Get-Date)\" $dest\n",
--        "Copy-Item $PSScriptRoot/'$(Get-Date' $dest\n",
--    ] {
--        let analysis = run_clean(source);
--        assert_eq!(call(&analysis, "Copy-Item").args.len(), 2, "{source}");
--    }
--    for source in [
--        "Copy-Item $PSScriptRoot/\"$(Get-Date\" $dest\n",
--        "Copy-Item $PSScriptRoot/\"first $(Get-Date\" $dest\n",
--    ] {
--        assert!(run(source).parse_error.is_some(), "{source}");
--    }
--}
--
--#[test]
--fn command_continuations_keep_pipelines_with_lf_and_crlf() {
--    for ending in ["\n", "\r\n"] {
--        let source = format!("Get-Date`{ending}| Write-Output{ending}");
--        let analysis = run_clean(&source);
--        assert!(
--            analysis
--                .facts
--                .calls
--                .iter()
--                .any(|call| call.callee == "Get-Date")
--        );
--        assert!(
--            analysis
--                .facts
--                .calls
--                .iter()
--                .any(|call| call.callee == "Write-Output")
--        );
--    }
--}
--
--#[test]
--fn crlf_after_an_escape_inside_a_bare_argument_ends_the_command() {
--    for indentation in ["", "    "] {
--        let source = format!("Write-Output hello`\r\n{indentation}Get-Date\r\n");
--        let analysis = run_clean(&source);
--        let callees = analysis
--            .facts
--            .calls
--            .iter()
--            .map(|call| call.callee)
--            .collect::<Vec<_>>();
--        assert_eq!(callees, ["Write-Output", "Get-Date"], "{source:?}");
 +use sloplint_core::facts::ArgShape;
 +
-+use super::powershell::{call, run, run_clean};
-+
-+#[test]
-+fn command_comma_lists_keep_parameter_words_and_parenthesized_items_together() {
-+    for source in [
-+        "Write-Output --:first,-second\n",
-+        "Write-Output --:first, -second\n",
-+    ] {
-+        let analysis = run_clean(source);
-+        assert_eq!(call(&analysis, "Write-Output").args.len(), 1, "{source}");
-+    }
-+    let analysis = run_clean("Write-Output --(Get-Date), (Get-Date)\n");
-+    assert_eq!(
-+        call(&analysis, "Write-Output").args.len(),
-+        2,
-+        "the end-of-options marker and one array argument"
-+    );
-+}
-+
-+#[test]
-+fn nbsp_separates_native_words_but_preserves_quoted_and_escaped_segments() {
-+    for source in [
-+        "git add --\u{a0}first.txt\u{a0}second.txt\n",
-+        "git add --\u{a0}--format=zip\u{a0}second.txt\n",
-+        "git add --\u{a0}\"first\u{a0}part\"\u{a0}second.txt\n",
-+        "git add --\u{a0}first`\u{a0}part\u{a0}second.txt\n",
-+    ] {
-+        let analysis = run_clean(source);
-+        assert_eq!(call(&analysis, "git").args.len(), 4, "{source}");
-+    }
-+}
-+
-+#[test]
-+fn variable_paths_keep_protected_nbsp_inside_one_argument() {
-+    for (source, count) in [
-+        ("git add -- $env:TEMP/\"first\u{a0}part\"\n", 3),
-+        ("git add -- $env:TEMP/first`\u{a0}part\n", 3),
-+        ("git add -- $env:TEMP/first\u{a0}part\n", 4),
-+    ] {
-+        let analysis = run_clean(source);
-+        assert_eq!(call(&analysis, "git").args.len(), count, "{source}");
-+    }
-+}
-+
-+#[test]
-+fn nbsp_delimits_command_names_outside_protected_segments() {
-+    let analysis = run_clean("git\u{a0}status\n");
-+    assert_eq!(call(&analysis, "git").args.len(), 1);
-+    for source in ["git\"first\u{a0}part\"\n", "git`\u{a0}status\n"] {
-+        let analysis = run_clean(source);
-+        assert_eq!(analysis.facts.calls.len(), 1, "{source}");
-+        assert_eq!(analysis.facts.calls[0].args.len(), 0, "{source}");
-+    }
-+}
-+
-+#[test]
-+fn variable_paths_parse_expandable_quoted_subexpressions() {
-+    for source in [
-+        "Copy-Item $PSScriptRoot/\"$(Get-Date)\" $dest\n",
-+        "Copy-Item $PSScriptRoot/\"file$.txt\" $dest\n",
-+        "Copy-Item $PSScriptRoot/\"#1.zip\" $dest\n",
-+        "Copy-Item $PSScriptRoot/\"`$(Get-Date\" $dest\n",
-+        "Copy-Item $PSScriptRoot/\"$(Get-Date -Format 'yyyy')\" $dest\n",
-+        "Copy-Item $PSScriptRoot/\"first\u{a0}$(Get-Date)\" $dest\n",
-+        "Copy-Item $PSScriptRoot/'$(Get-Date' $dest\n",
-+    ] {
-+        let analysis = run_clean(source);
-+        assert_eq!(call(&analysis, "Copy-Item").args.len(), 2, "{source}");
-+    }
-+    for source in [
-+        "Copy-Item $PSScriptRoot/\"$(Get-Date\" $dest\n",
-+        "Copy-Item $PSScriptRoot/\"first $(Get-Date\" $dest\n",
-+    ] {
-+        assert!(run(source).parse_error.is_some(), "{source}");
-+    }
-+}
-+
-+#[test]
-+fn command_continuations_keep_pipelines_with_lf_and_crlf() {
-+    for ending in ["\n", "\r\n"] {
-+        let source = format!("Get-Date`{ending}| Write-Output{ending}");
-+        let analysis = run_clean(&source);
-+        assert!(
-+            analysis
-+                .facts
-+                .calls
-+                .iter()
-+                .any(|call| call.callee == "Get-Date")
-+        );
-+        assert!(
-+            analysis
-+                .facts
-+                .calls
-+                .iter()
-+                .any(|call| call.callee == "Write-Output")
-+        );
-+    }
-+}
-+
-+#[test]
-+fn crlf_after_an_escape_inside_a_bare_argument_ends_the_command() {
-+    for indentation in ["", "    "] {
-+        let source = format!("Write-Output hello`\r\n{indentation}Get-Date\r\n");
-+        let analysis = run_clean(&source);
-+        let callees = analysis
-+            .facts
-+            .calls
-+            .iter()
-+            .map(|call| call.callee)
-+            .collect::<Vec<_>>();
-+        assert_eq!(callees, ["Write-Output", "Get-Date"], "{source:?}");
-+    }
-+}
+ use super::powershell::{call, run, run_clean};
+ 
+ #[test]
+@@ -113,3 +115,55 @@
+         assert_eq!(callees, ["Write-Output", "Get-Date"], "{source:?}");
+     }
+ }
 +
 +#[test]
 +fn here_string_dollar_does_not_consume_the_closing_line() {
@@ -1533,8 +221,40 @@ diff --git a/crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs b/cra
 +            searchable,
 +            "{source}: {longest_static}"
 +        );
-     }
- }
++    }
++}
+diff --git a/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/b.ps1 b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/b.ps1
+new file mode 100644
+--- /dev/null
++++ b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/b.ps1
+@@ -0,0 +1,3 @@
++function Invoke-Log($r, $id) {
++  Write-Host $r\x\"$id"
++}
+diff --git a/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/c.ps1 b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/c.ps1
+new file mode 100644
+--- /dev/null
++++ b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/c.ps1
+@@ -0,0 +1,3 @@
++function Invoke-Log($r, $id) {
++  Write-Host "$r\x\$id"
++}
+diff --git a/crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/e.ps1 b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/e.ps1
+new file mode 100644
+--- /dev/null
++++ b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/e.ps1
+@@ -0,0 +1,3 @@
++function Invoke-Log($r, $id) {
++  Write-Host $r\bin\deploy\"$id"
++}
+diff --git a/crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/f.ps1 b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/f.ps1
+new file mode 100644
+--- /dev/null
++++ b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/f.ps1
+@@ -0,0 +1,3 @@
++function Invoke-Log($r, $id) {
++  Write-Host "$r\bin\deploy\$id"
++}
 diff --git a/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/expected.txt b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/expected.txt
 --- a/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/expected.txt
 +++ b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/expected.txt
@@ -1553,164 +273,557 @@ diff --git a/crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-mis
 diff --git a/vendor/tree-sitter-powershell/sloplint-grammar.patch b/vendor/tree-sitter-powershell/sloplint-grammar.patch
 --- a/vendor/tree-sitter-powershell/sloplint-grammar.patch
 +++ b/vendor/tree-sitter-powershell/sloplint-grammar.patch
-@@ -774,153 +774,275 @@
- 
+@@ -1,11 +1,10 @@
+ diff --git a/grammar.js b/grammar.js
+-index 1f8b448..50135ee 100644
+ --- a/grammar.js
+ +++ b/grammar.js
+-@@ -7,10 +7,36 @@ const PREC = {
++@@ -7,10 +7,37 @@
+    PARAM: 6,
+  };
+-
++ 
+ +// sloplint: a command-line word may hold quoted segments that contain spaces,
+ +// pipes or parentheses: -x="a b", --format='%H||%P'. The segments are matched as
+ +// a unit inside the word token. A double-quoted segment holds no nested quote,
+@@ -30,19 +29,20 @@
+ +
+  export default grammar({
+    name: 'powershell',
+-
++ 
+ -  externals: ($) => [$._statement_terminator, $._bare_dashes],
+ +  externals: ($) => [
+ +    $._statement_terminator,
+ +    $._bare_dashes,
+ +    $._method_block_head,
+++    $._loose_dollar,
+ +  ],
+-
++ 
+    extras: ($) => [
+      $.comment,
+-@@ -21,15 +47,27 @@ export default grammar({
++@@ -21,15 +48,27 @@
+    ],
+-
++ 
+    conflicts: ($) => [
+ +    [$._cast_operand, $.invokation_foreach_expression],
+      [$._literal, $.member_name],
+@@ -55,7 +55,7 @@
+ +    // parameter's attribute or a cast inside the default's array literal.
+ +    [$._cast_operand, $.member_access, $.invokation_expression],
+    ],
+-
++ 
+    rules: {
+ -    program: ($) => seq(optional($.param_block), $.statement_list),
+ +    // sloplint: a script file body may be a list of named blocks
+@@ -66,13 +66,13 @@
+ +        optional($.param_block),
+ +        optional(choice($.statement_list, $.named_block_list)),
+ +      ),
+-
++ 
+      // Comments
+      comment: ($) =>
+-@@ -48,22 +86,24 @@ export default grammar({
++@@ -48,22 +87,24 @@
+      integer_literal: ($) =>
+        choice($.decimal_integer_literal, $.hexadecimal_integer_literal),
+-
++ 
+ +    // sloplint: numeric prefixes, exponents and multiplier suffixes are
+ +    // case-insensitive in PowerShell (0XFF, 1E3, 1MB, 10Gb).
+      decimal_integer_literal: ($) =>
+@@ -85,7 +85,7 @@
+ +          optional(/[kmgtpKMGTP][bB]/),
+          ),
+        ),
+-
++ 
+      hexadecimal_integer_literal: ($) =>
+        token(
+          seq(
+@@ -98,8 +98,8 @@
+ +          optional(/[kmgtpKMGTP][bB]/),
+          ),
+        ),
+-
+-@@ -73,18 +113,18 @@ export default grammar({
++ 
++@@ -73,18 +114,18 @@
+          choice(
+            seq(
+              /[0-9]+\.[0-9]+/,
+@@ -124,10 +124,10 @@
+            ),
+          ),
+        ),
+-@@ -98,21 +138,24 @@ export default grammar({
++@@ -98,21 +139,24 @@
+          $.verbatim_here_string_characters,
+        ),
+-
++ 
+ +    _expandable_string_part: ($) =>
+ +      choice(
+ +        // sloplint: lexical precedence keeps a text run that starts at
+@@ -139,7 +139,7 @@
+ +        token.immediate(/\$(`.{1}|`\r?\n|[\s\\])/),
+ +        token.immediate(/`.{1}|`\r?\n/),
+ +        token.immediate('""'),
+-+        token.immediate('$'),
+++        $._loose_dollar,
+ +      ),
+ +
+      expandable_string_literal: ($) =>
+@@ -160,8 +160,8 @@
+ +        repeat($._expandable_string_part),
+          token.immediate(/(\s*\#*)*\"/),
+        ),
+-
+-@@ -124,7 +167,11 @@ export default grammar({
++ 
++@@ -124,9 +168,13 @@
+              token.immediate(/[^\$\r\n`]+/),
+              $.variable,
+              $.sub_expression,
+@@ -172,21 +172,24 @@
+ +            token.immediate(/(\r?\n)+[^\"\r\n`]/),
+ +            token.immediate(/(\r?\n)+(`.{1}|`\r?\n)/),
+              token.immediate(/(\r?\n)+\"[^@]/),
+-             token.immediate('$'),
++-            token.immediate('$'),
+++            $._loose_dollar,
+              token.immediate(/`.{1}|`\r?\n/),
+-@@ -149,7 +196,10 @@ export default grammar({
++           ),
++         ),
++@@ -149,7 +197,10 @@
+      simple_name: ($) => /[a-zA-Z_][a-zA-Z0-9_]*/,
+-
++ 
+      // Type names
+ -    type_identifier: ($) => /[a-zA-Z0-9_]+/,
+ +    // sloplint: a type name may hold nested-type `+` and generic-arity
+ +    // backtick parts: System.Environment+SpecialFolder, System.Func`1,
+ +    // Dictionary`2+Enumerator.
+ +    type_identifier: ($) => /[a-zA-Z0-9_]+([`+]+[a-zA-Z0-9_]+)*/,
+-
++ 
+      type_name: ($) =>
+        choice($.type_identifier, seq($.type_name, '.', $.type_identifier)),
+-@@ -225,6 +275,11 @@ export default grammar({
++@@ -225,6 +276,11 @@
+          reservedWord('-ilike'),
+          reservedWord('-ilt'),
+          reservedWord('-imatch'),
+@@ -198,8 +201,8 @@
+          reservedWord('-in'),
+          reservedWord('-ine'),
+          reservedWord('-inotcontains'),
+-@@ -306,19 +361,107 @@ export default grammar({
+-
++@@ -306,19 +362,107 @@
++ 
+      // Commands
+      generic_token: ($) =>
+ -      token(/[^\(\)\$\"\'\-\{\}@\|\[`\&\s][^\&\s\(\)\}\|;,]*/),
+@@ -266,7 +269,7 @@
+ +          ),
+ +        ),
+ +      ),
+-+
++ 
+ +    // sloplint: variable-prefixed paths stay one argument, but expandable
+ +    // quoted segments must parse their variables and subexpressions.
+ +    _variable_path_word: ($) =>
+@@ -281,9 +284,9 @@
+ +          ),
+ +        ),
+ +      ),
+-
+++
+      _command_token: ($) => token(/[^\(\)\{\}\s;\&]+/),
+-
++ 
+ +    // sloplint: a switch clause word may open with a double quote only when
+ +    // it is a complete quoted word. Otherwise "^(a)$" is cut at the first
+ +    // parenthesis, lexed as a word, and the clause fails to parse.
+@@ -309,7 +312,7 @@
+            ),
+          ),
+          // A bare `--` or `-` argument (see scanner.c).
+-@@ -399,6 +542,13 @@ export default grammar({
++@@ -399,6 +543,13 @@
+            $.inlinescript_statement,
+            $.parallel_statement,
+            $.sequence_statement,
+@@ -323,10 +326,10 @@
+            seq($.pipeline, $._statement_terminator),
+            // `npm run dev &` (PowerShell 7): runs the pipeline as a background job
+            seq($.pipeline, $.background_operator),
+-@@ -476,16 +626,18 @@ export default grammar({
+-
++@@ -476,16 +627,18 @@
++ 
+      switch_clauses: ($) => repeat1($.switch_clause),
+-
++ 
+ +    // sloplint: terminators between switch clauses are optional in
+ +    // PowerShell, so clauses may share a line: { 1 { "a" } default { "b" } }.
+      switch_clause: ($) =>
+@@ -337,17 +340,17 @@
+ +        optional($._statement_terminator),
+          repeat(';'),
+        ),
+-
++ 
+      switch_clause_condition: ($) =>
+ -      choice($._command_token, $._primary_expression),
+ +      choice($._switch_clause_token, $._primary_expression),
+-
++ 
+      foreach_statement: ($) =>
+        seq(
+-@@ -568,8 +720,11 @@ export default grammar({
++@@ -568,8 +721,11 @@
+          ')',
+        ),
+-
++ 
+ +    // sloplint: attributes may precede a function definition, like they may
+ +    // class and enum: [Alias('x')] function f {}, [OutputType([int])] f {}.
+      function_statement: ($) =>
+@@ -356,7 +359,7 @@
+          choice(
+            reservedWord('function'),
+            reservedWord('filter'),
+-@@ -578,10 +733,19 @@ export default grammar({
++@@ -578,10 +734,19 @@
+          $.function_name,
+          optional($.function_parameter_declaration),
+          '{',
+@@ -366,7 +369,7 @@
+ +        ),
+          '}',
+        ),
+-
++ 
+ +    // sloplint: a function body may put its first statement right after the
+ +    // param block on the same line: function f { param($a) $a }. The hidden
+ +    // rule is aliased to script_block, the kind a body with a line break after
+@@ -375,21 +378,21 @@
+ +      seq($.param_block, field('script_block_body', $.script_block_body)),
+ +
+      function_name: ($) => $._command_token,
+-
++ 
+      function_parameter_declaration: ($) =>
+-@@ -598,7 +762,9 @@ export default grammar({
+-
++@@ -598,7 +763,9 @@
++ 
+      label: ($) => token(seq(':', /[a-zA-Z_][a-zA-Z0-9_]*/)),
+-
++ 
+ -    label_expression: ($) => choice($.label, $.unary_expression),
+ +    // sloplint: a loop label may be a bare name: break outer, continue top.
+ +    label_expression: ($) =>
+ +      choice($.label, $.simple_name, $.unary_expression),
+-
++ 
+      trap_statement: ($) =>
+        seq(reservedWord('trap'), optional($.type_literal), $.statement_block),
+-@@ -710,18 +876,8 @@ export default grammar({
+-
++@@ -710,18 +877,8 @@
++ 
+      _expandable_string_literal_immediate: ($) =>
+        seq(
+ -        repeat(
+@@ -407,9 +410,9 @@
+ +        repeat($._expandable_string_part),
+ +        token.immediate('"'),
+        ),
+-
++ 
+      _string_literal_immediate: ($) =>
+-@@ -733,7 +889,7 @@ export default grammar({
++@@ -733,7 +890,7 @@
+      command_name: ($) =>
+        seq(
+          choice(
+@@ -418,7 +421,7 @@
+            // tree-sitter does not allow to control lexer
+            // each start keyword into _statement rule must be present here
+            // https://github.com/airbus-cert/tree-sitter-powershell/issues/24
+-@@ -754,10 +910,23 @@ export default grammar({
++@@ -754,10 +911,23 @@
+            new RegExp(caseInsensitive('for-')),
+            new RegExp(caseInsensitive('while-')),
+            new RegExp(caseInsensitive('parallel-')),
+@@ -443,17 +446,17 @@
+              seq(token.immediate('"'), $._expandable_string_literal_immediate),
+              seq(token.immediate('\''), $._string_literal_immediate),
+              token.immediate('""'),
+-@@ -766,7 +935,8 @@ export default grammar({
++@@ -766,7 +936,8 @@
+          ),
+        ),
+-
++ 
+ -    path_command_name_token: ($) => /[0-9a-zA-Z_?\-\.\\]+/,
+ +    // sloplint: `/` is a path separator too: . $PSScriptRoot/x.ps1, ./build.ps1.
+ +    path_command_name_token: ($) => /[0-9a-zA-Z_?\-\.\\\/]+/,
+-
++ 
+      // Use to parse command path
+      path_command_name: ($) =>
+-@@ -781,41 +951,86 @@ export default grammar({
++@@ -781,41 +952,86 @@
+        prec.right(
+          choice(
+            $.command_parameter,
+@@ -466,7 +469,7 @@
+            $.stop_parsing,
+          ),
+        ),
+-
++ 
+ +    // sloplint: a call in an argument may be followed by more member access
+ +    // and calls: foo $s.ToString().TrimEnd(). The pieces are siblings of the
+ +    // argument, like the first argument_list.
+@@ -477,7 +480,7 @@
+ +
+      // Stop parsing is a token that end the parsing of command line
+      stop_parsing: ($) => /--%[^\r\n]*/,
+-
++ 
+      // Generic token is hard to manage
+      // So a definition is that a generic token must have to begin by one or more space char
+ -    command_argument_sep: ($) => prec.right(choice(repeat1(' '), ':')),
+@@ -486,9 +489,9 @@
+ +    // parameter is opaque). Format characters (U+200B, U+FEFF, U+2060) stay
+ +    // out: they are extras, not separators.
+ +    command_argument_sep: ($) => prec.right(choice(repeat1(choice(' ', '\t', '\u00A0')), ':')),
+-
++ 
+      // Adapt the grammar to have same behavior
+-
++ 
+ +    // sloplint: a parenthesized list may start at once after `--`, as in
+ +    // `--(Get-Date), (Get-Date)`: the commas continue the array without an
+ +    // intervening separator.
+@@ -514,7 +517,7 @@
+            $.script_block_expression,
+          ),
+        ),
+-
++ 
+ +    // sloplint: in argument position a comma list may hold bare words as
+ +    // well as expressions: Select-Object Name,Length. The hidden rules are
+ +    // aliased so that the node keeps the array_literal_expression kind.
+@@ -552,20 +555,20 @@
+ +
+      verbatim_command_argument: ($) =>
+        seq('--%', $._verbatim_command_argument_chars),
+-
+-@@ -827,8 +1042,10 @@ export default grammar({
++ 
++@@ -827,8 +1043,10 @@
+          seq($.file_redirection_operator, $.redirected_file_name),
+        ),
+-
++ 
+ +    // sloplint: a redirect may follow its operator with no separator, as
+ +    // in '/r'>null — a bare word target then lexes as generic_token.
+      redirected_file_name: ($) =>
+ -      choice($._command_argument, $._primary_expression),
+ +      choice($._command_argument, $._primary_expression, $.generic_token),
+-
++ 
+      // Class
+      class_attribute: ($) =>
+-@@ -857,13 +1074,26 @@ export default grammar({
++@@ -857,13 +1075,26 @@
+          '(',
+          optional($.class_method_parameter_list),
+          ')',
+@@ -581,7 +584,7 @@
+          optional($.script_block),
+          '}',
+        ),
+-
++ 
+ +    // sloplint: attributes may precede class and enum definitions:
+ +    // [DscResource()] class R {}, [Flags()] enum E {}. pwsh also reports
+ +    // CustomAttributeTypeNotFound for an unknown attribute type here, which
+@@ -592,7 +595,7 @@
+          token(reservedWord('class')),
+          $.simple_name,
+          optional(seq(':', $.simple_name, repeat(seq(',', $.simple_name)))),
+-@@ -884,6 +1114,7 @@ export default grammar({
++@@ -884,6 +1115,7 @@
+      // Enums
+      enum_statement: ($) =>
+        seq(
+@@ -600,15 +603,15 @@
+          token(reservedWord('enum')),
+          $.simple_name,
+          '{',
+-@@ -895,7 +1126,20 @@ export default grammar({
++@@ -895,8 +1127,21 @@
+        seq($.simple_name, optional(seq('=', $.integer_literal))),
+-
++ 
+      // Expressions
+ -    _expression: ($) => $.logical_expression,
+ +    // sloplint: PowerShell 7 ternary: $a ? "x" : "y". The condition is a
+ +    // binary expression; the branches are expressions or nested ternaries.
+ +    _expression: ($) => choice($.logical_expression, $.ternary_expression),
+-+
++ 
+ +    ternary_expression: ($) =>
+ +      prec.right(
+ +        seq(
+@@ -619,19 +622,20 @@
+ +          choice($.logical_expression, $.ternary_expression),
+ +        ),
+ +      ),
+-
+++
+      logical_expression: ($) =>
+        prec.left(
+-@@ -1008,7 +1252,35 @@ export default grammar({
++         choice(
++@@ -1008,8 +1253,36 @@
+      pre_decrement_expression: ($) => seq('--', $.unary_expression),
+-
++ 
+      cast_expression: ($) =>
+ -      prec(PREC.CAST, seq($.type_literal, $.unary_expression)),
+ +      prec(
+ +        PREC.CAST,
+ +        seq($.type_literal, alias($._cast_operand, $.unary_expression)),
+ +      ),
+-+
++ 
+ +    // sloplint: a cast operand may not begin with `,` — that comma is a
+ +    // parameter or array separator, as in param($T = [Exception], $M).
+ +    _cast_operand: ($) =>
+@@ -656,13 +660,14 @@
+ +        seq(reservedWord('-split'), $.unary_expression),
+ +        seq(reservedWord('-join'), $.unary_expression),
+ +      ),
+-
+++
+      attributed_variable: ($) => seq($.type_literal, $.variable),
+-
+-@@ -1042,8 +1314,12 @@ export default grammar({
++ 
++     _primary_expression: ($) =>
++@@ -1042,8 +1315,12 @@
+      array_expression: ($) =>
+        seq('@(', field('statements', optional($.statement_list)), ')'),
+-
++ 
+ +    // sloplint: an empty block is a valid script block expression: {} or { }.
+      script_block_expression: ($) =>
+ -      seq('{', optional($.param_block), $.script_block, '}'),
+@@ -670,13 +675,13 @@
+ +        seq('{', optional($.param_block), $.script_block, '}'),
+ +        seq('{', '}'),
+ +      ),
+-
++ 
+      hash_literal_expression: ($) =>
+        seq('@{', optional($.hash_literal_body), '}'),
+-@@ -1101,11 +1377,17 @@ export default grammar({
++@@ -1101,11 +1378,17 @@
+          $.invokation_foreach_expression,
+        ),
+-
++ 
+ -    // adding this rule to handle .foreach synthax
+ +    // sloplint: a method name may take a script block with no parentheses
+ +    // when the brace follows the name at once: $a.Where{ $_ },
+@@ -692,8 +697,8 @@
+ +        $._method_block_head,
+          $.script_block_expression,
+        ),
+-
+-@@ -1145,10 +1427,13 @@ export default grammar({
++ 
++@@ -1145,10 +1428,13 @@
+            $.comparison_argument_expression,
+            seq(
+              $.bitwise_argument_expression,
+@@ -710,10 +715,10 @@
+              ),
+              $.comparison_argument_expression,
+            ),
+-@@ -1213,32 +1498,49 @@ export default grammar({
+-
++@@ -1213,32 +1499,49 @@
++ 
+      type_literal: ($) => seq('[', $.type_spec, ']'),
+-
++ 
+ +    // sloplint: array ranks may repeat after an array or generic type
+ +    // (int[][], List[int][]), and a generic argument may be wrapped in its
+ +    // own brackets: Dictionary[[string], [int]].
+@@ -730,24 +735,24 @@
+ +        ),
+          $.type_name,
+        ),
+-
++ 
+ +    _rank: ($) => seq('[', optional($.dimension), ']'),
+ +
+      dimension: ($) => repeat1(','),
+-
++ 
+      generic_type_arguments: ($) =>
+ -      seq($.type_spec, repeat(seq(',', $.type_spec))),
+ +      seq(
+ +        $._generic_type_argument,
+ +        repeat(seq(',', $._generic_type_argument)),
+ +      ),
+-+
++ 
+ +    _generic_type_argument: ($) =>
+ +      choice($.type_spec, seq('[', $.type_spec, ']')),
+-
+++
+      // Attributes
+      attribute_list: ($) => repeat1($.attribute),
+-
++ 
+      attribute: ($) =>
+ -      choice(
+ -        seq(
+@@ -771,26 +776,114 @@
+ +        ')',
+ +        ']',
+        ),
+-
++ 
       attribute_name: ($) => $.type_spec,
  diff --git a/src/scanner.c b/src/scanner.c
 -index b46de2b..a94753f 100644
----- a/src/scanner.c
--+++ b/src/scanner.c
+ --- a/src/scanner.c
+ +++ b/src/scanner.c
 -@@ -6,7 +6,8 @@
 -
-- enum TOKEN_TYPE {
--     STATEMENT_TERMINATOR,
---    BARE_DASHES
--+    BARE_DASHES,
--+    METHOD_BLOCK_HEAD
-- };
--
-- /* --- API --- */
--@@ -25,6 +26,25 @@ bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer,
--
-- static void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
--
--+// sloplint: true when the lookahead starts the keyword `else` or `elseif`,
--+// as a whole word. The lookahead is consumed; the caller has already marked
--+// the end of the zero-width terminator token.
--+static bool at_else_keyword(TSLexer *lexer)
--+{
--+    static const char word[] = "else";
--+    for (int i = 0; word[i] != 0; i++) {
--+        if (towlower(lexer->lookahead) != (wint_t)word[i]) return false;
--+        skip(lexer);
--+    }
--+    if (towlower(lexer->lookahead) == 'i') {
--+        skip(lexer);
--+        if (towlower(lexer->lookahead) != 'f') return false;
--+        skip(lexer);
--+    }
--+    wint_t c = lexer->lookahead;
--+    return !(iswalnum(c) || c == '_' || c == '-');
--+}
--+
-- static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool *valid_symbols)
-- {
--     if (valid_symbols[STATEMENT_TERMINATOR]) {
--@@ -32,13 +52,26 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool
--         // This token has no characters -- everything is lookahead to determine its existence
--         lexer->mark_end(lexer);
--
--+        bool saw_newline = false;
--         for (;;) {
--             if (lexer->lookahead == 0) return true;
--             if (lexer->lookahead == '}') return true;
--             if (lexer->lookahead == ';') return true;
--             if (lexer->lookahead == ')') return true;
---            if (lexer->lookahead == '\n') return true;
---            if (!iswspace(lexer->lookahead)) return false;
--+            if (lexer->lookahead == '\n') saw_newline = true;
--+            else if (lexer->lookahead == '`') {
--+                // A backtick before a line break joins the lines, so it is
--+                // white space here: `$x -replace "a", "b" `` newline newline `}`.
--+                skip(lexer);
--+                if (lexer->lookahead == '\r') skip(lexer);
--+                if (lexer->lookahead != '\n') return false;
--+            }
--+            else if (!iswspace(lexer->lookahead)) {
--+                // A line break ends the statement, except when the next
--+                // line continues an if statement: `}` newline `else {`.
--+                if (saw_newline) return !at_else_keyword(lexer);
--+                return false;
--+            }
--             skip(lexer);
--         }
--     }
--@@ -50,13 +83,22 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool
-- // (`git log -- path`, `cargo test -- --nocapture`) and `-` names stdin
-- // (`tar -xf -`). `--` is also the decrement operator and `-` the unary minus,
-- // so the lexer cannot tell them apart by length or precedence: the token is
---// recognised only when the dashes are followed by whitespace or the end of the
---// command.
--+// recognised only when the dashes are followed by whitespace, `(` or `{`,
--+// a command separator, or the end of the command.
--+// sloplint: PowerShell treats non-breaking and zero-width spaces as
--+// horizontal whitespace (see grammar extras). The external scanner skips
--+// exactly those plus ASCII space and tab, never line breaks, so a `--`
--+// after ` \u00A0` is still an option terminator.
--+static bool is_horizontal_space(int32_t c)
--+{
--+    return c == ' ' || c == '\t' || c == 0x00A0 || c == 0xFEFF || c == 0x200B || c == 0x2060;
--+}
--+
-- static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_symbols)
-- {
--     if (!valid_symbols[BARE_DASHES]) return false;
--
---    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') skip(lexer);
--+    while (is_horizontal_space(lexer->lookahead)) skip(lexer);
--     if (lexer->lookahead != '-') return false;
--     lexer->advance(lexer, false);
--     if (lexer->lookahead == '-') lexer->advance(lexer, false);
--@@ -66,12 +108,18 @@ static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_sy
--         case 0:
--         case ' ':
--         case '\t':
--+        case 0x00A0:
--+        case 0xFEFF:
--+        case 0x200B:
--+        case 0x2060:
--         case '\r':
--         case '\n':
--         case ';':
--         case '|':
--         case '&':
--+        case '(':
--         case ')':
--+        case '{':
--         case '}':
--             lexer->result_symbol = BARE_DASHES;
--             return true;
--@@ -82,8 +130,36 @@ static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_sy
--
-- /* --- API Implementation --- */
--
--+// sloplint: `.Name` or `::Name` when `{` follows the name at once, as in
--+// $a.Where{ $_ }. The token ends before the brace. Anything else is left to
--+// the internal lexer, which re-reads the input from the start.
--+static bool scan_method_block_head(TSLexer *lexer)
--+{
--+    if (lexer->lookahead == ':') {
--+        lexer->advance(lexer, false);
--+        if (lexer->lookahead != ':') return false;
--+        lexer->advance(lexer, false);
--+    } else if (lexer->lookahead == '.') {
--+        lexer->advance(lexer, false);
--+    } else {
--+        return false;
--+    }
--+    if (!(iswalpha(lexer->lookahead) || lexer->lookahead == '_')) return false;
--+    while (iswalnum(lexer->lookahead) || lexer->lookahead == '_') {
--+        lexer->advance(lexer, false);
--+    }
--+    if (lexer->lookahead != '{') return false;
--+    lexer->mark_end(lexer);
--+    lexer->result_symbol = METHOD_BLOCK_HEAD;
--+    return true;
--+}
--+
-- bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols)
-- {
--+    if (valid_symbols[METHOD_BLOCK_HEAD] &&
--+        (lexer->lookahead == '.' || lexer->lookahead == ':')) {
--+        return scan_method_block_head(lexer);
--+    }
-+--- a/src/scanner.c
-++++ b/src/scanner.c
 +@@ -6,84 +6,191 @@
 + 
-+ enum TOKEN_TYPE {
-+     STATEMENT_TERMINATOR,
-+-    BARE_DASHES
+  enum TOKEN_TYPE {
+      STATEMENT_TERMINATOR,
+ -    BARE_DASHES
 +-};
 +-
 +-/* --- API --- */
@@ -1788,7 +901,15 @@ diff --git a/vendor/tree-sitter-powershell/sloplint-grammar.patch b/vendor/tree-
 +-
 +-bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols)
 +-{
-++    BARE_DASHES,
+ +    BARE_DASHES,
+-+    METHOD_BLOCK_HEAD
+- };
+-
+- /* --- API --- */
+-@@ -25,6 +26,25 @@ bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer,
+-
+- static void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
+-
 ++    METHOD_BLOCK_HEAD,
 ++    LOOSE_DOLLAR
 ++};
@@ -1809,25 +930,20 @@ diff --git a/vendor/tree-sitter-powershell/sloplint-grammar.patch b/vendor/tree-
 ++
 ++static void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
 ++
-++// sloplint: true when the lookahead starts the keyword `else` or `elseif`,
-++// as a whole word. The lookahead is consumed; the caller has already marked
-++// the end of the zero-width terminator token.
-++static bool at_else_keyword(TSLexer *lexer)
-++{
-++    static const char word[] = "else";
-++    for (int i = 0; word[i] != 0; i++) {
-++        if (towlower(lexer->lookahead) != (wint_t)word[i]) return false;
-++        skip(lexer);
-++    }
-++    if (towlower(lexer->lookahead) == 'i') {
-++        skip(lexer);
-++        if (towlower(lexer->lookahead) != 'f') return false;
-++        skip(lexer);
-++    }
-++    wint_t c = lexer->lookahead;
-++    return !(iswalnum(c) || c == '_' || c == '-');
-++}
-++
+ +// sloplint: true when the lookahead starts the keyword `else` or `elseif`,
+ +// as a whole word. The lookahead is consumed; the caller has already marked
+ +// the end of the zero-width terminator token.
+@@ -810,22 +903,24 @@
+ +    return !(iswalnum(c) || c == '_' || c == '-');
+ +}
+ +
+- static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool *valid_symbols)
+- {
+-     if (valid_symbols[STATEMENT_TERMINATOR]) {
+-@@ -32,13 +52,26 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool
+-         // This token has no characters -- everything is lookahead to determine its existence
+-         lexer->mark_end(lexer);
+-
 ++static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool *valid_symbols)
 ++{
 ++    if (valid_symbols[STATEMENT_TERMINATOR]) {
@@ -1835,7 +951,15 @@ diff --git a/vendor/tree-sitter-powershell/sloplint-grammar.patch b/vendor/tree-
 ++        // This token has no characters -- everything is lookahead to determine its existence
 ++        lexer->mark_end(lexer);
 ++
-++        bool saw_newline = false;
+ +        bool saw_newline = false;
+-         for (;;) {
+-             if (lexer->lookahead == 0) return true;
+-             if (lexer->lookahead == '}') return true;
+-             if (lexer->lookahead == ';') return true;
+-             if (lexer->lookahead == ')') return true;
+--            if (lexer->lookahead == '\n') return true;
+--            if (!iswspace(lexer->lookahead)) return false;
+-+            if (lexer->lookahead == '\n') saw_newline = true;
 ++        bool saw_blank_line = false;
 ++        for (;;) {
 ++            if (lexer->lookahead == 0) return true;
@@ -1846,24 +970,31 @@ diff --git a/vendor/tree-sitter-powershell/sloplint-grammar.patch b/vendor/tree-
 ++                saw_blank_line = saw_blank_line || saw_newline;
 ++                saw_newline = true;
 ++            }
-++            else if (lexer->lookahead == '`') {
-++                // A backtick before a line break joins the lines, so it is
-++                // white space here: `$x -replace "a", "b" `` newline newline `}`.
-++                skip(lexer);
-++                if (lexer->lookahead == '\r') skip(lexer);
-++                if (lexer->lookahead != '\n') return false;
-++            }
-++            else if (!iswspace(lexer->lookahead)) {
-++                // A line break ends the statement, except when the next
-++                // line continues an if statement: `}` newline `else {`.
+ +            else if (lexer->lookahead == '`') {
+ +                // A backtick before a line break joins the lines, so it is
+ +                // white space here: `$x -replace "a", "b" `` newline newline `}`.
+@@ -836,18 +931,25 @@
+ +            else if (!iswspace(lexer->lookahead)) {
+ +                // A line break ends the statement, except when the next
+ +                // line continues an if statement: `}` newline `else {`.
+-+                if (saw_newline) return !at_else_keyword(lexer);
 ++                // A leading pipe on the next line continues the pipeline.
 ++                // An intervening blank line ends the statement.
 ++                if (saw_newline) {
 ++                    if (lexer->lookahead == '|' && !saw_blank_line) return false;
 ++                    return !at_else_keyword(lexer);
 ++                }
-++                return false;
-++            }
+ +                return false;
+ +            }
+-             skip(lexer);
+-         }
+-     }
+-@@ -50,13 +83,22 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool
+- // (`git log -- path`, `cargo test -- --nocapture`) and `-` names stdin
+- // (`tar -xf -`). `--` is also the decrement operator and `-` the unary minus,
+- // so the lexer cannot tell them apart by length or precedence: the token is
+--// recognised only when the dashes are followed by whitespace or the end of the
+--// command.
 ++            skip(lexer);
 ++        }
 ++    }
@@ -1875,22 +1006,30 @@ diff --git a/vendor/tree-sitter-powershell/sloplint-grammar.patch b/vendor/tree-
 ++// (`git log -- path`, `cargo test -- --nocapture`) and `-` names stdin
 ++// (`tar -xf -`). `--` is also the decrement operator and `-` the unary minus,
 ++// so the lexer cannot tell them apart by length or precedence: the token is
-++// recognised only when the dashes are followed by whitespace, `(` or `{`,
-++// a command separator, or the end of the command.
-++// sloplint: PowerShell treats non-breaking and zero-width spaces as
-++// horizontal whitespace (see grammar extras). The external scanner skips
-++// exactly those plus ASCII space and tab, never line breaks, so a `--`
-++// after ` \u00A0` is still an option terminator.
-++static bool is_horizontal_space(int32_t c)
-++{
-++    return c == ' ' || c == '\t' || c == 0x00A0 || c == 0xFEFF || c == 0x200B || c == 0x2060;
-++}
-++
+ +// recognised only when the dashes are followed by whitespace, `(` or `{`,
+ +// a command separator, or the end of the command.
+ +// sloplint: PowerShell treats non-breaking and zero-width spaces as
+@@ -859,38 +961,42 @@
+ +    return c == ' ' || c == '\t' || c == 0x00A0 || c == 0xFEFF || c == 0x200B || c == 0x2060;
+ +}
+ +
+- static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_symbols)
+- {
+-     if (!valid_symbols[BARE_DASHES]) return false;
+-
+--    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') skip(lexer);
 ++static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_symbols)
 ++{
 ++    if (!valid_symbols[BARE_DASHES]) return false;
 ++
-++    while (is_horizontal_space(lexer->lookahead)) skip(lexer);
+ +    while (is_horizontal_space(lexer->lookahead)) skip(lexer);
+-     if (lexer->lookahead != '-') return false;
+-     lexer->advance(lexer, false);
+-     if (lexer->lookahead == '-') lexer->advance(lexer, false);
+-@@ -66,12 +108,18 @@ static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_sy
+-         case 0:
+-         case ' ':
+-         case '\t':
 ++    if (lexer->lookahead != '-') return false;
 ++    lexer->advance(lexer, false);
 ++    if (lexer->lookahead == '-') lexer->advance(lexer, false);
@@ -1900,18 +1039,31 @@ diff --git a/vendor/tree-sitter-powershell/sloplint-grammar.patch b/vendor/tree-
 ++        case 0:
 ++        case ' ':
 ++        case '\t':
-++        case 0x00A0:
-++        case 0xFEFF:
-++        case 0x200B:
-++        case 0x2060:
+ +        case 0x00A0:
+ +        case 0xFEFF:
+ +        case 0x200B:
+ +        case 0x2060:
+-         case '\r':
+-         case '\n':
+-         case ';':
+-         case '|':
+-         case '&':
 ++        case '\r':
 ++        case '\n':
 ++        case ';':
 ++        case '|':
 ++        case '&':
-++        case '(':
+ +        case '(':
+-         case ')':
 ++        case ')':
-++        case '{':
+ +        case '{':
+-         case '}':
+-             lexer->result_symbol = BARE_DASHES;
+-             return true;
+-@@ -82,8 +130,36 @@ static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_sy
+-
+- /* --- API Implementation --- */
+-
 ++        case '}':
 ++            lexer->result_symbol = BARE_DASHES;
 ++            return true;
@@ -1922,29 +1074,13 @@ diff --git a/vendor/tree-sitter-powershell/sloplint-grammar.patch b/vendor/tree-
 ++
 ++/* --- API Implementation --- */
 ++
-++// sloplint: `.Name` or `::Name` when `{` follows the name at once, as in
-++// $a.Where{ $_ }. The token ends before the brace. Anything else is left to
-++// the internal lexer, which re-reads the input from the start.
-++static bool scan_method_block_head(TSLexer *lexer)
-++{
-++    if (lexer->lookahead == ':') {
-++        lexer->advance(lexer, false);
-++        if (lexer->lookahead != ':') return false;
-++        lexer->advance(lexer, false);
-++    } else if (lexer->lookahead == '.') {
-++        lexer->advance(lexer, false);
-++    } else {
-++        return false;
-++    }
-++    if (!(iswalpha(lexer->lookahead) || lexer->lookahead == '_')) return false;
-++    while (iswalnum(lexer->lookahead) || lexer->lookahead == '_') {
-++        lexer->advance(lexer, false);
-++    }
-++    if (lexer->lookahead != '{') return false;
-++    lexer->mark_end(lexer);
-++    lexer->result_symbol = METHOD_BLOCK_HEAD;
-++    return true;
-++}
+ +// sloplint: `.Name` or `::Name` when `{` follows the name at once, as in
+ +// $a.Where{ $_ }. The token ends before the brace. Anything else is left to
+ +// the internal lexer, which re-reads the input from the start.
+@@ -914,13 +1020,34 @@
+ +    lexer->result_symbol = METHOD_BLOCK_HEAD;
+ +    return true;
+ +}
 ++// sloplint: a lone `$` inside an expandable string, when it does not open
 ++// `${`, `$(` or a variable. The internal lexer cannot express `$` not
 ++// followed by `{` (no lookahead), so an external token covers the lone case.
@@ -1965,13 +1101,15 @@ diff --git a/vendor/tree-sitter-powershell/sloplint-grammar.patch b/vendor/tree-
 ++    lexer->result_symbol = LOOSE_DOLLAR;
 ++    return true;
 ++}
-++
+ +
+- bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols)
+- {
 ++bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols)
 ++{
-++    if (valid_symbols[METHOD_BLOCK_HEAD] &&
-++        (lexer->lookahead == '.' || lexer->lookahead == ':')) {
-++        return scan_method_block_head(lexer);
-++    }
+ +    if (valid_symbols[METHOD_BLOCK_HEAD] &&
+ +        (lexer->lookahead == '.' || lexer->lookahead == ':')) {
+ +        return scan_method_block_head(lexer);
+ +    }
 ++    if (scan_loose_dollar(payload, lexer, valid_symbols)) return true;
       // The statement terminator consumes nothing, so it must be tried last: when
       // both are valid, a `--` has to win over the empty terminator.
@@ -1979,39 +1117,10 @@ diff --git a/vendor/tree-sitter-powershell/sloplint-grammar.patch b/vendor/tree-
 diff --git a/vendor/tree-sitter-powershell/SLOPLINT.md b/vendor/tree-sitter-powershell/SLOPLINT.md
 --- a/vendor/tree-sitter-powershell/SLOPLINT.md
 +++ b/vendor/tree-sitter-powershell/SLOPLINT.md
-@@ -73,35 +73,49 @@
+@@ -73,6 +73,20 @@
  PowerShell 7.7.0 parsing separately confirms these accepted and rejected
  forms; this comparison does not execute the commands.
  
--## What v0.26.6 replaces
--
--Upstream [PR #65](https://github.com/airbus-cert/tree-sitter-powershell/pull/65)
--(`b03e6b0e39692037a98e37a26f0a969b2c46fbc1`) replaces the local digit-in-parameter
--regex and the bare `--` alias. Its scanner accepts both `--` and `-`. It skips
--the space before a bare `--` rather than emitting a `command_argument_sep`.
--The adapter already ignores that separator. The release also adds trailing
--`&` as a `background_operator`.
--
--Keep the local `generic_token` for attached option words. The adapter reads
--it as a string argument, and the token keeps commas and quoted segments in
--the value. Keep the local comma-list rules: they produce one
--`array_literal_expression` instead of separate arguments for the items.
--Both groups overlap PR #65. Open upstream issues
--[#46](https://github.com/airbus-cert/tree-sitter-powershell/issues/46) and
--[#59](https://github.com/airbus-cert/tree-sitter-powershell/issues/59) concern
--related argument parsing.
--
--The remaining local groups do not have an upstream fix in this release:
--
--| Local grammar or scanner group | Upstream tracking |
--| --- | --- |
--| Ternary | [#7](https://github.com/airbus-cert/tree-sitter-powershell/issues/7), open |
--| Argument words, variable paths and dots, quoted and escaped words, member-call tails, redirects | #46 and #59 overlap option arguments; [#57](https://github.com/airbus-cert/tree-sitter-powershell/issues/57) concerns leading backticks; no exact issue identified for the other forms |
--| Named and empty blocks, switch clauses, constructors, attributes and declarations, labels, parameter bodies | No issue or PR identified for these changes |
--| Case-insensitive numbers, cast operands, type names and generic ranks, bitwise and membership operators | No issue or PR identified for these changes |
--| String text and here-string escapes, statement terminators, method-block scanner | No issue or PR identified for these changes |
--
--The current patch has 1,557 lines and 42 diff hunks. It includes the
 +## Literal dollars and blank-line boundaries
 +
 +The external scanner accepts a literal dollar before whitespace, a backslash,
@@ -2026,67 +1135,15 @@ diff --git a/vendor/tree-sitter-powershell/SLOPLINT.md b/vendor/tree-sitter-powe
 +cover searchable and short interpolated Windows paths; the adapter uses
 +PowerShell's backtick escape character when measuring their literal runs.
 +
-+## What v0.26.6 replaces
-+
-+Upstream [PR #65](https://github.com/airbus-cert/tree-sitter-powershell/pull/65)
-+(`b03e6b0e39692037a98e37a26f0a969b2c46fbc1`) replaces the local digit-in-parameter
-+regex and the bare `--` alias. Its scanner accepts both `--` and `-`. It skips
-+the space before a bare `--` rather than emitting a `command_argument_sep`.
-+The adapter already ignores that separator. The release also adds trailing
-+`&` as a `background_operator`.
-+
-+Keep the local `generic_token` for attached option words. The adapter reads
-+it as a string argument, and the token keeps commas and quoted segments in
-+the value. Keep the local comma-list rules: they produce one
-+`array_literal_expression` instead of separate arguments for the items.
-+Both groups overlap PR #65. Open upstream issues
-+[#46](https://github.com/airbus-cert/tree-sitter-powershell/issues/46) and
-+[#59](https://github.com/airbus-cert/tree-sitter-powershell/issues/59) concern
-+related argument parsing.
-+
-+The remaining local groups do not have an upstream fix in this release:
-+
-+| Local grammar or scanner group | Upstream tracking |
-+| --- | --- |
-+| Ternary | [#7](https://github.com/airbus-cert/tree-sitter-powershell/issues/7), open |
-+| Argument words, variable paths and dots, quoted and escaped words, member-call tails, redirects | #46 and #59 overlap option arguments; [#57](https://github.com/airbus-cert/tree-sitter-powershell/issues/57) concerns leading backticks; no exact issue identified for the other forms |
-+| Named and empty blocks, switch clauses, constructors, attributes and declarations, labels, parameter bodies | No issue or PR identified for these changes |
-+| Case-insensitive numbers, cast operands, type names and generic ranks, bitwise and membership operators | No issue or PR identified for these changes |
-+| String text and here-string escapes, statement terminators, method-block scanner | No issue or PR identified for these changes |
-+
-+The current patch has 1,679 lines and 37 diff hunks. It includes the
+ ## What v0.26.6 replaces
+ 
+ Upstream [PR #65](https://github.com/airbus-cert/tree-sitter-powershell/pull/65)
+@@ -101,7 +115,7 @@
+ | Case-insensitive numbers, cast operands, type names and generic ranks, bitwise and membership operators | No issue or PR identified for these changes |
+ | String text and here-string escapes, statement terminators, method-block scanner | No issue or PR identified for these changes |
+ 
+-The current patch has 1,557 lines and 42 diff hunks. It includes the
++The current patch has 1,684 lines and 37 diff hunks. It includes the
  native argument corpus along with the grammar and scanner changes.
  
  ## Round 1 grammar changes
-diff --git a/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/b.ps1 b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/b.ps1
-new file mode 100644
---- /dev/null
-+++ b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/b.ps1
-@@ -0,0 +1,3 @@
-+function Invoke-Log($r, $id) {
-+  Write-Host $r\x\"$id"
-+}
-diff --git a/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/c.ps1 b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/c.ps1
-new file mode 100644
---- /dev/null
-+++ b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/c.ps1
-@@ -0,0 +1,3 @@
-+function Invoke-Log($r, $id) {
-+  Write-Host "$r\x\$id"
-+}
-diff --git a/crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/e.ps1 b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/e.ps1
-new file mode 100644
---- /dev/null
-+++ b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/e.ps1
-@@ -0,0 +1,3 @@
-+function Invoke-Log($r, $id) {
-+  Write-Host $r\bin\deploy\"$id"
-+}
-diff --git a/crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/f.ps1 b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/f.ps1
-new file mode 100644
---- /dev/null
-+++ b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/f.ps1
-@@ -0,0 +1,3 @@
-+function Invoke-Log($r, $id) {
-+  Write-Host "$r\bin\deploy\$id"
-+}
