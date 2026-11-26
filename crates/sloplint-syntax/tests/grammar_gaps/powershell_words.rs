@@ -147,6 +147,58 @@ fn leading_pipes_require_an_adjacent_nonblank_line() {
 }
 
 #[test]
+fn here_string_newlines_preserve_interpolation_and_escape_openers() {
+    for ending in ["\n", "\r\n"] {
+        for second_line in [
+            "${name}",
+            "$name",
+            "$(Get-Date)",
+            "`$",
+            "`\"@",
+            "``````PowerShell",
+            "# literal text",
+            "\"literal quote",
+        ] {
+            let source = format!(
+                "$p = @\"{ending}end${ending}{second_line}{ending}\"@{ending}Write-Output done{ending}"
+            );
+            let analysis = run_clean(&source);
+            assert_eq!(call(&analysis, "Write-Output").args.len(), 1, "{source:?}");
+        }
+        for second_line in ["${}", "${name", "$(Get-Date"] {
+            let source = format!("$p = @\"{ending}end${ending}{second_line}{ending}\"@{ending}");
+            assert!(run(&source).parse_error.is_some(), "{source:?}");
+        }
+    }
+}
+
+#[test]
+fn parenthesized_pipelines_reject_a_leading_pipe_after_a_blank_line() {
+    for (prefix, suffix) in [
+        ("(", ")"),
+        ("if (", ") { 1 }"),
+        ("if ($false) { 0 } elseif (", ") { 1 }"),
+        ("while (", ") { break }"),
+        ("do { 1 } until (", ")"),
+        ("foreach ($item in ", ") { $item }"),
+        ("switch (", ") { default { 1 } }"),
+        ("for (", ";;) { break }"),
+    ] {
+        for ending in ["\n", "\r\n"] {
+            for space in ["", " ", "\t"] {
+                let adjacent =
+                    format!("{prefix}Get-Date{ending}{space}| Write-Output{suffix}{ending}");
+                run_clean(&adjacent);
+                let blank = format!(
+                    "{prefix}Get-Date{ending}{space}{ending}| Write-Output{suffix}{ending}"
+                );
+                assert!(run(&blank).parse_error.is_some(), "{blank:?}");
+            }
+        }
+    }
+}
+
+#[test]
 fn variable_path_literals_use_powershell_escape_rules() {
     for (source, searchable) in [
         (r#"Write-Host $r\bin\deploy\"$id""#, true),

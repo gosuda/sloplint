@@ -32,7 +32,7 @@ and loses every other finding for that file.
   `bash scripts/grammars.sh verify tree-sitter-powershell` checks the result
   against the vendored files. Run `tree-sitter test` in the vendor directory
   to include the sloplint corpus.
-- The regenerated parser uses ABI 15 and has 2,707 states.
+- The regenerated parser uses ABI 15 and has 2,017 states.
 
 ## Native argument follow-up
 
@@ -87,6 +87,27 @@ here-string endings, and malformed interpolation controls. CLI fixtures also
 cover searchable and short interpolated Windows paths; the adapter uses
 PowerShell's backtick escape character when measuring their literal runs.
 
+## Literal accounting in interpolated words
+
+The adapter excludes hidden variable prefixes and quote delimiters when measuring
+literal runs in interpolated command words. Adjacent quoted and bare segments
+share a run. Single-quoted backticks and dollar signs remain literal; expandable
+and bare escapes end a run. Named subexpressions retain their AST boundaries.
+Variable names follow PowerShell's UTF-16 letter and decimal-digit categories,
+including the distinction between decimal digits and other numeric characters.
+
+## Multiline interpolation and parenthesized pipelines
+
+An expandable here-string line break immediately before a dollar is a separate
+external token. It leaves the interpolation opener intact. Closing delimiters
+and line-start escapes retain their existing line-break tokens. Parenthesized pipelines use the same statement terminator
+as top-level pipelines, including grouped expressions and control-flow clauses.
+A blank line cannot reconnect either form to a leading pipe.
+
+The focused Rust regressions cover both LF and CRLF. The vendored corpus covers
+valid interpolation and escapes after a literal-dollar line, malformed braced
+variables and subexpressions, and adjacent versus blank-separated pipes.
+
 ## What v0.26.6 replaces
 
 Upstream [PR #65](https://github.com/airbus-cert/tree-sitter-powershell/pull/65)
@@ -115,7 +136,7 @@ The remaining local groups do not have an upstream fix in this release:
 | Case-insensitive numbers, cast operands, type names and generic ranks, bitwise and membership operators | No issue or PR identified for these changes |
 | String text and here-string escapes, statement terminators, method-block scanner | No issue or PR identified for these changes |
 
-The current patch has 1,684 lines and 37 diff hunks. It includes the
+The current patch has 2,355 lines and 49 diff hunks. It includes the
 native argument corpus along with the grammar and scanner changes.
 
 ## Round 1 grammar changes
@@ -369,9 +390,6 @@ PowerShell unless noted. The v0.26.6 update does not address these limits.
 - `2>$null` and `>$null` with no space after the operator lex as one `generic_token`
   word, not as a redirection. No error is reported, and the stock grammar does the
   same. `2>&1` and `> $null` with a space are redirections.
-- `ps_shape` in the sloplint adapter counts a `generic_token` as a literal of its full
-  length. A word such as `$BunBin\bun.exe` therefore looks like static text. This was
-  already true for words like `v$VERSION.tar.gz`.
 - `param()` blocks inside a function body give the adapter an empty parameter list.
   The adapter only reads the parameter list of `function f($a)`. This is the same
   on the stock grammar.

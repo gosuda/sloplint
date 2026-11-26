@@ -56,6 +56,8 @@ mod odin;
 mod php;
 #[path = "grammar_gaps/powershell.rs"]
 mod powershell;
+#[path = "grammar_gaps/powershell_literal_runs.rs"]
+mod powershell_literal_runs;
 #[path = "grammar_gaps/powershell_syntax.rs"]
 mod powershell_syntax;
 #[path = "grammar_gaps/powershell_words.rs"]

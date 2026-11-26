@@ -1,3 +1,6 @@
+use std::sync::LazyLock;
+
+use regex::Regex;
 use sloplint_core::facts::{Arg, ArgShape, CallKind};
 use sloplint_core::text::longest_static_chunk_with_escape;
 use tree_sitter::Node;
@@ -174,30 +177,146 @@ pub(crate) fn ps_arg_value(n: Node<'_>) -> Node<'_> {
     node
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum PsWordQuote {
+    Bare,
+    Expandable,
+    Verbatim,
+}
+
+// PowerShell scans variable names as UTF-16 chars in the Letter and
+// Decimal_Number categories. Other numeric and alphabetic Unicode properties
+// are broader, so Rust's is_alphanumeric is not the same predicate.
+fn ps_word_name_char(ch: char) -> bool {
+    if ch.is_ascii() {
+        return ch.is_ascii_alphanumeric();
+    }
+    static NAME_CHAR: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"^[\p{L}\p{Nd}]$").expect("constant character class"));
+    let mut utf8 = [0; 4];
+    ch.len_utf16() == 1 && NAME_CHAR.is_match(ch.encode_utf8(&mut utf8))
+}
+
+// The grammar hides a variable-path word's leading variable in an anonymous
+// token. Scan that name without including its following path separator.
+fn ps_word_variable_end(raw: &str) -> Option<usize> {
+    let tail = raw.strip_prefix('$')?;
+    let first = tail.chars().next()?;
+    if first == '{' {
+        let mut escaped = false;
+        for (offset, ch) in tail.char_indices().skip(1) {
+            if escaped {
+                escaped = false;
+            } else if ch == '`' {
+                escaped = true;
+            } else if ch == '}' {
+                return Some(1 + offset + ch.len_utf8());
+            }
+        }
+        return None;
+    }
+    if matches!(first, '$' | '?' | '^') {
+        return Some(1 + first.len_utf8());
+    }
+    if !matches!(first, '_' | ':') && !ps_word_name_char(first) {
+        return None;
+    }
+    let mut end = 1 + first.len_utf8();
+    for (offset, ch) in tail.char_indices().skip(1) {
+        if ch == ':' && tail[offset..].starts_with("::") {
+            break;
+        }
+        if !ps_word_name_char(ch) && !matches!(ch, '_' | '?' | ':') {
+            break;
+        }
+        end = 1 + offset + ch.len_utf8();
+    }
+    Some(end)
+}
+
+// Named AST holes are disjoint and sorted, and their byte offsets are relative
+// to this UTF-8 word. Quotes change lexical mode without breaking a literal run.
+fn ps_word_static_run(raw: &str, dynamics: &[(usize, usize)]) -> u32 {
+    let mut quote = PsWordQuote::Bare;
+    let mut offset = 0;
+    let mut dynamic = 0;
+    let mut run = 0;
+    let mut best = 0;
+    while offset < raw.len() {
+        if let Some(&(start, end)) = dynamics.get(dynamic)
+            && offset == start
+        {
+            best = best.max(run);
+            run = 0;
+            offset = end;
+            dynamic += 1;
+            continue;
+        }
+        let ch = raw[offset..]
+            .chars()
+            .next()
+            .expect("offset is before the end");
+        offset += ch.len_utf8();
+        if quote == PsWordQuote::Verbatim {
+            if ch == '\'' {
+                if raw[offset..].starts_with('\'') {
+                    run += 1;
+                    offset += 1;
+                } else {
+                    quote = PsWordQuote::Bare;
+                }
+            } else {
+                run += 1;
+            }
+            continue;
+        }
+        if ch == '`' {
+            best = best.max(run);
+            run = 0;
+            if let Some(escaped) = raw[offset..].chars().next() {
+                offset += escaped.len_utf8();
+            }
+        } else if ch == '\'' && quote == PsWordQuote::Bare {
+            quote = PsWordQuote::Verbatim;
+        } else if ch == '"' {
+            if quote == PsWordQuote::Expandable && raw[offset..].starts_with('"') {
+                run += 1;
+                offset += 1;
+            } else {
+                quote = if quote == PsWordQuote::Bare {
+                    PsWordQuote::Expandable
+                } else {
+                    PsWordQuote::Bare
+                };
+            }
+        } else if ch == '$'
+            && let Some(end) = ps_word_variable_end(&raw[offset - 1..])
+        {
+            best = best.max(run);
+            run = 0;
+            offset += end - 1;
+        } else {
+            run += 1;
+        }
+    }
+    narrow(best.max(run))
+}
+
 fn ps_generic_static(cx: &Cx<'_, '_>, node: Node<'_>) -> u32 {
     let mut dynamics = Vec::new();
     let mut stack = vec![node];
     while let Some(current) = stack.pop() {
         if current.kind() == "variable" || current.kind() == "sub_expression" {
-            dynamics.push(current);
+            dynamics.push((
+                current.start_byte() - node.start_byte(),
+                current.end_byte() - node.start_byte(),
+            ));
         } else {
             stack.extend(named_children(current));
         }
     }
-    dynamics.sort_by_key(|d| d.start_byte());
-    let end = node.end_byte();
-    let mut gaps = Vec::new();
-    let mut cursor = node.start_byte();
-    for dynamic in &dynamics {
-        gaps.push(slice(
-            cx.src,
-            cursor.min(dynamic.start_byte()),
-            dynamic.start_byte(),
-        ));
-        cursor = cursor.max(dynamic.end_byte());
-    }
-    gaps.push(slice(cx.src, cursor.min(end), end));
-    longest_static_chunk_with_escape(&gaps, b'`')
+    dynamics.sort_unstable_by_key(|&(start, _)| start);
+    ps_word_static_run(text(cx, node), &dynamics)
 }
 
 fn ps_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
@@ -205,7 +324,13 @@ fn ps_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     match node.kind() {
         "string_literal" => ps_string_shape(cx, node),
         "generic_token" => {
-            if subtree_has_kind(node, "variable") || subtree_has_kind(node, "sub_expression") {
+            let raw = text(cx, node);
+            let variable_path = ps_word_variable_end(raw)
+                .is_some_and(|end| matches!(raw.as_bytes().get(end), Some(b'/' | b'\\')));
+            if variable_path
+                || subtree_has_kind(node, "variable")
+                || subtree_has_kind(node, "sub_expression")
+            {
                 ArgShape::Concat {
                     longest_static: ps_generic_static(cx, node),
                 }

@@ -1,3 +1,4 @@
 a.ps1:2 info grep/contiguous-log-literal
 b.ps1:2 info grep/contiguous-log-literal
 c.ps1:2 info grep/contiguous-log-literal
+d.ps1:2 info grep/contiguous-log-literal

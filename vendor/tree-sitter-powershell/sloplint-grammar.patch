@@ -1,10 +1,11 @@
 diff --git a/grammar.js b/grammar.js
+index 1f8b448..29c135a 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -7,10 +7,37 @@
+@@ -7,10 +7,38 @@ const PREC = {
    PARAM: 6,
  };
- 
+
 +// sloplint: a command-line word may hold quoted segments that contain spaces,
 +// pipes or parentheses: -x="a b", --format='%H||%P'. The segments are matched as
 +// a unit inside the word token. A double-quoted segment holds no nested quote,
@@ -29,20 +30,21 @@ diff --git a/grammar.js b/grammar.js
 +
  export default grammar({
    name: 'powershell',
- 
+
 -  externals: ($) => [$._statement_terminator, $._bare_dashes],
 +  externals: ($) => [
 +    $._statement_terminator,
 +    $._bare_dashes,
 +    $._method_block_head,
 +    $._loose_dollar,
++    $._here_string_newline,
 +  ],
- 
+
    extras: ($) => [
      $.comment,
-@@ -21,15 +48,27 @@
+@@ -21,15 +49,27 @@ export default grammar({
    ],
- 
+
    conflicts: ($) => [
 +    [$._cast_operand, $.invokation_foreach_expression],
      [$._literal, $.member_name],
@@ -55,7 +57,7 @@ diff --git a/grammar.js b/grammar.js
 +    // parameter's attribute or a cast inside the default's array literal.
 +    [$._cast_operand, $.member_access, $.invokation_expression],
    ],
- 
+
    rules: {
 -    program: ($) => seq(optional($.param_block), $.statement_list),
 +    // sloplint: a script file body may be a list of named blocks
@@ -66,13 +68,13 @@ diff --git a/grammar.js b/grammar.js
 +        optional($.param_block),
 +        optional(choice($.statement_list, $.named_block_list)),
 +      ),
- 
+
      // Comments
      comment: ($) =>
-@@ -48,22 +87,24 @@
+@@ -48,22 +88,24 @@ export default grammar({
      integer_literal: ($) =>
        choice($.decimal_integer_literal, $.hexadecimal_integer_literal),
- 
+
 +    // sloplint: numeric prefixes, exponents and multiplier suffixes are
 +    // case-insensitive in PowerShell (0XFF, 1E3, 1MB, 10Gb).
      decimal_integer_literal: ($) =>
@@ -85,7 +87,7 @@ diff --git a/grammar.js b/grammar.js
 +          optional(/[kmgtpKMGTP][bB]/),
          ),
        ),
- 
+
      hexadecimal_integer_literal: ($) =>
        token(
          seq(
@@ -98,8 +100,8 @@ diff --git a/grammar.js b/grammar.js
 +          optional(/[kmgtpKMGTP][bB]/),
          ),
        ),
- 
-@@ -73,18 +114,18 @@
+
+@@ -73,18 +115,18 @@ export default grammar({
          choice(
            seq(
              /[0-9]+\.[0-9]+/,
@@ -124,10 +126,10 @@ diff --git a/grammar.js b/grammar.js
            ),
          ),
        ),
-@@ -98,21 +139,24 @@
+@@ -98,21 +140,24 @@ export default grammar({
          $.verbatim_here_string_characters,
        ),
- 
+
 +    _expandable_string_part: ($) =>
 +      choice(
 +        // sloplint: lexical precedence keeps a text run that starts at
@@ -160,8 +162,8 @@ diff --git a/grammar.js b/grammar.js
 +        repeat($._expandable_string_part),
          token.immediate(/(\s*\#*)*\"/),
        ),
- 
-@@ -124,9 +168,13 @@
+
+@@ -124,9 +169,14 @@ export default grammar({
              token.immediate(/[^\$\r\n`]+/),
              $.variable,
              $.sub_expression,
@@ -169,27 +171,28 @@ diff --git a/grammar.js b/grammar.js
 +            // sloplint: a line that starts with a backtick must not lose half
 +            // of an escape pair to the line-break token: ``````PowerShell.
 +            // The break takes the whole pair.
-+            token.immediate(/(\r?\n)+[^\"\r\n`]/),
++            token.immediate(/(\r?\n)+[^\"\$\r\n`]/),
 +            token.immediate(/(\r?\n)+(`.{1}|`\r?\n)/),
              token.immediate(/(\r?\n)+\"[^@]/),
 -            token.immediate('$'),
++            $._here_string_newline,
 +            $._loose_dollar,
              token.immediate(/`.{1}|`\r?\n/),
            ),
          ),
-@@ -149,7 +197,10 @@
+@@ -149,7 +199,10 @@ export default grammar({
      simple_name: ($) => /[a-zA-Z_][a-zA-Z0-9_]*/,
- 
+
      // Type names
 -    type_identifier: ($) => /[a-zA-Z0-9_]+/,
 +    // sloplint: a type name may hold nested-type `+` and generic-arity
 +    // backtick parts: System.Environment+SpecialFolder, System.Func`1,
 +    // Dictionary`2+Enumerator.
 +    type_identifier: ($) => /[a-zA-Z0-9_]+([`+]+[a-zA-Z0-9_]+)*/,
- 
+
      type_name: ($) =>
        choice($.type_identifier, seq($.type_name, '.', $.type_identifier)),
-@@ -225,6 +276,11 @@
+@@ -225,6 +278,11 @@ export default grammar({
          reservedWord('-ilike'),
          reservedWord('-ilt'),
          reservedWord('-imatch'),
@@ -201,8 +204,8 @@ diff --git a/grammar.js b/grammar.js
          reservedWord('-in'),
          reservedWord('-ine'),
          reservedWord('-inotcontains'),
-@@ -306,19 +362,107 @@
- 
+@@ -306,19 +364,107 @@ export default grammar({
+
      // Commands
      generic_token: ($) =>
 -      token(/[^\(\)\$\"\'\-\{\}@\|\[`\&\s][^\&\s\(\)\}\|;,]*/),
@@ -269,7 +272,7 @@ diff --git a/grammar.js b/grammar.js
 +          ),
 +        ),
 +      ),
- 
++
 +    // sloplint: variable-prefixed paths stay one argument, but expandable
 +    // quoted segments must parse their variables and subexpressions.
 +    _variable_path_word: ($) =>
@@ -284,9 +287,9 @@ diff --git a/grammar.js b/grammar.js
 +          ),
 +        ),
 +      ),
-+
+
      _command_token: ($) => token(/[^\(\)\{\}\s;\&]+/),
- 
+
 +    // sloplint: a switch clause word may open with a double quote only when
 +    // it is a complete quoted word. Otherwise "^(a)$" is cut at the first
 +    // parenthesis, lexed as a word, and the clause fails to parse.
@@ -312,7 +315,7 @@ diff --git a/grammar.js b/grammar.js
            ),
          ),
          // A bare `--` or `-` argument (see scanner.c).
-@@ -399,6 +543,13 @@
+@@ -399,6 +545,13 @@ export default grammar({
            $.inlinescript_statement,
            $.parallel_statement,
            $.sequence_statement,
@@ -326,10 +329,35 @@ diff --git a/grammar.js b/grammar.js
            seq($.pipeline, $._statement_terminator),
            // `npm run dev &` (PowerShell 7): runs the pipeline as a background job
            seq($.pipeline, $.background_operator),
-@@ -476,16 +627,18 @@
- 
+@@ -416,6 +569,7 @@ export default grammar({
+           reservedWord('if'),
+           '(',
+           field('condition', $.pipeline),
++          $._statement_terminator,
+           ')',
+           $.statement_block,
+           field('elseif_clauses', optional($.elseif_clauses)),
+@@ -430,6 +584,7 @@ export default grammar({
+         reservedWord('elseif'),
+         '(',
+         field('condition', $.pipeline),
++        $._statement_terminator,
+         ')',
+         $.statement_block,
+       ),
+@@ -466,7 +621,7 @@ export default grammar({
+
+     switch_condition: ($) =>
+       choice(
+-        seq('(', $.pipeline, ')'),
++        seq('(', $.pipeline, $._statement_terminator, ')'),
+         seq(reservedWord('-file'), $.switch_filename),
+       ),
+
+@@ -476,16 +631,18 @@ export default grammar({
+
      switch_clauses: ($) => repeat1($.switch_clause),
- 
+
 +    // sloplint: terminators between switch clauses are optional in
 +    // PowerShell, so clauses may share a line: { 1 { "a" } default { "b" } }.
      switch_clause: ($) =>
@@ -340,17 +368,34 @@ diff --git a/grammar.js b/grammar.js
 +        optional($._statement_terminator),
          repeat(';'),
        ),
- 
+
      switch_clause_condition: ($) =>
 -      choice($._command_token, $._primary_expression),
 +      choice($._switch_clause_token, $._primary_expression),
- 
+
      foreach_statement: ($) =>
        seq(
-@@ -568,8 +721,11 @@
+@@ -495,6 +652,7 @@ export default grammar({
+         $.variable,
+         reservedWord('in'),
+         $.pipeline,
++        $._statement_terminator,
+         ')',
+         $.statement_block,
+       ),
+@@ -556,7 +714,7 @@ export default grammar({
+         $.statement_block,
+       ),
+
+-    while_condition: ($) => $.pipeline,
++    while_condition: ($) => seq($.pipeline, $._statement_terminator),
+
+     do_statement: ($) =>
+       seq(
+@@ -568,8 +726,11 @@ export default grammar({
          ')',
        ),
- 
+
 +    // sloplint: attributes may precede a function definition, like they may
 +    // class and enum: [Alias('x')] function f {}, [OutputType([int])] f {}.
      function_statement: ($) =>
@@ -359,7 +404,7 @@ diff --git a/grammar.js b/grammar.js
          choice(
            reservedWord('function'),
            reservedWord('filter'),
-@@ -578,10 +734,19 @@
+@@ -578,10 +739,19 @@ export default grammar({
          $.function_name,
          optional($.function_parameter_declaration),
          '{',
@@ -369,7 +414,7 @@ diff --git a/grammar.js b/grammar.js
 +        ),
          '}',
        ),
- 
+
 +    // sloplint: a function body may put its first statement right after the
 +    // param block on the same line: function f { param($a) $a }. The hidden
 +    // rule is aliased to script_block, the kind a body with a line break after
@@ -378,21 +423,21 @@ diff --git a/grammar.js b/grammar.js
 +      seq($.param_block, field('script_block_body', $.script_block_body)),
 +
      function_name: ($) => $._command_token,
- 
+
      function_parameter_declaration: ($) =>
-@@ -598,7 +763,9 @@
- 
+@@ -598,7 +768,9 @@ export default grammar({
+
      label: ($) => token(seq(':', /[a-zA-Z_][a-zA-Z0-9_]*/)),
- 
+
 -    label_expression: ($) => choice($.label, $.unary_expression),
 +    // sloplint: a loop label may be a bare name: break outer, continue top.
 +    label_expression: ($) =>
 +      choice($.label, $.simple_name, $.unary_expression),
- 
+
      trap_statement: ($) =>
        seq(reservedWord('trap'), optional($.type_literal), $.statement_block),
-@@ -710,18 +877,8 @@
- 
+@@ -710,18 +882,8 @@ export default grammar({
+
      _expandable_string_literal_immediate: ($) =>
        seq(
 -        repeat(
@@ -410,9 +455,9 @@ diff --git a/grammar.js b/grammar.js
 +        repeat($._expandable_string_part),
 +        token.immediate('"'),
        ),
- 
+
      _string_literal_immediate: ($) =>
-@@ -733,7 +890,7 @@
+@@ -733,7 +895,7 @@ export default grammar({
      command_name: ($) =>
        seq(
          choice(
@@ -421,7 +466,7 @@ diff --git a/grammar.js b/grammar.js
            // tree-sitter does not allow to control lexer
            // each start keyword into _statement rule must be present here
            // https://github.com/airbus-cert/tree-sitter-powershell/issues/24
-@@ -754,10 +911,23 @@
+@@ -754,10 +916,23 @@ export default grammar({
            new RegExp(caseInsensitive('for-')),
            new RegExp(caseInsensitive('while-')),
            new RegExp(caseInsensitive('parallel-')),
@@ -446,17 +491,17 @@ diff --git a/grammar.js b/grammar.js
              seq(token.immediate('"'), $._expandable_string_literal_immediate),
              seq(token.immediate('\''), $._string_literal_immediate),
              token.immediate('""'),
-@@ -766,7 +936,8 @@
+@@ -766,7 +941,8 @@ export default grammar({
          ),
        ),
- 
+
 -    path_command_name_token: ($) => /[0-9a-zA-Z_?\-\.\\]+/,
 +    // sloplint: `/` is a path separator too: . $PSScriptRoot/x.ps1, ./build.ps1.
 +    path_command_name_token: ($) => /[0-9a-zA-Z_?\-\.\\\/]+/,
- 
+
      // Use to parse command path
      path_command_name: ($) =>
-@@ -781,41 +952,86 @@
+@@ -781,41 +957,86 @@ export default grammar({
        prec.right(
          choice(
            $.command_parameter,
@@ -469,7 +514,7 @@ diff --git a/grammar.js b/grammar.js
            $.stop_parsing,
          ),
        ),
- 
+
 +    // sloplint: a call in an argument may be followed by more member access
 +    // and calls: foo $s.ToString().TrimEnd(). The pieces are siblings of the
 +    // argument, like the first argument_list.
@@ -480,7 +525,7 @@ diff --git a/grammar.js b/grammar.js
 +
      // Stop parsing is a token that end the parsing of command line
      stop_parsing: ($) => /--%[^\r\n]*/,
- 
+
      // Generic token is hard to manage
      // So a definition is that a generic token must have to begin by one or more space char
 -    command_argument_sep: ($) => prec.right(choice(repeat1(' '), ':')),
@@ -489,9 +534,9 @@ diff --git a/grammar.js b/grammar.js
 +    // parameter is opaque). Format characters (U+200B, U+FEFF, U+2060) stay
 +    // out: they are extras, not separators.
 +    command_argument_sep: ($) => prec.right(choice(repeat1(choice(' ', '\t', '\u00A0')), ':')),
- 
+
      // Adapt the grammar to have same behavior
- 
+
 +    // sloplint: a parenthesized list may start at once after `--`, as in
 +    // `--(Get-Date), (Get-Date)`: the commas continue the array without an
 +    // intervening separator.
@@ -517,7 +562,7 @@ diff --git a/grammar.js b/grammar.js
            $.script_block_expression,
          ),
        ),
- 
+
 +    // sloplint: in argument position a comma list may hold bare words as
 +    // well as expressions: Select-Object Name,Length. The hidden rules are
 +    // aliased so that the node keeps the array_literal_expression kind.
@@ -555,20 +600,20 @@ diff --git a/grammar.js b/grammar.js
 +
      verbatim_command_argument: ($) =>
        seq('--%', $._verbatim_command_argument_chars),
- 
-@@ -827,8 +1043,10 @@
+
+@@ -827,8 +1048,10 @@ export default grammar({
          seq($.file_redirection_operator, $.redirected_file_name),
        ),
- 
+
 +    // sloplint: a redirect may follow its operator with no separator, as
 +    // in '/r'>null — a bare word target then lexes as generic_token.
      redirected_file_name: ($) =>
 -      choice($._command_argument, $._primary_expression),
 +      choice($._command_argument, $._primary_expression, $.generic_token),
- 
+
      // Class
      class_attribute: ($) =>
-@@ -857,13 +1075,26 @@
+@@ -857,13 +1080,26 @@ export default grammar({
          '(',
          optional($.class_method_parameter_list),
          ')',
@@ -584,7 +629,7 @@ diff --git a/grammar.js b/grammar.js
          optional($.script_block),
          '}',
        ),
- 
+
 +    // sloplint: attributes may precede class and enum definitions:
 +    // [DscResource()] class R {}, [Flags()] enum E {}. pwsh also reports
 +    // CustomAttributeTypeNotFound for an unknown attribute type here, which
@@ -595,7 +640,7 @@ diff --git a/grammar.js b/grammar.js
          token(reservedWord('class')),
          $.simple_name,
          optional(seq(':', $.simple_name, repeat(seq(',', $.simple_name)))),
-@@ -884,6 +1115,7 @@
+@@ -884,6 +1120,7 @@ export default grammar({
      // Enums
      enum_statement: ($) =>
        seq(
@@ -603,15 +648,15 @@ diff --git a/grammar.js b/grammar.js
          token(reservedWord('enum')),
          $.simple_name,
          '{',
-@@ -895,8 +1127,21 @@
+@@ -895,7 +1132,20 @@ export default grammar({
        seq($.simple_name, optional(seq('=', $.integer_literal))),
- 
+
      // Expressions
 -    _expression: ($) => $.logical_expression,
 +    // sloplint: PowerShell 7 ternary: $a ? "x" : "y". The condition is a
 +    // binary expression; the branches are expressions or nested ternaries.
 +    _expression: ($) => choice($.logical_expression, $.ternary_expression),
- 
++
 +    ternary_expression: ($) =>
 +      prec.right(
 +        seq(
@@ -622,20 +667,19 @@ diff --git a/grammar.js b/grammar.js
 +          choice($.logical_expression, $.ternary_expression),
 +        ),
 +      ),
-+
+
      logical_expression: ($) =>
        prec.left(
-         choice(
-@@ -1008,8 +1253,36 @@
+@@ -1008,7 +1258,35 @@ export default grammar({
      pre_decrement_expression: ($) => seq('--', $.unary_expression),
- 
+
      cast_expression: ($) =>
 -      prec(PREC.CAST, seq($.type_literal, $.unary_expression)),
 +      prec(
 +        PREC.CAST,
 +        seq($.type_literal, alias($._cast_operand, $.unary_expression)),
 +      ),
- 
++
 +    // sloplint: a cast operand may not begin with `,` — that comma is a
 +    // parameter or array separator, as in param($T = [Exception], $M).
 +    _cast_operand: ($) =>
@@ -660,14 +704,22 @@ diff --git a/grammar.js b/grammar.js
 +        seq(reservedWord('-split'), $.unary_expression),
 +        seq(reservedWord('-join'), $.unary_expression),
 +      ),
-+
+
      attributed_variable: ($) => seq($.type_literal, $.variable),
- 
-     _primary_expression: ($) =>
-@@ -1042,8 +1315,12 @@
+
+@@ -1034,7 +1312,7 @@ export default grammar({
+         $.variable,
+       ),
+
+-    parenthesized_expression: ($) => seq('(', $.pipeline, ')'),
++    parenthesized_expression: ($) => seq('(', $.pipeline, $._statement_terminator, ')'),
+
+     sub_expression: ($) =>
+       seq('$(', field('statements', optional($.statement_list)), ')'),
+@@ -1042,8 +1320,12 @@ export default grammar({
      array_expression: ($) =>
        seq('@(', field('statements', optional($.statement_list)), ')'),
- 
+
 +    // sloplint: an empty block is a valid script block expression: {} or { }.
      script_block_expression: ($) =>
 -      seq('{', optional($.param_block), $.script_block, '}'),
@@ -675,13 +727,13 @@ diff --git a/grammar.js b/grammar.js
 +        seq('{', optional($.param_block), $.script_block, '}'),
 +        seq('{', '}'),
 +      ),
- 
+
      hash_literal_expression: ($) =>
        seq('@{', optional($.hash_literal_body), '}'),
-@@ -1101,11 +1378,17 @@
+@@ -1101,11 +1383,17 @@ export default grammar({
          $.invokation_foreach_expression,
        ),
- 
+
 -    // adding this rule to handle .foreach synthax
 +    // sloplint: a method name may take a script block with no parentheses
 +    // when the brace follows the name at once: $a.Where{ $_ },
@@ -697,8 +749,8 @@ diff --git a/grammar.js b/grammar.js
 +        $._method_block_head,
          $.script_block_expression,
        ),
- 
-@@ -1145,10 +1428,13 @@
+
+@@ -1145,10 +1433,13 @@ export default grammar({
            $.comparison_argument_expression,
            seq(
              $.bitwise_argument_expression,
@@ -715,10 +767,10 @@ diff --git a/grammar.js b/grammar.js
              ),
              $.comparison_argument_expression,
            ),
-@@ -1213,32 +1499,49 @@
- 
+@@ -1213,32 +1504,49 @@ export default grammar({
+
      type_literal: ($) => seq('[', $.type_spec, ']'),
- 
+
 +    // sloplint: array ranks may repeat after an array or generic type
 +    // (int[][], List[int][]), and a generic argument may be wrapped in its
 +    // own brackets: Dictionary[[string], [int]].
@@ -735,24 +787,24 @@ diff --git a/grammar.js b/grammar.js
 +        ),
          $.type_name,
        ),
- 
+
 +    _rank: ($) => seq('[', optional($.dimension), ']'),
 +
      dimension: ($) => repeat1(','),
- 
+
      generic_type_arguments: ($) =>
 -      seq($.type_spec, repeat(seq(',', $.type_spec))),
 +      seq(
 +        $._generic_type_argument,
 +        repeat(seq(',', $._generic_type_argument)),
 +      ),
- 
++
 +    _generic_type_argument: ($) =>
 +      choice($.type_spec, seq('[', $.type_spec, ']')),
-+
+
      // Attributes
      attribute_list: ($) => repeat1($.attribute),
- 
+
      attribute: ($) =>
 -      choice(
 -        seq(
@@ -776,114 +828,28 @@ diff --git a/grammar.js b/grammar.js
 +        ')',
 +        ']',
        ),
- 
+
      attribute_name: ($) => $.type_spec,
 diff --git a/src/scanner.c b/src/scanner.c
+index b46de2b..37a6f2b 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
-@@ -6,84 +6,191 @@
- 
+@@ -6,7 +6,10 @@
+
  enum TOKEN_TYPE {
      STATEMENT_TERMINATOR,
 -    BARE_DASHES
--};
--
--/* --- API --- */
--
--void *tree_sitter_powershell_external_scanner_create();
--
--void tree_sitter_powershell_external_scanner_destroy(void *p);
--
--unsigned tree_sitter_powershell_external_scanner_serialize(void *payload, char *buffer);
--
--void tree_sitter_powershell_external_scanner_deserialize(void *payload, const char *buffer, unsigned length);
--
--bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols);
--
--/* --- Internal Functions --- */
--
--static void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
--
--static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool *valid_symbols)
--{
--    if (valid_symbols[STATEMENT_TERMINATOR]) {
--        lexer->result_symbol = STATEMENT_TERMINATOR;
--        // This token has no characters -- everything is lookahead to determine its existence
--        lexer->mark_end(lexer);
--
--        for (;;) {
--            if (lexer->lookahead == 0) return true;
--            if (lexer->lookahead == '}') return true;
--            if (lexer->lookahead == ';') return true;
--            if (lexer->lookahead == ')') return true;
--            if (lexer->lookahead == '\n') return true;
--            if (!iswspace(lexer->lookahead)) return false;
--            skip(lexer);
--        }
--    }
--
--    return false;
--}
--
--// A bare `-` or `--` argument: `--` ends option parsing for a native command
--// (`git log -- path`, `cargo test -- --nocapture`) and `-` names stdin
--// (`tar -xf -`). `--` is also the decrement operator and `-` the unary minus,
--// so the lexer cannot tell them apart by length or precedence: the token is
--// recognised only when the dashes are followed by whitespace or the end of the
--// command.
--static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_symbols)
--{
--    if (!valid_symbols[BARE_DASHES]) return false;
--
--    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') skip(lexer);
--    if (lexer->lookahead != '-') return false;
--    lexer->advance(lexer, false);
--    if (lexer->lookahead == '-') lexer->advance(lexer, false);
--    lexer->mark_end(lexer);
--
--    switch (lexer->lookahead) {
--        case 0:
--        case ' ':
--        case '\t':
--        case '\r':
--        case '\n':
--        case ';':
--        case '|':
--        case '&':
--        case ')':
--        case '}':
--            lexer->result_symbol = BARE_DASHES;
--            return true;
--        default:
--            return false;
--    }
--}
--
--/* --- API Implementation --- */
--
--bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols)
--{
 +    BARE_DASHES,
 +    METHOD_BLOCK_HEAD,
-+    LOOSE_DOLLAR
-+};
-+
-+/* --- API --- */
-+
-+void *tree_sitter_powershell_external_scanner_create();
-+
-+void tree_sitter_powershell_external_scanner_destroy(void *p);
-+
-+unsigned tree_sitter_powershell_external_scanner_serialize(void *payload, char *buffer);
-+
-+void tree_sitter_powershell_external_scanner_deserialize(void *payload, const char *buffer, unsigned length);
-+
-+bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols);
-+
-+/* --- Internal Functions --- */
-+
-+static void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
-+
++    LOOSE_DOLLAR,
++    HERE_STRING_NEWLINE
+ };
+
+ /* --- API --- */
+@@ -25,6 +28,25 @@ bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer,
+
+ static void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
+
 +// sloplint: true when the lookahead starts the keyword `else` or `elseif`,
 +// as a whole word. The lookahead is consumed; the caller has already marked
 +// the end of the zero-width terminator token.
@@ -903,20 +869,22 @@ diff --git a/src/scanner.c b/src/scanner.c
 +    return !(iswalnum(c) || c == '_' || c == '-');
 +}
 +
-+static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool *valid_symbols)
-+{
-+    if (valid_symbols[STATEMENT_TERMINATOR]) {
-+        lexer->result_symbol = STATEMENT_TERMINATOR;
-+        // This token has no characters -- everything is lookahead to determine its existence
-+        lexer->mark_end(lexer);
-+
+ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool *valid_symbols)
+ {
+     if (valid_symbols[STATEMENT_TERMINATOR]) {
+@@ -32,13 +54,35 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool
+         // This token has no characters -- everything is lookahead to determine its existence
+         lexer->mark_end(lexer);
+
 +        bool saw_newline = false;
 +        bool saw_blank_line = false;
-+        for (;;) {
-+            if (lexer->lookahead == 0) return true;
-+            if (lexer->lookahead == '}') return true;
-+            if (lexer->lookahead == ';') return true;
-+            if (lexer->lookahead == ')') return true;
+         for (;;) {
+             if (lexer->lookahead == 0) return true;
+             if (lexer->lookahead == '}') return true;
+             if (lexer->lookahead == ';') return true;
+             if (lexer->lookahead == ')') return true;
+-            if (lexer->lookahead == '\n') return true;
+-            if (!iswspace(lexer->lookahead)) return false;
 +            if (lexer->lookahead == '\n') {
 +                saw_blank_line = saw_blank_line || saw_newline;
 +                saw_newline = true;
@@ -939,17 +907,15 @@ diff --git a/src/scanner.c b/src/scanner.c
 +                }
 +                return false;
 +            }
-+            skip(lexer);
-+        }
-+    }
-+
-+    return false;
-+}
-+
-+// A bare `-` or `--` argument: `--` ends option parsing for a native command
-+// (`git log -- path`, `cargo test -- --nocapture`) and `-` names stdin
-+// (`tar -xf -`). `--` is also the decrement operator and `-` the unary minus,
-+// so the lexer cannot tell them apart by length or precedence: the token is
+             skip(lexer);
+         }
+     }
+@@ -50,13 +94,22 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool
+ // (`git log -- path`, `cargo test -- --nocapture`) and `-` names stdin
+ // (`tar -xf -`). `--` is also the decrement operator and `-` the unary minus,
+ // so the lexer cannot tell them apart by length or precedence: the token is
+-// recognised only when the dashes are followed by whitespace or the end of the
+-// command.
 +// recognised only when the dashes are followed by whitespace, `(` or `{`,
 +// a command separator, or the end of the command.
 +// sloplint: PowerShell treats non-breaking and zero-width spaces as
@@ -961,42 +927,38 @@ diff --git a/src/scanner.c b/src/scanner.c
 +    return c == ' ' || c == '\t' || c == 0x00A0 || c == 0xFEFF || c == 0x200B || c == 0x2060;
 +}
 +
-+static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_symbols)
-+{
-+    if (!valid_symbols[BARE_DASHES]) return false;
-+
+ static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_symbols)
+ {
+     if (!valid_symbols[BARE_DASHES]) return false;
+
+-    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') skip(lexer);
 +    while (is_horizontal_space(lexer->lookahead)) skip(lexer);
-+    if (lexer->lookahead != '-') return false;
-+    lexer->advance(lexer, false);
-+    if (lexer->lookahead == '-') lexer->advance(lexer, false);
-+    lexer->mark_end(lexer);
-+
-+    switch (lexer->lookahead) {
-+        case 0:
-+        case ' ':
-+        case '\t':
+     if (lexer->lookahead != '-') return false;
+     lexer->advance(lexer, false);
+     if (lexer->lookahead == '-') lexer->advance(lexer, false);
+@@ -66,12 +119,18 @@ static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_sy
+         case 0:
+         case ' ':
+         case '\t':
 +        case 0x00A0:
 +        case 0xFEFF:
 +        case 0x200B:
 +        case 0x2060:
-+        case '\r':
-+        case '\n':
-+        case ';':
-+        case '|':
-+        case '&':
+         case '\r':
+         case '\n':
+         case ';':
+         case '|':
+         case '&':
 +        case '(':
-+        case ')':
+         case ')':
 +        case '{':
-+        case '}':
-+            lexer->result_symbol = BARE_DASHES;
-+            return true;
-+        default:
-+            return false;
-+    }
-+}
-+
-+/* --- API Implementation --- */
-+
+         case '}':
+             lexer->result_symbol = BARE_DASHES;
+             return true;
+@@ -82,8 +141,80 @@ static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_sy
+
+ /* --- API Implementation --- */
+
 +// sloplint: `.Name` or `::Name` when `{` follows the name at once, as in
 +// $a.Where{ $_ }. The token ends before the brace. Anything else is left to
 +// the internal lexer, which re-reads the input from the start.
@@ -1041,8 +1003,31 @@ diff --git a/src/scanner.c b/src/scanner.c
 +    return true;
 +}
 +
-+bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols)
++// sloplint: only separate a here-string line break when the next line
++// starts interpolation. Never take the closing delimiter's line break.
++static bool scan_here_string_newline(TSLexer *lexer)
 +{
++    bool saw_newline = false;
++    while (lexer->lookahead == '\r' || lexer->lookahead == '\n') {
++        if (lexer->lookahead == '\r') {
++            lexer->advance(lexer, false);
++            if (lexer->lookahead != '\n') return false;
++        }
++        lexer->advance(lexer, false);
++        saw_newline = true;
++    }
++    if (!saw_newline || lexer->lookahead != '$') return false;
++    lexer->mark_end(lexer);
++    lexer->result_symbol = HERE_STRING_NEWLINE;
++    return true;
++}
++
+ bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols)
+ {
++    if (valid_symbols[HERE_STRING_NEWLINE] &&
++        (lexer->lookahead == '\r' || lexer->lookahead == '\n')) {
++        return scan_here_string_newline(lexer);
++    }
 +    if (valid_symbols[METHOD_BLOCK_HEAD] &&
 +        (lexer->lookahead == '.' || lexer->lookahead == ':')) {
 +        return scan_method_block_head(lexer);
@@ -1565,6 +1550,692 @@ index e91d0a4..6043257 100644
 +      (pipeline_chain
 +        (command
 +          (command_name))))))
+diff --git a/test/corpus/sloplint_multiline_boundaries.txt b/test/corpus/sloplint_multiline_boundaries.txt
+new file mode 100644
+index 0000000..2466b75
+--- /dev/null
++++ b/test/corpus/sloplint_multiline_boundaries.txt
+@@ -0,0 +1,680 @@
++====================
++multiline-here-lf-0
++====================
++
++$p = @"
++end$
++${name}
++"@
++Write-Output done
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (assignment_expression
++        (left_assignment_expression
++          (logical_expression
++            (bitwise_expression
++              (comparison_expression
++                (additive_expression
++                  (multiplicative_expression
++                    (format_expression
++                      (range_expression
++                        (array_literal_expression
++                          (unary_expression
++                            (variable)))))))))))
++        (assignement_operator)
++        (pipeline
++          (pipeline_chain
++            (logical_expression
++              (bitwise_expression
++                (comparison_expression
++                  (additive_expression
++                    (multiplicative_expression
++                      (format_expression
++                        (range_expression
++                          (array_literal_expression
++                            (unary_expression
++                              (string_literal
++                                (expandable_here_string_literal
++                                  (variable
++                                    (braced_variable)))))))))))))))))
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name)
++          (command_elements
++            (command_argument_sep)
++            (generic_token)))))))
++
++====================
++multiline-here-lf-2
++====================
++
++$p = @"
++end$
++$(Get-Date)
++"@
++Write-Output done
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (assignment_expression
++        (left_assignment_expression
++          (logical_expression
++            (bitwise_expression
++              (comparison_expression
++                (additive_expression
++                  (multiplicative_expression
++                    (format_expression
++                      (range_expression
++                        (array_literal_expression
++                          (unary_expression
++                            (variable)))))))))))
++        (assignement_operator)
++        (pipeline
++          (pipeline_chain
++            (logical_expression
++              (bitwise_expression
++                (comparison_expression
++                  (additive_expression
++                    (multiplicative_expression
++                      (format_expression
++                        (range_expression
++                          (array_literal_expression
++                            (unary_expression
++                              (string_literal
++                                (expandable_here_string_literal
++                                  (sub_expression
++                                    (statement_list
++                                      (pipeline
++                                        (pipeline_chain
++                                          (command
++                                            (command_name)))))))))))))))))))))
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name)
++          (command_elements
++            (command_argument_sep)
++            (generic_token)))))))
++
++====================
++multiline-here-lf-3
++====================
++
++$p = @"
++end$
++`$
++"@
++Write-Output done
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (assignment_expression
++        (left_assignment_expression
++          (logical_expression
++            (bitwise_expression
++              (comparison_expression
++                (additive_expression
++                  (multiplicative_expression
++                    (format_expression
++                      (range_expression
++                        (array_literal_expression
++                          (unary_expression
++                            (variable)))))))))))
++        (assignement_operator)
++        (pipeline
++          (pipeline_chain
++            (logical_expression
++              (bitwise_expression
++                (comparison_expression
++                  (additive_expression
++                    (multiplicative_expression
++                      (format_expression
++                        (range_expression
++                          (array_literal_expression
++                            (unary_expression
++                              (string_literal
++                                (expandable_here_string_literal)))))))))))))))
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name)
++          (command_elements
++            (command_argument_sep)
++            (generic_token)))))))
++
++====================
++multiline-here-lf-4
++====================
++
++$p = @"
++end$
++`"@
++"@
++Write-Output done
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (assignment_expression
++        (left_assignment_expression
++          (logical_expression
++            (bitwise_expression
++              (comparison_expression
++                (additive_expression
++                  (multiplicative_expression
++                    (format_expression
++                      (range_expression
++                        (array_literal_expression
++                          (unary_expression
++                            (variable)))))))))))
++        (assignement_operator)
++        (pipeline
++          (pipeline_chain
++            (logical_expression
++              (bitwise_expression
++                (comparison_expression
++                  (additive_expression
++                    (multiplicative_expression
++                      (format_expression
++                        (range_expression
++                          (array_literal_expression
++                            (unary_expression
++                              (string_literal
++                                (expandable_here_string_literal)))))))))))))))
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name)
++          (command_elements
++            (command_argument_sep)
++            (generic_token)))))))
++
++====================
++multiline-here-lf-5
++====================
++
++$p = @"
++end$
++``````PowerShell
++"@
++Write-Output done
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (assignment_expression
++        (left_assignment_expression
++          (logical_expression
++            (bitwise_expression
++              (comparison_expression
++                (additive_expression
++                  (multiplicative_expression
++                    (format_expression
++                      (range_expression
++                        (array_literal_expression
++                          (unary_expression
++                            (variable)))))))))))
++        (assignement_operator)
++        (pipeline
++          (pipeline_chain
++            (logical_expression
++              (bitwise_expression
++                (comparison_expression
++                  (additive_expression
++                    (multiplicative_expression
++                      (format_expression
++                        (range_expression
++                          (array_literal_expression
++                            (unary_expression
++                              (string_literal
++                                (expandable_here_string_literal)))))))))))))))
++    (pipeline
++      (pipeline_chain
++        (command
++          (command_name)
++          (command_elements
++            (command_argument_sep)
++            (generic_token)))))))
++
++====================
++multiline-here-lf-8
++:error
++====================
++
++$p = @"
++end$
++${}
++"@
++Write-Output done
++
++---
++
++
++
++====================
++multiline-here-lf-9
++:error
++====================
++
++$p = @"
++end$
++${name
++"@
++Write-Output done
++
++---
++
++
++
++====================
++multiline-here-lf-10
++:error
++====================
++
++$p = @"
++end$
++$(Get-Date
++"@
++Write-Output done
++
++---
++
++
++
++====================
++parenthesized-pipe-lf-0-0-adjacent
++====================
++
++(Get-Date
++| Write-Output)
++
++---
++
++(program
++  (statement_list
++    (pipeline
++      (pipeline_chain
++        (logical_expression
++          (bitwise_expression
++            (comparison_expression
++              (additive_expression
++                (multiplicative_expression
++                  (format_expression
++                    (range_expression
++                      (array_literal_expression
++                        (unary_expression
++                          (parenthesized_expression
++                            (pipeline
++                              (pipeline_chain
++                                (command
++                                  (command_name))
++                                (command
++                                  (command_name))))))))))))))))))
++
++====================
++parenthesized-pipe-lf-0-0-blank
++:error
++====================
++
++(Get-Date
++
++| Write-Output)
++
++---
++
++
++
++====================
++parenthesized-pipe-lf-1-0-adjacent
++====================
++
++if (Get-Date
++| Write-Output) { 1 }
++
++---
++
++(program
++  (statement_list
++    (if_statement
++      (pipeline
++        (pipeline_chain
++          (command
++            (command_name))
++          (command
++            (command_name))))
++      (statement_block
++        (statement_list
++          (pipeline
++            (pipeline_chain
++              (logical_expression
++                (bitwise_expression
++                  (comparison_expression
++                    (additive_expression
++                      (multiplicative_expression
++                        (format_expression
++                          (range_expression
++                            (array_literal_expression
++                              (unary_expression
++                                (integer_literal
++                                  (decimal_integer_literal))))))))))))))))))
++
++====================
++parenthesized-pipe-lf-1-0-blank
++:error
++====================
++
++if (Get-Date
++
++| Write-Output) { 1 }
++
++---
++
++
++
++====================
++parenthesized-pipe-lf-2-0-adjacent
++====================
++
++if ($false) { 0 } elseif (Get-Date
++| Write-Output) { 1 }
++
++---
++
++(program
++  (statement_list
++    (if_statement
++      (pipeline
++        (pipeline_chain
++          (logical_expression
++            (bitwise_expression
++              (comparison_expression
++                (additive_expression
++                  (multiplicative_expression
++                    (format_expression
++                      (range_expression
++                        (array_literal_expression
++                          (unary_expression
++                            (variable))))))))))))
++      (statement_block
++        (statement_list
++          (pipeline
++            (pipeline_chain
++              (logical_expression
++                (bitwise_expression
++                  (comparison_expression
++                    (additive_expression
++                      (multiplicative_expression
++                        (format_expression
++                          (range_expression
++                            (array_literal_expression
++                              (unary_expression
++                                (integer_literal
++                                  (decimal_integer_literal)))))))))))))))
++      (elseif_clauses
++        (elseif_clause
++          (pipeline
++            (pipeline_chain
++              (command
++                (command_name))
++              (command
++                (command_name))))
++          (statement_block
++            (statement_list
++              (pipeline
++                (pipeline_chain
++                  (logical_expression
++                    (bitwise_expression
++                      (comparison_expression
++                        (additive_expression
++                          (multiplicative_expression
++                            (format_expression
++                              (range_expression
++                                (array_literal_expression
++                                  (unary_expression
++                                    (integer_literal
++                                      (decimal_integer_literal))))))))))))))))))))
++
++====================
++parenthesized-pipe-lf-2-0-blank
++:error
++====================
++
++if ($false) { 0 } elseif (Get-Date
++
++| Write-Output) { 1 }
++
++---
++
++
++
++====================
++parenthesized-pipe-lf-3-0-adjacent
++====================
++
++while (Get-Date
++| Write-Output) { break }
++
++---
++
++(program
++  (statement_list
++    (while_statement
++      (while_condition
++        (pipeline
++          (pipeline_chain
++            (command
++              (command_name))
++            (command
++              (command_name)))))
++      (statement_block
++        (statement_list
++          (flow_control_statement))))))
++
++====================
++parenthesized-pipe-lf-3-0-blank
++:error
++====================
++
++while (Get-Date
++
++| Write-Output) { break }
++
++---
++
++
++
++====================
++parenthesized-pipe-lf-4-0-adjacent
++====================
++
++do { 1 } until (Get-Date
++| Write-Output)
++
++---
++
++(program
++  (statement_list
++    (do_statement
++      (statement_block
++        (statement_list
++          (pipeline
++            (pipeline_chain
++              (logical_expression
++                (bitwise_expression
++                  (comparison_expression
++                    (additive_expression
++                      (multiplicative_expression
++                        (format_expression
++                          (range_expression
++                            (array_literal_expression
++                              (unary_expression
++                                (integer_literal
++                                  (decimal_integer_literal)))))))))))))))
++      (while_condition
++        (pipeline
++          (pipeline_chain
++            (command
++              (command_name))
++            (command
++              (command_name))))))))
++
++====================
++parenthesized-pipe-lf-4-0-blank
++:error
++====================
++
++do { 1 } until (Get-Date
++
++| Write-Output)
++
++---
++
++
++
++====================
++parenthesized-pipe-lf-5-0-adjacent
++====================
++
++foreach ($item in Get-Date
++| Write-Output) { $item }
++
++---
++
++(program
++  (statement_list
++    (foreach_statement
++      (variable)
++      (pipeline
++        (pipeline_chain
++          (command
++            (command_name))
++          (command
++            (command_name))))
++      (statement_block
++        (statement_list
++          (pipeline
++            (pipeline_chain
++              (logical_expression
++                (bitwise_expression
++                  (comparison_expression
++                    (additive_expression
++                      (multiplicative_expression
++                        (format_expression
++                          (range_expression
++                            (array_literal_expression
++                              (unary_expression
++                                (variable)))))))))))))))))
++
++====================
++parenthesized-pipe-lf-5-0-blank
++:error
++====================
++
++foreach ($item in Get-Date
++
++| Write-Output) { $item }
++
++---
++
++
++
++====================
++parenthesized-pipe-lf-6-0-adjacent
++====================
++
++switch (Get-Date
++| Write-Output) { default { 1 } }
++
++---
++
++(program
++  (statement_list
++    (switch_statement
++      (switch_condition
++        (pipeline
++          (pipeline_chain
++            (command
++              (command_name))
++            (command
++              (command_name)))))
++      (switch_body
++        (switch_clauses
++          (switch_clause
++            (switch_clause_condition)
++            (statement_block
++              (statement_list
++                (pipeline
++                  (pipeline_chain
++                    (logical_expression
++                      (bitwise_expression
++                        (comparison_expression
++                          (additive_expression
++                            (multiplicative_expression
++                              (format_expression
++                                (range_expression
++                                  (array_literal_expression
++                                    (unary_expression
++                                      (integer_literal
++                                        (decimal_integer_literal)))))))))))))))))))))
++
++====================
++parenthesized-pipe-lf-6-0-blank
++:error
++====================
++
++switch (Get-Date
++
++| Write-Output) { default { 1 } }
++
++---
++
++
++
++====================
++parenthesized-pipe-lf-7-0-adjacent
++====================
++
++for (Get-Date
++| Write-Output;;) { break }
++
++---
++
++(program
++  (statement_list
++    (for_statement
++      (for_initializer
++        (pipeline
++          (pipeline_chain
++            (command
++              (command_name))
++            (command
++              (command_name)))))
++      (statement_block
++        (statement_list
++          (flow_control_statement))))))
++
++====================
++parenthesized-pipe-lf-7-0-blank
++:error
++====================
++
++for (Get-Date
++
++| Write-Output;;) { break }
++
++---
 diff --git a/test/corpus/sloplint_word_boundaries.txt b/test/corpus/sloplint_word_boundaries.txt
 new file mode 100644
 index 0000000..8ba60b5

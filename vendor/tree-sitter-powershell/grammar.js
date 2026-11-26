@@ -37,6 +37,7 @@ export default grammar({
     $._bare_dashes,
     $._method_block_head,
     $._loose_dollar,
+    $._here_string_newline,
   ],
 
   extras: ($) => [
@@ -171,9 +172,10 @@ export default grammar({
             // sloplint: a line that starts with a backtick must not lose half
             // of an escape pair to the line-break token: ``````PowerShell.
             // The break takes the whole pair.
-            token.immediate(/(\r?\n)+[^\"\r\n`]/),
+            token.immediate(/(\r?\n)+[^\"\$\r\n`]/),
             token.immediate(/(\r?\n)+(`.{1}|`\r?\n)/),
             token.immediate(/(\r?\n)+\"[^@]/),
+            $._here_string_newline,
             $._loose_dollar,
             token.immediate(/`.{1}|`\r?\n/),
           ),
@@ -567,6 +569,7 @@ export default grammar({
           reservedWord('if'),
           '(',
           field('condition', $.pipeline),
+          $._statement_terminator,
           ')',
           $.statement_block,
           field('elseif_clauses', optional($.elseif_clauses)),
@@ -581,6 +584,7 @@ export default grammar({
         reservedWord('elseif'),
         '(',
         field('condition', $.pipeline),
+        $._statement_terminator,
         ')',
         $.statement_block,
       ),
@@ -617,7 +621,7 @@ export default grammar({
 
     switch_condition: ($) =>
       choice(
-        seq('(', $.pipeline, ')'),
+        seq('(', $.pipeline, $._statement_terminator, ')'),
         seq(reservedWord('-file'), $.switch_filename),
       ),
 
@@ -648,6 +652,7 @@ export default grammar({
         $.variable,
         reservedWord('in'),
         $.pipeline,
+        $._statement_terminator,
         ')',
         $.statement_block,
       ),
@@ -709,7 +714,7 @@ export default grammar({
         $.statement_block,
       ),
 
-    while_condition: ($) => $.pipeline,
+    while_condition: ($) => seq($.pipeline, $._statement_terminator),
 
     do_statement: ($) =>
       seq(
@@ -1307,7 +1312,7 @@ export default grammar({
         $.variable,
       ),
 
-    parenthesized_expression: ($) => seq('(', $.pipeline, ')'),
+    parenthesized_expression: ($) => seq('(', $.pipeline, $._statement_terminator, ')'),
 
     sub_expression: ($) =>
       seq('$(', field('statements', optional($.statement_list)), ')'),

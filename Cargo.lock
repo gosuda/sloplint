@@ -1019,6 +1019,7 @@ dependencies = [
 name = "sloplint-syntax"
 version = "0.1.0"
 dependencies = [
+ "regex",
  "sloplint-core",
  "tree-sitter",
  "tree-sitter-alloy",

@@ -8,7 +8,8 @@ enum TOKEN_TYPE {
     STATEMENT_TERMINATOR,
     BARE_DASHES,
     METHOD_BLOCK_HEAD,
-    LOOSE_DOLLAR
+    LOOSE_DOLLAR,
+    HERE_STRING_NEWLINE
 };
 
 /* --- API --- */
@@ -184,8 +185,31 @@ static bool scan_loose_dollar(void *payload, TSLexer *lexer, const bool *valid_s
     return true;
 }
 
+// sloplint: only separate a here-string line break when the next line
+// starts interpolation. Never take the closing delimiter's line break.
+static bool scan_here_string_newline(TSLexer *lexer)
+{
+    bool saw_newline = false;
+    while (lexer->lookahead == '\r' || lexer->lookahead == '\n') {
+        if (lexer->lookahead == '\r') {
+            lexer->advance(lexer, false);
+            if (lexer->lookahead != '\n') return false;
+        }
+        lexer->advance(lexer, false);
+        saw_newline = true;
+    }
+    if (!saw_newline || lexer->lookahead != '$') return false;
+    lexer->mark_end(lexer);
+    lexer->result_symbol = HERE_STRING_NEWLINE;
+    return true;
+}
+
 bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols)
 {
+    if (valid_symbols[HERE_STRING_NEWLINE] &&
+        (lexer->lookahead == '\r' || lexer->lookahead == '\n')) {
+        return scan_here_string_newline(lexer);
+    }
     if (valid_symbols[METHOD_BLOCK_HEAD] &&
         (lexer->lookahead == '.' || lexer->lookahead == ':')) {
         return scan_method_block_head(lexer);

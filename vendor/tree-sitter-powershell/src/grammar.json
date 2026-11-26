@@ -513,7 +513,7 @@
                 "type": "IMMEDIATE_TOKEN",
                 "content": {
                   "type": "PATTERN",
-                  "value": "(\\r?\\n)+[^\\\"\\r\\n`]"
+                  "value": "(\\r?\\n)+[^\\\"\\$\\r\\n`]"
                 }
               },
               {
@@ -529,6 +529,10 @@
                   "type": "PATTERN",
                   "value": "(\\r?\\n)+\\\"[^@]"
                 }
+              },
+              {
+                "type": "SYMBOL",
+                "name": "_here_string_newline"
               },
               {
                 "type": "SYMBOL",
@@ -2482,6 +2486,10 @@
             }
           },
           {
+            "type": "SYMBOL",
+            "name": "_statement_terminator"
+          },
+          {
             "type": "STRING",
             "value": ")"
           },
@@ -2562,6 +2570,10 @@
             "type": "SYMBOL",
             "name": "pipeline"
           }
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_statement_terminator"
         },
         {
           "type": "STRING",
@@ -2750,6 +2762,10 @@
               "name": "pipeline"
             },
             {
+              "type": "SYMBOL",
+              "name": "_statement_terminator"
+            },
+            {
               "type": "STRING",
               "value": ")"
             }
@@ -2921,6 +2937,10 @@
         {
           "type": "SYMBOL",
           "name": "pipeline"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_statement_terminator"
         },
         {
           "type": "STRING",
@@ -3177,8 +3197,17 @@
       ]
     },
     "while_condition": {
-      "type": "SYMBOL",
-      "name": "pipeline"
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "pipeline"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_statement_terminator"
+        }
+      ]
     },
     "do_statement": {
       "type": "SEQ",
@@ -6201,6 +6230,10 @@
           "name": "pipeline"
         },
         {
+          "type": "SYMBOL",
+          "name": "_statement_terminator"
+        },
+        {
           "type": "STRING",
           "value": ")"
         }
@@ -7323,6 +7356,10 @@
     {
       "type": "SYMBOL",
       "name": "_loose_dollar"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_here_string_newline"
     }
   ],
   "inline": [],

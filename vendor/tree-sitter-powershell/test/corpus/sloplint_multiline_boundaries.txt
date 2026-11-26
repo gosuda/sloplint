@@ -1,0 +1,680 @@
+====================
+multiline-here-lf-0
+====================
+
+$p = @"
+end$
+${name}
+"@
+Write-Output done
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (assignment_expression
+        (left_assignment_expression
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (variable)))))))))))
+        (assignement_operator)
+        (pipeline
+          (pipeline_chain
+            (logical_expression
+              (bitwise_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (string_literal
+                                (expandable_here_string_literal
+                                  (variable
+                                    (braced_variable)))))))))))))))))
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)))))))
+
+====================
+multiline-here-lf-2
+====================
+
+$p = @"
+end$
+$(Get-Date)
+"@
+Write-Output done
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (assignment_expression
+        (left_assignment_expression
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (variable)))))))))))
+        (assignement_operator)
+        (pipeline
+          (pipeline_chain
+            (logical_expression
+              (bitwise_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (string_literal
+                                (expandable_here_string_literal
+                                  (sub_expression
+                                    (statement_list
+                                      (pipeline
+                                        (pipeline_chain
+                                          (command
+                                            (command_name)))))))))))))))))))))
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)))))))
+
+====================
+multiline-here-lf-3
+====================
+
+$p = @"
+end$
+`$
+"@
+Write-Output done
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (assignment_expression
+        (left_assignment_expression
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (variable)))))))))))
+        (assignement_operator)
+        (pipeline
+          (pipeline_chain
+            (logical_expression
+              (bitwise_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (string_literal
+                                (expandable_here_string_literal)))))))))))))))
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)))))))
+
+====================
+multiline-here-lf-4
+====================
+
+$p = @"
+end$
+`"@
+"@
+Write-Output done
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (assignment_expression
+        (left_assignment_expression
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (variable)))))))))))
+        (assignement_operator)
+        (pipeline
+          (pipeline_chain
+            (logical_expression
+              (bitwise_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (string_literal
+                                (expandable_here_string_literal)))))))))))))))
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)))))))
+
+====================
+multiline-here-lf-5
+====================
+
+$p = @"
+end$
+``````PowerShell
+"@
+Write-Output done
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (assignment_expression
+        (left_assignment_expression
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (variable)))))))))))
+        (assignement_operator)
+        (pipeline
+          (pipeline_chain
+            (logical_expression
+              (bitwise_expression
+                (comparison_expression
+                  (additive_expression
+                    (multiplicative_expression
+                      (format_expression
+                        (range_expression
+                          (array_literal_expression
+                            (unary_expression
+                              (string_literal
+                                (expandable_here_string_literal)))))))))))))))
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)))))))
+
+====================
+multiline-here-lf-8
+:error
+====================
+
+$p = @"
+end$
+${}
+"@
+Write-Output done
+
+---
+
+
+
+====================
+multiline-here-lf-9
+:error
+====================
+
+$p = @"
+end$
+${name
+"@
+Write-Output done
+
+---
+
+
+
+====================
+multiline-here-lf-10
+:error
+====================
+
+$p = @"
+end$
+$(Get-Date
+"@
+Write-Output done
+
+---
+
+
+
+====================
+parenthesized-pipe-lf-0-0-adjacent
+====================
+
+(Get-Date
+| Write-Output)
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (logical_expression
+          (bitwise_expression
+            (comparison_expression
+              (additive_expression
+                (multiplicative_expression
+                  (format_expression
+                    (range_expression
+                      (array_literal_expression
+                        (unary_expression
+                          (parenthesized_expression
+                            (pipeline
+                              (pipeline_chain
+                                (command
+                                  (command_name))
+                                (command
+                                  (command_name))))))))))))))))))
+
+====================
+parenthesized-pipe-lf-0-0-blank
+:error
+====================
+
+(Get-Date
+
+| Write-Output)
+
+---
+
+
+
+====================
+parenthesized-pipe-lf-1-0-adjacent
+====================
+
+if (Get-Date
+| Write-Output) { 1 }
+
+---
+
+(program
+  (statement_list
+    (if_statement
+      (pipeline
+        (pipeline_chain
+          (command
+            (command_name))
+          (command
+            (command_name))))
+      (statement_block
+        (statement_list
+          (pipeline
+            (pipeline_chain
+              (logical_expression
+                (bitwise_expression
+                  (comparison_expression
+                    (additive_expression
+                      (multiplicative_expression
+                        (format_expression
+                          (range_expression
+                            (array_literal_expression
+                              (unary_expression
+                                (integer_literal
+                                  (decimal_integer_literal))))))))))))))))))
+
+====================
+parenthesized-pipe-lf-1-0-blank
+:error
+====================
+
+if (Get-Date
+
+| Write-Output) { 1 }
+
+---
+
+
+
+====================
+parenthesized-pipe-lf-2-0-adjacent
+====================
+
+if ($false) { 0 } elseif (Get-Date
+| Write-Output) { 1 }
+
+---
+
+(program
+  (statement_list
+    (if_statement
+      (pipeline
+        (pipeline_chain
+          (logical_expression
+            (bitwise_expression
+              (comparison_expression
+                (additive_expression
+                  (multiplicative_expression
+                    (format_expression
+                      (range_expression
+                        (array_literal_expression
+                          (unary_expression
+                            (variable))))))))))))
+      (statement_block
+        (statement_list
+          (pipeline
+            (pipeline_chain
+              (logical_expression
+                (bitwise_expression
+                  (comparison_expression
+                    (additive_expression
+                      (multiplicative_expression
+                        (format_expression
+                          (range_expression
+                            (array_literal_expression
+                              (unary_expression
+                                (integer_literal
+                                  (decimal_integer_literal)))))))))))))))
+      (elseif_clauses
+        (elseif_clause
+          (pipeline
+            (pipeline_chain
+              (command
+                (command_name))
+              (command
+                (command_name))))
+          (statement_block
+            (statement_list
+              (pipeline
+                (pipeline_chain
+                  (logical_expression
+                    (bitwise_expression
+                      (comparison_expression
+                        (additive_expression
+                          (multiplicative_expression
+                            (format_expression
+                              (range_expression
+                                (array_literal_expression
+                                  (unary_expression
+                                    (integer_literal
+                                      (decimal_integer_literal))))))))))))))))))))
+
+====================
+parenthesized-pipe-lf-2-0-blank
+:error
+====================
+
+if ($false) { 0 } elseif (Get-Date
+
+| Write-Output) { 1 }
+
+---
+
+
+
+====================
+parenthesized-pipe-lf-3-0-adjacent
+====================
+
+while (Get-Date
+| Write-Output) { break }
+
+---
+
+(program
+  (statement_list
+    (while_statement
+      (while_condition
+        (pipeline
+          (pipeline_chain
+            (command
+              (command_name))
+            (command
+              (command_name)))))
+      (statement_block
+        (statement_list
+          (flow_control_statement))))))
+
+====================
+parenthesized-pipe-lf-3-0-blank
+:error
+====================
+
+while (Get-Date
+
+| Write-Output) { break }
+
+---
+
+
+
+====================
+parenthesized-pipe-lf-4-0-adjacent
+====================
+
+do { 1 } until (Get-Date
+| Write-Output)
+
+---
+
+(program
+  (statement_list
+    (do_statement
+      (statement_block
+        (statement_list
+          (pipeline
+            (pipeline_chain
+              (logical_expression
+                (bitwise_expression
+                  (comparison_expression
+                    (additive_expression
+                      (multiplicative_expression
+                        (format_expression
+                          (range_expression
+                            (array_literal_expression
+                              (unary_expression
+                                (integer_literal
+                                  (decimal_integer_literal)))))))))))))))
+      (while_condition
+        (pipeline
+          (pipeline_chain
+            (command
+              (command_name))
+            (command
+              (command_name))))))))
+
+====================
+parenthesized-pipe-lf-4-0-blank
+:error
+====================
+
+do { 1 } until (Get-Date
+
+| Write-Output)
+
+---
+
+
+
+====================
+parenthesized-pipe-lf-5-0-adjacent
+====================
+
+foreach ($item in Get-Date
+| Write-Output) { $item }
+
+---
+
+(program
+  (statement_list
+    (foreach_statement
+      (variable)
+      (pipeline
+        (pipeline_chain
+          (command
+            (command_name))
+          (command
+            (command_name))))
+      (statement_block
+        (statement_list
+          (pipeline
+            (pipeline_chain
+              (logical_expression
+                (bitwise_expression
+                  (comparison_expression
+                    (additive_expression
+                      (multiplicative_expression
+                        (format_expression
+                          (range_expression
+                            (array_literal_expression
+                              (unary_expression
+                                (variable)))))))))))))))))
+
+====================
+parenthesized-pipe-lf-5-0-blank
+:error
+====================
+
+foreach ($item in Get-Date
+
+| Write-Output) { $item }
+
+---
+
+
+
+====================
+parenthesized-pipe-lf-6-0-adjacent
+====================
+
+switch (Get-Date
+| Write-Output) { default { 1 } }
+
+---
+
+(program
+  (statement_list
+    (switch_statement
+      (switch_condition
+        (pipeline
+          (pipeline_chain
+            (command
+              (command_name))
+            (command
+              (command_name)))))
+      (switch_body
+        (switch_clauses
+          (switch_clause
+            (switch_clause_condition)
+            (statement_block
+              (statement_list
+                (pipeline
+                  (pipeline_chain
+                    (logical_expression
+                      (bitwise_expression
+                        (comparison_expression
+                          (additive_expression
+                            (multiplicative_expression
+                              (format_expression
+                                (range_expression
+                                  (array_literal_expression
+                                    (unary_expression
+                                      (integer_literal
+                                        (decimal_integer_literal)))))))))))))))))))))
+
+====================
+parenthesized-pipe-lf-6-0-blank
+:error
+====================
+
+switch (Get-Date
+
+| Write-Output) { default { 1 } }
+
+---
+
+
+
+====================
+parenthesized-pipe-lf-7-0-adjacent
+====================
+
+for (Get-Date
+| Write-Output;;) { break }
+
+---
+
+(program
+  (statement_list
+    (for_statement
+      (for_initializer
+        (pipeline
+          (pipeline_chain
+            (command
+              (command_name))
+            (command
+              (command_name)))))
+      (statement_block
+        (statement_list
+          (flow_control_statement))))))
+
+====================
+parenthesized-pipe-lf-7-0-blank
+:error
+====================
+
+for (Get-Date
+
+| Write-Output;;) { break }
+
+---
