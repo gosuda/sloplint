@@ -2,14 +2,14 @@ diff --git a/bindings/rust/build.rs b/bindings/rust/build.rs
 index cbc9120..0e671e1 100644
 --- a/bindings/rust/build.rs
 +++ b/bindings/rust/build.rs
-@@ -1,19 +1,50 @@
+@@ -1,5 +1,6 @@
  fn main() {
      let src_dir = std::path::Path::new("src");
 +    let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
  
      let mut c_config = cc::Build::new();
      c_config.std("c11").include(src_dir);
- 
+@@ -7,9 +8,39 @@ fn main() {
      #[cfg(target_env = "msvc")]
      c_config.flag("-utf-8");
  
@@ -50,22 +50,11 @@ index cbc9120..0e671e1 100644
  
      let scanner_path = src_dir.join("scanner.c");
      c_config.file(&scanner_path);
-     println!("cargo:rerun-if-changed={}", scanner_path.to_str().unwrap());
- 
-     c_config.compile("tree-sitter-lean");
- }
 diff --git a/grammar.js b/grammar.js
-index b093699..66cd893 100644
+index 31f12ce..ae99f83 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -61,24 +61,43 @@ export default grammar({
-     $.line_comment,
-     $.block_comment,
-     $.doc_comment,
-   ],
- 
-   word: $ => $._plain_ident,
- 
+@@ -68,10 +68,29 @@ export default grammar({
    conflicts: $ => [
      /* `public`/`meta` can start an `import`, a `public meta section`
         marker, or a Lean 4 visibility-prefixed declaration. */
@@ -97,21 +86,7 @@ index b093699..66cd893 100644
      /* `{ ident <ident> … }` could be a function-style struct_field
         (`method args := body`) or the singleton-set `{ app args }`. We
         always prefer the struct_field when followed by `:=`. */
-     [$.struct_field, $._term_atom],
-     /* `{ a, b ... }` could be a set literal (`elem` list) or the
-        multi-source struct update `{ src₁, src₂ with … }`. `with`
-        one token after disambiguates. */
-     [$.struct_lit],
-   ],
- 
-@@ -92,62 +111,103 @@ export default grammar({
-     ),
- 
-     moduleTk: _ => 'module',
-     prelude:  _ => 'prelude',
- 
-     import: $ => seq(
-       optional($.public),
+@@ -99,7 +118,7 @@ export default grammar({
        optional($.meta),
        'import',
        optional($.all),
@@ -120,15 +95,7 @@ index b093699..66cd893 100644
      ),
  
      public: _ => 'public',
-     meta:   _ => 'meta',
-     all:    _ => 'all',
- 
-     /* ===== commands ====================================================== */
- 
-     _command: $ => choice(
-       $.check,
-       $.eval,
-       $.print,
+@@ -115,7 +134,6 @@ export default grammar({
        $.reduce,
        $.namespace,
        $.section,
@@ -136,18 +103,7 @@ index b093699..66cd893 100644
        $.end,
        $.variable,
        $.universe,
-       $.open,
-       $.export,
-       $.attribute_cmd,
-       $.initialize,
-       $.set_option,
-       $.deriving_cmd,
-       $.assert_cmd,
-       $.decl_doc_cmd,
-       $.grind_pattern_cmd,
-       $.alias_cmd,
-       $.notation_decl_cmd,
-       $.syntax_cmd,
+@@ -134,13 +152,55 @@ export default grammar({
        $.macro_cmd,
        $.macro_rules_cmd,
        $.elab_rules_cmd,
@@ -203,21 +159,7 @@ index b093699..66cd893 100644
      /* `mutual … end` groups mutually-recursive declarations. Like
         `namespace`/`section`/`end`, it is modeled as a flat marker
         rather than a nesting block: the inner declarations parse as
-        siblings and the closing `end` is the ordinary `end` command.
-        Pairing is left to tooling, consistent with the rest of the
-        grammar (and avoids an `end`-disambiguation conflict). */
-     mutual: _ => 'mutual',
- 
-     /* `declare_syntax_cat name (behavior := both)?` — introduces a new
-        syntax category for the parser DSL. */
-@@ -182,27 +242,30 @@ export default grammar({
-     unif_hint_cmd: $ => prec.right(seq(
-       'unif_hint',
-       optional(field('name', $.identifier)),
-       repeat($._bracketed_binder),
-       'where',
-       repeat($._term),
-     )),
+@@ -189,13 +249,16 @@ export default grammar({
  
      /* `assert_not_exists Name`, `assert_not_imported Name`, etc. —
         Lean's lightweight assertion commands taking a single ident. */
@@ -236,21 +178,7 @@ index b093699..66cd893 100644
      ),
  
      /* Lean/Mathlib commands that attach a doc/spelling/grind note or
-        a `:=`-bodied cast/coercion to an existing declaration. Takes
-        an identifier or string literal, optional atomic args
-        (`initialize_simps_projections Foo (a, b)`), and any number of
-        `=> e` / `for e` / `in e` / `:= e` clauses
-        (`recommended_spelling "iff" for "↔" in [Iff, …]`). */
-     decl_doc_cmd: $ => prec.right(seq(
-       choice(
-@@ -275,20 +338,47 @@ export default grammar({
-        Body terms are usually `do …` blocks or quotations. */
-     elab_rules_cmd: $ => seq(
-       optional(choice('scoped', 'local')),
-       'elab_rules',
-       optional($._named_attr),
-       ':',
-       field('category', $.identifier),
+@@ -282,6 +345,33 @@ export default grammar({
        repeat1($.match_alt),
      ),
  
@@ -284,21 +212,7 @@ index b093699..66cd893 100644
      /* `macro [prec]? [(name := X)]? "kw" arg* : category => body` —
         coarse parse of Lean's macro-declaration command. The macro's
         body after `=>` is a single term (typically a `(…)` quotation).
-        Argument list before `:` accepts any term-shaped tokens. */
-     macro_cmd: $ => prec.right(seq(
-       optional($.attributes),
-       optional(choice('scoped', 'local')),
-       'macro',
-       optional(seq(
-         token.immediate(':'),
-@@ -398,75 +488,143 @@ export default grammar({
-           sep1($._term, choice(';', $._newline)),
-           $._dedent,
-         ),
-       ),
-     )),
- 
-     /* `public section` / `public meta section` — Lean 4 module-system
+@@ -405,61 +495,129 @@ export default grammar({
         marker; everything below is exported. It has no body and no
         matching `end`. Optionally preceded by attributes
         (e.g. `@[expose] public section`). */
@@ -448,21 +362,7 @@ index b093699..66cd893 100644
      ),
  
      export: $ => seq(
-       'export',
-       field('namespace', $.identifier),
-       '(',
-       repeat1(field('only', $.identifier)),
-       ')',
-     ),
- 
-@@ -503,20 +661,22 @@ export default grammar({
-       'private',
-       'protected',
-       'unsafe',
-       'scoped',
-       'local',
-     )),
- 
+@@ -510,6 +668,8 @@ export default grammar({
      attributes: $ => seq('@[', sep1($._attr_instance, ','), ']'),
      _attr_instance: $ => seq(
        optional(choice('scoped', 'local')),
@@ -471,21 +371,7 @@ index b093699..66cd893 100644
        $._attribute,
      ),
      /* Attributes can carry arguments (`@[simp 1000]`,
-        `@[combinator_parenthesizer foo, expose]`, `@[simps -isSimp]`,
-        `@[grind =]`, `@[grind →]`). Args restricted to atoms,
-        unary-prefixed atoms, or bare directive tokens to keep state
-        count bounded. */
-     _attribute: $ => seq(
-       field('name', $.identifier),
-       repeat(field('arg', choice(
-@@ -816,21 +976,23 @@ export default grammar({
-     /* `fun (x, y) => …` — destructured tuple as a single binder.
-        Distinct from `explicit_binder` (which has `:`). */
-     tuple_binder: $ => seq('(',
-       $._binder_ident, ',', sep1($._binder_ident, ','),
-       ')'),
- 
-     /* `fun ⟨x, y⟩ => …` — anonymous-constructor destructuring binder.
+@@ -823,7 +983,9 @@ export default grammar({
         Supports nested forms like `⟨x, ⟨y, z⟩⟩`. */
      anon_ctor_binder: $ => seq(
        '⟨',
@@ -496,21 +382,7 @@ index b093699..66cd893 100644
        '⟩',
      ),
  
-     _binder_ident: $ => choice($.identifier, $.hole),
- 
-     _bracketed_binder: $ => choice(
-       $.explicit_binder,
-       $.implicit_binder,
-       $.strict_implicit_binder,
-       $.instance_binder,
-@@ -897,22 +1059,27 @@ export default grammar({
-       $.suffices,
-       $.by_cases,
-       $.show,
-       $.if_then_else,
-       $.forall,
-       $.exists,
-       $.sigma,
+@@ -904,8 +1066,13 @@ export default grammar({
        $.big_op_binder,
        $.by,
        $.do_block,
@@ -524,21 +396,7 @@ index b093699..66cd893 100644
      ),
  
      _op_term: $ => choice(
-       $._term_atom,
-       $.app,
-       $.proj,
-       $.subscript,
-       $.postfix_op,
-       $.binary_op,
-       $.unary_op,
-@@ -1198,26 +1365,49 @@ export default grammar({
-         ':=',
-         field('value', $._term),
-       ),
-       /* Field-name punning: `{ x, y }` abbreviates `{ x := x, y := y
-          }`. No binders on this branch — a bare name is a complete
-          field, so `x y := e` stays unambiguous (binders of `x`). */
-       field('name', $.identifier),
+@@ -1205,12 +1372,35 @@ export default grammar({
      ),
  
      /* `f x` — left-associative application. The argument can be an
@@ -576,21 +434,7 @@ index b093699..66cd893 100644
      )),
  
      proj: $ => prec.left(PREC.proj, seq(
-       field('term', $._op_term),
-       token.immediate('.'),
-       field('field', choice($.identifier, $.num_lit)),
-     )),
- 
-     /* `Foo.{u₁, u₂}` or `NonemptyType.{0}` — explicit universe-level
-        application. The `.{` is one immediate token so it wins the
-@@ -1451,35 +1641,37 @@ export default grammar({
-     /* `∀ x, body`, `∀ x : T, body`, `∀ x ∈ s, body` (sugar) — and
-        Mathlib's `∀ b ≠ ⊥, body` / `∀ c ⊆ S, body` predicate-tail
-        sugar. */
-     forall: $ => prec.right(seq(
-       /* `Π` is a deprecated Mathlib synonym for `∀` for product types. */
-       choice('∀', 'forall', 'Π'),
-       $._binders,
+@@ -1458,7 +1648,8 @@ export default grammar({
        optional(choice(
          $._type_spec,
          seq(
@@ -600,13 +444,7 @@ index b093699..66cd893 100644
            field('bound', $._op_term),
          ),
        )),
-       ',',
-       field('body', $._term),
-     )),
- 
-     exists: $ => prec.right(seq(
-       choice('∃', 'exists'),
-       $._binders,
+@@ -1472,7 +1663,8 @@ export default grammar({
        optional(choice(
          $._type_spec,
          seq(
@@ -616,21 +454,7 @@ index b093699..66cd893 100644
            field('bound', $._op_term),
          ),
        )),
-       ',',
-       field('body', $._term),
-     )),
- 
-     /* `Σ x, T x` / `Σ' x, T x` — sigma / non-dependent-pair type binder. */
-     sigma: $ => prec.right(seq(
-       choice('Σ', "Σ'"),
-@@ -1534,25 +1726,31 @@ export default grammar({
-       optional($._binders),
-       optional($._type_spec),
-       choice(':=', '←', '<-'),
-       field('value', $._term),
-       optional(seq(';', field('body', $._term))),
-     )),
- 
+@@ -1541,11 +1733,17 @@ export default grammar({
      have: $ => prec.right(seq(
        /* `haveI` is Mathlib's "have instance" variant. */
        choice('have', 'haveI'),
@@ -652,21 +476,7 @@ index b093699..66cd893 100644
        optional(seq(';', field('body', $._term))),
      )),
  
-     /* `suffices g : T from proof` / `suffices g : T by tac` — a
-        tactic-language reframing. The `from`/`by` proves the new
-        suffices-goal, then the original goal is discharged via `g`. */
-     suffices: $ => prec.right(seq(
-       'suffices',
-       field('name', $._binder_ident),
-       $._type_spec,
-@@ -1624,51 +1822,136 @@ export default grammar({
-      * The grammar accepts `let mut`, `←`/`<-` (bind), and `for`/`while`
-      * /`return` etc. by virtue of those being valid Lean syntax that
-      * the term-tier rules already cover (via `let`, the `for` keyword
-      * inside ranges, etc.). Coverage is approximate but far cheaper.
-      */
-     by: $ => seq('by', $._block_body),
-     do_block: $ => seq('do', $._block_body),
+@@ -1631,16 +1829,73 @@ export default grammar({
  
      _block_body: $ => choice(
        /* Inline `by tac; tac` and `do x; y` — multiple tactics
@@ -744,9 +554,7 @@ index b093699..66cd893 100644
      /* `x := v` mutation, valid only inside a do-block. */
      block_assign: $ => seq(
        field('name', $.identifier),
-       ':=',
-       field('value', $._term),
-     ),
+@@ -1650,18 +1905,46 @@ export default grammar({
  
      match: $ => prec.right(seq(
        'match',
@@ -795,21 +603,7 @@ index b093699..66cd893 100644
      /* `case name args => body` — Lean tactic-language case selection
         (analogous to a `match_alt` but goal-keyed). Stand-alone tactic
         statement; commonly chained as sibling at the same indent. */
-     tactic_case: $ => prec.right(seq(
-       'case',
-       field('name', $.identifier),
-       repeat(field('arg', $._binder_ident)),
-       '=>',
-       field('body', $._term),
-     )),
-@@ -1748,13 +2031,23 @@ export default grammar({
-     /* Identifier is split into two paths:
-      *   `_plain_ident` — internal regex for the ASCII single-component
-      *     case. This is the `word` token, so tree-sitter performs
-      *     keyword extraction against grammar literals automatically.
-      *   `_scanned_ident` — external token emitted by the scanner only
-      *     when the identifier needs richer handling: dotted parts,
-      *     `«quoted»` escapes, or non-ASCII characters.
+@@ -1758,6 +2041,16 @@ export default grammar({
       * The scanner returns false (rewind to start) for the plain case,
       * letting internal lexing handle word/keyword arbitration. */
      identifier: $ => choice($._plain_ident, $._scanned_ident),
@@ -826,18 +620,23 @@ index b093699..66cd893 100644
      _plain_ident: _ => /[a-zA-Z_][a-zA-Z_0-9'!?]*/,
    },
  });
+diff --git a/queries/highlights.scm b/queries/highlights.scm
+index 09aa103..852c8bd 100644
+--- a/queries/highlights.scm
++++ b/queries/highlights.scm
+@@ -106,7 +106,6 @@
+ (meta)      @keyword.import
+ (all)       @keyword.import
+ "import"    @keyword.import
+-(public_section) @keyword.import
+ 
+ [
+   "namespace"
 diff --git a/src/scanner.c b/src/scanner.c
 index 1eb7f4a..b4f7a3b 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
-@@ -61,29 +61,47 @@ static bool is_letter_like(int32_t c) {
-       || (0x0100  <= c && c <= 0x017f);
- }
- 
- static bool is_subscript_alnum(int32_t c) {
-   return (0x2080 <= c && c <= 0x2089)
-       || (0x2090 <= c && c <= 0x209c)
-       || (0x1d62 <= c && c <= 0x1d6a)
+@@ -68,6 +68,17 @@ static bool is_subscript_alnum(int32_t c) {
        || c == 0x2c7c;
  }
  
@@ -855,8 +654,7 @@ index 1eb7f4a..b4f7a3b 100644
  static bool is_id_first(int32_t c) {
    return is_alpha_ascii(c) || c == '_' || is_letter_like(c);
  }
- 
- static bool is_id_rest(int32_t c) {
+@@ -76,7 +87,14 @@ static bool is_id_rest(int32_t c) {
    return is_alpha_ascii(c)
        || is_digit_ascii(c)
        || c == '_' || c == '\'' || c == '!' || c == '?'
@@ -872,21 +670,7 @@ index 1eb7f4a..b4f7a3b 100644
  }
  
  /*
-  * Indent stack: each entry is the column (in columns, not bytes) of an
-  * open tactic/do block. Always contains at least one entry — the base
-  * (0). Tokens push and pop based on observed line indentation.
-  */
- struct Scanner {
-   Array(uint16_t) indents;
- };
-@@ -242,20 +260,21 @@ static bool scan_block_or_doc_comment(TSLexer *lexer,
-   } else if (lexer->lookahead == '!' && valid_symbols[MODULE_DOC_COMMENT]) {
-     advance(lexer);
-     kind = MODULE_DOC_COMMENT;
-   } else if (valid_symbols[BLOCK_COMMENT]) {
-     kind = BLOCK_COMMENT;
-   } else {
-     return false;
+@@ -249,6 +267,7 @@ static bool scan_block_or_doc_comment(TSLexer *lexer,
    }
  
    if (!scan_block_comment_body(lexer)) return false;
@@ -894,21 +678,7 @@ index 1eb7f4a..b4f7a3b 100644
    lexer->result_symbol = kind;
    return true;
  }
- 
- /* ---------- raw strings -------------------------------------------------- */
- 
- /*
-  * Recognize r"…", r#"…"#, r##"…"##, … with matching `#` counts. The
-  * leading `r` is assumed already consumed by the dispatcher.
-  */
-@@ -271,20 +290,21 @@ static bool scan_raw_string_after_r(TSLexer *lexer) {
-   for (;;) {
-     if (lexer->eof(lexer)) return false;
-     if (lexer->lookahead == '"') {
-       advance(lexer);
-       unsigned seen = 0;
-       while (seen < hashes && lexer->lookahead == '#') {
-         advance(lexer);
+@@ -278,6 +297,7 @@ static bool scan_raw_string_after_r(TSLexer *lexer) {
          seen++;
        }
        if (seen == hashes) {
@@ -916,21 +686,7 @@ index 1eb7f4a..b4f7a3b 100644
          lexer->result_symbol = RAW_STRING_LITERAL;
          return true;
        }
-     } else {
-       advance(lexer);
-     }
-   }
- }
- 
- /* ---------- layout (indent / dedent / newline) -------------------------- */
-@@ -296,37 +316,48 @@ static bool scan_raw_string_after_r(TSLexer *lexer) {
-  *
-  *   indent > top  → push, emit INDENT
-  *   indent < top  → pop one, emit DEDENT (caller will re-invoke us if
-  *                   more pops are needed)
-  *   indent == top → emit NEWLINE
-  *
-  * Lines that are entirely blank or contain only a comment don't
+@@ -303,14 +323,25 @@ static bool scan_raw_string_after_r(TSLexer *lexer) {
   * participate — they're skipped, and we use the indent of the next
   * real content line.
   */
@@ -959,8 +715,7 @@ index 1eb7f4a..b4f7a3b 100644
    /* Skip trailing spaces/tabs on the current line; we only care about
       layout once we reach a newline. */
    while (lexer->lookahead == ' ' || lexer->lookahead == '\t'
-       || lexer->lookahead == '\r') {
-     skip(lexer);
+@@ -319,7 +350,7 @@ static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
    }
  
    /* If we're not at a newline (or EOF), no layout token applies. */
@@ -969,21 +724,7 @@ index 1eb7f4a..b4f7a3b 100644
  
    uint32_t indent = 0;
    bool saw_newline = false;
-   for (;;) {
-     if (lexer->lookahead == '\n') {
-       indent = 0;
-       saw_newline = true;
-       skip(lexer);
-     } else if (lexer->lookahead == ' ') {
-       indent++;
-@@ -334,73 +365,98 @@ static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
-     } else if (lexer->lookahead == '\t') {
-       indent += 8;
-       skip(lexer);
-     } else if (lexer->lookahead == '\r') {
-       skip(lexer);
-     } else if (lexer->eof(lexer)) {
-       /* EOF closes every open block. */
+@@ -341,14 +372,14 @@ static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
        if (valid_symbols[DEDENT] && scanner->indents.size > 1) {
          array_pop(&scanner->indents);
          lexer->result_symbol = DEDENT;
@@ -1001,9 +742,7 @@ index 1eb7f4a..b4f7a3b 100644
  
    uint16_t top = scanner->indents.size > 0
      ? *array_back(&scanner->indents)
-     : 0;
- 
-   /* `|` always continues the surrounding rule (match alt, ctor alt,
+@@ -358,30 +389,53 @@ static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
       pipe-operator) — never terminates a layout block. Suppress
       NEWLINE/DEDENT at the start of a `|`-line so the parser stays
       inside the match/inductive/etc. */
@@ -1063,11 +802,7 @@ index 1eb7f4a..b4f7a3b 100644
  }
  
  /* ---------- dispatch ----------------------------------------------------- */
- 
- static bool scan(struct Scanner *scanner, TSLexer *lexer,
-                  const bool *valid_symbols) {
-   if (valid_symbols[ERROR_SENTINEL]) return false;
- 
+@@ -393,7 +447,9 @@ static bool scan(struct Scanner *scanner, TSLexer *lexer,
    /* Layout tokens have to be considered before the whitespace skip —
       they're triggered by newlines and leading-line indentation. */
    if (valid_symbols[INDENT] || valid_symbols[DEDENT] || valid_symbols[NEWLINE]) {
@@ -1078,25 +813,11 @@ index 1eb7f4a..b4f7a3b 100644
    }
  
    /* Skip plain whitespace so the rest of the scanner's view matches
-      the lexer's. */
-   while (lexer->lookahead == ' '
-       || lexer->lookahead == '\t'
-       || lexer->lookahead == '\r'
-       || lexer->lookahead == '\n') {
-     skip(lexer);
-   }
 diff --git a/test/corpus/comments.txt b/test/corpus/comments.txt
 index a99d365..82bc2ab 100644
 --- a/test/corpus/comments.txt
 +++ b/test/corpus/comments.txt
-@@ -2,21 +2,22 @@
- Line comment
- ==============
- 
- -- this is a comment
- import Foo
- 
- ---
+@@ -9,7 +9,8 @@ import Foo
  
  (module
    (line_comment)
@@ -1106,21 +827,7 @@ index a99d365..82bc2ab 100644
  
  ==============
  Multiple line comments
- ==============
- 
- -- first
- -- second
- -- third
- 
- ---
-@@ -30,21 +31,22 @@ Multiple line comments
- Block comment
- ==============
- 
- /- foo bar baz -/
- import Foo
- 
- ---
+@@ -37,7 +38,8 @@ import Foo
  
  (module
    (block_comment)
@@ -1130,21 +837,7 @@ index a99d365..82bc2ab 100644
  
  ==============
  Multiline block comment
- ==============
- 
- /-
- foo
- bar
- baz
- -/
-@@ -80,54 +82,58 @@ Deeply nested block comment
- Doc comment
- ==============
- 
- /-- This is a doc comment. -/
- import Foo
- 
- ---
+@@ -87,7 +89,8 @@ import Foo
  
  (module
    (doc_comment)
@@ -1154,13 +847,7 @@ index a99d365..82bc2ab 100644
  
  ==============
  Module doc comment
- ==============
- 
- /-! Top of file documentation. -/
- 
- import Foo
- 
- ---
+@@ -101,7 +104,8 @@ import Foo
  
  (module
    (module_doc_comment)
@@ -1170,15 +857,7 @@ index a99d365..82bc2ab 100644
  
  ==============
  Doc comment with block content
- ==============
- 
- /--
-   This doc comment has
-   many lines.
- -/
- import Foo
- 
- ---
+@@ -117,7 +121,8 @@ import Foo
  
  (module
    (doc_comment)
@@ -1188,11 +867,7 @@ index a99d365..82bc2ab 100644
  
  ==============
  Module doc only valid at top
- ==============
- 
- import Foo
- /-! Not a module doc -/
- 
+@@ -129,5 +134,6 @@ import Foo
  ---
  
  (module
@@ -1204,14 +879,7 @@ diff --git a/test/corpus/declarations.txt b/test/corpus/declarations.txt
 index 74ca71b..7de8b8d 100644
 --- a/test/corpus/declarations.txt
 +++ b/test/corpus/declarations.txt
-@@ -397,14 +397,18 @@ Interactive commands
- ==============
- 
- #check x
- #eval foo
- #print bar
- #reduce baz
- 
+@@ -404,7 +404,11 @@ Interactive commands
  ---
  
  (module
@@ -1231,14 +899,7 @@ diff --git a/test/corpus/module.txt b/test/corpus/module.txt
 index d49ea36..1435fed 100644
 --- a/test/corpus/module.txt
 +++ b/test/corpus/module.txt
-@@ -58,23 +58,26 @@ import Foo.Bar.Baz
- Multiple imports
- ==============
- 
- import Foo
- import Bar.Baz
- import Quux
- 
+@@ -65,9 +65,12 @@ import Quux
  ---
  
  (module
@@ -1254,21 +915,7 @@ index d49ea36..1435fed 100644
  
  ==============
  Public import
- ==============
- 
- public import Foo
- 
- ---
- 
- (module
-@@ -102,10 +105,28 @@ Public meta import all
- public meta import all Foo
- 
- ---
- 
- (module
-   (import
-     (public)
+@@ -109,3 +112,21 @@ public meta import all Foo
      (meta)
      (all)
      name: (identifier)))
@@ -1655,14 +1302,7 @@ diff --git a/test/corpus/syntax-extras.txt b/test/corpus/syntax-extras.txt
 index 0f49d67..c8a9a54 100644
 --- a/test/corpus/syntax-extras.txt
 +++ b/test/corpus/syntax-extras.txt
-@@ -53,21 +53,22 @@ Rest pattern
- #check match x with | .foo .. => 0
- 
- ---
- 
- (module
-   (check
-     term: (match
+@@ -60,7 +60,8 @@ Rest pattern
        scrutinee: (identifier)
        (match_alt
          pattern: (app
@@ -1672,21 +1312,7 @@ index 0f49d67..c8a9a54 100644
            arg: (rest_pat))
          body: (num_lit)))))
  
- ==============
- If with named hypothesis
- ==============
- 
- #check if h : a = b then x else y
- 
- ---
-@@ -149,60 +150,63 @@ App with fun arg
- 
- ---
- 
- (module
-   (check
-     term: (app
-       fn: (app
+@@ -156,7 +157,8 @@ App with fun arg
          fn: (identifier)
          arg: (paren
            (fun
@@ -1696,18 +1322,7 @@ index 0f49d67..c8a9a54 100644
              body: (binary_op
                lhs: (identifier)
                rhs: (num_lit)))))
-       arg: (identifier))))
- 
- ==============
- App with bare fun arg
- ==============
- 
- #check List.map fun x => x + 1
- 
- ---
- 
- (module
-   (check
+@@ -175,7 +177,8 @@ App with bare fun arg
      term: (app
        fn: (identifier)
        arg: (fun
@@ -1717,15 +1332,7 @@ index 0f49d67..c8a9a54 100644
          body: (binary_op
            lhs: (identifier)
            rhs: (num_lit))))))
- 
- ==============
- App with do arg
- ==============
- 
- #check runIO do return 0
- 
- ---
- 
+@@ -191,11 +194,12 @@ App with do arg
  (module
    (check
      term: (app
@@ -1742,21 +1349,7 @@ index 0f49d67..c8a9a54 100644
  
  ==============
  Anonymous structure literal
- ==============
- 
- #check { x := 1, y := 2 }
- 
- ---
- 
- (module
-@@ -348,21 +352,21 @@ def andthen : Parser where
- Public section
- ==============
- 
- public section
- 
- def x := 1
- 
+@@ -355,7 +359,7 @@ def x := 1
  ---
  
  (module
@@ -1765,21 +1358,7 @@ index 0f49d67..c8a9a54 100644
      (public))
    (declaration
      (def
-       name: (identifier)
-       body: (num_lit))))
- 
- ==============
- Set option
- ==============
- 
-@@ -577,22 +581,24 @@ Destructured tuple binder
- ==============
- Lowercase true/false
- ==============
- 
- #check true
- #check false
- 
+@@ -584,8 +588,10 @@ Lowercase true/false
  ---
  
  (module
@@ -1792,21 +1371,7 @@ index 0f49d67..c8a9a54 100644
  
  ==============
  Syntax quotation
- ==============
- 
- #check `(x + 1)
- 
- ---
- 
- (module
-@@ -640,21 +646,21 @@ Match-style fun
- 
- ==============
- Public section with attribute
- ==============
- 
- @[expose] public section
- 
+@@ -647,7 +653,7 @@ Public section with attribute
  ---
  
  (module
@@ -1815,21 +1380,7 @@ index 0f49d67..c8a9a54 100644
      (attributes
        name: (identifier))
      (public)))
- 
- ==============
- Vsub operator
- ==============
- 
- #check p -ᵥ q
- 
-@@ -981,21 +987,22 @@ assert_not_exists Finset
- assert_not_imported Mathlib.Data.Foo
- #exit
- 
- ---
- 
- (module
-   (assert_cmd
+@@ -988,7 +994,8 @@ assert_not_imported Mathlib.Data.Foo
      target: (identifier))
    (assert_cmd
      target: (identifier))
@@ -1839,21 +1390,7 @@ index 0f49d67..c8a9a54 100644
  
  ==============
  Instance-implicit field
- ==============
- 
- class Foo where
-   [bar : Bar]
-   baz : Nat
- 
- ---
-@@ -1103,35 +1110,33 @@ example : Nat := by exact 0; rfl
- ==============
- Postfix operator opposite
- ==============
- 
- #check Aᵒᵖ
- 
- ---
+@@ -1110,8 +1117,7 @@ Postfix operator opposite
  
  (module
    (check
@@ -1863,11 +1400,7 @@ index 0f49d67..c8a9a54 100644
  
  ==============
  Postfix operator inverse
- ==============
- 
- #check x⁻¹
- 
- ---
+@@ -1123,8 +1129,7 @@ Postfix operator inverse
  
  (module
    (check
@@ -1877,21 +1410,7 @@ index 0f49d67..c8a9a54 100644
  
  ==============
  Cardinality prefix
- ==============
- 
- #check #X
- 
- ---
- 
- (module
-@@ -1719,23 +1724,23 @@ Set cross product
- ==============
- Mathematical double-struck identifier
- ==============
- 
- #check 𝟙 X
- 
- ---
+@@ -1726,9 +1731,9 @@ Mathematical double-struck identifier
  
  (module
    (check
@@ -1904,21 +1423,7 @@ index 0f49d67..c8a9a54 100644
  
  ==============
  Add decl doc command
- ==============
- 
- add_decl_doc extrinsicFix
- 
- ---
- 
- (module
-@@ -2034,21 +2039,22 @@ Explicit args mode on fun
- ==============
- 
- #check @fun x => x
- 
- ---
- 
- (module
+@@ -2041,7 +2046,8 @@ Explicit args mode on fun
    (check
      term: (explicit_mode
        term: (fun
@@ -1928,21 +1433,7 @@ index 0f49d67..c8a9a54 100644
          body: (identifier)))))
  
  ==============
- Field in parens
- ==============
- 
- structure Foo where
-   of ::
-   (carrier : Type*)
- 
-@@ -2527,21 +2533,20 @@ structure Task (α : Type u) where
-           type: (type_const
-             (identifier))))
-       (ctor
-         name: (identifier))
-       (field
-         name: (identifier)
-         type: (identifier))
+@@ -2534,7 +2540,6 @@ structure Task (α : Type u) where
        (identifier)
        (identifier))))
  
@@ -1950,21 +1441,7 @@ index 0f49d67..c8a9a54 100644
  ==============
  Let rec with binders
  ==============
- 
- #check let rec go (j : Nat) (h : Bool) : Nat := j; go 0 true
- 
- ---
- 
- (module
-   (check
-@@ -2564,21 +2569,21 @@ Let rec with binders
- 
- ==============
- Public meta section
- ==============
- 
- public meta section
- 
+@@ -2571,7 +2576,7 @@ public meta section
  ---
  
  (module
@@ -1973,25 +1450,11 @@ index 0f49d67..c8a9a54 100644
      (public)
      (meta)))
  
- ==============
- m! string macro
- ==============
- 
- #check m!"hello {name}"
- 
- ---
 diff --git a/test/corpus/terms.txt b/test/corpus/terms.txt
 index 67f3811..913ae80 100644
 --- a/test/corpus/terms.txt
 +++ b/test/corpus/terms.txt
-@@ -659,22 +659,21 @@ Double angle bracket constructor
- ==============
- Positive-part postfix operator
- ==============
- 
- #check a⁺
- 
- ---
+@@ -666,8 +666,7 @@ Positive-part postfix operator
  
  (module
    (check
@@ -2001,10 +1464,3 @@ index 67f3811..913ae80 100644
  
  ==============
  Symmetric difference operator
- ==============
- 
- #check s ∆ t
- 
- ---
- 
- (module

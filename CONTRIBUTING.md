@@ -35,23 +35,30 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 ```
 
-CI runs Clippy, debug-profile tests, and release-binary self-lint on all six
-native release targets. It disables incremental compilation and keeps line-table
-debug information for backtraces; debug assertions and overflow checks remain
-enabled in tests. Local build profiles and the release profile are unchanged.
+Routine PR and merge-queue CI runs Clippy and the complete debug-profile suite
+on Depot Linux x64 and ARM64, followed by a release build and Linux self-lint.
+Weekly, manual and release-tag runs also execute the complete suites on macOS
+ARM64, macOS x64 through Rosetta, and Windows x64. Windows ARM64 receives
+cross-Clippy and a release cross-build; Depot has no native Windows ARM64 host,
+so that target has no runtime-test or release self-lint guarantee.
 
-CI caches registry and vendored grammar dependencies, excluding first-party
-builds. The cache is partitioned by runner, target, toolchain, compiler settings,
-manifests, lockfile, and vendored source content. The `crates -> ../target`
-workspace setting keeps `vendor/` outside the cache action's first-party cleanup
-scope. Vendor timestamps are normalized only in CI, after selecting a cache
-whose restore prefix includes the vendor content hash. Keep that hash in the
-restore prefix whenever changing the cache configuration, and keep the CI and
-release cache settings aligned. All build and test commands run on cache hits.
+CI disables incremental compilation and retains line-table backtraces.
+Debug assertions and overflow checks remain enabled; local and release
+profiles are unchanged.
 
-Tagged releases reuse the same checks with `skip-release-build: true`: the
-release workflow's build matrix compiles and self-lints each release binary once
-before packaging it. Publishing still requires both the CI and build jobs.
+Test CI caches registry and vendored grammar dependencies, excluding
+first-party builds. The cache is partitioned by ref, target, toolchain,
+compiler settings, manifests, root lockfile and vendored source content.
+The `crates -> ../target` workspace setting keeps `vendor/` outside the
+cache action's first-party cleanup scope. Explicit vendor and root-lockfile
+hashes remain in the restore prefix even when vendor timestamps are normalized.
+All build and test commands still run on cache hits.
+
+Release packaging deliberately restores no CI Rust cache because Depot's
+repository cache lacks GitHub's branch isolation. Tagged releases reuse CI
+with `skip-release-build: true`; the release matrix builds every artifact
+and self-lints the runnable targets. Publishing requires both CI and builds.
+Mac x64 execution uses Rosetta, and Windows ARM64 remains cross-build-only.
 
 CI runs `sloplint check crates --format agent --strictness standard --mode threshold --fail-on minor` (using the root `sloplint.toml`, which excludes test fixtures). Minor and higher findings fail CI. Lower rungs are reported without failing, so treat them as defects unless a reviewer accepts them. The self-lint gate is a contributor check, not a protected boundary. A pull request can change `sloplint.toml` (`exclude`, rule levels, custom rules) and the workflow itself. Reviewers must read changes to `sloplint.toml` and `.github/`:
 

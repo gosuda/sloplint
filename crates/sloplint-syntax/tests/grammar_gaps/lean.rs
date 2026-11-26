@@ -2,7 +2,7 @@
 //! raw-tree walk because a hidden MISSING recovery node sets `has_error`
 //! without producing a cursor-visible error position.
 //!
-//! The vendored grammar starts from upstream commit `0d28e5d`, with local
+//! The vendored grammar starts from upstream commit `fefc2ef`, with local
 //! fixes recorded in `vendor/tree-sitter-lean/sloplint-grammar.patch`.
 //! Each test pins a construct class so a re-vendor cannot silently drop it.
 //! There is no external Lean corpus in this repository, so the fixtures
@@ -460,6 +460,29 @@ fn custom_command_heads_parse_clean() {
         sexp.contains("(custom_command "),
         "custom command heads must parse, got {sexp}"
     );
+}
+
+#[test]
+fn string_gaps_parse_clean() {
+    let source = "def greeting : String := \"hello \\\n  world\"\ndef shout (n : Nat) : String := s!\"count \\\n    {n} done\"\ndef after : Nat := 0\n";
+    let analysis = run_clean("src/gaps.lean", source);
+    for want in ["greeting", "shout", "after"] {
+        assert!(
+            function_names(&analysis).contains(&want),
+            "{want} must surface as a function, got {:?}",
+            function_names(&analysis)
+        );
+    }
+    let sexp = parse_raw(source).root_node().to_sexp();
+    for shape in [
+        "(str_lit (escape_sequence))",
+        "(interpolated_str (escape_sequence) (interpolation ",
+    ] {
+        assert!(
+            sexp.contains(shape),
+            "a string gap must lex as an escape sequence, got {sexp}"
+        );
+    }
 }
 
 #[test]

@@ -1,14 +1,16 @@
 name: ci
 
 on:
-  push:
-    branches: [main]
   pull_request:
+  merge_group:
+    types: [checks_requested]
+  schedule:
+    - cron: "23 3 * * 1"
   workflow_dispatch:
   workflow_call:
     inputs:
       skip-release-build:
-        description: The caller builds and self-lints every release target.
+        description: The caller builds every target and self-lints runnable targets.
         type: boolean
         default: false
 
@@ -27,33 +29,6 @@ jobs:
   lint:
     runs-on: depot-ubuntu-24.04
     timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - run: cargo fmt --all --check
-
-  grammar-manifest:
-    runs-on: depot-ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - run: bash scripts/grammars.sh check
-
-  release-scripts:
-    runs-on: depot-ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - run: bash scripts/selftest-release-scripts.sh
-
-  deny:
-    runs-on: depot-ubuntu-24.04
-    timeout-minutes: 30
     env:
       CARGO_DENY_VERSION: 0.20.2
       CARGO_DENY_SHA256: 9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f
@@ -61,6 +36,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+        id: checkout
+      - name: Check formatting
+        run: cargo fmt --all --check
+      - name: Verify grammar manifest
+        run: bash scripts/grammars.sh check
+        if: ${{ !cancelled() && steps.checkout.outcome == 'success' }}
+      - name: Verify release scripts
+        run: bash scripts/selftest-release-scripts.sh
+        if: ${{ !cancelled() && steps.checkout.outcome == 'success' }}
       - name: Install cargo-deny
         run: |
           dir="cargo-deny-$CARGO_DENY_VERSION-x86_64-unknown-linux-musl"
@@ -70,30 +54,27 @@ jobs:
           printf '%s\n' "$CARGO_DENY_SHA256  $RUNNER_TEMP/$dir.tar.gz" | sha256sum --check --strict
           tar -xzf "$RUNNER_TEMP/$dir.tar.gz" -C "$RUNNER_TEMP" "$dir/cargo-deny"
           printf '%s\n' "$RUNNER_TEMP/$dir" >> "$GITHUB_PATH"
+        if: ${{ !cancelled() && steps.checkout.outcome == 'success' }}
+        id: deny
       - run: cargo deny check
 
+        if: ${{ !cancelled() && steps.deny.outcome == 'success' }}
   test:
-    runs-on: >-
-      ${{ matrix.os == 'ubuntu-24.04' && 'depot-ubuntu-24.04' ||
-          matrix.os == 'ubuntu-24.04-arm' && 'depot-ubuntu-24.04-arm' ||
-          matrix.os }}
-    timeout-minutes: 120
+    # Full proof on Linux: clippy, the whole suite, a release build per
+    # Linux target, and the single self-lint run.
+    runs-on: ${{ matrix.runs_on }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-24.04, target: x86_64-unknown-linux-gnu, require_fs_caps: "1" }
-          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu, require_fs_caps: "1" }
-          - { os: macos-26-intel, target: x86_64-apple-darwin }
-          - { os: macos-26, target: aarch64-apple-darwin }
-          - { os: windows-2025, target: x86_64-pc-windows-msvc }
-          - { os: windows-11-arm, target: aarch64-pc-windows-msvc }
+          - {runs_on: depot-ubuntu-24.04, target: x86_64-unknown-linux-gnu, require_fs_caps: "1"}
+          - {runs_on: depot-ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu, require_fs_caps: "1"}
     env:
       CARGO_INCREMENTAL: "0"
       # Keep assertion checks and useful backtraces without full debug symbols.
       CARGO_PROFILE_DEV_DEBUG: line-tables-only
       CARGO_PROFILE_TEST_DEBUG: line-tables-only
-      MACOSX_DEPLOYMENT_TARGET: "11.0"
       SLOPLINT_REQUIRE_FS_CAPS: ${{ matrix.require_fs_caps }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -103,14 +84,71 @@ jobs:
       - name: Preserve vendor dependency fingerprints
         id: vendor
         run: TZ=UTC find vendor -exec touch -t 200001010000 {} +
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: ${{ matrix.target }}-${{ github.ref }}-vendor-${{ hashFiles('vendor/**') }}-lock-${{ hashFiles('Cargo.lock') }}
+          workspaces: crates -> ../target
       - run: cargo clippy --workspace --all-targets --locked --target ${{ matrix.target }} -- -D warnings
       - run: cargo test --workspace --locked --no-fail-fast --target ${{ matrix.target }}
         if: ${{ !cancelled() && steps.vendor.outcome == 'success' }}
       - if: ${{ !inputs.skip-release-build }}
         run: cargo build --release --locked --target ${{ matrix.target }}
       - name: Self-lint with the release binary
-        if: ${{ !inputs.skip-release-build }}
+        if: ${{ !inputs.skip-release-build && matrix.target == 'x86_64-unknown-linux-gnu' }}
         run: |
           bin="target/${{ matrix.target }}/release/sloplint"
-          if [ "$RUNNER_OS" = Windows ]; then bin="$bin.exe"; fi
           "$bin" check crates --format agent --strictness standard --mode threshold --fail-on minor
+
+  test-native:
+    # Extended platform proof runs weekly, manually, and for release tags.
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ${{ matrix.runs_on }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runs_on: depot-macos-latest
+            target: x86_64-apple-darwin
+          - runs_on: depot-macos-latest
+            target: aarch64-apple-darwin
+          - runs_on: depot-windows-2025-4
+            target: x86_64-pc-windows-msvc
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_DEV_DEBUG: line-tables-only
+      CARGO_PROFILE_TEST_DEBUG: line-tables-only
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require Rosetta for macOS x64 execution
+        if: matrix.target == 'x86_64-apple-darwin'
+        run: arch -x86_64 /usr/bin/true
+      - name: Add target unless preinstalled
+        run: |
+          target='${{ matrix.target }}'
+          found=
+          for d in "$HOME"/.rustup/toolchains/*/lib/rustlib/"$target"; do
+            [ -d "$d" ] && found=1 && break
+          done
+          [ -n "$found" ] || rustup target add "$target"
+      - name: Preserve vendor dependency fingerprints
+        id: vendor
+        run: TZ=UTC find vendor -exec touch -t 200001010000 {} +
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: ${{ matrix.target }}-${{ github.ref }}-vendor-${{ hashFiles('vendor/**') }}-lock-${{ hashFiles('Cargo.lock') }}
+          workspaces: crates -> ../target
+      - name: Clippy for the target
+        run: cargo clippy --workspace --all-targets --locked --target ${{ matrix.target }} -- -D warnings
+      - name: Cross-check Windows ARM64
+        if: runner.os == 'Windows'
+        run: |
+          rustup target add aarch64-pc-windows-msvc
+          cargo clippy --workspace --all-targets --locked --target aarch64-pc-windows-msvc -- -D warnings
+      - name: Run the complete native target suite
+        if: ${{ !cancelled() && steps.vendor.outcome == 'success' }}
+        run: >-
+          cargo test --workspace --locked --no-fail-fast --target ${{ matrix.target }}
