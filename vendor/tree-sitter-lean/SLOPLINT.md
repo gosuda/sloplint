@@ -1,6 +1,6 @@
 # tree-sitter-lean, vendored for sloplint
 
-Date: 2026-11-24.
+Date: 2026-11-26.
 
 ## Origin
 
@@ -95,7 +95,8 @@ Date: 2026-11-24.
   `grammar.js`, `queries/` (`folds`, `highlights`, `indents`, `injections`,
   `locals`), `src/` (`grammar.json`, `node-types.json`, `parser.c.gz`,
   `scanner.c`, `tree_sitter/`), `bindings/rust/` (`build.rs`, `lib.rs`),
-  `test/corpus/` (upstream's 7 files plus `sloplint-commands.txt`),
+  `test/corpus/` (upstream's 7 files plus `sloplint-commands.txt` and
+  `sloplint-string-gaps.txt`),
   `tree-sitter.json`.
 - Files dropped: `binding.gyp`, `bindings/c/`, `bindings/node/`,
   `bindings/python/`, `CMakeLists.txt`, `Makefile`, `pyproject.toml`,
@@ -107,15 +108,18 @@ Date: 2026-11-24.
   with tree-sitter-cli 0.27.1 (`tree-sitter generate --abi 15`): the
   output carries `#define LANGUAGE_VERSION 15`, which the workspace
   runtime (`tree-sitter 0.27.2`) loads. Allow sufficient memory
-  for generation. The PR #36 regeneration reached 10.5 GiB resident
-  memory and spent substantial time paging under host memory pressure.
+  for generation. The 2026-11-26 reproduction used a 32 GiB Depot
+  Ubuntu 24.04 runner, peaked at 25,860,624 KiB resident memory, and
+  completed generation in 21 minutes 37.67 seconds without swapping.
+  The earlier 10.5 GiB observation did not bound the complete recipe.
 - `src/scanner.c` is upstream plus the sloplint delta: an external
   scanner for dotted and quoted identifiers, nested block/doc/module-doc
   comments, raw string literals with matched `#` counts, and the
   layout-sensitive `_indent`, `_dedent`, `_newline` tokens that delimit
   tactic and do-block bodies, extended with `mark_end`-guarded word
   peeks, replay-free multi-level dedents, widened identifier
-  characters, and token-end marks on completed block comments and raw
+  characters, string-only gaps with exactly one physical line break,
+  and token-end marks on completed block comments and raw
   strings so a same-line token after `by` keeps its full span
   (see the grammar patch). The indentation stack is the
   complete serialized scanner state.
@@ -127,9 +131,9 @@ Date: 2026-11-24.
 
 ## Size
 
-`src/parser.c`: 97,113,414 bytes, 2,571,816 lines. States: 18895
-(`STATE_COUNT`), 12150 large. Symbols: 647. Token count: 434. External
-tokens: 11 (`EXTERNAL_TOKEN_COUNT`). Fields: 57. ABI 15
+`src/parser.c`: 97,115,282 bytes, 2,571,893 lines. States: 18895
+(`STATE_COUNT`), 12150 large. Symbols: 648. Token count: 435. External
+tokens: 12 (`EXTERNAL_TOKEN_COUNT`). Fields: 57. ABI 15
 (`LANGUAGE_VERSION`). To keep the large generated diff out of Git,
 `src/parser.c` is ignored and `src/parser.c.gz`
 (~5.5 MB) is committed; `bindings/rust/build.rs` inflates it into
@@ -137,11 +141,29 @@ tokens: 11 (`EXTERNAL_TOKEN_COUNT`). Fields: 57. ABI 15
 
 ## Corpus results
 
-`tree-sitter test --debug-build` (CLI 0.27.1): 315 cases passed, including
-the new string-gap literal and the expected `ERROR` for a comma between
-tactics. With the same 315 corpus inputs, the previous vendor parser
-reported errors on 2 inputs, plain `fefc2ef` on 12, and this parser on 1
-(the expected tactic separator error).
+`tree-sitter test --debug-build` (CLI 0.27.1): all 323 cases pass. The
+string-gap regressions cover ordinary and interpolated strings, CRLF,
+invalid character-literal gaps, forbidden blank lines after a gap, and
+ordinary multiline string text.
+
+The [2026-11-26 Depot reproduction](https://github.com/gosuda/sloplint/actions/runs/45761114903)
+started from the exact upstream pin above, applied `sloplint-grammar.patch`,
+and byte-compared all 11 patched source inputs before generating the parser.
+Its temporary producer commit was
+`e90a73f92ec04bf37d2f3465b884cf13918a5a62`. The generated files were downloaded
+from artifact `15091111568` and verified against the run's source and output
+hashes before being committed here. The generator and corpus steps passed;
+the run's later Rust step stopped at an unrelated Alloy formatting failure
+before executing Rust tests.
+
+- Generator: tree-sitter CLI 0.27.1, ABI 15.
+- Generator archive SHA-256:
+  `d01042f94ba3d6827ddc9788e235f75d8366431be42bdf90ade534d960c98b7d`.
+- Artifact ZIP SHA-256:
+  `9bb2f7b1fd055bdcf49daf98b416afdb006f9e4c669010989e7508ac24c05288`.
+- Committed `src/parser.c.gz` SHA-256:
+  `c6a503fd51535258b83c0edff4acf5d4df6d523d79514fa08160c34cc8f54b68`.
+
 ## Scanner progress regression
 
 The scanner must either consume input or change serialized state whenever
