@@ -58,10 +58,12 @@ const docsDOMReader = {
         if (source.split(reader).length !== 2 || source.split(boundary).length !== 3)
           throw new Error("CodeMirror DOM reader line boundary changed");
         return {
-          contents: source.replace(reader, reader + "\n        this.contentDOM = view.contentDOM;").replaceAll(
-            boundary,
-            "tile ? tile.breakAfter && (cur.nextSibling || cur.parentNode != this.contentDOM) : isBlockElement(cur) && !isEmptyToEnd(cur, end)",
-          ),
+          contents: source
+            .replace(reader, reader + "\n        this.contentDOM = view.contentDOM;")
+            .replaceAll(
+              boundary,
+              "tile ? tile.breakAfter && (cur.nextSibling || cur.parentNode != this.contentDOM) : isBlockElement(cur) && !isEmptyToEnd(cur, end)",
+            ),
           loader: "js",
         };
       },

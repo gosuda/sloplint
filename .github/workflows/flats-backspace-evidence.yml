@@ -1,4 +1,4 @@
-name: Verify the DOM reader boundary repair on exact sources
+name: Verify the repository browser regression and editor build
 on:
   push:
     branches: [ci/flats-backspace-evidence-20261126-r13]
@@ -13,19 +13,13 @@ defaults:
 jobs:
   browser:
     runs-on: depot-ubuntu-24.04-8
-    timeout-minutes: 45
+    timeout-minutes: 100
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           path: proof
           persist-credentials: false
           sparse-checkout: ci-tools/flats-backspace
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          repository: gosuda/flats
-          ref: 72a25911d41dbe8d7e59d2e3694d4520a26e8e58
-          path: old
-          persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: gosuda/flats
@@ -55,17 +49,17 @@ jobs:
           set -euo pipefail
           npm install --prefix "$RUNNER_TEMP/flats-browser-tools" --ignore-scripts --no-audit --no-fund --save-exact playwright@1.65.1
           "$RUNNER_TEMP/flats-browser-tools/node_modules/.bin/playwright" install --with-deps chromium
-      - name: Run frozen native input controls before and after the build-input repair
-        run: uv run --no-project --python 3.15 proof/ci-tools/flats-backspace/verify.py
+      - name: Run the repository browser regression and affected development gates
+        run: uv run --no-project --python 3.15 proof/ci-tools/flats-backspace/final-verify.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: flats-backspace-${{ github.sha }}
           path: |
-            ${{ runner.temp }}/flats-backspace-evidence/results.json
-            ${{ runner.temp }}/flats-backspace-evidence/*/browser.log
-            ${{ runner.temp }}/flats-backspace-evidence/*/*.png
-            ${{ runner.temp }}/flats-backspace-evidence/*/candidate-source/**
+            ${{ runner.temp }}/flats-editor-final/results.json
+            ${{ runner.temp }}/flats-editor-final/candidate-tree.txt
+            ${{ runner.temp }}/flats-editor-final/*.log
+            ${{ runner.temp }}/flats-editor-final/*-screenshots/*.png
             ${{ runner.temp }}/flats-browser-tools/package-lock.json
           if-no-files-found: error
           retention-days: 7

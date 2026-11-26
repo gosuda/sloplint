@@ -1,26 +1,26 @@
 {
-  "repo": "gosuda/flats",
-  "purpose": "Development-time native browser proof; temporary authored build-input correction, no maintained source publication or stage acceptance",
-  "sources": [
-    {
-      "name": "old",
-      "head": "72a25911d41dbe8d7e59d2e3694d4520a26e8e58",
-      "tree": "9c5687b485e707cd9590a707f0e6fdc59e95b57d"
-    },
-    {
-      "name": "baseline",
-      "head": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
-      "tree": "91efebe5baab56592f04481d3516dc3a2163d5e4"
-    },
-    {
-      "name": "candidate",
-      "head": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
-      "tree": "91efebe5baab56592f04481d3516dc3a2163d5e4"
-    }
+  "scope": "D3 Unit C implementation development verification; no maintained publication or stage acceptance",
+  "base": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
+  "base_tree": "91efebe5baab56592f04481d3516dc3a2163d5e4",
+  "paths": [
+    "internal/apps/docs/_web/build.mjs",
+    "internal/apps/docs/testdata/browser_test.mjs",
+    "internal/apps/docs/dist/server.js",
+    "internal/apps/docs/dist/BUILD-INPUTS.sha256"
   ],
-  "driver_sha256": "4e9ea26ae3f9278c32ab051e833674c4c81e06ff75a5baea9a7d66c917feefa3",
-  "build_sha256": "2003b106ee51cfe7d180b3d40a93c7c79220345a3893ebeaf5d7492be403f8bf",
+  "upstream_source_sha256": "350b1e5a052e2f016efa17791f3a56dfb1c849ae43df14b7d2f91fda100e3bc0",
+  "proof_sha256": {
+    "candidate-build.mjs": "48af351f5188ae99dc739f5ae30b88de0e3bb11cb4353864e41300d822b8fcce",
+    "repository-browser.mjs": "2187f5f10f9a310a19fdb85a0ff3725e23b52de14a351ac06fb1df935e0ac395",
+    "final-verify.py": "c708c31848cf41f761dbe48b8ee5d51caa950f9a54ea4462b71963a8d57a99b0"
+  },
   "go": "1.27.4",
   "node": "26.13.1",
-  "playwright": "1.65.1"
+  "playwright": "1.65.1",
+  "previous_native_control": {
+    "producer": "4cdeea79593f556cf86152d9855e48b22606fff3",
+    "run": 45844308833,
+    "artifact": 15131920439,
+    "zip_sha256": "cb800c52e4cf3540b43935ed4dea01dca79b7adde4408223e3c19844fd561b9c"
+  }
 }
