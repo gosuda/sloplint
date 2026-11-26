@@ -360,7 +360,7 @@ export default grammar({
       token(
         choice(
           new RegExp(
-            /[^()$"'\-{}@|\[`&\s]/.source + wordTail(/[^&\s()}|;,"'`]/.source),
+            /[^()$"'\-{}@|\[`&\s\u00A0]/.source + wordTail(/[^&\s\u00A0()}|;,"'`]/.source),
           ),
           // sloplint: option with an attached value, as in -I=dir,
           // --go_out=$dir or -buildmode=c-shared. A bare -Name or -Name:
@@ -369,8 +369,8 @@ export default grammar({
           // (about_Parsing, argument mode).
           new RegExp(
             /-+[a-zA-Z_?\-`][a-zA-Z0-9_?\-`]*/.source +
-              /[^a-zA-Z0-9_?\-`\s:<>&(){}|;,"'$@\[]/.source +
-              wordTail(/[^&\s()}|;"'`]/.source),
+              /[^a-zA-Z0-9_?\-`\s\u00A0:<>&(){}|;,"'$@\[]/.source +
+              wordTail(/[^&\s\u00A0()}|;"'`]/.source),
           ),
           // sloplint: dash-colon word, as in --:warning: the colon does not
           // delimit a standalone `--` token, so the whole word is one
@@ -380,21 +380,21 @@ export default grammar({
           // segment may follow the colon at once, as in `--:"warning text"`.
           new RegExp(
             /-+:/.source +
-              '(' + /[^&\s()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + WORD_ESC + ')' +
-              wordTail(/[^&,\s()}|;"'`]/.source),
+              '(' + /[^&\s\u00A0()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + WORD_ESC + ')' +
+              wordTail(/[^&,\s\u00A0()}|;"'`]/.source),
           ),
           // sloplint: word that starts with a variable and continues as a
           // path, as in $env:TEMP\x.ps1 or ${root}/bin.
-          /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)[\\\/][^\&\s\(\)\}\|;,]*/,
+          /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)[\\\/][^\&\s\u00A0\(\)\}\|;,]*/,
           // sloplint: bare escape sequence used as a word, as in
           // Write-Host `r`n — expandable-string content without quotes.
-          new RegExp(WORD_ESC + wordTail(/[^&\s()}|;,"'`]/.source)),
+          new RegExp(WORD_ESC + wordTail(/[^&\s\u00A0()}|;,"'`]/.source)),
           // sloplint: word that interleaves a variable head with quoted or
           // plain segments, as in $x"cat"$y — a single expandable word.
           new RegExp(
             /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)/.source +
               '(' + WORD_SQ + '|' + WORD_DQ + ')' +
-              wordTail(/[^&\s()}|;,]/.source),
+              wordTail(/[^&\s\u00A0()}|;,]/.source),
           ),
           // sloplint: a variable head followed by `..` or by a `.` that
           // does not open a member name is argument-mode text, as in
@@ -404,8 +404,8 @@ export default grammar({
           new RegExp(
             /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)/.source +
               '(' +
-                /\.{2,}[^&\s()}|;,"'`]*/.source + '|' +
-                /\.[^&\s()}|;,"'`a-zA-Z0-9_$][^&\s()}|;,"'`]*/.source +
+                /\.{2,}[^&\s\u00A0()}|;,"'`]*/.source + '|' +
+                /\.[^&\s\u00A0()}|;,"'`a-zA-Z0-9_$][^&\s\u00A0()}|;,"'`]*/.source +
               ')',
           ),
           // sloplint: word that starts with a quoted segment and keeps
@@ -415,7 +415,7 @@ export default grammar({
           new RegExp(
             '(' + WORD_SQ + '|' + WORD_DQ + ')' +
               '(' +
-                /[^&\s()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + WORD_ESC +
+                /[^&\s\u00A0()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + WORD_ESC +
               ')+',
           ),
         ),
@@ -442,7 +442,7 @@ export default grammar({
             // `-Name`, `-Name1`, `--long-flag`, `-A5`
             /-+[a-zA-Z_?\-`][a-zA-Z0-9_?\-`]*/,
             // `--format=%H`, `--pretty=format:"%B"`: a native option with an attached value
-            /--?[a-zA-Z_][a-zA-Z0-9_\-]*=([^\s"'`;|&(){}]|"[^"\r\n]*"|'[^'\r\n]*')*/,
+            /--?[a-zA-Z_][a-zA-Z0-9_\-]*=([^\s\u00A0"'`;|&(){}]|"[^"\r\n]*"|'[^'\r\n]*')*/,
           ),
         ),
         // A bare `--` or `-` argument (see scanner.c).
@@ -980,13 +980,7 @@ export default grammar({
         choice(
           seq($.command_argument_sep, optional($.generic_token)),
           seq($.command_argument_sep, $._command_argument_list),
-          alias(
-            seq(
-              $.parenthesized_expression,
-              repeat1(seq(',', $._command_list_element)),
-            ),
-            $.array_literal_expression,
-          ),
+          alias($._command_list_from_paren, $.array_literal_expression),
           $.parenthesized_expression,
           $.script_block_expression,
         ),
@@ -1011,7 +1005,21 @@ export default grammar({
         seq($.generic_token, repeat1(seq(',', $._command_list_element))),
       ),
 
-    _command_list_element: ($) => choice($.generic_token, $.unary_expression),
+    _command_list_from_paren: ($) =>
+      prec.left(
+        seq($.parenthesized_expression, repeat1(seq(',', $._command_list_element))),
+      ),
+
+    _command_list_element: ($) =>
+      choice(
+        $.generic_token,
+        $.unary_expression,
+        alias($._command_list_parameter, $.generic_token),
+      ),
+
+    _command_list_parameter: ($) =>
+      token(/-+[a-zA-Z_?\-`][a-zA-Z0-9_?\-`]*/),
+
 
     verbatim_command_argument: ($) =>
       seq('--%', $._verbatim_command_argument_chars),

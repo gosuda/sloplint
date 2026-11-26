@@ -545,11 +545,11 @@ Write-Output --(Get-Date), (Get-Date)
           (command_elements
             (command_parameter)
             (array_literal_expression
-              (pipeline
-                (pipeline_chain
-                  (command
-                    (command_name)))))
-            (array_literal_expression
+              (parenthesized_expression
+                (pipeline
+                  (pipeline_chain
+                    (command
+                      (command_name)))))
               (unary_expression
                 (parenthesized_expression
                   (pipeline
@@ -594,3 +594,156 @@ Write-Output --:"warning text"
           (command_elements
             (command_argument_sep)
             (generic_token)))))))
+
+===
+Native: dash-colon list accepts a bare parameter word
+===
+
+Write-Output --:first,-second
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (array_literal_expression
+              (generic_token)
+              (generic_token))))))))
+
+===
+Native: spaced dash-colon list accepts a bare parameter word
+===
+
+Write-Output --:first, -second
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (array_literal_expression
+              (generic_token)
+              (generic_token))))))))
+
+===
+Native: two NBSP-separated arguments after double dash
+===
+
+git add -- first.txt second.txt
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)
+            (command_parameter)
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (generic_token)))))))
+
+===
+Native: NBSP ends an attached-option tail
+===
+
+git add -- --format=zip second.txt
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)
+            (command_parameter)
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (generic_token)))))))
+
+===
+Native: quoted NBSP stays inside one argument
+===
+
+git add -- "first part" second.txt
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)
+            (command_parameter)
+            (command_argument_sep)
+            (array_literal_expression
+              (unary_expression
+                (string_literal
+                  (expandable_string_literal))))
+            (command_argument_sep)
+            (generic_token)))))))
+
+===
+Native: escaped NBSP stays inside one argument
+===
+
+git add -- first` part second.txt
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (generic_token)
+            (command_parameter)
+            (command_argument_sep)
+            (generic_token)
+            (command_argument_sep)
+            (generic_token)))))))
+
+===
+Native: standalone parameter remains a parameter
+===
+
+Write-Output -second
+
+---
+
+(program
+  (statement_list
+    (pipeline
+      (pipeline_chain
+        (command
+          (command_name)
+          (command_elements
+            (command_argument_sep)
+            (command_parameter)))))))

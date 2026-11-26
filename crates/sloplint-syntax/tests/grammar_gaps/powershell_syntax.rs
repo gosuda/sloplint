@@ -542,3 +542,33 @@ fn invalid_powershell_still_reports_a_parse_error() {
         );
     }
 }
+
+#[test]
+fn command_comma_lists_keep_parameter_words_and_parenthesized_items_together() {
+    for source in [
+        "Write-Output --:first,-second\n",
+        "Write-Output --:first, -second\n",
+    ] {
+        let analysis = run_clean(source);
+        assert_eq!(call(&analysis, "Write-Output").args.len(), 1, "{source}");
+    }
+    let analysis = run_clean("Write-Output --(Get-Date), (Get-Date)\n");
+    assert_eq!(
+        call(&analysis, "Write-Output").args.len(),
+        2,
+        "the end-of-options marker and one array argument"
+    );
+}
+
+#[test]
+fn nbsp_separates_native_words_but_preserves_quoted_and_escaped_segments() {
+    for source in [
+        "git add --\u{a0}first.txt\u{a0}second.txt\n",
+        "git add --\u{a0}--format=zip\u{a0}second.txt\n",
+        "git add --\u{a0}\"first\u{a0}part\"\u{a0}second.txt\n",
+        "git add --\u{a0}first`\u{a0}part\u{a0}second.txt\n",
+    ] {
+        let analysis = run_clean(source);
+        assert_eq!(call(&analysis, "git").args.len(), 4, "{source}");
+    }
+}

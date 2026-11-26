@@ -32,7 +32,24 @@ and loses every other finding for that file.
   `bash scripts/grammars.sh verify tree-sitter-powershell` checks the result
   against the vendored files. Run `tree-sitter test` in the vendor directory
   to include the sloplint corpus.
-- The regenerated parser uses ABI 15 and has 2,697 states.
+- The regenerated parser uses ABI 15 and has 2,713 states.
+
+## Native argument follow-up
+
+The command word rules explicitly exclude unquoted U+00A0 from plain
+characters, including attached-option tails. Quoted and backtick-escaped
+segments still retain that character. Tabs and U+00A0 separate successive
+native arguments, including after an end-of-options marker.
+
+Comma-list elements accept parameter-shaped bare words only in list
+context, so both spaced and unspaced dash-colon lists remain one array.
+A dedicated hidden rule owns a parenthesized list after a double dash;
+aliasing that symbol preserves one array node and its parenthesized child.
+
+Regenerated grammar.json, node-types.json and parser.c with tree-sitter-cli
+0.27.1 using the command above. All 234 corpus cases pass, including the
+seven new boundary cases. Standalone parameters keep their existing node
+kind. Rust adapter regressions also assert the resulting argument counts.
 
 ## What v0.26.6 replaces
 
@@ -62,9 +79,8 @@ The remaining local groups do not have an upstream fix in this release:
 | Case-insensitive numbers, cast operands, type names and generic ranks, bitwise and membership operators | No issue or PR identified for these changes |
 | String text and here-string escapes, statement terminators, method-block scanner | No issue or PR identified for these changes |
 
-The patch has 748 lines and 31 diff hunks, compared with 751 lines and
-31 hunks before. The two replacements were edits inside larger hunks, which
-still contain local changes.
+The current patch has 1,639 lines and 19 diff hunks. It includes the
+native argument corpus along with the grammar and scanner changes.
 
 ## Round 1 grammar changes
 

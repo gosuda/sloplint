@@ -112,7 +112,7 @@
           "named": true
         },
         {
-          "type": "pipeline",
+          "type": "parenthesized_expression",
           "named": true
         },
         {
