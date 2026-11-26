@@ -1,0 +1,62 @@
+{
+  "source": "86c7849c2f608fd751e9a478c2574c49e817f44d",
+  "actual_main": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
+  "design_sha256": "7ca9ddc48b8a78b81f6b53a0e455763c68419cb62d90d73d0136c2a91a271835",
+  "files": [
+    {
+      "path": "docs/gates.md",
+      "sha256": "fb92548397e1f5f0dad33b882f6be9dec5b72e4653440e8730f798ce78ae0f8c"
+    },
+    {
+      "path": "internal/notebook/markdown_read_capture_release_test.go",
+      "sha256": "03158b7df1e1d50895b6a59ae77ac3580b92339c9bda367a17cbc8d4142b484b"
+    },
+    {
+      "path": "internal/notebook/markdown_read_memory_test.go",
+      "sha256": "1b010c165763eb293ec2ea513ddd3a2bd228150799262e33d941c443d820c811"
+    },
+    {
+      "path": "internal/notebook/markdown_read_scaling_test.go",
+      "sha256": "6f4c062611e62194e6819973fa5928e6164144c9ba2cc3b71493e26e6f1bf15f"
+    },
+    {
+      "path": "internal/notebook/reader_entry_test.go",
+      "sha256": "6c56a89fde4bf05ad42293fd273b876569b2ae95cda0706e78965d63548a87a3"
+    }
+  ],
+  "threads": [
+    "PRRT_kwDOU5_u3s68YJ66",
+    "PRRT_kwDOU5_u3s68YJ8h"
+  ],
+  "stage": "design",
+  "verdict": "accepted",
+  "budget_origin": "PR 266 published body, prior exact reviewer receipts unavailable",
+  "budgets": {
+    "design": {
+      "invocations_used": 3,
+      "invocation_limit": 3,
+      "corrections_used": 1,
+      "correction_limit": 2
+    },
+    "implementation": {
+      "invocations_used": 2,
+      "invocation_limit": 3,
+      "corrections_used": 1,
+      "correction_limit": 2
+    },
+    "testing": {
+      "invocations_used": 1,
+      "invocation_limit": 3,
+      "corrections_used": 0,
+      "correction_limit": 2
+    }
+  },
+  "review": {
+    "session": "/root/bitcoin_round7/flats_retention_design_review",
+    "requested_fixed_model": "gpt-6.2-sol",
+    "author_model": "gpt-6.2-astra",
+    "receipt_sha256": "a326a2d85d66adabc6fad2b281361a8f901686b4bb36166cf17d9c4cf3a794e0",
+    "receipt_path": "ci-tools/flats-review/notebook-retention-design-review.md",
+    "design_record": "2f779365b46eb8fae37b5c8a3974c034bdffd5e1"
+  }
+}
