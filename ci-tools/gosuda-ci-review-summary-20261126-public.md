@@ -1,6 +1,6 @@
 # Gosuda CI and PR reconciliation
 
-Observed through 2026-11-26T21:51:58.282Z. This is a finite snapshot, not an atomic organization-wide transaction.
+Observed through 2026-11-26T23:03:43.891Z. This is a finite snapshot, not an atomic organization-wide transaction.
 
 ## Runner result
 
@@ -11,11 +11,11 @@ Every audited maintained PR head selects Depot runners or contains no runner job
 | Repositories | 115 |
 | Open PRs | 149 |
 | Exact source commits inspected | 288 |
-| Unique workflow blobs | 245 |
-| Unique job definitions | 789 |
+| Unique workflow blobs | 244 |
+| Unique job definitions | 772 |
 | Open PR heads with non-Depot or forbidden runner labels | 0 |
-| Unresolved review threads | 30 |
-| Confirmed merge conflicts | 7 |
+| Unresolved review threads | 21 |
+| Confirmed merge conflicts | 1 |
 | Unknown mergeability states | 0 |
 
 ## Default branches still awaiting rollout
@@ -52,7 +52,9 @@ Each completed repair has an immutable checkpoint linking its source tree, nativ
 
 [gosuda/sloplint #137](https://github.com/gosuda/sloplint/pull/137) has a verified publication at [`57adc9fff126`](https://github.com/gosuda/sloplint/commit/57adc9fff126a9826e0fb0be921c28e6cdb08391). Its [native verification](https://github.com/gosuda/sloplint/actions/runs/45893490495) passed for source tree `f518b3943c6b86af53c334175309303c3d79f38b`, and its [ordinary PR workflow](https://github.com/gosuda/sloplint/actions/runs/45895428017) completed success.
 
-2 later findings remain open. The source-identity analysis thread is resolved. Two source findings are assigned to the r23 owner; the native baseline is complete and a bounded grammar experiment is being prepared.
+The maintained PR has since moved to [`e7ee97e84246`](https://github.com/gosuda/sloplint/commit/e7ee97e84246863766ec7465777a035134533feb). The earlier passing evidence does not certify that later source tree.
+
+undefined later findings remain open. An external actor advanced the maintained PR. The prior native and ordinary success certifies only the listed historical source. Current review findings and any candidate proof are being reconciled separately.
 
 The [immutable checkpoint](https://github.com/gosuda/sloplint/blob/03a275c9b8b72820d5bcb0925e43da127d0e25b9/ci-tools/powershell-context-boundaries-r22/checkpoint.json) records the exact verified source, native results and temporary-workflow retirement.
 
@@ -61,21 +63,18 @@ The [immutable checkpoint](https://github.com/gosuda/sloplint/blob/03a275c9b8b72
 | PR | Unresolved threads | Merge conflict |
 | --- | ---: | --- |
 | [gosuda/ssh-chat #1](https://github.com/gosuda/ssh-chat/pull/1) | 0 | Confirmed |
-| [gosuda/ruk #20](https://github.com/gosuda/ruk/pull/20) | 2 | No confirmed conflict |
-| [gosuda/sloplint #137](https://github.com/gosuda/sloplint/pull/137) | 2 | No confirmed conflict |
+| [gosuda/ruk #20](https://github.com/gosuda/ruk/pull/20) | 3 | No confirmed conflict |
+| [gosuda/sloplint #137](https://github.com/gosuda/sloplint/pull/137) | 1 | No confirmed conflict |
 | [gosuda/LoGOs #343](https://github.com/gosuda/LoGOs/pull/343) | 3 | No confirmed conflict |
 | [gosuda/LoGOs #342](https://github.com/gosuda/LoGOs/pull/342) | 4 | No confirmed conflict |
-| [gosuda/LoGOs #339](https://github.com/gosuda/LoGOs/pull/339) | 1 | Confirmed |
-| [gosuda/LoGOs #336](https://github.com/gosuda/LoGOs/pull/336) | 0 | Confirmed |
-| [gosuda/LoGOs #334](https://github.com/gosuda/LoGOs/pull/334) | 0 | Confirmed |
-| [gosuda/LoGOs #328](https://github.com/gosuda/LoGOs/pull/328) | 13 | Confirmed |
-| [gosuda/LoGOs #322](https://github.com/gosuda/LoGOs/pull/322) | 0 | Confirmed |
-| [gosuda/LoGOs #306](https://github.com/gosuda/LoGOs/pull/306) | 0 | Confirmed |
-| [gosuda/gglint #33](https://github.com/gosuda/gglint/pull/33) | 5 | No confirmed conflict |
+| [gosuda/LoGOs #339](https://github.com/gosuda/LoGOs/pull/339) | 3 | No confirmed conflict |
+| [gosuda/LoGOs #336](https://github.com/gosuda/LoGOs/pull/336) | 4 | No confirmed conflict |
+| [gosuda/LoGOs #334](https://github.com/gosuda/LoGOs/pull/334) | 1 | No confirmed conflict |
+| [gosuda/gglint #33](https://github.com/gosuda/gglint/pull/33) | 2 | No confirmed conflict |
 
 ## Audit method and limits
 
-Both paginated repository catalogs agree. Canonical per-repository open-PR lists are authoritative; search indexing is not used as the completeness boundary. Thread state comes from `is_resolved`, and inline comment counts agree with REST metadata. Actual base commits come from raw target refs.
+The owner-filtered repository catalog was read through its empty final page. Canonical per-repository open-PR lists are authoritative; search indexing is not used as the completeness boundary. Thread state comes from `is_resolved`, and inline comment counts agree with REST metadata. Actual base commits come from raw target refs.
 
 Workflow YAML is parsed, finite matrices and conditional literal matrices are enumerated, local reusable workflows are resolved, and generated cargo-dist matrices are checked against the exact configuration and pinned generator source. Unchanged source is reused only by immutable commit or blob identity; original source observation times remain in the JSON.
 

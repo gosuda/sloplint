@@ -2,22 +2,22 @@
   "schema": 2,
   "kind": "gosuda-pr-and-runner-reconciliation",
   "visibility": "public",
-  "started_at": "2026-11-26T21:41:29.853Z",
-  "finished_at": "2026-11-26T21:51:58.282Z",
+  "started_at": "2026-11-26T22:57:00.014Z",
+  "finished_at": "2026-11-26T23:03:43.891Z",
   "scope": {
     "repositories": 115,
     "open_pull_requests": 149,
     "repositories_with_open_prs": 52,
-    "unresolved_threads": 30,
-    "prs_with_unresolved_threads": 7,
-    "actual_conflicts": 7,
-    "review_threads": 406,
-    "inline_comments": 899
+    "unresolved_threads": 21,
+    "prs_with_unresolved_threads": 8,
+    "actual_conflicts": 1,
+    "review_threads": 419,
+    "inline_comments": 935
   },
   "completeness": {
     "repository_catalogs_identical": true,
     "repository_catalog_methods": [
-      "Public subset of two independently reconciled paginated organization catalogs; private rows are omitted."
+      "Public subset of the complete paginated owner-filtered repository catalog; private rows are omitted."
     ],
     "canonical_open_pr_lists_read": 115,
     "all_canonical_open_pr_pages_fewer_than_100": true,
@@ -33,13 +33,79 @@
       "A blocked or unstable check state is not a merge conflict.",
       "Resolution uses is_resolved, including outdated unresolved threads.",
       "Only maintained open PR heads, current actual bases and current defaults are audited. Temporary diagnostic branches are excluded."
-    ]
+    ],
+    "changes_since_preceding_snapshot": {
+      "new_pull_requests": 0,
+      "closed_pull_requests": 0,
+      "moved_heads": [
+        {
+          "repository": "gosuda/ruk",
+          "number": 20,
+          "previous_head": "79704448b042c4b39f2c10d73d9dac275c2f28b6",
+          "head": "adbb6ff975bbd520a985a4d296c8a3cf6ea87daf"
+        },
+        {
+          "repository": "gosuda/sloplint",
+          "number": 137,
+          "previous_head": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
+          "head": "e7ee97e84246863766ec7465777a035134533feb"
+        },
+        {
+          "repository": "gosuda/LoGOs",
+          "number": 339,
+          "previous_head": "8f65066faa91b54beb14410dc4c84cb4ac237e66",
+          "head": "1cccd8960b7a046553afaa804cd2f49e2bf21c5c"
+        },
+        {
+          "repository": "gosuda/LoGOs",
+          "number": 336,
+          "previous_head": "fe6309200798d9d7b561338658aa84fe237c30d5",
+          "head": "e2a50cb63c8381f3017f9f198bfb0394f54f50d4"
+        },
+        {
+          "repository": "gosuda/LoGOs",
+          "number": 334,
+          "previous_head": "f2eae8c964bae2dda5ee8c747f8f039ddabb5f35",
+          "head": "682c21d440d5b2bb27afaa04643c421f4dfcac1a"
+        },
+        {
+          "repository": "gosuda/LoGOs",
+          "number": 328,
+          "previous_head": "e43b5ef4408cd79d4b48cec44b1166bfd145305f",
+          "head": "04a036afb5da302b35c09e3ad9d7911661ef6025"
+        },
+        {
+          "repository": "gosuda/LoGOs",
+          "number": 322,
+          "previous_head": "177e5555822fe4ddac9dbc68c9035ff55dee6b9b",
+          "head": "63f7648df6766d83a0d83221d49f3095087f0e92"
+        },
+        {
+          "repository": "gosuda/LoGOs",
+          "number": 306,
+          "previous_head": "f0979a01cca06bcce260d93fa3fddcf04cef0095",
+          "head": "ead666708bb1ef92eb13e1b480125bf6eba36720"
+        },
+        {
+          "repository": "gosuda/1",
+          "number": 115,
+          "previous_head": "dd1ba2139c4cc757096180dec1a376cf1435866f",
+          "head": "05d6f77884856046560621449a50eab5186dd676"
+        },
+        {
+          "repository": "gosuda/gglint",
+          "number": 33,
+          "previous_head": "65b0c11e4b42b5e6224011c8f19903e4e7084efc",
+          "head": "c3de725ac5a3f876f5dc6f2045cd86de93fec621"
+        }
+      ]
+    }
   },
   "runner_audit": {
     "source_targets": 288,
     "workflow_occurrences": 541,
-    "unique_workflow_blobs": 245,
-    "unique_job_definitions": 789,
+    "unique_workflow_blobs": 244,
+    "unique_job_definitions": 772,
     "absent_workflow_directories": 129,
     "unavailable_workflow_directories": 0,
     "yaml_parse_errors": 0,
@@ -1028,34 +1094,7 @@
     "limits": [
       "This audits declared and source-resolved runner selection, not runtime availability, billing, or universal CI success.",
       "The remaining legacy labels are explicitly listed on default branches. No PR was merged and no archived repository was unarchived."
-    ],
-    "provider_label_validation": {
-      "source": "https://depot.dev/docs/github-actions/runner-types",
-      "read_at": "2026-11-26T20:37:46.880Z",
-      "labels": [
-        "depot-macos-latest",
-        "depot-ubuntu-22.04",
-        "depot-ubuntu-22.04-4",
-        "depot-ubuntu-22.04-arm-4",
-        "depot-ubuntu-24.04",
-        "depot-ubuntu-24.04-16",
-        "depot-ubuntu-24.04-4",
-        "depot-ubuntu-24.04-8",
-        "depot-ubuntu-24.04-arm",
-        "depot-ubuntu-24.04-arm-4",
-        "depot-windows-2022-4",
-        "depot-windows-2025",
-        "depot-windows-2025-16",
-        "depot-windows-2025-4",
-        "depot-windows-2025-8"
-      ],
-      "unsupported": [],
-      "policy": {
-        "ubuntu_26_04_forbidden": true,
-        "macos_required": "depot-macos-latest"
-      },
-      "scope": "All Depot labels observed in the exact audited workflow selectors and cargo-dist mappings are explicitly listed by the provider, including the selected size suffixes. Runtime availability and billing were not measured."
-    }
+    ]
   },
   "repositories": [
     {
@@ -2225,9 +2264,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "bcbd1601512ddeaba6beca63eeaf7ea966d50a71",
-      "actual_base_observed_at": "2026-11-26T21:49:29.063Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.475Z",
       "pr_base_at_read": "bcbd1601512ddeaba6beca63eeaf7ea966d50a71",
-      "observed_at": "2026-11-26T21:43:32.779Z",
+      "observed_at": "2026-11-26T22:58:21.001Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -2248,9 +2287,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "e8e72e1c0231e2223f6112cdf2bf1e6002372d63",
-      "actual_base_observed_at": "2026-11-26T21:49:29.109Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.444Z",
       "pr_base_at_read": "e8e72e1c0231e2223f6112cdf2bf1e6002372d63",
-      "observed_at": "2026-11-26T21:43:32.950Z",
+      "observed_at": "2026-11-26T22:58:20.997Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -2271,9 +2310,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-      "actual_base_observed_at": "2026-11-26T21:49:29.049Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.404Z",
       "pr_base_at_read": "645aa94d63bd29b5190a8c7cfa1fe36957bf368b",
-      "observed_at": "2026-11-26T21:43:32.879Z",
+      "observed_at": "2026-11-26T22:58:20.936Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 2,
       "runner_labels": [
@@ -2296,9 +2335,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-      "actual_base_observed_at": "2026-11-26T21:49:29.049Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.404Z",
       "pr_base_at_read": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-      "observed_at": "2026-11-26T21:43:32.743Z",
+      "observed_at": "2026-11-26T22:58:20.905Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 2,
       "runner_labels": [
@@ -2321,9 +2360,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-      "actual_base_observed_at": "2026-11-26T21:49:29.049Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.404Z",
       "pr_base_at_read": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-      "observed_at": "2026-11-26T21:43:32.803Z",
+      "observed_at": "2026-11-26T22:58:20.997Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 2,
       "runner_labels": [
@@ -2346,9 +2385,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-      "actual_base_observed_at": "2026-11-26T21:49:29.049Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.404Z",
       "pr_base_at_read": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-      "observed_at": "2026-11-26T21:43:32.744Z",
+      "observed_at": "2026-11-26T22:58:21.127Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 2,
       "runner_labels": [
@@ -2371,9 +2410,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-      "actual_base_observed_at": "2026-11-26T21:49:29.049Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.404Z",
       "pr_base_at_read": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-      "observed_at": "2026-11-26T21:43:32.831Z",
+      "observed_at": "2026-11-26T22:58:20.993Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 2,
       "runner_labels": [
@@ -2396,9 +2435,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-      "actual_base_observed_at": "2026-11-26T21:49:29.049Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.404Z",
       "pr_base_at_read": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-      "observed_at": "2026-11-26T21:43:32.842Z",
+      "observed_at": "2026-11-26T22:58:20.965Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 2,
       "runner_labels": [
@@ -2421,9 +2460,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-      "actual_base_observed_at": "2026-11-26T21:49:29.049Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.404Z",
       "pr_base_at_read": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-      "observed_at": "2026-11-26T21:43:32.594Z",
+      "observed_at": "2026-11-26T22:58:21.147Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 2,
       "runner_labels": [
@@ -2446,9 +2485,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-      "actual_base_observed_at": "2026-11-26T21:49:29.049Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.404Z",
       "pr_base_at_read": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-      "observed_at": "2026-11-26T21:43:32.666Z",
+      "observed_at": "2026-11-26T22:58:21.363Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 2,
       "runner_labels": [
@@ -2471,9 +2510,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-      "actual_base_observed_at": "2026-11-26T21:49:29.049Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.404Z",
       "pr_base_at_read": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
-      "observed_at": "2026-11-26T21:43:33.080Z",
+      "observed_at": "2026-11-26T22:58:21.014Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 2,
       "runner_labels": [
@@ -2496,9 +2535,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "4f4c7f7e57d5b5e90433a77e743948a208f018e2",
-      "actual_base_observed_at": "2026-11-26T21:49:29.075Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.483Z",
       "pr_base_at_read": "a3826ed318bb5b18266f83e247ec5e093bfbf391",
-      "observed_at": "2026-11-26T21:43:32.816Z",
+      "observed_at": "2026-11-26T22:58:21.484Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -2519,9 +2558,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "b2e6e7a7d13120cb549c64f89099359581d3603d",
-      "actual_base_observed_at": "2026-11-26T21:49:29.164Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.485Z",
       "pr_base_at_read": "b2e6e7a7d13120cb549c64f89099359581d3603d",
-      "observed_at": "2026-11-26T21:43:32.742Z",
+      "observed_at": "2026-11-26T22:58:21.138Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 4,
       "runner_labels": [
@@ -2544,9 +2583,9 @@
       "rest_inline_comments": 1,
       "counts_match": true,
       "actual_base": "266ce8ba66fa867558f0a0f2b10f3ea83c1b22c1",
-      "actual_base_observed_at": "2026-11-26T21:49:29.149Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.544Z",
       "pr_base_at_read": "266ce8ba66fa867558f0a0f2b10f3ea83c1b22c1",
-      "observed_at": "2026-11-26T21:43:32.906Z",
+      "observed_at": "2026-11-26T22:58:21.394Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 4,
       "runner_labels": [
@@ -2572,9 +2611,9 @@
       "rest_inline_comments": 18,
       "counts_match": true,
       "actual_base": "266ce8ba66fa867558f0a0f2b10f3ea83c1b22c1",
-      "actual_base_observed_at": "2026-11-26T21:49:29.149Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.544Z",
       "pr_base_at_read": "266ce8ba66fa867558f0a0f2b10f3ea83c1b22c1",
-      "observed_at": "2026-11-26T21:43:32.972Z",
+      "observed_at": "2026-11-26T22:58:21.361Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 4,
       "runner_labels": [
@@ -2600,9 +2639,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "266ce8ba66fa867558f0a0f2b10f3ea83c1b22c1",
-      "actual_base_observed_at": "2026-11-26T21:49:29.149Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.544Z",
       "pr_base_at_read": "266ce8ba66fa867558f0a0f2b10f3ea83c1b22c1",
-      "observed_at": "2026-11-26T21:43:33.263Z",
+      "observed_at": "2026-11-26T22:58:21.215Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 4,
       "runner_labels": [
@@ -2628,9 +2667,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "266ce8ba66fa867558f0a0f2b10f3ea83c1b22c1",
-      "actual_base_observed_at": "2026-11-26T21:49:29.149Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.544Z",
       "pr_base_at_read": "266ce8ba66fa867558f0a0f2b10f3ea83c1b22c1",
-      "observed_at": "2026-11-26T21:43:33.538Z",
+      "observed_at": "2026-11-26T22:58:21.150Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 4,
       "runner_labels": [
@@ -2656,9 +2695,9 @@
       "rest_inline_comments": 6,
       "counts_match": true,
       "actual_base": "9b4e6bcd8081ad87d786d8fd1b186fab650d3818",
-      "actual_base_observed_at": "2026-11-26T21:49:29.257Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.656Z",
       "pr_base_at_read": "9b4e6bcd8081ad87d786d8fd1b186fab650d3818",
-      "observed_at": "2026-11-26T21:43:32.990Z",
+      "observed_at": "2026-11-26T22:58:21.336Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -2681,9 +2720,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "8db25b7a082c3dd11bdfc6bcb1d07cbdd0462117",
-      "actual_base_observed_at": "2026-11-26T21:49:29.124Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.477Z",
       "pr_base_at_read": "8db25b7a082c3dd11bdfc6bcb1d07cbdd0462117",
-      "observed_at": "2026-11-26T21:43:32.816Z",
+      "observed_at": "2026-11-26T22:58:21.105Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -2704,9 +2743,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "669d9ed335677d810cf80e9267e2126df590d80e",
-      "actual_base_observed_at": "2026-11-26T21:49:29.164Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.534Z",
       "pr_base_at_read": "669d9ed335677d810cf80e9267e2126df590d80e",
-      "observed_at": "2026-11-26T21:43:32.807Z",
+      "observed_at": "2026-11-26T22:58:21.359Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -2727,9 +2766,9 @@
       "rest_inline_comments": 10,
       "counts_match": true,
       "actual_base": "628dba1d469b4607f5c4484d49ebe3a019ee21cf",
-      "actual_base_observed_at": "2026-11-26T21:49:29.777Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.525Z",
       "pr_base_at_read": "628dba1d469b4607f5c4484d49ebe3a019ee21cf",
-      "observed_at": "2026-11-26T21:43:34.407Z",
+      "observed_at": "2026-11-26T22:58:21.359Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 6,
       "runner_labels": [
@@ -2755,9 +2794,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "628dba1d469b4607f5c4484d49ebe3a019ee21cf",
-      "actual_base_observed_at": "2026-11-26T21:49:29.777Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.525Z",
       "pr_base_at_read": "628dba1d469b4607f5c4484d49ebe3a019ee21cf",
-      "observed_at": "2026-11-26T21:43:34.372Z",
+      "observed_at": "2026-11-26T22:58:21.313Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 6,
       "runner_labels": [
@@ -2783,9 +2822,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "c0a5ef2e8cccfcd9ff5cfae97faa7263cec42e11",
-      "actual_base_observed_at": "2026-11-26T21:49:29.746Z",
+      "actual_base_observed_at": "2026-11-26T23:00:36.638Z",
       "pr_base_at_read": "c0a5ef2e8cccfcd9ff5cfae97faa7263cec42e11",
-      "observed_at": "2026-11-26T21:43:34.210Z",
+      "observed_at": "2026-11-26T22:58:21.076Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -2810,9 +2849,9 @@
       "rest_inline_comments": 30,
       "counts_match": true,
       "actual_base": "179d41e6e32c79fe2619b1f718d560edb2a8c33a",
-      "actual_base_observed_at": "2026-11-26T21:49:29.700Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.247Z",
       "pr_base_at_read": "179d41e6e32c79fe2619b1f718d560edb2a8c33a",
-      "observed_at": "2026-11-26T21:43:34.812Z",
+      "observed_at": "2026-11-26T22:58:21.687Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -2833,9 +2872,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "179d41e6e32c79fe2619b1f718d560edb2a8c33a",
-      "actual_base_observed_at": "2026-11-26T21:49:29.700Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.247Z",
       "pr_base_at_read": "121bd4b1996ee2dc1cc01d1a8299949587524ece",
-      "observed_at": "2026-11-26T21:43:34.313Z",
+      "observed_at": "2026-11-26T22:58:22.264Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -2856,9 +2895,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "8a41f275cf3c07526f78f1bd27df36ca0a1583ed",
-      "actual_base_observed_at": "2026-11-26T21:49:29.680Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.249Z",
       "pr_base_at_read": "8a41f275cf3c07526f78f1bd27df36ca0a1583ed",
-      "observed_at": "2026-11-26T21:43:34.209Z",
+      "observed_at": "2026-11-26T22:58:22.473Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 6,
       "runner_labels": [
@@ -2883,9 +2922,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "8a41f275cf3c07526f78f1bd27df36ca0a1583ed",
-      "actual_base_observed_at": "2026-11-26T21:49:29.680Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.249Z",
       "pr_base_at_read": "8a41f275cf3c07526f78f1bd27df36ca0a1583ed",
-      "observed_at": "2026-11-26T21:43:34.518Z",
+      "observed_at": "2026-11-26T22:58:22.318Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 6,
       "runner_labels": [
@@ -2910,9 +2949,9 @@
       "rest_inline_comments": 46,
       "counts_match": true,
       "actual_base": "8a41f275cf3c07526f78f1bd27df36ca0a1583ed",
-      "actual_base_observed_at": "2026-11-26T21:49:29.680Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.249Z",
       "pr_base_at_read": "8a41f275cf3c07526f78f1bd27df36ca0a1583ed",
-      "observed_at": "2026-11-26T21:43:35.038Z",
+      "observed_at": "2026-11-26T22:58:22.673Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 6,
       "runner_labels": [
@@ -2937,9 +2976,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "cf6b665d1150c3050c9fe652f295b59ac0188146",
-      "actual_base_observed_at": "2026-11-26T21:49:29.667Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.255Z",
       "pr_base_at_read": "cf6b665d1150c3050c9fe652f295b59ac0188146",
-      "observed_at": "2026-11-26T21:43:34.164Z",
+      "observed_at": "2026-11-26T22:58:22.435Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -2960,9 +2999,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "cf6b665d1150c3050c9fe652f295b59ac0188146",
-      "actual_base_observed_at": "2026-11-26T21:49:29.667Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.255Z",
       "pr_base_at_read": "cf6b665d1150c3050c9fe652f295b59ac0188146",
-      "observed_at": "2026-11-26T21:43:35.533Z",
+      "observed_at": "2026-11-26T22:58:22.411Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -2983,9 +3022,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "cf6b665d1150c3050c9fe652f295b59ac0188146",
-      "actual_base_observed_at": "2026-11-26T21:49:29.667Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.255Z",
       "pr_base_at_read": "cf6b665d1150c3050c9fe652f295b59ac0188146",
-      "observed_at": "2026-11-26T21:43:34.448Z",
+      "observed_at": "2026-11-26T22:58:22.393Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -3006,9 +3045,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "cf6b665d1150c3050c9fe652f295b59ac0188146",
-      "actual_base_observed_at": "2026-11-26T21:49:29.667Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.255Z",
       "pr_base_at_read": "cf6b665d1150c3050c9fe652f295b59ac0188146",
-      "observed_at": "2026-11-26T21:43:34.135Z",
+      "observed_at": "2026-11-26T22:58:22.336Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -3029,9 +3068,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "cf6b665d1150c3050c9fe652f295b59ac0188146",
-      "actual_base_observed_at": "2026-11-26T21:49:29.667Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.255Z",
       "pr_base_at_read": "cf6b665d1150c3050c9fe652f295b59ac0188146",
-      "observed_at": "2026-11-26T21:43:34.197Z",
+      "observed_at": "2026-11-26T22:58:22.392Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -3052,9 +3091,9 @@
       "rest_inline_comments": 6,
       "counts_match": true,
       "actual_base": "cf6b665d1150c3050c9fe652f295b59ac0188146",
-      "actual_base_observed_at": "2026-11-26T21:49:29.667Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.255Z",
       "pr_base_at_read": "cf6b665d1150c3050c9fe652f295b59ac0188146",
-      "observed_at": "2026-11-26T21:43:34.612Z",
+      "observed_at": "2026-11-26T22:58:22.674Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -3075,9 +3114,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "cf6b665d1150c3050c9fe652f295b59ac0188146",
-      "actual_base_observed_at": "2026-11-26T21:49:29.667Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.255Z",
       "pr_base_at_read": "cf6b665d1150c3050c9fe652f295b59ac0188146",
-      "observed_at": "2026-11-26T21:43:34.431Z",
+      "observed_at": "2026-11-26T22:58:22.527Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -3098,9 +3137,9 @@
       "rest_inline_comments": 8,
       "counts_match": true,
       "actual_base": "170454b7de8a756acb124f434a62c7be60f67e39",
-      "actual_base_observed_at": "2026-11-26T21:49:29.922Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.426Z",
       "pr_base_at_read": "170454b7de8a756acb124f434a62c7be60f67e39",
-      "observed_at": "2026-11-26T21:43:34.466Z",
+      "observed_at": "2026-11-26T22:58:22.667Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 2,
       "runner_labels": [
@@ -3123,9 +3162,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "170454b7de8a756acb124f434a62c7be60f67e39",
-      "actual_base_observed_at": "2026-11-26T21:49:29.922Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.426Z",
       "pr_base_at_read": "170454b7de8a756acb124f434a62c7be60f67e39",
-      "observed_at": "2026-11-26T21:43:34.503Z",
+      "observed_at": "2026-11-26T22:58:22.507Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 2,
       "runner_labels": [
@@ -3148,9 +3187,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "feffbef1d6b254892254fd1d12c58d8081123d5e",
-      "actual_base_observed_at": "2026-11-26T21:49:29.762Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.350Z",
       "pr_base_at_read": "feffbef1d6b254892254fd1d12c58d8081123d5e",
-      "observed_at": "2026-11-26T21:43:34.565Z",
+      "observed_at": "2026-11-26T22:58:22.493Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -3171,9 +3210,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "feffbef1d6b254892254fd1d12c58d8081123d5e",
-      "actual_base_observed_at": "2026-11-26T21:49:29.762Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.350Z",
       "pr_base_at_read": "feffbef1d6b254892254fd1d12c58d8081123d5e",
-      "observed_at": "2026-11-26T21:43:35.258Z",
+      "observed_at": "2026-11-26T22:58:22.528Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -3194,9 +3233,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "beb21a428b7c3fb3a1d97180129e5a7592c7d33f",
-      "actual_base_observed_at": "2026-11-26T21:49:30.404Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.421Z",
       "pr_base_at_read": "beb21a428b7c3fb3a1d97180129e5a7592c7d33f",
-      "observed_at": "2026-11-26T21:43:36.269Z",
+      "observed_at": "2026-11-26T22:58:22.577Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3219,9 +3258,9 @@
       "rest_inline_comments": 6,
       "counts_match": true,
       "actual_base": "beb21a428b7c3fb3a1d97180129e5a7592c7d33f",
-      "actual_base_observed_at": "2026-11-26T21:49:30.404Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.421Z",
       "pr_base_at_read": "beb21a428b7c3fb3a1d97180129e5a7592c7d33f",
-      "observed_at": "2026-11-26T21:43:36.331Z",
+      "observed_at": "2026-11-26T22:58:22.671Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3244,9 +3283,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "actual_base_observed_at": "2026-11-26T21:49:30.475Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.361Z",
       "pr_base_at_read": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "observed_at": "2026-11-26T21:43:36.741Z",
+      "observed_at": "2026-11-26T22:58:22.526Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3274,9 +3313,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "actual_base_observed_at": "2026-11-26T21:49:30.475Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.361Z",
       "pr_base_at_read": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "observed_at": "2026-11-26T21:43:36.406Z",
+      "observed_at": "2026-11-26T22:58:22.564Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3304,9 +3343,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "actual_base_observed_at": "2026-11-26T21:49:30.475Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.361Z",
       "pr_base_at_read": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "observed_at": "2026-11-26T21:43:36.235Z",
+      "observed_at": "2026-11-26T22:58:22.578Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3334,9 +3373,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "actual_base_observed_at": "2026-11-26T21:49:30.475Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.361Z",
       "pr_base_at_read": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "observed_at": "2026-11-26T21:43:36.435Z",
+      "observed_at": "2026-11-26T22:58:22.578Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3364,9 +3403,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "actual_base_observed_at": "2026-11-26T21:49:30.475Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.361Z",
       "pr_base_at_read": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "observed_at": "2026-11-26T21:43:36.271Z",
+      "observed_at": "2026-11-26T22:58:22.580Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3394,9 +3433,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "actual_base_observed_at": "2026-11-26T21:49:30.475Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.361Z",
       "pr_base_at_read": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "observed_at": "2026-11-26T21:43:36.166Z",
+      "observed_at": "2026-11-26T22:58:22.602Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3424,9 +3463,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "actual_base_observed_at": "2026-11-26T21:49:30.475Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.361Z",
       "pr_base_at_read": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "observed_at": "2026-11-26T21:43:36.305Z",
+      "observed_at": "2026-11-26T22:58:23.539Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3454,9 +3493,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "actual_base_observed_at": "2026-11-26T21:49:30.475Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.361Z",
       "pr_base_at_read": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "observed_at": "2026-11-26T21:43:36.310Z",
+      "observed_at": "2026-11-26T22:58:23.500Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3484,9 +3523,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "actual_base_observed_at": "2026-11-26T21:49:30.475Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.361Z",
       "pr_base_at_read": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "observed_at": "2026-11-26T21:43:36.297Z",
+      "observed_at": "2026-11-26T22:58:23.476Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3514,9 +3553,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "actual_base_observed_at": "2026-11-26T21:49:30.475Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.361Z",
       "pr_base_at_read": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "observed_at": "2026-11-26T21:43:36.241Z",
+      "observed_at": "2026-11-26T22:58:23.585Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3544,9 +3583,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "actual_base_observed_at": "2026-11-26T21:49:30.475Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.361Z",
       "pr_base_at_read": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "observed_at": "2026-11-26T21:43:36.242Z",
+      "observed_at": "2026-11-26T22:58:23.528Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3574,9 +3613,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "actual_base_observed_at": "2026-11-26T21:49:30.475Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.361Z",
       "pr_base_at_read": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "observed_at": "2026-11-26T21:43:37.203Z",
+      "observed_at": "2026-11-26T22:58:23.700Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3604,9 +3643,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "actual_base_observed_at": "2026-11-26T21:49:30.475Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.361Z",
       "pr_base_at_read": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "observed_at": "2026-11-26T21:43:36.491Z",
+      "observed_at": "2026-11-26T22:58:23.650Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3634,9 +3673,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "actual_base_observed_at": "2026-11-26T21:49:30.475Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.361Z",
       "pr_base_at_read": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "observed_at": "2026-11-26T21:43:36.224Z",
+      "observed_at": "2026-11-26T22:58:23.864Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3664,9 +3703,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "actual_base_observed_at": "2026-11-26T21:49:30.475Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.361Z",
       "pr_base_at_read": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "observed_at": "2026-11-26T21:43:36.407Z",
+      "observed_at": "2026-11-26T22:58:23.568Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3694,9 +3733,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "actual_base_observed_at": "2026-11-26T21:49:30.475Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.361Z",
       "pr_base_at_read": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "observed_at": "2026-11-26T21:43:36.290Z",
+      "observed_at": "2026-11-26T22:58:23.776Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3724,9 +3763,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "actual_base_observed_at": "2026-11-26T21:49:30.475Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.361Z",
       "pr_base_at_read": "6920d2c875d852c9bc0605526a6e88879d4f8e0b",
-      "observed_at": "2026-11-26T21:43:37.793Z",
+      "observed_at": "2026-11-26T22:58:23.669Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3754,9 +3793,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "actual_base_observed_at": "2026-11-26T21:49:30.475Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.361Z",
       "pr_base_at_read": "6920d2c875d852c9bc0605526a6e88879d4f8e0b",
-      "observed_at": "2026-11-26T21:43:37.864Z",
+      "observed_at": "2026-11-26T22:58:23.654Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3784,9 +3823,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "18af339df7864b9c567524b212f5fcbd5b9584c6",
-      "actual_base_observed_at": "2026-11-26T21:49:30.475Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.361Z",
       "pr_base_at_read": "6920d2c875d852c9bc0605526a6e88879d4f8e0b",
-      "observed_at": "2026-11-26T21:43:37.909Z",
+      "observed_at": "2026-11-26T22:58:23.491Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3814,9 +3853,9 @@
       "rest_inline_comments": 2,
       "counts_match": true,
       "actual_base": "41334f991486e29822c2e4c4f6b040a1315ef1bd",
-      "actual_base_observed_at": "2026-11-26T21:49:30.423Z",
+      "actual_base_observed_at": "2026-11-26T23:00:37.314Z",
       "pr_base_at_read": "41334f991486e29822c2e4c4f6b040a1315ef1bd",
-      "observed_at": "2026-11-26T21:43:37.866Z",
+      "observed_at": "2026-11-26T22:58:23.702Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -3839,9 +3878,9 @@
       "rest_inline_comments": 3,
       "counts_match": true,
       "actual_base": "e1805dd6046fad5d9e3bb6a6e8874bf659f13eed",
-      "actual_base_observed_at": "2026-11-26T21:49:30.386Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.288Z",
       "pr_base_at_read": "e1805dd6046fad5d9e3bb6a6e8874bf659f13eed",
-      "observed_at": "2026-11-26T21:43:38.048Z",
+      "observed_at": "2026-11-26T22:58:23.669Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -3867,9 +3906,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "e1805dd6046fad5d9e3bb6a6e8874bf659f13eed",
-      "actual_base_observed_at": "2026-11-26T21:49:30.386Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.288Z",
       "pr_base_at_read": "e1805dd6046fad5d9e3bb6a6e8874bf659f13eed",
-      "observed_at": "2026-11-26T21:43:38.166Z",
+      "observed_at": "2026-11-26T22:58:23.593Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -3895,9 +3934,9 @@
       "rest_inline_comments": 3,
       "counts_match": true,
       "actual_base": "d8c011d2a362bfc27600011da866163cad2e9311",
-      "actual_base_observed_at": "2026-11-26T21:49:30.395Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.170Z",
       "pr_base_at_read": "d8c011d2a362bfc27600011da866163cad2e9311",
-      "observed_at": "2026-11-26T21:43:38.013Z",
+      "observed_at": "2026-11-26T22:58:23.849Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -3922,9 +3961,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "d8c011d2a362bfc27600011da866163cad2e9311",
-      "actual_base_observed_at": "2026-11-26T21:49:30.395Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.170Z",
       "pr_base_at_read": "e82a4e81bc2405088319f426d795d85afc4b39d5",
-      "observed_at": "2026-11-26T21:43:37.871Z",
+      "observed_at": "2026-11-26T22:58:23.595Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -3945,9 +3984,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "b62af2204f55d254a3250f62614142e031de972e",
-      "actual_base_observed_at": "2026-11-26T21:49:30.509Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.337Z",
       "pr_base_at_read": "b62af2204f55d254a3250f62614142e031de972e",
-      "observed_at": "2026-11-26T21:43:37.930Z",
+      "observed_at": "2026-11-26T22:58:23.805Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -3972,9 +4011,9 @@
       "rest_inline_comments": 22,
       "counts_match": true,
       "actual_base": "529d7ddc11bcd208145f92f52225ab1ad6b76e03",
-      "actual_base_observed_at": "2026-11-26T21:49:30.437Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.398Z",
       "pr_base_at_read": "529d7ddc11bcd208145f92f52225ab1ad6b76e03",
-      "observed_at": "2026-11-26T21:43:38.165Z",
+      "observed_at": "2026-11-26T22:58:24.009Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -4000,9 +4039,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "529d7ddc11bcd208145f92f52225ab1ad6b76e03",
-      "actual_base_observed_at": "2026-11-26T21:49:30.437Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.398Z",
       "pr_base_at_read": "529d7ddc11bcd208145f92f52225ab1ad6b76e03",
-      "observed_at": "2026-11-26T21:43:37.987Z",
+      "observed_at": "2026-11-26T22:58:24.930Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -4028,9 +4067,9 @@
       "rest_inline_comments": 4,
       "counts_match": true,
       "actual_base": "a471de394b3f27408839ad8e0ec1642054c0aeee",
-      "actual_base_observed_at": "2026-11-26T21:49:30.362Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.283Z",
       "pr_base_at_read": "06ad13105b61017c03330692671c6d6b402c50aa",
-      "observed_at": "2026-11-26T21:43:38.137Z",
+      "observed_at": "2026-11-26T22:58:23.895Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 7,
       "runner_labels": [
@@ -4056,9 +4095,9 @@
       "rest_inline_comments": 4,
       "counts_match": true,
       "actual_base": "a471de394b3f27408839ad8e0ec1642054c0aeee",
-      "actual_base_observed_at": "2026-11-26T21:49:30.362Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.283Z",
       "pr_base_at_read": "a471de394b3f27408839ad8e0ec1642054c0aeee",
-      "observed_at": "2026-11-26T21:43:38.043Z",
+      "observed_at": "2026-11-26T22:58:23.744Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 7,
       "runner_labels": [
@@ -4084,9 +4123,9 @@
       "rest_inline_comments": 55,
       "counts_match": true,
       "actual_base": "a471de394b3f27408839ad8e0ec1642054c0aeee",
-      "actual_base_observed_at": "2026-11-26T21:49:30.362Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.283Z",
       "pr_base_at_read": "a471de394b3f27408839ad8e0ec1642054c0aeee",
-      "observed_at": "2026-11-26T21:43:38.360Z",
+      "observed_at": "2026-11-26T22:58:24.063Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 7,
       "runner_labels": [
@@ -4112,9 +4151,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "95e16946eaac9041c4acc7f2890e117c85e1aa97",
-      "actual_base_observed_at": "2026-11-26T21:49:30.423Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.742Z",
       "pr_base_at_read": "a8b67a3386e7f827963fb0d4d5b33838e09b2b64",
-      "observed_at": "2026-11-26T21:43:37.925Z",
+      "observed_at": "2026-11-26T22:58:23.829Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -4135,9 +4174,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "1e1455e2a7810d639108a2f24bf066b33c3fd9d7",
-      "actual_base_observed_at": "2026-11-26T21:49:30.438Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.203Z",
       "pr_base_at_read": "1e1455e2a7810d639108a2f24bf066b33c3fd9d7",
-      "observed_at": "2026-11-26T21:43:37.877Z",
+      "observed_at": "2026-11-26T22:58:28.274Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -4158,9 +4197,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "1c48069c0996ed918d786e5a3ba5793325788d57",
-      "actual_base_observed_at": "2026-11-26T21:49:31.793Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.304Z",
       "pr_base_at_read": "1c48069c0996ed918d786e5a3ba5793325788d57",
-      "observed_at": "2026-11-26T21:43:37.928Z",
+      "observed_at": "2026-11-26T22:58:28.223Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -4184,9 +4223,9 @@
       "rest_inline_comments": 5,
       "counts_match": true,
       "actual_base": "30eb0a96dab89b7a908120444be2fb80f8003167",
-      "actual_base_observed_at": "2026-11-26T21:49:31.830Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.284Z",
       "pr_base_at_read": "30eb0a96dab89b7a908120444be2fb80f8003167",
-      "observed_at": "2026-11-26T21:43:38.038Z",
+      "observed_at": "2026-11-26T22:58:28.334Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -4209,9 +4248,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "30eb0a96dab89b7a908120444be2fb80f8003167",
-      "actual_base_observed_at": "2026-11-26T21:49:31.830Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.284Z",
       "pr_base_at_read": "30eb0a96dab89b7a908120444be2fb80f8003167",
-      "observed_at": "2026-11-26T21:43:38.332Z",
+      "observed_at": "2026-11-26T22:58:28.688Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -4234,9 +4273,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "30eb0a96dab89b7a908120444be2fb80f8003167",
-      "actual_base_observed_at": "2026-11-26T21:49:31.830Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.284Z",
       "pr_base_at_read": "30eb0a96dab89b7a908120444be2fb80f8003167",
-      "observed_at": "2026-11-26T21:43:37.896Z",
+      "observed_at": "2026-11-26T22:58:28.226Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -4259,9 +4298,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "5baf923d1e4cf3942543a5caf07c97cd5dd5c229",
-      "actual_base_observed_at": "2026-11-26T21:49:31.810Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.629Z",
       "pr_base_at_read": "da4230540e5910cdaf9785564188042593623802",
-      "observed_at": "2026-11-26T21:43:39.379Z",
+      "observed_at": "2026-11-26T22:58:28.379Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 5,
       "runner_labels": [
@@ -4288,9 +4327,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "5baf923d1e4cf3942543a5caf07c97cd5dd5c229",
-      "actual_base_observed_at": "2026-11-26T21:49:31.810Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.629Z",
       "pr_base_at_read": "da4230540e5910cdaf9785564188042593623802",
-      "observed_at": "2026-11-26T21:43:39.055Z",
+      "observed_at": "2026-11-26T22:58:28.353Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 5,
       "runner_labels": [
@@ -4317,9 +4356,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "5baf923d1e4cf3942543a5caf07c97cd5dd5c229",
-      "actual_base_observed_at": "2026-11-26T21:49:31.810Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.629Z",
       "pr_base_at_read": "da4230540e5910cdaf9785564188042593623802",
-      "observed_at": "2026-11-26T21:43:39.069Z",
+      "observed_at": "2026-11-26T22:58:29.924Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 5,
       "runner_labels": [
@@ -4346,9 +4385,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "5baf923d1e4cf3942543a5caf07c97cd5dd5c229",
-      "actual_base_observed_at": "2026-11-26T21:49:31.810Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.629Z",
       "pr_base_at_read": "da4230540e5910cdaf9785564188042593623802",
-      "observed_at": "2026-11-26T21:43:39.080Z",
+      "observed_at": "2026-11-26T22:58:28.367Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 5,
       "runner_labels": [
@@ -4375,9 +4414,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "5baf923d1e4cf3942543a5caf07c97cd5dd5c229",
-      "actual_base_observed_at": "2026-11-26T21:49:31.810Z",
+      "actual_base_observed_at": "2026-11-26T23:00:38.629Z",
       "pr_base_at_read": "bd273d0f0f9192df78ca87c9d18ffae27fe77d7d",
-      "observed_at": "2026-11-26T21:43:39.242Z",
+      "observed_at": "2026-11-26T22:58:28.700Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 5,
       "runner_labels": [
@@ -4404,9 +4443,9 @@
       "rest_inline_comments": 27,
       "counts_match": true,
       "actual_base": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-      "actual_base_observed_at": "2026-11-26T21:49:31.832Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.325Z",
       "pr_base_at_read": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-      "observed_at": "2026-11-26T21:43:39.306Z",
+      "observed_at": "2026-11-26T22:58:28.476Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -4431,9 +4470,9 @@
       "rest_inline_comments": 28,
       "counts_match": true,
       "actual_base": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-      "actual_base_observed_at": "2026-11-26T21:49:31.832Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.325Z",
       "pr_base_at_read": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-      "observed_at": "2026-11-26T21:43:39.376Z",
+      "observed_at": "2026-11-26T22:58:28.902Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -4458,9 +4497,9 @@
       "rest_inline_comments": 12,
       "counts_match": true,
       "actual_base": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-      "actual_base_observed_at": "2026-11-26T21:49:31.832Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.325Z",
       "pr_base_at_read": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-      "observed_at": "2026-11-26T21:43:39.341Z",
+      "observed_at": "2026-11-26T22:58:28.566Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -4485,9 +4524,9 @@
       "rest_inline_comments": 31,
       "counts_match": true,
       "actual_base": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-      "actual_base_observed_at": "2026-11-26T21:49:31.832Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.325Z",
       "pr_base_at_read": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-      "observed_at": "2026-11-26T21:43:39.353Z",
+      "observed_at": "2026-11-26T22:58:28.961Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -4512,9 +4551,9 @@
       "rest_inline_comments": 15,
       "counts_match": true,
       "actual_base": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-      "actual_base_observed_at": "2026-11-26T21:49:31.832Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.325Z",
       "pr_base_at_read": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-      "observed_at": "2026-11-26T21:43:39.397Z",
+      "observed_at": "2026-11-26T22:58:28.617Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -4539,9 +4578,9 @@
       "rest_inline_comments": 54,
       "counts_match": true,
       "actual_base": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-      "actual_base_observed_at": "2026-11-26T21:49:31.832Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.325Z",
       "pr_base_at_read": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-      "observed_at": "2026-11-26T21:43:39.539Z",
+      "observed_at": "2026-11-26T22:58:28.779Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -4566,9 +4605,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "6e6a57762d4077115562dcf2f8f3d38d2374b414",
-      "actual_base_observed_at": "2026-11-26T21:49:31.893Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.337Z",
       "pr_base_at_read": "6e6a57762d4077115562dcf2f8f3d38d2374b414",
-      "observed_at": "2026-11-26T21:43:39.003Z",
+      "observed_at": "2026-11-26T22:58:28.502Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 2,
       "runner_labels": [
@@ -4591,9 +4630,9 @@
       "rest_inline_comments": 2,
       "counts_match": true,
       "actual_base": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
-      "actual_base_observed_at": "2026-11-26T21:49:32.666Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.293Z",
       "pr_base_at_read": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
-      "observed_at": "2026-11-26T21:43:39.132Z",
+      "observed_at": "2026-11-26T22:58:28.576Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 6,
       "runner_labels": [
@@ -4618,9 +4657,9 @@
       "rest_inline_comments": 20,
       "counts_match": true,
       "actual_base": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
-      "actual_base_observed_at": "2026-11-26T21:49:32.666Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.293Z",
       "pr_base_at_read": "81235c28ba7d51ea12aad4740da198d54b8a59b5",
-      "observed_at": "2026-11-26T21:43:39.500Z",
+      "observed_at": "2026-11-26T22:58:29.046Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 6,
       "runner_labels": [
@@ -4645,9 +4684,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "28503d6e53e0f52ab060287e8681290138b04179",
-      "actual_base_observed_at": "2026-11-26T21:49:33.704Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.375Z",
       "pr_base_at_read": "28503d6e53e0f52ab060287e8681290138b04179",
-      "observed_at": "2026-11-26T21:43:39.040Z",
+      "observed_at": "2026-11-26T22:58:28.424Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 6,
       "runner_labels": [
@@ -4672,9 +4711,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
-      "actual_base_observed_at": "2026-11-26T21:49:32.666Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.293Z",
       "pr_base_at_read": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
-      "observed_at": "2026-11-26T21:43:40.203Z",
+      "observed_at": "2026-11-26T22:58:30.665Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 6,
       "runner_labels": [
@@ -4699,9 +4738,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "f2338bb45e432ae2bfd738c870db4b5995f5edf3",
-      "actual_base_observed_at": "2026-11-26T21:49:32.764Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.428Z",
       "pr_base_at_read": "f2338bb45e432ae2bfd738c870db4b5995f5edf3",
-      "observed_at": "2026-11-26T21:43:40.120Z",
+      "observed_at": "2026-11-26T22:58:30.698Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -4724,9 +4763,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "7adbcdf388dd92c945d5162dd09eef15564cfbb2",
-      "actual_base_observed_at": "2026-11-26T21:49:32.754Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.313Z",
       "pr_base_at_read": "7adbcdf388dd92c945d5162dd09eef15564cfbb2",
-      "observed_at": "2026-11-26T21:43:40.274Z",
+      "observed_at": "2026-11-26T22:58:31.677Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -4749,9 +4788,9 @@
       "rest_inline_comments": 3,
       "counts_match": true,
       "actual_base": "b8909486a3f0ca945252184a165f0e001c465d1f",
-      "actual_base_observed_at": "2026-11-26T21:49:32.815Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.307Z",
       "pr_base_at_read": "b8909486a3f0ca945252184a165f0e001c465d1f",
-      "observed_at": "2026-11-26T21:43:40.355Z",
+      "observed_at": "2026-11-26T22:58:30.898Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 4,
       "runner_labels": [
@@ -4777,9 +4816,9 @@
       "rest_inline_comments": 3,
       "counts_match": true,
       "actual_base": "d6a86830101624ea8f696ec450be5f25a9200c5a",
-      "actual_base_observed_at": "2026-11-26T21:49:32.729Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.475Z",
       "pr_base_at_read": "d6a86830101624ea8f696ec450be5f25a9200c5a",
-      "observed_at": "2026-11-26T21:43:40.170Z",
+      "observed_at": "2026-11-26T22:58:30.703Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -4794,20 +4833,20 @@
       "repository": "gosuda/ruk",
       "number": 20,
       "url": "https://github.com/gosuda/ruk/pull/20",
-      "head": "79704448b042c4b39f2c10d73d9dac275c2f28b6",
+      "head": "adbb6ff975bbd520a985a4d296c8a3cf6ea87daf",
       "head_repository": "gosuda/ruk",
       "state": "open",
       "mergeable": true,
       "mergeable_state": "clean",
-      "unresolved": 2,
-      "threads": 17,
-      "inline_comments": 45,
-      "rest_inline_comments": 45,
+      "unresolved": 3,
+      "threads": 20,
+      "inline_comments": 51,
+      "rest_inline_comments": 51,
       "counts_match": true,
       "actual_base": "bea93392f643e50085a38d0fe1370ecba7be0ee6",
-      "actual_base_observed_at": "2026-11-26T21:49:32.694Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.409Z",
       "pr_base_at_read": "bea93392f643e50085a38d0fe1370ecba7be0ee6",
-      "observed_at": "2026-11-26T21:43:40.627Z",
+      "observed_at": "2026-11-26T22:58:31.154Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -4817,21 +4856,30 @@
       ],
       "unresolved_threads": [
         {
-          "id": "PRRT_kwDOVOGZ-868XrPT",
+          "id": "PRRT_kwDOVOGZ-868lJoZ",
           "path": "crates/ruk/src/cli/verbs_stage.rs",
-          "line": 359,
+          "line": 391,
           "is_outdated": false,
           "comment_ids": [
-            4708074333
+            4713928948
           ]
         },
         {
-          "id": "PRRT_kwDOVOGZ-868XrRP",
+          "id": "PRRT_kwDOVOGZ-868lJpB",
           "path": "crates/ruk/src/cli/tests/lexical_paths.rs",
-          "line": 214,
+          "line": 450,
           "is_outdated": false,
           "comment_ids": [
-            4708074515
+            4713929035
+          ]
+        },
+        {
+          "id": "PRRT_kwDOVOGZ-868lJpx",
+          "path": "crates/ruk/src/cli/tests/lexical_paths.rs",
+          "line": 419,
+          "is_outdated": false,
+          "comment_ids": [
+            4713929123
           ]
         }
       ]
@@ -4851,9 +4899,9 @@
       "rest_inline_comments": 14,
       "counts_match": true,
       "actual_base": "bea93392f643e50085a38d0fe1370ecba7be0ee6",
-      "actual_base_observed_at": "2026-11-26T21:49:32.694Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.409Z",
       "pr_base_at_read": "bea93392f643e50085a38d0fe1370ecba7be0ee6",
-      "observed_at": "2026-11-26T21:43:40.535Z",
+      "observed_at": "2026-11-26T22:58:30.882Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -4867,20 +4915,20 @@
       "repository": "gosuda/sloplint",
       "number": 137,
       "url": "https://github.com/gosuda/sloplint/pull/137",
-      "head": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
+      "head": "e7ee97e84246863766ec7465777a035134533feb",
       "head_repository": "gosuda/sloplint",
       "state": "open",
       "mergeable": true,
       "mergeable_state": "blocked",
-      "unresolved": 2,
-      "threads": 25,
-      "inline_comments": 51,
-      "rest_inline_comments": 51,
+      "unresolved": 1,
+      "threads": 26,
+      "inline_comments": 54,
+      "rest_inline_comments": 54,
       "counts_match": true,
       "actual_base": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
-      "actual_base_observed_at": "2026-11-26T21:49:32.708Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.459Z",
       "pr_base_at_read": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
-      "observed_at": "2026-11-26T21:51:26.174Z",
+      "observed_at": "2026-11-26T22:58:31.434Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 2,
       "runner_labels": [
@@ -4891,21 +4939,12 @@
       ],
       "unresolved_threads": [
         {
-          "id": "PRRT_kwDOVOMFM868j3zg",
+          "id": "PRRT_kwDOVOMFM868lKep",
           "path": "vendor/tree-sitter-powershell/grammar.js",
-          "line": 1011,
+          "line": 1000,
           "is_outdated": false,
           "comment_ids": [
-            4713373036
-          ]
-        },
-        {
-          "id": "PRRT_kwDOVOMFM868j30i",
-          "path": "vendor/tree-sitter-powershell/grammar.js",
-          "line": 1011,
-          "is_outdated": false,
-          "comment_ids": [
-            4713373164
+            4713934560
           ]
         }
       ]
@@ -4925,9 +4964,9 @@
       "rest_inline_comments": 3,
       "counts_match": true,
       "actual_base": "96e8d01b715057fd4cab6057fa811e97dab11c1b",
-      "actual_base_observed_at": "2026-11-26T21:49:32.737Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.349Z",
       "pr_base_at_read": "96e8d01b715057fd4cab6057fa811e97dab11c1b",
-      "observed_at": "2026-11-26T21:43:40.547Z",
+      "observed_at": "2026-11-26T22:58:31.043Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 8,
       "runner_labels": [
@@ -4981,9 +5020,9 @@
       "rest_inline_comments": 4,
       "counts_match": true,
       "actual_base": "96e8d01b715057fd4cab6057fa811e97dab11c1b",
-      "actual_base_observed_at": "2026-11-26T21:49:32.737Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.349Z",
       "pr_base_at_read": "96e8d01b715057fd4cab6057fa811e97dab11c1b",
-      "observed_at": "2026-11-26T21:43:40.417Z",
+      "observed_at": "2026-11-26T22:58:30.940Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 8,
       "runner_labels": [
@@ -5035,20 +5074,20 @@
       "repository": "gosuda/LoGOs",
       "number": 339,
       "url": "https://github.com/gosuda/LoGOs/pull/339",
-      "head": "8f65066faa91b54beb14410dc4c84cb4ac237e66",
+      "head": "1cccd8960b7a046553afaa804cd2f49e2bf21c5c",
       "head_repository": "gosuda/LoGOs",
       "state": "open",
-      "mergeable": false,
-      "mergeable_state": "dirty",
-      "unresolved": 1,
-      "threads": 7,
-      "inline_comments": 15,
-      "rest_inline_comments": 15,
+      "mergeable": true,
+      "mergeable_state": "blocked",
+      "unresolved": 3,
+      "threads": 9,
+      "inline_comments": 17,
+      "rest_inline_comments": 17,
       "counts_match": true,
       "actual_base": "96e8d01b715057fd4cab6057fa811e97dab11c1b",
-      "actual_base_observed_at": "2026-11-26T21:49:32.737Z",
-      "pr_base_at_read": "a39a6dfa7572ac072f553963fc00baccf78f242a",
-      "observed_at": "2026-11-26T21:43:40.414Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.349Z",
+      "pr_base_at_read": "96e8d01b715057fd4cab6057fa811e97dab11c1b",
+      "observed_at": "2026-11-26T22:58:30.814Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 8,
       "runner_labels": [
@@ -5067,6 +5106,24 @@
             4707020612,
             4708539188
           ]
+        },
+        {
+          "id": "PRRT_kwDOVOeymc68lQH4",
+          "path": "src/cmd/go/internal/logos/eject/eject.go",
+          "line": 2402,
+          "is_outdated": false,
+          "comment_ids": [
+            4713972745
+          ]
+        },
+        {
+          "id": "PRRT_kwDOVOeymc68lQJg",
+          "path": "src/cmd/compile/internal/noder/irgen.go",
+          "line": 340,
+          "is_outdated": false,
+          "comment_ids": [
+            4713972893
+          ]
         }
       ]
     },
@@ -5074,76 +5131,20 @@
       "repository": "gosuda/LoGOs",
       "number": 336,
       "url": "https://github.com/gosuda/LoGOs/pull/336",
-      "head": "fe6309200798d9d7b561338658aa84fe237c30d5",
+      "head": "e2a50cb63c8381f3017f9f198bfb0394f54f50d4",
       "head_repository": "gosuda/LoGOs",
       "state": "open",
-      "mergeable": false,
-      "mergeable_state": "dirty",
-      "unresolved": 0,
-      "threads": 21,
-      "inline_comments": 51,
-      "rest_inline_comments": 51,
+      "mergeable": true,
+      "mergeable_state": "blocked",
+      "unresolved": 4,
+      "threads": 25,
+      "inline_comments": 55,
+      "rest_inline_comments": 55,
       "counts_match": true,
       "actual_base": "96e8d01b715057fd4cab6057fa811e97dab11c1b",
-      "actual_base_observed_at": "2026-11-26T21:49:32.737Z",
-      "pr_base_at_read": "a39a6dfa7572ac072f553963fc00baccf78f242a",
-      "observed_at": "2026-11-26T21:43:41.076Z",
-      "runner_status": "depot_only_or_no_jobs",
-      "workflow_files": 8,
-      "runner_labels": [
-        "depot-ubuntu-24.04",
-        "depot-ubuntu-24.04-4",
-        "depot-ubuntu-24.04-8",
-        "depot-ubuntu-24.04-arm"
-      ],
-      "unresolved_threads": []
-    },
-    {
-      "repository": "gosuda/LoGOs",
-      "number": 334,
-      "url": "https://github.com/gosuda/LoGOs/pull/334",
-      "head": "f2eae8c964bae2dda5ee8c747f8f039ddabb5f35",
-      "head_repository": "gosuda/LoGOs",
-      "state": "open",
-      "mergeable": false,
-      "mergeable_state": "dirty",
-      "unresolved": 0,
-      "threads": 9,
-      "inline_comments": 19,
-      "rest_inline_comments": 19,
-      "counts_match": true,
-      "actual_base": "96e8d01b715057fd4cab6057fa811e97dab11c1b",
-      "actual_base_observed_at": "2026-11-26T21:49:32.737Z",
-      "pr_base_at_read": "a39a6dfa7572ac072f553963fc00baccf78f242a",
-      "observed_at": "2026-11-26T21:43:40.476Z",
-      "runner_status": "depot_only_or_no_jobs",
-      "workflow_files": 8,
-      "runner_labels": [
-        "depot-ubuntu-24.04",
-        "depot-ubuntu-24.04-4",
-        "depot-ubuntu-24.04-8",
-        "depot-ubuntu-24.04-arm"
-      ],
-      "unresolved_threads": []
-    },
-    {
-      "repository": "gosuda/LoGOs",
-      "number": 328,
-      "url": "https://github.com/gosuda/LoGOs/pull/328",
-      "head": "e43b5ef4408cd79d4b48cec44b1166bfd145305f",
-      "head_repository": "gosuda/LoGOs",
-      "state": "open",
-      "mergeable": false,
-      "mergeable_state": "dirty",
-      "unresolved": 13,
-      "threads": 28,
-      "inline_comments": 43,
-      "rest_inline_comments": 43,
-      "counts_match": true,
-      "actual_base": "96e8d01b715057fd4cab6057fa811e97dab11c1b",
-      "actual_base_observed_at": "2026-11-26T21:49:32.737Z",
-      "pr_base_at_read": "a39a6dfa7572ac072f553963fc00baccf78f242a",
-      "observed_at": "2026-11-26T21:43:41.086Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.349Z",
+      "pr_base_at_read": "96e8d01b715057fd4cab6057fa811e97dab11c1b",
+      "observed_at": "2026-11-26T22:58:31.714Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 8,
       "runner_labels": [
@@ -5154,142 +5155,127 @@
       ],
       "unresolved_threads": [
         {
-          "id": "PRRT_kwDOVOeymc68NS-0",
-          "path": "src/cmd/compile/internal/types2/ctinst_logos.go",
-          "line": 1090,
+          "id": "PRRT_kwDOVOeymc68lHZg",
+          "path": "src/cmd/go/internal/logos/eject/eject_vendor.go",
+          "line": 326,
           "is_outdated": false,
           "comment_ids": [
-            4703648285
+            4713914418
           ]
         },
         {
-          "id": "PRRT_kwDOVOeymc68NTA5",
-          "path": "src/cmd/compile/internal/types2/ctinst_logos.go",
-          "line": 612,
+          "id": "PRRT_kwDOVOeymc68lHaR",
+          "path": "src/cmd/go/internal/logos/eject/eject_vendor.go",
+          "line": 308,
           "is_outdated": false,
           "comment_ids": [
-            4703648514
+            4713914497
           ]
         },
         {
-          "id": "PRRT_kwDOVOeymc68NTCA",
-          "path": "src/cmd/compile/internal/types2/ctinst_logos.go",
-          "line": 463,
+          "id": "PRRT_kwDOVOeymc68lHa6",
+          "path": "src/cmd/go/testdata/script/logos_eject_lgo_runtime_pair.txt",
+          "line": 41,
           "is_outdated": false,
           "comment_ids": [
-            4703648651
+            4713914561
           ]
         },
         {
-          "id": "PRRT_kwDOVOeymc68NTCz",
-          "path": "src/cmd/compile/internal/types2/ctinst_logos.go",
-          "line": 830,
+          "id": "PRRT_kwDOVOeymc68lHbb",
+          "path": "src/cmd/go/internal/logos/eject/eject_vendor_test.go",
+          "line": 36,
           "is_outdated": false,
           "comment_ids": [
-            4703648737
-          ]
-        },
-        {
-          "id": "PRRT_kwDOVOeymc68NTDs",
-          "path": "src/cmd/compile/internal/types2/ctinst_logos.go",
-          "line": 125,
-          "is_outdated": false,
-          "comment_ids": [
-            4703648831
-          ]
-        },
-        {
-          "id": "PRRT_kwDOVOeymc68NTEx",
-          "path": "src/cmd/compile/internal/logos/cteject.go",
-          "line": 412,
-          "is_outdated": false,
-          "comment_ids": [
-            4703648956
-          ]
-        },
-        {
-          "id": "PRRT_kwDOVOeymc68NTHq",
-          "path": "src/cmd/compile/internal/types2/ctinst_logos.go",
-          "line": 472,
-          "is_outdated": false,
-          "comment_ids": [
-            4703649222
-          ]
-        },
-        {
-          "id": "PRRT_kwDOVOeymc68NTJS",
-          "path": "src/cmd/compile/internal/types2/ctinst_logos.go",
-          "line": 834,
-          "is_outdated": false,
-          "comment_ids": [
-            4703649389
-          ]
-        },
-        {
-          "id": "PRRT_kwDOVOeymc68NTKh",
-          "path": "src/cmd/compile/internal/noder/writer.go",
-          "line": 163,
-          "is_outdated": false,
-          "comment_ids": [
-            4703649509
-          ]
-        },
-        {
-          "id": "PRRT_kwDOVOeymc68NTLH",
-          "path": "src/cmd/compile/internal/types2/assignments.go",
-          "line": 150,
-          "is_outdated": false,
-          "comment_ids": [
-            4703649585
-          ]
-        },
-        {
-          "id": "PRRT_kwDOVOeymc68ODJN",
-          "path": "src/cmd/compile/internal/logos/constmap_lower.go",
-          "line": 426,
-          "is_outdated": false,
-          "comment_ids": [
-            4703973758
-          ]
-        },
-        {
-          "id": "PRRT_kwDOVOeymc68ODKY",
-          "path": "src/cmd/compile/internal/logos/constmap_lower.go",
-          "line": 716,
-          "is_outdated": false,
-          "comment_ids": [
-            4703973877
-          ]
-        },
-        {
-          "id": "PRRT_kwDOVOeymc68ODLE",
-          "path": "src/cmd/compile/internal/logos/constmap_lower.go",
-          "line": 378,
-          "is_outdated": false,
-          "comment_ids": [
-            4703973962
+            4713914627
           ]
         }
       ]
     },
     {
       "repository": "gosuda/LoGOs",
-      "number": 322,
-      "url": "https://github.com/gosuda/LoGOs/pull/322",
-      "head": "177e5555822fe4ddac9dbc68c9035ff55dee6b9b",
+      "number": 334,
+      "url": "https://github.com/gosuda/LoGOs/pull/334",
+      "head": "682c21d440d5b2bb27afaa04643c421f4dfcac1a",
       "head_repository": "gosuda/LoGOs",
       "state": "open",
-      "mergeable": false,
-      "mergeable_state": "dirty",
+      "mergeable": true,
+      "mergeable_state": "blocked",
+      "unresolved": 1,
+      "threads": 10,
+      "inline_comments": 20,
+      "rest_inline_comments": 20,
+      "counts_match": true,
+      "actual_base": "96e8d01b715057fd4cab6057fa811e97dab11c1b",
+      "actual_base_observed_at": "2026-11-26T23:00:43.349Z",
+      "pr_base_at_read": "96e8d01b715057fd4cab6057fa811e97dab11c1b",
+      "observed_at": "2026-11-26T22:58:31.271Z",
+      "runner_status": "depot_only_or_no_jobs",
+      "workflow_files": 8,
+      "runner_labels": [
+        "depot-ubuntu-24.04",
+        "depot-ubuntu-24.04-4",
+        "depot-ubuntu-24.04-8",
+        "depot-ubuntu-24.04-arm"
+      ],
+      "unresolved_threads": [
+        {
+          "id": "PRRT_kwDOVOeymc68lFtH",
+          "path": "logos-doc/IMPLEMENTATION.md",
+          "line": 320,
+          "is_outdated": false,
+          "comment_ids": [
+            4713902873
+          ]
+        }
+      ]
+    },
+    {
+      "repository": "gosuda/LoGOs",
+      "number": 328,
+      "url": "https://github.com/gosuda/LoGOs/pull/328",
+      "head": "04a036afb5da302b35c09e3ad9d7911661ef6025",
+      "head_repository": "gosuda/LoGOs",
+      "state": "open",
+      "mergeable": true,
+      "mergeable_state": "blocked",
+      "unresolved": 0,
+      "threads": 28,
+      "inline_comments": 56,
+      "rest_inline_comments": 56,
+      "counts_match": true,
+      "actual_base": "96e8d01b715057fd4cab6057fa811e97dab11c1b",
+      "actual_base_observed_at": "2026-11-26T23:00:43.349Z",
+      "pr_base_at_read": "96e8d01b715057fd4cab6057fa811e97dab11c1b",
+      "observed_at": "2026-11-26T22:58:31.497Z",
+      "runner_status": "depot_only_or_no_jobs",
+      "workflow_files": 8,
+      "runner_labels": [
+        "depot-ubuntu-24.04",
+        "depot-ubuntu-24.04-4",
+        "depot-ubuntu-24.04-8",
+        "depot-ubuntu-24.04-arm"
+      ],
+      "unresolved_threads": []
+    },
+    {
+      "repository": "gosuda/LoGOs",
+      "number": 322,
+      "url": "https://github.com/gosuda/LoGOs/pull/322",
+      "head": "63f7648df6766d83a0d83221d49f3095087f0e92",
+      "head_repository": "gosuda/LoGOs",
+      "state": "open",
+      "mergeable": true,
+      "mergeable_state": "blocked",
       "unresolved": 0,
       "threads": 17,
       "inline_comments": 41,
       "rest_inline_comments": 41,
       "counts_match": true,
       "actual_base": "96e8d01b715057fd4cab6057fa811e97dab11c1b",
-      "actual_base_observed_at": "2026-11-26T21:49:32.737Z",
-      "pr_base_at_read": "32971b54ec80e04de00ce34cf365712958da8ede",
-      "observed_at": "2026-11-26T21:43:40.513Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.349Z",
+      "pr_base_at_read": "96e8d01b715057fd4cab6057fa811e97dab11c1b",
+      "observed_at": "2026-11-26T22:58:31.314Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 8,
       "runner_labels": [
@@ -5304,20 +5290,20 @@
       "repository": "gosuda/LoGOs",
       "number": 306,
       "url": "https://github.com/gosuda/LoGOs/pull/306",
-      "head": "f0979a01cca06bcce260d93fa3fddcf04cef0095",
+      "head": "ead666708bb1ef92eb13e1b480125bf6eba36720",
       "head_repository": "gosuda/LoGOs",
       "state": "open",
-      "mergeable": false,
-      "mergeable_state": "dirty",
+      "mergeable": true,
+      "mergeable_state": "blocked",
       "unresolved": 0,
       "threads": 3,
       "inline_comments": 6,
       "rest_inline_comments": 6,
       "counts_match": true,
       "actual_base": "96e8d01b715057fd4cab6057fa811e97dab11c1b",
-      "actual_base_observed_at": "2026-11-26T21:49:32.737Z",
-      "pr_base_at_read": "f7d65b060e7e0f2eeb23d197131bf2d749d0a636",
-      "observed_at": "2026-11-26T21:43:40.570Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.349Z",
+      "pr_base_at_read": "96e8d01b715057fd4cab6057fa811e97dab11c1b",
+      "observed_at": "2026-11-26T22:58:30.787Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 8,
       "runner_labels": [
@@ -5343,9 +5329,9 @@
       "rest_inline_comments": 34,
       "counts_match": true,
       "actual_base": "6d22cc6eca145f331561b6d69192e211e7059205",
-      "actual_base_observed_at": "2026-11-26T21:49:32.666Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.385Z",
       "pr_base_at_read": "6d22cc6eca145f331561b6d69192e211e7059205",
-      "observed_at": "2026-11-26T21:43:41.577Z",
+      "observed_at": "2026-11-26T22:58:33.589Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -5369,9 +5355,9 @@
       "rest_inline_comments": 13,
       "counts_match": true,
       "actual_base": "8c544c514101d99e5fc52f5fc3d06e970c09ae29",
-      "actual_base_observed_at": "2026-11-26T21:49:32.727Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.540Z",
       "pr_base_at_read": "8c544c514101d99e5fc52f5fc3d06e970c09ae29",
-      "observed_at": "2026-11-26T21:43:40.628Z",
+      "observed_at": "2026-11-26T22:58:30.914Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5392,9 +5378,9 @@
       "rest_inline_comments": 20,
       "counts_match": true,
       "actual_base": "2a27912f46a7ffa7841edc3f5ff0fc37e219ee27",
-      "actual_base_observed_at": "2026-11-26T21:49:32.720Z",
+      "actual_base_observed_at": "2026-11-26T23:00:43.427Z",
       "pr_base_at_read": "5e833a874c8772cfea035ff2300da76829e89ec0",
-      "observed_at": "2026-11-26T21:43:40.648Z",
+      "observed_at": "2026-11-26T22:58:30.874Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -5417,9 +5403,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "f0f6875436b756950df2b90b837d485f0ddc8f23",
-      "actual_base_observed_at": "2026-11-26T21:49:33.626Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.716Z",
       "pr_base_at_read": "f0f6875436b756950df2b90b837d485f0ddc8f23",
-      "observed_at": "2026-11-26T21:43:42.151Z",
+      "observed_at": "2026-11-26T22:58:30.774Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5429,7 +5415,7 @@
       "repository": "gosuda/1",
       "number": 115,
       "url": "https://github.com/gosuda/1/pull/115",
-      "head": "dd1ba2139c4cc757096180dec1a376cf1435866f",
+      "head": "05d6f77884856046560621449a50eab5186dd676",
       "head_repository": "gosuda/1",
       "state": "open",
       "mergeable": true,
@@ -5439,10 +5425,10 @@
       "inline_comments": 0,
       "rest_inline_comments": 0,
       "counts_match": true,
-      "actual_base": "d67044b5d1fab9a2f54a6c6322611b67d725fead",
-      "actual_base_observed_at": "2026-11-26T21:49:33.635Z",
-      "pr_base_at_read": "d67044b5d1fab9a2f54a6c6322611b67d725fead",
-      "observed_at": "2026-11-26T21:43:42.175Z",
+      "actual_base": "32187fea2ada26ef407be06566990f3dc8bf35a9",
+      "actual_base_observed_at": "2026-11-26T23:00:44.319Z",
+      "pr_base_at_read": "32187fea2ada26ef407be06566990f3dc8bf35a9",
+      "observed_at": "2026-11-26T22:58:30.656Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5463,9 +5449,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "5479689d0cd2e8f6be38dd38da654a023cd2ec12",
-      "actual_base_observed_at": "2026-11-26T21:49:33.660Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.421Z",
       "pr_base_at_read": "5479689d0cd2e8f6be38dd38da654a023cd2ec12",
-      "observed_at": "2026-11-26T21:43:42.444Z",
+      "observed_at": "2026-11-26T22:58:30.585Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5486,9 +5472,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "b3f3579c99d78aab7aa98cb1e4e99e5683e04f58",
-      "actual_base_observed_at": "2026-11-26T21:49:33.626Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.371Z",
       "pr_base_at_read": "b3f3579c99d78aab7aa98cb1e4e99e5683e04f58",
-      "observed_at": "2026-11-26T21:43:42.203Z",
+      "observed_at": "2026-11-26T22:58:30.666Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5509,9 +5495,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "f33b029facf067b6ce2e852e03fac54687520ed4",
-      "actual_base_observed_at": "2026-11-26T21:49:33.623Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.835Z",
       "pr_base_at_read": "f33b029facf067b6ce2e852e03fac54687520ed4",
-      "observed_at": "2026-11-26T21:43:42.175Z",
+      "observed_at": "2026-11-26T22:58:30.688Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5532,9 +5518,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "612eff2a241296bf58cb1369516eb82bed09b8f8",
-      "actual_base_observed_at": "2026-11-26T21:49:33.626Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.389Z",
       "pr_base_at_read": "612eff2a241296bf58cb1369516eb82bed09b8f8",
-      "observed_at": "2026-11-26T21:43:42.670Z",
+      "observed_at": "2026-11-26T22:58:34.393Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5555,9 +5541,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "09a01919736b8ecb83f536b771fe1f3c13ed3420",
-      "actual_base_observed_at": "2026-11-26T21:49:33.701Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.383Z",
       "pr_base_at_read": "09a01919736b8ecb83f536b771fe1f3c13ed3420",
-      "observed_at": "2026-11-26T21:43:42.164Z",
+      "observed_at": "2026-11-26T22:58:34.142Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5578,9 +5564,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "cc49bb4246fb7a3b20f0ae120e9e51fa03971217",
-      "actual_base_observed_at": "2026-11-26T21:49:33.639Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.331Z",
       "pr_base_at_read": "cc49bb4246fb7a3b20f0ae120e9e51fa03971217",
-      "observed_at": "2026-11-26T21:43:42.217Z",
+      "observed_at": "2026-11-26T22:58:35.047Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5601,9 +5587,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "056d132a6c85ee5dd3f71b0ea607ec06c115668e",
-      "actual_base_observed_at": "2026-11-26T21:49:33.661Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.443Z",
       "pr_base_at_read": "056d132a6c85ee5dd3f71b0ea607ec06c115668e",
-      "observed_at": "2026-11-26T21:43:42.237Z",
+      "observed_at": "2026-11-26T22:58:34.134Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5624,9 +5610,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "c2bd5c0a5715859633d2e95e4475e3b543a0df5b",
-      "actual_base_observed_at": "2026-11-26T21:49:34.069Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.343Z",
       "pr_base_at_read": "c2bd5c0a5715859633d2e95e4475e3b543a0df5b",
-      "observed_at": "2026-11-26T21:43:42.333Z",
+      "observed_at": "2026-11-26T22:58:34.241Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5647,9 +5633,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "2e8a295471b9860613cea2e4519828bdd4dc9e49",
-      "actual_base_observed_at": "2026-11-26T21:49:33.588Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.483Z",
       "pr_base_at_read": "2e8a295471b9860613cea2e4519828bdd4dc9e49",
-      "observed_at": "2026-11-26T21:43:42.436Z",
+      "observed_at": "2026-11-26T22:58:34.235Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5670,9 +5656,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "a2a6f76b042b29a16ac6dae1f2f8239d87cc0092",
-      "actual_base_observed_at": "2026-11-26T21:49:33.700Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.385Z",
       "pr_base_at_read": "a2a6f76b042b29a16ac6dae1f2f8239d87cc0092",
-      "observed_at": "2026-11-26T21:43:42.223Z",
+      "observed_at": "2026-11-26T22:58:34.130Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5693,9 +5679,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "e248a7634947b46fdceb1fa2f88acd285646ccc4",
-      "actual_base_observed_at": "2026-11-26T21:49:33.630Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.400Z",
       "pr_base_at_read": "e248a7634947b46fdceb1fa2f88acd285646ccc4",
-      "observed_at": "2026-11-26T21:43:42.299Z",
+      "observed_at": "2026-11-26T22:58:34.402Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5716,9 +5702,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "4238da9b1fc7389b161056e5813a80622983299e",
-      "actual_base_observed_at": "2026-11-26T21:49:33.788Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.358Z",
       "pr_base_at_read": "4238da9b1fc7389b161056e5813a80622983299e",
-      "observed_at": "2026-11-26T21:43:42.283Z",
+      "observed_at": "2026-11-26T22:58:34.477Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5739,9 +5725,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "485bb74e4b76e74748e8cfd3c7cdae70543c439f",
-      "actual_base_observed_at": "2026-11-26T21:49:34.495Z",
+      "actual_base_observed_at": "2026-11-26T23:00:45.356Z",
       "pr_base_at_read": "485bb74e4b76e74748e8cfd3c7cdae70543c439f",
-      "observed_at": "2026-11-26T21:43:42.224Z",
+      "observed_at": "2026-11-26T22:58:34.145Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5762,9 +5748,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "978bd31de633e09ae378badeac5eb7d0c3fbf66d",
-      "actual_base_observed_at": "2026-11-26T21:49:34.529Z",
+      "actual_base_observed_at": "2026-11-26T23:00:45.364Z",
       "pr_base_at_read": "978bd31de633e09ae378badeac5eb7d0c3fbf66d",
-      "observed_at": "2026-11-26T21:43:42.169Z",
+      "observed_at": "2026-11-26T22:58:34.187Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5785,9 +5771,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "304f24e2c5289f49df7e9fd1fc846c182c69a192",
-      "actual_base_observed_at": "2026-11-26T21:49:34.517Z",
+      "actual_base_observed_at": "2026-11-26T23:00:45.653Z",
       "pr_base_at_read": "304f24e2c5289f49df7e9fd1fc846c182c69a192",
-      "observed_at": "2026-11-26T21:43:42.238Z",
+      "observed_at": "2026-11-26T22:58:34.352Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5808,9 +5794,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "d20d3685b5e4a55269324f39c686fdd735fd0714",
-      "actual_base_observed_at": "2026-11-26T21:49:34.515Z",
+      "actual_base_observed_at": "2026-11-26T23:00:45.368Z",
       "pr_base_at_read": "d20d3685b5e4a55269324f39c686fdd735fd0714",
-      "observed_at": "2026-11-26T21:43:42.178Z",
+      "observed_at": "2026-11-26T22:58:34.114Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5831,9 +5817,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "f5d742fd79406e48c03292df9d2721a1e802fe19",
-      "actual_base_observed_at": "2026-11-26T21:49:34.638Z",
+      "actual_base_observed_at": "2026-11-26T23:00:45.312Z",
       "pr_base_at_read": "f5d742fd79406e48c03292df9d2721a1e802fe19",
-      "observed_at": "2026-11-26T21:43:42.235Z",
+      "observed_at": "2026-11-26T22:58:34.403Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5854,9 +5840,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "ec633c0c637e8f0aecad4070b6f12d91f2498985",
-      "actual_base_observed_at": "2026-11-26T21:49:34.505Z",
+      "actual_base_observed_at": "2026-11-26T23:00:45.327Z",
       "pr_base_at_read": "ec633c0c637e8f0aecad4070b6f12d91f2498985",
-      "observed_at": "2026-11-26T21:43:42.251Z",
+      "observed_at": "2026-11-26T22:58:34.574Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5877,9 +5863,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "1b414db2ad5ef88ddf28f228ab87e5f155802d2d",
-      "actual_base_observed_at": "2026-11-26T21:49:34.635Z",
+      "actual_base_observed_at": "2026-11-26T23:00:45.330Z",
       "pr_base_at_read": "1b414db2ad5ef88ddf28f228ab87e5f155802d2d",
-      "observed_at": "2026-11-26T21:43:43.246Z",
+      "observed_at": "2026-11-26T22:58:34.373Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5900,9 +5886,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "c60d4e90b027ce4dbf562cd344f6d0a02f3c61a2",
-      "actual_base_observed_at": "2026-11-26T21:49:34.672Z",
+      "actual_base_observed_at": "2026-11-26T23:00:45.402Z",
       "pr_base_at_read": "c60d4e90b027ce4dbf562cd344f6d0a02f3c61a2",
-      "observed_at": "2026-11-26T21:43:43.505Z",
+      "observed_at": "2026-11-26T22:58:34.222Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5923,9 +5909,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "2bdc9b67f85fc3683f57ab464048d3d82acc2800",
-      "actual_base_observed_at": "2026-11-26T21:49:34.485Z",
+      "actual_base_observed_at": "2026-11-26T23:00:45.447Z",
       "pr_base_at_read": "2bdc9b67f85fc3683f57ab464048d3d82acc2800",
-      "observed_at": "2026-11-26T21:43:43.571Z",
+      "observed_at": "2026-11-26T22:58:34.314Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5946,9 +5932,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "2f46f69bf69129603028dce8c9f5ee44da0a1ab9",
-      "actual_base_observed_at": "2026-11-26T21:49:34.467Z",
+      "actual_base_observed_at": "2026-11-26T23:00:45.312Z",
       "pr_base_at_read": "2f46f69bf69129603028dce8c9f5ee44da0a1ab9",
-      "observed_at": "2026-11-26T21:43:43.269Z",
+      "observed_at": "2026-11-26T22:58:34.288Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5969,9 +5955,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "680a9a7731f9e425a090a54d7e8994309bc587b5",
-      "actual_base_observed_at": "2026-11-26T21:49:34.495Z",
+      "actual_base_observed_at": "2026-11-26T23:00:45.529Z",
       "pr_base_at_read": "680a9a7731f9e425a090a54d7e8994309bc587b5",
-      "observed_at": "2026-11-26T21:43:43.531Z",
+      "observed_at": "2026-11-26T22:58:34.280Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -5992,9 +5978,9 @@
       "rest_inline_comments": 3,
       "counts_match": true,
       "actual_base": "6eb905e38ee96eac4b12d4af379515a1f9e1cd29",
-      "actual_base_observed_at": "2026-11-26T21:49:32.826Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.351Z",
       "pr_base_at_read": "6eb905e38ee96eac4b12d4af379515a1f9e1cd29",
-      "observed_at": "2026-11-26T21:43:43.348Z",
+      "observed_at": "2026-11-26T22:58:34.550Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 2,
       "runner_labels": [
@@ -6018,9 +6004,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "15ac57833c48cd50fea7e8dcdb7586699352d5cb",
-      "actual_base_observed_at": "2026-11-26T21:49:32.808Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.566Z",
       "pr_base_at_read": "46de2a91ff1dd8aec0f2c082cd7378ede33fbaf4",
-      "observed_at": "2026-11-26T21:43:43.547Z",
+      "observed_at": "2026-11-26T22:58:34.385Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 2,
       "runner_labels": [
@@ -6045,9 +6031,9 @@
       "rest_inline_comments": 3,
       "counts_match": true,
       "actual_base": "2a5f9b55d574c77ecb40ca027a6d768c5831943a",
-      "actual_base_observed_at": "2026-11-26T21:49:33.614Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.351Z",
       "pr_base_at_read": "2a5f9b55d574c77ecb40ca027a6d768c5831943a",
-      "observed_at": "2026-11-26T21:43:43.504Z",
+      "observed_at": "2026-11-26T22:58:34.456Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 4,
       "runner_labels": [
@@ -6074,9 +6060,9 @@
       "rest_inline_comments": 17,
       "counts_match": true,
       "actual_base": "2a5f9b55d574c77ecb40ca027a6d768c5831943a",
-      "actual_base_observed_at": "2026-11-26T21:49:33.614Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.351Z",
       "pr_base_at_read": "2a5f9b55d574c77ecb40ca027a6d768c5831943a",
-      "observed_at": "2026-11-26T21:43:43.498Z",
+      "observed_at": "2026-11-26T22:58:34.668Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 4,
       "runner_labels": [
@@ -6092,20 +6078,20 @@
       "repository": "gosuda/gglint",
       "number": 33,
       "url": "https://github.com/gosuda/gglint/pull/33",
-      "head": "65b0c11e4b42b5e6224011c8f19903e4e7084efc",
+      "head": "c3de725ac5a3f876f5dc6f2045cd86de93fec621",
       "head_repository": "gosuda/gglint",
       "state": "open",
       "mergeable": true,
       "mergeable_state": "blocked",
-      "unresolved": 5,
-      "threads": 21,
-      "inline_comments": 37,
-      "rest_inline_comments": 37,
+      "unresolved": 2,
+      "threads": 23,
+      "inline_comments": 44,
+      "rest_inline_comments": 44,
       "counts_match": true,
       "actual_base": "729a9b43cd78f96d5ba0ba73c4ede2e5c0a54479",
-      "actual_base_observed_at": "2026-11-26T21:49:33.606Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.302Z",
       "pr_base_at_read": "729a9b43cd78f96d5ba0ba73c4ede2e5c0a54479",
-      "observed_at": "2026-11-26T21:43:44.833Z",
+      "observed_at": "2026-11-26T22:58:34.892Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 1,
       "runner_labels": [
@@ -6114,48 +6100,21 @@
       ],
       "unresolved_threads": [
         {
-          "id": "PRRT_kwDOVnJgBc68YJMZ",
-          "path": "internal/driver/fixverify.go",
-          "line": 111,
+          "id": "PRRT_kwDOVnJgBc68lUjU",
+          "path": "internal/config/activeroots.go",
+          "line": 38,
           "is_outdated": false,
           "comment_ids": [
-            4708275520
+            4714002152
           ]
         },
         {
-          "id": "PRRT_kwDOVnJgBc68YJRt",
-          "path": "internal/driver/fixverify.go",
-          "line": 141,
+          "id": "PRRT_kwDOVnJgBc68lUkK",
+          "path": "internal/config/activeroots_test.go",
+          "line": 75,
           "is_outdated": false,
           "comment_ids": [
-            4708276093
-          ]
-        },
-        {
-          "id": "PRRT_kwDOVnJgBc68YJXt",
-          "path": "internal/vettool/vettool.go",
-          "line": 164,
-          "is_outdated": false,
-          "comment_ids": [
-            4708276694
-          ]
-        },
-        {
-          "id": "PRRT_kwDOVnJgBc68YJaG",
-          "path": "internal/cli/fixgatefile_test.go",
-          "line": 36,
-          "is_outdated": false,
-          "comment_ids": [
-            4708276932
-          ]
-        },
-        {
-          "id": "PRRT_kwDOVnJgBc68YJdl",
-          "path": "internal/config/modulescope_test.go",
-          "line": 30,
-          "is_outdated": false,
-          "comment_ids": [
-            4708277319
+            4714002235
           ]
         }
       ]
@@ -6175,9 +6134,9 @@
       "rest_inline_comments": 4,
       "counts_match": true,
       "actual_base": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
-      "actual_base_observed_at": "2026-11-26T21:49:33.599Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.294Z",
       "pr_base_at_read": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
-      "observed_at": "2026-11-26T21:43:43.480Z",
+      "observed_at": "2026-11-26T22:58:34.556Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 0,
       "runner_labels": [],
@@ -6198,9 +6157,9 @@
       "rest_inline_comments": 16,
       "counts_match": true,
       "actual_base": "66922b3733c617dda64ae05bdbf30543e169be11",
-      "actual_base_observed_at": "2026-11-26T21:49:33.652Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.313Z",
       "pr_base_at_read": "66922b3733c617dda64ae05bdbf30543e169be11",
-      "observed_at": "2026-11-26T21:43:43.611Z",
+      "observed_at": "2026-11-26T22:58:34.970Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 9,
       "runner_labels": [
@@ -6227,9 +6186,9 @@
       "rest_inline_comments": 25,
       "counts_match": true,
       "actual_base": "280f8fe7966e1e9589eab3f8a0359c4dc18a27c7",
-      "actual_base_observed_at": "2026-11-26T21:49:33.635Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.351Z",
       "pr_base_at_read": "280f8fe7966e1e9589eab3f8a0359c4dc18a27c7",
-      "observed_at": "2026-11-26T21:43:43.619Z",
+      "observed_at": "2026-11-26T22:58:35.352Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -6253,9 +6212,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "280f8fe7966e1e9589eab3f8a0359c4dc18a27c7",
-      "actual_base_observed_at": "2026-11-26T21:49:33.635Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.351Z",
       "pr_base_at_read": "280f8fe7966e1e9589eab3f8a0359c4dc18a27c7",
-      "observed_at": "2026-11-26T21:43:43.264Z",
+      "observed_at": "2026-11-26T22:58:34.324Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 2,
       "runner_labels": [
@@ -6279,9 +6238,9 @@
       "rest_inline_comments": 7,
       "counts_match": true,
       "actual_base": "3a5a542795dd287b679ecbad0dba6e65d7d73ee4",
-      "actual_base_observed_at": "2026-11-26T21:49:33.680Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.387Z",
       "pr_base_at_read": "3a5a542795dd287b679ecbad0dba6e65d7d73ee4",
-      "observed_at": "2026-11-26T21:43:44.181Z",
+      "observed_at": "2026-11-26T22:58:34.445Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 4,
       "runner_labels": [
@@ -6307,9 +6266,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "3a5a542795dd287b679ecbad0dba6e65d7d73ee4",
-      "actual_base_observed_at": "2026-11-26T21:49:33.680Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.387Z",
       "pr_base_at_read": "3a5a542795dd287b679ecbad0dba6e65d7d73ee4",
-      "observed_at": "2026-11-26T21:43:43.254Z",
+      "observed_at": "2026-11-26T22:58:34.402Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 4,
       "runner_labels": [
@@ -6335,9 +6294,9 @@
       "rest_inline_comments": 4,
       "counts_match": true,
       "actual_base": "afa5a631ec41cb1e9aa0634b2d547d084bd27e33",
-      "actual_base_observed_at": "2026-11-26T21:49:33.646Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.369Z",
       "pr_base_at_read": "afa5a631ec41cb1e9aa0634b2d547d084bd27e33",
-      "observed_at": "2026-11-26T21:43:43.628Z",
+      "observed_at": "2026-11-26T22:58:34.592Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -6362,9 +6321,9 @@
       "rest_inline_comments": 0,
       "counts_match": true,
       "actual_base": "afa5a631ec41cb1e9aa0634b2d547d084bd27e33",
-      "actual_base_observed_at": "2026-11-26T21:49:33.646Z",
+      "actual_base_observed_at": "2026-11-26T23:00:44.369Z",
       "pr_base_at_read": "afa5a631ec41cb1e9aa0634b2d547d084bd27e33",
-      "observed_at": "2026-11-26T21:43:43.684Z",
+      "observed_at": "2026-11-26T22:58:34.579Z",
       "runner_status": "depot_only_or_no_jobs",
       "workflow_files": 3,
       "runner_labels": [
@@ -8967,20 +8926,6 @@
       ],
       "directory_status": "absent",
       "observed_at": "2026-11-26T19:02:26.654Z",
-      "files": [],
-      "runner_status": "depot_only_or_no_jobs"
-    },
-    {
-      "repository": "gosuda/1",
-      "head": "d67044b5d1fab9a2f54a6c6322611b67d725fead",
-      "archived": false,
-      "roles": [
-        {
-          "kind": "base"
-        }
-      ],
-      "directory_status": "absent",
-      "observed_at": "2026-11-26T21:49:35.062Z",
       "files": [],
       "runner_status": "depot_only_or_no_jobs"
     },
@@ -11789,26 +11734,6 @@
     },
     {
       "repository": "gosuda/ruk",
-      "head": "79704448b042c4b39f2c10d73d9dac275c2f28b6",
-      "archived": false,
-      "roles": [
-        {
-          "kind": "pr",
-          "pr": 20
-        }
-      ],
-      "directory_status": "ok",
-      "observed_at": "2026-11-26T17:09:31.023Z",
-      "files": [
-        {
-          "path": ".github/workflows/ci.yml",
-          "blob": "1ccbef7b88020aadfbc96126a48cfb45fbbb6369"
-        }
-      ],
-      "runner_status": "depot_only_or_no_jobs"
-    },
-    {
-      "repository": "gosuda/ruk",
       "head": "0e8e235294440e9127a6c54d53f6327dc547722b",
       "archived": false,
       "roles": [
@@ -11823,30 +11748,6 @@
         {
           "path": ".github/workflows/ci.yml",
           "blob": "1ccbef7b88020aadfbc96126a48cfb45fbbb6369"
-        }
-      ],
-      "runner_status": "depot_only_or_no_jobs"
-    },
-    {
-      "repository": "gosuda/sloplint",
-      "head": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
-      "archived": false,
-      "roles": [
-        {
-          "kind": "pr",
-          "pr": 137
-        }
-      ],
-      "directory_status": "ok",
-      "observed_at": "2026-11-26T21:05:05.616Z",
-      "files": [
-        {
-          "path": ".github/workflows/ci.yml",
-          "blob": "318af336a730492b08e20ec84b4c62568ec48bab"
-        },
-        {
-          "path": ".github/workflows/release.yml",
-          "blob": "de1e7d15549b146df23409451844860e931a74f2"
         }
       ],
       "runner_status": "depot_only_or_no_jobs"
@@ -11948,294 +11849,6 @@
       "runner_status": "depot_only_or_no_jobs"
     },
     {
-      "repository": "gosuda/LoGOs",
-      "head": "8f65066faa91b54beb14410dc4c84cb4ac237e66",
-      "archived": false,
-      "roles": [
-        {
-          "kind": "pr",
-          "pr": 339
-        }
-      ],
-      "directory_status": "ok",
-      "observed_at": "2026-11-26T17:09:28.968Z",
-      "files": [
-        {
-          "path": ".github/workflows/autovec-bench.yml",
-          "blob": "d00349289abe9250a0fbd4e0f89046f1bd2cf69d"
-        },
-        {
-          "path": ".github/workflows/autovec.yml",
-          "blob": "fc0aa8a63926d1fcaadaaf0921bebd487ac8d74c"
-        },
-        {
-          "path": ".github/workflows/ci.yml",
-          "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5"
-        },
-        {
-          "path": ".github/workflows/gc-g6-pr.yml",
-          "blob": "3455c290c2e009d07cf2ecef6661f2eff615592f"
-        },
-        {
-          "path": ".github/workflows/gc-g6.yml",
-          "blob": "26571d72e649b5aa35f29aec7fd129bbfcb97064"
-        },
-        {
-          "path": ".github/workflows/gc-stability.yml",
-          "blob": "d8c1c7a82a1352f6129a4e350a1dc6f23f55bf52"
-        },
-        {
-          "path": ".github/workflows/release-acceptance.yml",
-          "blob": "ca9b65027e7531b27493657968cb971b34340ba2"
-        },
-        {
-          "path": ".github/workflows/simd-zero-guards.yml",
-          "blob": "a7f9ead9ea36f5ee662ba934a139448daac5ccfe"
-        }
-      ],
-      "runner_status": "depot_only_or_no_jobs"
-    },
-    {
-      "repository": "gosuda/LoGOs",
-      "head": "fe6309200798d9d7b561338658aa84fe237c30d5",
-      "archived": false,
-      "roles": [
-        {
-          "kind": "pr",
-          "pr": 336
-        }
-      ],
-      "directory_status": "ok",
-      "observed_at": "2026-11-26T17:09:28.920Z",
-      "files": [
-        {
-          "path": ".github/workflows/autovec-bench.yml",
-          "blob": "d00349289abe9250a0fbd4e0f89046f1bd2cf69d"
-        },
-        {
-          "path": ".github/workflows/autovec.yml",
-          "blob": "fc0aa8a63926d1fcaadaaf0921bebd487ac8d74c"
-        },
-        {
-          "path": ".github/workflows/ci.yml",
-          "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5"
-        },
-        {
-          "path": ".github/workflows/gc-g6-pr.yml",
-          "blob": "3455c290c2e009d07cf2ecef6661f2eff615592f"
-        },
-        {
-          "path": ".github/workflows/gc-g6.yml",
-          "blob": "26571d72e649b5aa35f29aec7fd129bbfcb97064"
-        },
-        {
-          "path": ".github/workflows/gc-stability.yml",
-          "blob": "d8c1c7a82a1352f6129a4e350a1dc6f23f55bf52"
-        },
-        {
-          "path": ".github/workflows/release-acceptance.yml",
-          "blob": "ca9b65027e7531b27493657968cb971b34340ba2"
-        },
-        {
-          "path": ".github/workflows/simd-zero-guards.yml",
-          "blob": "a7f9ead9ea36f5ee662ba934a139448daac5ccfe"
-        }
-      ],
-      "runner_status": "depot_only_or_no_jobs"
-    },
-    {
-      "repository": "gosuda/LoGOs",
-      "head": "f2eae8c964bae2dda5ee8c747f8f039ddabb5f35",
-      "archived": false,
-      "roles": [
-        {
-          "kind": "pr",
-          "pr": 334
-        }
-      ],
-      "directory_status": "ok",
-      "observed_at": "2026-11-26T17:09:28.900Z",
-      "files": [
-        {
-          "path": ".github/workflows/autovec-bench.yml",
-          "blob": "d00349289abe9250a0fbd4e0f89046f1bd2cf69d"
-        },
-        {
-          "path": ".github/workflows/autovec.yml",
-          "blob": "fc0aa8a63926d1fcaadaaf0921bebd487ac8d74c"
-        },
-        {
-          "path": ".github/workflows/ci.yml",
-          "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5"
-        },
-        {
-          "path": ".github/workflows/gc-g6-pr.yml",
-          "blob": "3455c290c2e009d07cf2ecef6661f2eff615592f"
-        },
-        {
-          "path": ".github/workflows/gc-g6.yml",
-          "blob": "26571d72e649b5aa35f29aec7fd129bbfcb97064"
-        },
-        {
-          "path": ".github/workflows/gc-stability.yml",
-          "blob": "d8c1c7a82a1352f6129a4e350a1dc6f23f55bf52"
-        },
-        {
-          "path": ".github/workflows/release-acceptance.yml",
-          "blob": "ca9b65027e7531b27493657968cb971b34340ba2"
-        },
-        {
-          "path": ".github/workflows/simd-zero-guards.yml",
-          "blob": "a7f9ead9ea36f5ee662ba934a139448daac5ccfe"
-        }
-      ],
-      "runner_status": "depot_only_or_no_jobs"
-    },
-    {
-      "repository": "gosuda/LoGOs",
-      "head": "e43b5ef4408cd79d4b48cec44b1166bfd145305f",
-      "archived": false,
-      "roles": [
-        {
-          "kind": "pr",
-          "pr": 328
-        }
-      ],
-      "directory_status": "ok",
-      "observed_at": "2026-11-26T17:09:31.004Z",
-      "files": [
-        {
-          "path": ".github/workflows/autovec-bench.yml",
-          "blob": "d00349289abe9250a0fbd4e0f89046f1bd2cf69d"
-        },
-        {
-          "path": ".github/workflows/autovec.yml",
-          "blob": "fc0aa8a63926d1fcaadaaf0921bebd487ac8d74c"
-        },
-        {
-          "path": ".github/workflows/ci.yml",
-          "blob": "cc3e6a793d99201445059fde56f4a067d7bf18b1"
-        },
-        {
-          "path": ".github/workflows/gc-g6-pr.yml",
-          "blob": "3455c290c2e009d07cf2ecef6661f2eff615592f"
-        },
-        {
-          "path": ".github/workflows/gc-g6.yml",
-          "blob": "26571d72e649b5aa35f29aec7fd129bbfcb97064"
-        },
-        {
-          "path": ".github/workflows/gc-stability.yml",
-          "blob": "d8c1c7a82a1352f6129a4e350a1dc6f23f55bf52"
-        },
-        {
-          "path": ".github/workflows/release-acceptance.yml",
-          "blob": "ca9b65027e7531b27493657968cb971b34340ba2"
-        },
-        {
-          "path": ".github/workflows/simd-zero-guards.yml",
-          "blob": "a7f9ead9ea36f5ee662ba934a139448daac5ccfe"
-        }
-      ],
-      "runner_status": "depot_only_or_no_jobs"
-    },
-    {
-      "repository": "gosuda/LoGOs",
-      "head": "177e5555822fe4ddac9dbc68c9035ff55dee6b9b",
-      "archived": false,
-      "roles": [
-        {
-          "kind": "pr",
-          "pr": 322
-        }
-      ],
-      "directory_status": "ok",
-      "observed_at": "2026-11-26T17:09:30.991Z",
-      "files": [
-        {
-          "path": ".github/workflows/autovec-bench.yml",
-          "blob": "d00349289abe9250a0fbd4e0f89046f1bd2cf69d"
-        },
-        {
-          "path": ".github/workflows/autovec.yml",
-          "blob": "fc0aa8a63926d1fcaadaaf0921bebd487ac8d74c"
-        },
-        {
-          "path": ".github/workflows/ci.yml",
-          "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5"
-        },
-        {
-          "path": ".github/workflows/gc-g6-pr.yml",
-          "blob": "3455c290c2e009d07cf2ecef6661f2eff615592f"
-        },
-        {
-          "path": ".github/workflows/gc-g6.yml",
-          "blob": "26571d72e649b5aa35f29aec7fd129bbfcb97064"
-        },
-        {
-          "path": ".github/workflows/gc-stability.yml",
-          "blob": "d8c1c7a82a1352f6129a4e350a1dc6f23f55bf52"
-        },
-        {
-          "path": ".github/workflows/release-acceptance.yml",
-          "blob": "ca9b65027e7531b27493657968cb971b34340ba2"
-        },
-        {
-          "path": ".github/workflows/simd-zero-guards.yml",
-          "blob": "a7f9ead9ea36f5ee662ba934a139448daac5ccfe"
-        }
-      ],
-      "runner_status": "depot_only_or_no_jobs"
-    },
-    {
-      "repository": "gosuda/LoGOs",
-      "head": "f0979a01cca06bcce260d93fa3fddcf04cef0095",
-      "archived": false,
-      "roles": [
-        {
-          "kind": "pr",
-          "pr": 306
-        }
-      ],
-      "directory_status": "ok",
-      "observed_at": "2026-11-26T17:09:30.973Z",
-      "files": [
-        {
-          "path": ".github/workflows/autovec-bench.yml",
-          "blob": "d00349289abe9250a0fbd4e0f89046f1bd2cf69d"
-        },
-        {
-          "path": ".github/workflows/autovec.yml",
-          "blob": "fc0aa8a63926d1fcaadaaf0921bebd487ac8d74c"
-        },
-        {
-          "path": ".github/workflows/ci.yml",
-          "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5"
-        },
-        {
-          "path": ".github/workflows/gc-g6-pr.yml",
-          "blob": "3455c290c2e009d07cf2ecef6661f2eff615592f"
-        },
-        {
-          "path": ".github/workflows/gc-g6.yml",
-          "blob": "26571d72e649b5aa35f29aec7fd129bbfcb97064"
-        },
-        {
-          "path": ".github/workflows/gc-stability.yml",
-          "blob": "d8c1c7a82a1352f6129a4e350a1dc6f23f55bf52"
-        },
-        {
-          "path": ".github/workflows/release-acceptance.yml",
-          "blob": "ca9b65027e7531b27493657968cb971b34340ba2"
-        },
-        {
-          "path": ".github/workflows/simd-zero-guards.yml",
-          "blob": "a7f9ead9ea36f5ee662ba934a139448daac5ccfe"
-        }
-      ],
-      "runner_status": "depot_only_or_no_jobs"
-    },
-    {
       "repository": "gosuda/rukie",
       "head": "ac9dd73e9b5cd2997f9a5c0c7d9694349a160053",
       "archived": false,
@@ -12302,21 +11915,6 @@
       ],
       "directory_status": "absent",
       "observed_at": "2026-11-26T19:02:26.666Z",
-      "files": [],
-      "runner_status": "depot_only_or_no_jobs"
-    },
-    {
-      "repository": "gosuda/1",
-      "head": "dd1ba2139c4cc757096180dec1a376cf1435866f",
-      "archived": false,
-      "roles": [
-        {
-          "kind": "pr",
-          "pr": 115
-        }
-      ],
-      "directory_status": "absent",
-      "observed_at": "2026-11-26T21:49:35.060Z",
       "files": [],
       "runner_status": "depot_only_or_no_jobs"
     },
@@ -12778,26 +12376,6 @@
       "runner_status": "depot_only_or_no_jobs"
     },
     {
-      "repository": "gosuda/gglint",
-      "head": "65b0c11e4b42b5e6224011c8f19903e4e7084efc",
-      "archived": false,
-      "roles": [
-        {
-          "kind": "pr",
-          "pr": 33
-        }
-      ],
-      "directory_status": "ok",
-      "observed_at": "2026-11-26T17:09:28.936Z",
-      "files": [
-        {
-          "path": ".github/workflows/ci.yml",
-          "blob": "22df862d8b322cb30be7494e745d3dd70b3f5a1a"
-        }
-      ],
-      "runner_status": "depot_only_or_no_jobs"
-    },
-    {
       "repository": "gosuda/spira",
       "head": "91e3c18e0701cb38318e71c4fbe9c820879b2c74",
       "archived": false,
@@ -13032,6 +12610,387 @@
         {
           "path": ".github/workflows/verify.yml",
           "blob": "06818911cb70051f273bb6d92a5686c3d3bf544a"
+        }
+      ],
+      "runner_status": "depot_only_or_no_jobs"
+    },
+    {
+      "repository": "gosuda/1",
+      "head": "32187fea2ada26ef407be06566990f3dc8bf35a9",
+      "archived": false,
+      "roles": [
+        {
+          "kind": "base"
+        }
+      ],
+      "directory_status": "absent",
+      "observed_at": "2026-11-26T23:00:54.616Z",
+      "files": [],
+      "runner_status": "depot_only_or_no_jobs"
+    },
+    {
+      "repository": "gosuda/ruk",
+      "head": "adbb6ff975bbd520a985a4d296c8a3cf6ea87daf",
+      "archived": false,
+      "roles": [
+        {
+          "kind": "pr",
+          "pr": 20
+        }
+      ],
+      "directory_status": "ok",
+      "observed_at": "2026-11-26T23:00:54.600Z",
+      "files": [
+        {
+          "path": ".github/workflows/ci.yml",
+          "blob": "1ccbef7b88020aadfbc96126a48cfb45fbbb6369"
+        }
+      ],
+      "runner_status": "depot_only_or_no_jobs"
+    },
+    {
+      "repository": "gosuda/sloplint",
+      "head": "e7ee97e84246863766ec7465777a035134533feb",
+      "archived": false,
+      "roles": [
+        {
+          "kind": "pr",
+          "pr": 137
+        }
+      ],
+      "directory_status": "ok",
+      "observed_at": "2026-11-26T23:00:54.809Z",
+      "files": [
+        {
+          "path": ".github/workflows/ci.yml",
+          "blob": "318af336a730492b08e20ec84b4c62568ec48bab"
+        },
+        {
+          "path": ".github/workflows/release.yml",
+          "blob": "de1e7d15549b146df23409451844860e931a74f2"
+        }
+      ],
+      "runner_status": "depot_only_or_no_jobs"
+    },
+    {
+      "repository": "gosuda/LoGOs",
+      "head": "1cccd8960b7a046553afaa804cd2f49e2bf21c5c",
+      "archived": false,
+      "roles": [
+        {
+          "kind": "pr",
+          "pr": 339
+        }
+      ],
+      "directory_status": "ok",
+      "observed_at": "2026-11-26T23:00:54.947Z",
+      "files": [
+        {
+          "path": ".github/workflows/autovec-bench.yml",
+          "blob": "d00349289abe9250a0fbd4e0f89046f1bd2cf69d"
+        },
+        {
+          "path": ".github/workflows/autovec.yml",
+          "blob": "fc0aa8a63926d1fcaadaaf0921bebd487ac8d74c"
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "blob": "cc3e6a793d99201445059fde56f4a067d7bf18b1"
+        },
+        {
+          "path": ".github/workflows/gc-g6-pr.yml",
+          "blob": "3455c290c2e009d07cf2ecef6661f2eff615592f"
+        },
+        {
+          "path": ".github/workflows/gc-g6.yml",
+          "blob": "26571d72e649b5aa35f29aec7fd129bbfcb97064"
+        },
+        {
+          "path": ".github/workflows/gc-stability.yml",
+          "blob": "d8c1c7a82a1352f6129a4e350a1dc6f23f55bf52"
+        },
+        {
+          "path": ".github/workflows/release-acceptance.yml",
+          "blob": "ca9b65027e7531b27493657968cb971b34340ba2"
+        },
+        {
+          "path": ".github/workflows/simd-zero-guards.yml",
+          "blob": "a7f9ead9ea36f5ee662ba934a139448daac5ccfe"
+        }
+      ],
+      "runner_status": "depot_only_or_no_jobs"
+    },
+    {
+      "repository": "gosuda/LoGOs",
+      "head": "e2a50cb63c8381f3017f9f198bfb0394f54f50d4",
+      "archived": false,
+      "roles": [
+        {
+          "kind": "pr",
+          "pr": 336
+        }
+      ],
+      "directory_status": "ok",
+      "observed_at": "2026-11-26T23:00:54.609Z",
+      "files": [
+        {
+          "path": ".github/workflows/autovec-bench.yml",
+          "blob": "d00349289abe9250a0fbd4e0f89046f1bd2cf69d"
+        },
+        {
+          "path": ".github/workflows/autovec.yml",
+          "blob": "fc0aa8a63926d1fcaadaaf0921bebd487ac8d74c"
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "blob": "cc3e6a793d99201445059fde56f4a067d7bf18b1"
+        },
+        {
+          "path": ".github/workflows/gc-g6-pr.yml",
+          "blob": "3455c290c2e009d07cf2ecef6661f2eff615592f"
+        },
+        {
+          "path": ".github/workflows/gc-g6.yml",
+          "blob": "26571d72e649b5aa35f29aec7fd129bbfcb97064"
+        },
+        {
+          "path": ".github/workflows/gc-stability.yml",
+          "blob": "d8c1c7a82a1352f6129a4e350a1dc6f23f55bf52"
+        },
+        {
+          "path": ".github/workflows/release-acceptance.yml",
+          "blob": "ca9b65027e7531b27493657968cb971b34340ba2"
+        },
+        {
+          "path": ".github/workflows/simd-zero-guards.yml",
+          "blob": "a7f9ead9ea36f5ee662ba934a139448daac5ccfe"
+        }
+      ],
+      "runner_status": "depot_only_or_no_jobs"
+    },
+    {
+      "repository": "gosuda/LoGOs",
+      "head": "682c21d440d5b2bb27afaa04643c421f4dfcac1a",
+      "archived": false,
+      "roles": [
+        {
+          "kind": "pr",
+          "pr": 334
+        }
+      ],
+      "directory_status": "ok",
+      "observed_at": "2026-11-26T23:00:54.594Z",
+      "files": [
+        {
+          "path": ".github/workflows/autovec-bench.yml",
+          "blob": "d00349289abe9250a0fbd4e0f89046f1bd2cf69d"
+        },
+        {
+          "path": ".github/workflows/autovec.yml",
+          "blob": "fc0aa8a63926d1fcaadaaf0921bebd487ac8d74c"
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "blob": "cc3e6a793d99201445059fde56f4a067d7bf18b1"
+        },
+        {
+          "path": ".github/workflows/gc-g6-pr.yml",
+          "blob": "3455c290c2e009d07cf2ecef6661f2eff615592f"
+        },
+        {
+          "path": ".github/workflows/gc-g6.yml",
+          "blob": "26571d72e649b5aa35f29aec7fd129bbfcb97064"
+        },
+        {
+          "path": ".github/workflows/gc-stability.yml",
+          "blob": "d8c1c7a82a1352f6129a4e350a1dc6f23f55bf52"
+        },
+        {
+          "path": ".github/workflows/release-acceptance.yml",
+          "blob": "ca9b65027e7531b27493657968cb971b34340ba2"
+        },
+        {
+          "path": ".github/workflows/simd-zero-guards.yml",
+          "blob": "a7f9ead9ea36f5ee662ba934a139448daac5ccfe"
+        }
+      ],
+      "runner_status": "depot_only_or_no_jobs"
+    },
+    {
+      "repository": "gosuda/LoGOs",
+      "head": "04a036afb5da302b35c09e3ad9d7911661ef6025",
+      "archived": false,
+      "roles": [
+        {
+          "kind": "pr",
+          "pr": 328
+        }
+      ],
+      "directory_status": "ok",
+      "observed_at": "2026-11-26T23:00:54.625Z",
+      "files": [
+        {
+          "path": ".github/workflows/autovec-bench.yml",
+          "blob": "d00349289abe9250a0fbd4e0f89046f1bd2cf69d"
+        },
+        {
+          "path": ".github/workflows/autovec.yml",
+          "blob": "fc0aa8a63926d1fcaadaaf0921bebd487ac8d74c"
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "blob": "cc3e6a793d99201445059fde56f4a067d7bf18b1"
+        },
+        {
+          "path": ".github/workflows/gc-g6-pr.yml",
+          "blob": "3455c290c2e009d07cf2ecef6661f2eff615592f"
+        },
+        {
+          "path": ".github/workflows/gc-g6.yml",
+          "blob": "26571d72e649b5aa35f29aec7fd129bbfcb97064"
+        },
+        {
+          "path": ".github/workflows/gc-stability.yml",
+          "blob": "d8c1c7a82a1352f6129a4e350a1dc6f23f55bf52"
+        },
+        {
+          "path": ".github/workflows/release-acceptance.yml",
+          "blob": "ca9b65027e7531b27493657968cb971b34340ba2"
+        },
+        {
+          "path": ".github/workflows/simd-zero-guards.yml",
+          "blob": "a7f9ead9ea36f5ee662ba934a139448daac5ccfe"
+        }
+      ],
+      "runner_status": "depot_only_or_no_jobs"
+    },
+    {
+      "repository": "gosuda/LoGOs",
+      "head": "63f7648df6766d83a0d83221d49f3095087f0e92",
+      "archived": false,
+      "roles": [
+        {
+          "kind": "pr",
+          "pr": 322
+        }
+      ],
+      "directory_status": "ok",
+      "observed_at": "2026-11-26T23:00:54.611Z",
+      "files": [
+        {
+          "path": ".github/workflows/autovec-bench.yml",
+          "blob": "d00349289abe9250a0fbd4e0f89046f1bd2cf69d"
+        },
+        {
+          "path": ".github/workflows/autovec.yml",
+          "blob": "fc0aa8a63926d1fcaadaaf0921bebd487ac8d74c"
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "blob": "cc3e6a793d99201445059fde56f4a067d7bf18b1"
+        },
+        {
+          "path": ".github/workflows/gc-g6-pr.yml",
+          "blob": "3455c290c2e009d07cf2ecef6661f2eff615592f"
+        },
+        {
+          "path": ".github/workflows/gc-g6.yml",
+          "blob": "26571d72e649b5aa35f29aec7fd129bbfcb97064"
+        },
+        {
+          "path": ".github/workflows/gc-stability.yml",
+          "blob": "d8c1c7a82a1352f6129a4e350a1dc6f23f55bf52"
+        },
+        {
+          "path": ".github/workflows/release-acceptance.yml",
+          "blob": "ca9b65027e7531b27493657968cb971b34340ba2"
+        },
+        {
+          "path": ".github/workflows/simd-zero-guards.yml",
+          "blob": "a7f9ead9ea36f5ee662ba934a139448daac5ccfe"
+        }
+      ],
+      "runner_status": "depot_only_or_no_jobs"
+    },
+    {
+      "repository": "gosuda/LoGOs",
+      "head": "ead666708bb1ef92eb13e1b480125bf6eba36720",
+      "archived": false,
+      "roles": [
+        {
+          "kind": "pr",
+          "pr": 306
+        }
+      ],
+      "directory_status": "ok",
+      "observed_at": "2026-11-26T23:00:54.584Z",
+      "files": [
+        {
+          "path": ".github/workflows/autovec-bench.yml",
+          "blob": "d00349289abe9250a0fbd4e0f89046f1bd2cf69d"
+        },
+        {
+          "path": ".github/workflows/autovec.yml",
+          "blob": "fc0aa8a63926d1fcaadaaf0921bebd487ac8d74c"
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "blob": "cc3e6a793d99201445059fde56f4a067d7bf18b1"
+        },
+        {
+          "path": ".github/workflows/gc-g6-pr.yml",
+          "blob": "3455c290c2e009d07cf2ecef6661f2eff615592f"
+        },
+        {
+          "path": ".github/workflows/gc-g6.yml",
+          "blob": "26571d72e649b5aa35f29aec7fd129bbfcb97064"
+        },
+        {
+          "path": ".github/workflows/gc-stability.yml",
+          "blob": "d8c1c7a82a1352f6129a4e350a1dc6f23f55bf52"
+        },
+        {
+          "path": ".github/workflows/release-acceptance.yml",
+          "blob": "ca9b65027e7531b27493657968cb971b34340ba2"
+        },
+        {
+          "path": ".github/workflows/simd-zero-guards.yml",
+          "blob": "a7f9ead9ea36f5ee662ba934a139448daac5ccfe"
+        }
+      ],
+      "runner_status": "depot_only_or_no_jobs"
+    },
+    {
+      "repository": "gosuda/1",
+      "head": "05d6f77884856046560621449a50eab5186dd676",
+      "archived": false,
+      "roles": [
+        {
+          "kind": "pr",
+          "pr": 115
+        }
+      ],
+      "directory_status": "absent",
+      "observed_at": "2026-11-26T23:00:54.573Z",
+      "files": [],
+      "runner_status": "depot_only_or_no_jobs"
+    },
+    {
+      "repository": "gosuda/gglint",
+      "head": "c3de725ac5a3f876f5dc6f2045cd86de93fec621",
+      "archived": false,
+      "roles": [
+        {
+          "kind": "pr",
+          "pr": 33
+        }
+      ],
+      "directory_status": "ok",
+      "observed_at": "2026-11-26T23:00:54.571Z",
+      "files": [
+        {
+          "path": ".github/workflows/ci.yml",
+          "blob": "22df862d8b322cb30be7494e745d3dd70b3f5a1a"
         }
       ],
       "runner_status": "depot_only_or_no_jobs"
@@ -19515,191 +19474,6 @@
       "violations": []
     },
     {
-      "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5",
-      "job": "route",
-      "runner_expression": "depot-ubuntu-24.04",
-      "local_reusable_workflow": null,
-      "labels": [
-        "depot-ubuntu-24.04"
-      ],
-      "resolution": "resolved",
-      "violations": []
-    },
-    {
-      "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5",
-      "job": "build",
-      "runner_expression": "depot-ubuntu-24.04-4",
-      "local_reusable_workflow": null,
-      "labels": [
-        "depot-ubuntu-24.04-4"
-      ],
-      "resolution": "resolved",
-      "violations": []
-    },
-    {
-      "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5",
-      "job": "unit",
-      "runner_expression": "depot-ubuntu-24.04-4",
-      "local_reusable_workflow": null,
-      "labels": [
-        "depot-ubuntu-24.04-4"
-      ],
-      "resolution": "resolved",
-      "violations": []
-    },
-    {
-      "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5",
-      "job": "scripts",
-      "runner_expression": "depot-ubuntu-24.04-8",
-      "local_reusable_workflow": null,
-      "labels": [
-        "depot-ubuntu-24.04-8"
-      ],
-      "resolution": "resolved",
-      "violations": []
-    },
-    {
-      "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5",
-      "job": "upstream",
-      "runner_expression": "depot-ubuntu-24.04-8",
-      "local_reusable_workflow": null,
-      "labels": [
-        "depot-ubuntu-24.04-8"
-      ],
-      "resolution": "resolved",
-      "violations": []
-    },
-    {
-      "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5",
-      "job": "autovec",
-      "runner_expression": "depot-ubuntu-24.04-4",
-      "local_reusable_workflow": null,
-      "labels": [
-        "depot-ubuntu-24.04-4"
-      ],
-      "resolution": "resolved",
-      "violations": []
-    },
-    {
-      "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5",
-      "job": "compiler",
-      "runner_expression": "depot-ubuntu-24.04-4",
-      "local_reusable_workflow": null,
-      "labels": [
-        "depot-ubuntu-24.04-4"
-      ],
-      "resolution": "resolved",
-      "violations": []
-    },
-    {
-      "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5",
-      "job": "gates",
-      "runner_expression": "depot-ubuntu-24.04-4",
-      "local_reusable_workflow": null,
-      "labels": [
-        "depot-ubuntu-24.04-4"
-      ],
-      "resolution": "resolved",
-      "violations": []
-    },
-    {
-      "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5",
-      "job": "gc-arm",
-      "runner_expression": null,
-      "local_reusable_workflow": "./.github/workflows/gc-stability.yml",
-      "labels": [],
-      "resolution": "reusable",
-      "violations": []
-    },
-    {
-      "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5",
-      "job": "gc",
-      "runner_expression": "depot-ubuntu-24.04-4",
-      "local_reusable_workflow": null,
-      "labels": [
-        "depot-ubuntu-24.04-4"
-      ],
-      "resolution": "resolved",
-      "violations": []
-    },
-    {
-      "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5",
-      "job": "ssa",
-      "runner_expression": "depot-ubuntu-24.04-4",
-      "local_reusable_workflow": null,
-      "labels": [
-        "depot-ubuntu-24.04-4"
-      ],
-      "resolution": "resolved",
-      "violations": []
-    },
-    {
-      "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5",
-      "job": "simdstd",
-      "runner_expression": "depot-ubuntu-24.04-4",
-      "local_reusable_workflow": null,
-      "labels": [
-        "depot-ubuntu-24.04-4"
-      ],
-      "resolution": "resolved",
-      "violations": []
-    },
-    {
-      "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5",
-      "job": "cgo",
-      "runner_expression": "depot-ubuntu-24.04-4",
-      "local_reusable_workflow": null,
-      "labels": [
-        "depot-ubuntu-24.04-4"
-      ],
-      "resolution": "resolved",
-      "violations": []
-    },
-    {
-      "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5",
-      "job": "cgofull",
-      "runner_expression": "depot-ubuntu-24.04-4",
-      "local_reusable_workflow": null,
-      "labels": [
-        "depot-ubuntu-24.04-4"
-      ],
-      "resolution": "resolved",
-      "violations": []
-    },
-    {
-      "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5",
-      "job": "cgobench",
-      "runner_expression": "depot-ubuntu-24.04-4",
-      "local_reusable_workflow": null,
-      "labels": [
-        "depot-ubuntu-24.04-4"
-      ],
-      "resolution": "resolved",
-      "violations": []
-    },
-    {
-      "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5",
-      "job": "dogfood",
-      "runner_expression": "depot-ubuntu-24.04-4",
-      "local_reusable_workflow": null,
-      "labels": [
-        "depot-ubuntu-24.04-4"
-      ],
-      "resolution": "resolved",
-      "violations": []
-    },
-    {
-      "blob": "e2a91792e957a2f3966708af5bf6078bf11e57e5",
-      "job": "bench",
-      "runner_expression": "depot-ubuntu-24.04-4",
-      "local_reusable_workflow": null,
-      "labels": [
-        "depot-ubuntu-24.04-4"
-      ],
-      "resolution": "resolved",
-      "violations": []
-    },
-    {
       "blob": "72138f4094d6353d2507cfd4fc0fc058c972efd0",
       "job": "release-verification",
       "runner_expression": "${{ matrix.os }}",
@@ -21934,13 +21708,11 @@
       "ordinary_conclusion": "success",
       "checkpoint_url": "https://github.com/gosuda/sloplint/blob/03a275c9b8b72820d5bcb0925e43da127d0e25b9/ci-tools/powershell-context-boundaries-r22/checkpoint.json",
       "probe_retirement": "a10db6900c5ed16b4be9530ca240d2624b1c98b5",
-      "current_unresolved_threads": [
-        "PRRT_kwDOVOMFM868j3zg",
-        "PRRT_kwDOVOMFM868j30i"
-      ],
-      "status": "The source-identity analysis thread is resolved. Two source findings are assigned to the r23 owner; the native baseline is complete and a bounded grammar experiment is being prepared.",
+      "current_unresolved_threads": 1,
+      "status": "An external actor advanced the maintained PR. The prior native and ordinary success certifies only the listed historical source. Current review findings and any candidate proof are being reconciled separately.",
       "visibility": "public",
-      "current_head": "57adc9fff126a9826e0fb0be921c28e6cdb08391"
+      "current_head": "e7ee97e84246863766ec7465777a035134533feb",
+      "current_tree": "5d2a547a693d073ad9739311e7b653baa96a08d6"
     }
   ]
 }
