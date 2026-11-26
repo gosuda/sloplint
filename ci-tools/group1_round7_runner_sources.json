@@ -146,7 +146,7 @@
     {
       "repo": "zoekt",
       "n": 3,
-      "head": "afad69272badcbe50436c865de2029ec10062c46",
+      "head": "39efb178903990104b61fe9d5d51150123d9b41e",
       "headRepo": "gosuda/zoekt",
       "branch": "ci/review-followups-20261126",
       "base": "main",
@@ -322,7 +322,7 @@
     {
       "repo": "spira",
       "n": 43,
-      "head": "f937bed673e3b4fb4ca8d95fdf95da69f6a028b7",
+      "head": "e0deaf15184649d22ee3935376c89fcadbe4b586",
       "headRepo": "gosuda/spira",
       "branch": "followup/sweep-stream-hide-22",
       "base": "main",
@@ -388,7 +388,7 @@
     {
       "repo": "spira",
       "n": 30,
-      "head": "eb504645d953ab7490606d45b11e17cc2e0f713f",
+      "head": "e279994d829e0ea8e47f0bbb55ed2d8801d408c7",
       "headRepo": "gosuda/spira",
       "branch": "fix/server-timeouts-126",
       "base": "main",
@@ -1684,7 +1684,7 @@
     {
       "repo": "zoekt",
       "n": 3,
-      "head": "afad69272badcbe50436c865de2029ec10062c46",
+      "head": "39efb178903990104b61fe9d5d51150123d9b41e",
       "headRepo": "gosuda/zoekt",
       "branch": "ci/review-followups-20261126",
       "base": "main",
@@ -1697,7 +1697,7 @@
     {
       "repo": "zoekt",
       "n": 3,
-      "head": "afad69272badcbe50436c865de2029ec10062c46",
+      "head": "39efb178903990104b61fe9d5d51150123d9b41e",
       "headRepo": "gosuda/zoekt",
       "branch": "ci/review-followups-20261126",
       "base": "main",
@@ -1710,7 +1710,7 @@
     {
       "repo": "zoekt",
       "n": 3,
-      "head": "afad69272badcbe50436c865de2029ec10062c46",
+      "head": "39efb178903990104b61fe9d5d51150123d9b41e",
       "headRepo": "gosuda/zoekt",
       "branch": "ci/review-followups-20261126",
       "base": "main",
