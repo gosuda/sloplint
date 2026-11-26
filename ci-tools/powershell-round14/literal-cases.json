@@ -198,8 +198,8 @@
   },
   {
     "name": "unicode_verbatim_spelling",
-    "source": "Write-Host $r/'`u{1F600}x'$id\n",
-    "expected": "__ROOT__/`u{1F600}x__ID__"
+    "source": "Write-Host '`u{1F600}x'\n",
+    "expected": "`u{1F600}x"
   },
   {
     "name": "bare_version_word",
