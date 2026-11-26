@@ -1,0 +1,204 @@
+{
+  "schema_version": 1,
+  "scope": "D3 Unit C editor follow-up only",
+  "state": "awaiting implementation review",
+  "candidate_verdict": "not assessed",
+  "original_request": "Reduce GitHub CI across all gosuda repositories, use only Depot runners, resolve PR feedback and conflicts, publish additive PRs by default without force-push, amend or merge.",
+  "candidate": {
+    "repository": "gosuda/Flats",
+    "head": "4c3e0652b6d1a93c4d4a8cac93b79beaf315f2cc",
+    "tree": "6eec14666cf6b71d56f686a7f7709b0527d53b8f",
+    "branch": "fix/docs-native-backspace-20261126",
+    "base": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
+    "files": [
+      {
+        "path": "internal/apps/docs/_web/build.mjs",
+        "sha256": "48af351f5188ae99dc739f5ae30b88de0e3bb11cb4353864e41300d822b8fcce"
+      },
+      {
+        "path": "internal/apps/docs/dist/BUILD-INPUTS.sha256",
+        "sha256": "16e2752336d671a09673167440a7ea2ed2a7858179ef02b958a79f75866a9ec5"
+      },
+      {
+        "path": "internal/apps/docs/dist/server.js",
+        "sha256": "ce0529d2450ebd6907929f1d0958f892924f4850c12e75bbd08fc0ae507c9553"
+      },
+      {
+        "path": "internal/apps/docs/testdata/browser_test.mjs",
+        "sha256": "8dd918a536ff12d248db6c44c02c0957f8625d379fb316f8c3184488030ce22b"
+      }
+    ]
+  },
+  "authors": [
+    {
+      "canonical_model": "gpt-6.2-astra",
+      "session": "/root/bitcoin_round7",
+      "scope": "Implementation, tests, execution report"
+    }
+  ],
+  "design": {
+    "snapshot": {
+      "repository": "gosuda/sloplint",
+      "commit": "63f8d62557caea32a07c077f432c4f0e1f85d18a",
+      "path": "ci-tools/flats-review/D3.md",
+      "sha256": "2b658a28d5524575b4cad9c77ea03ac37a960f94eec2df609212b0d8e4f998e4"
+    },
+    "receipt": {
+      "commit": "28143b7a1a3549a61a0b1ca6837c13e69b764af9",
+      "path": "ci-tools/flats-review/D3-review.md",
+      "sha256": "28d115a78c3037eb32e66015125df53090ee5a5ad3949a58448dab6d9697191d",
+      "reviewer_model": "gpt-6.2-sol",
+      "session": "/root/bitcoin_round7/flats_design_review"
+    },
+    "state": "accepted for Unit C; implementation and testing not assessed"
+  },
+  "budgets": {
+    "design_corrections_used": 3,
+    "design_corrections_limit": 3,
+    "invocation_retries_used": 1,
+    "invocation_retries_limit": 2,
+    "implementation_corrections_used": 0,
+    "implementation_corrections_limit": 3,
+    "testing_corrections_used": 0,
+    "testing_corrections_limit": 3
+  },
+  "requirements": [
+    "AGENTS.md",
+    ".agents/skills/flats-dev-workflow/SKILL.md",
+    "docs/development-protocol.md",
+    ".agents/skills/flats-implement/SKILL.md",
+    ".agents/skills/flats-test/SKILL.md",
+    ".agents/skills/flats-deslop/SKILL.md",
+    ".agents/skills/flats-unslop/SKILL.md",
+    ".agents/skills/flats-dev-workflow/playbooks/console-ui.md",
+    ".agents/skills/flats-dev-workflow/playbooks/debugging.md",
+    ".agents/skills/flats-dev-workflow/playbooks/pull-requests-and-release.md",
+    "docs/spec/docs-public-edit.md"
+  ],
+  "implementation": "A guarded esbuild input transform stores the actual editor contentDOM on CodeMirror's DOMReader and prevents an obsolete final top-level tile breakAfter from restoring a newline deleted by a native browser operation. Both boundary expressions are covered. The lockfile stays on CodeMirror 6.44.0. Generated server.js and BUILD-INPUTS.sha256 were rebuilt from the locked inputs and transferred with SHA-256 checks; GitHub create_tree reproduced the exact native tree.",
+  "regression": "The permanent browser test exercises nine documents with both keyboard Backspace and native document.execCommand('delete'), requires a trusted deleteContentBackward input event for native cases, and compares both independently connected clients after the changed state has converged and been acknowledged. It restores the original document before the existing collaboration, undo, reconnect, preview, mobile and public-reader tests.",
+  "existing_test_disposition": {
+    "finding": "The unmodified current-main browser test fails waiting for an anonymous random nickname in #presence.",
+    "evidence": "The immutable development run requires that original failure before injecting the regression. Current docs/spec/docs-public-edit.md rule 10 requires readers to receive no presence. Production showPresence uses an empty map for read-only viewers.",
+    "change": "Replace the stale random-name presence assertion with an assertion that public-reader #presence is empty. No access-control or presence implementation changed.",
+    "classification": "Existing-contract test oracle repair within implementation, not a new product contract."
+  },
+  "deslop": {
+    "status": "completed",
+    "summary": "Inspected both authored diffs against their surrounding files. The build transform follows the existing guarded esbuild-plugin pattern; no dependency rollback, duplicate product wrapper or hand-edited bundle was introduced. The browser additions reuse the existing host, wait, editorText and context helpers; the source remains within the accepted editor repair scope."
+  },
+  "development": {
+    "producer_repository": "gosuda/sloplint",
+    "producer": "109b1e0d8d373765b5fadf2eed94008d181e5c05",
+    "branch": "ci/flats-backspace-evidence-20261126-r13",
+    "run": 45847147750,
+    "job": 140003664800,
+    "url": "https://github.com/gosuda/sloplint/actions/runs/45847147750/job/140003664800",
+    "artifact": 15132571339,
+    "zip_sha256": "3cfc7f7b40379d5d216400f285b168d5bed9ca4874d9d38b2439213c78fa0c91",
+    "helper": "ci-tools/flats-backspace/final-verify.py",
+    "manifest": "ci-tools/flats-backspace/manifest.json",
+    "runner": "depot-ubuntu-24.04-8",
+    "go": "1.27.4",
+    "node": "26.13.1",
+    "playwright": "1.65.1",
+    "chromium": "159.0.8154.6",
+    "cache": "Separate initially absent GOCACHE for baseline and candidate; GOENV=off, GOCACHEPROG empty verified.",
+    "gates": [
+      {
+        "name": "unmodified-main-browser",
+        "exit": 1
+      },
+      {
+        "name": "baseline-browser",
+        "exit": 1
+      },
+      {
+        "name": "npm-ci",
+        "exit": 0
+      },
+      {
+        "name": "locked-build",
+        "exit": 0
+      },
+      {
+        "name": "whitespace",
+        "exit": 0
+      },
+      {
+        "name": "build-syntax",
+        "exit": 0
+      },
+      {
+        "name": "browser-syntax",
+        "exit": 0
+      },
+      {
+        "name": "candidate-browser",
+        "exit": 0
+      },
+      {
+        "name": "docs-web",
+        "exit": 0
+      },
+      {
+        "name": "affected-vet",
+        "exit": 0
+      },
+      {
+        "name": "docs-budget",
+        "exit": 0
+      },
+      {
+        "name": "docs-soak",
+        "exit": 0
+      },
+      {
+        "name": "docs",
+        "exit": 0
+      },
+      {
+        "name": "runtime-codec",
+        "exit": 0
+      },
+      {
+        "name": "runtime-soak",
+        "exit": 0
+      },
+      {
+        "name": "runtime",
+        "exit": 0
+      },
+      {
+        "name": "docs-audit",
+        "exit": 0
+      },
+      {
+        "name": "docs-verify",
+        "exit": 0
+      },
+      {
+        "name": "build-inputs",
+        "exit": 0
+      }
+    ],
+    "checks": "Exact current main and candidate source identity checked before work; temporary source restored afterward. Four candidate files and whole Git tree verified. Native compilation and execution used the recorded generated assets."
+  },
+  "causal_controls": {
+    "producer": "4cdeea79593f556cf86152d9855e48b22606fff3",
+    "run": 45844308833,
+    "artifact": 15131920439,
+    "zip_sha256": "cb800c52e4cf3540b43935ed4dea01dca79b7adde4408223e3c19844fd561b9c",
+    "old": "CodeMirror 6.43.15: all 18 cases pass",
+    "current_main": "CodeMirror 6.44.0: all nine keyboard controls pass; five native cases fail (last, empty first/final/middle, Unicode line).",
+    "candidate": "All 18 cases pass."
+  },
+  "limitations": [
+    "Only Unit C is in this snapshot. Unit B's independent work and its unresolved product-specification conflict are separate.",
+    "Development-time proof is not implementation or final-testing acceptance.",
+    "The native DOM path is exercised in Chromium, not physical mobile OS keyboard hardware.",
+    "Full-browser access headers and cookies belong to the existing repository test host; this test establishes editor behavior, not a production human-approval boundary.",
+    "No merging or auto-merge is authorized."
+  ],
+  "next": "Obtain independent implementation review of all four candidate paths and these development results; then perform the final testing stage on the accepted immutable candidate and obtain a separate testing verdict before publishing the follow-up PR."
+}
