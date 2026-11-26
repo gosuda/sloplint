@@ -1,4 +1,4 @@
-name: Freeze PowerShell context boundary witnesses
+name: Verify PowerShell contextual command boundaries
 on:
   push:
     branches: [ci/powershell-context-boundaries-20261126-r22]
@@ -7,13 +7,16 @@ on:
       - ci-tools/powershell-context-boundaries-r22/**
 permissions:
   contents: read
+  actions: read
 defaults:
   run:
     shell: bash
 jobs:
-  baseline:
+  prepare:
     runs-on: depot-ubuntu-24.04-8
     timeout-minutes: 40
+    outputs:
+      stages_sha256: ${{ steps.prepare.outputs.stages_sha256 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -25,15 +28,51 @@ jobs:
           ref: 83f73f04e7f20bf405dbf4c2de3bd5467c8010bb
           path: source
           persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          version: 0.13.9
+          python-version: "3.15"
+          require-checksums: true
+          enable-cache: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.18.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          artifact-ids: 15151180936
+          skip-decompress: true
+          digest-mismatch: error
+          run-id: 45888591536
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/powershell-context-boundaries-r22/baseline
+      - name: Generate exact staged candidates and compare native semantics
+        id: prepare
+        run: uv run --no-project --python 3.15 proof/ci-tools/powershell-context-boundaries-r22/verify.py prepare
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: powershell-context-boundaries-candidate-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/powershell-context-boundaries-r22/*.log
+            ${{ runner.temp }}/powershell-context-boundaries-r22/*.json
+          if-no-files-found: error
+          retention-days: 7
+  x64:
+    needs: prepare
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 60
+    env:
+      STAGES_SHA256: ${{ needs.prepare.outputs.stages_sha256 }}
+    steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: 3071f522049cbe2d440bc68ca20e8887fdbdaa9a
-          path: pre_source
+          path: proof
           persist-credentials: false
+          sparse-checkout: ci-tools/powershell-context-boundaries-r22
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: 61c88ec4d492dd1ab72f76b15b84fa9434cccfaa
-          path: legacy_source
+          ref: 83f73f04e7f20bf405dbf4c2de3bd5467c8010bb
+          path: source
           persist-credentials: false
       - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
         with:
@@ -41,12 +80,95 @@ jobs:
           python-version: "3.15"
           require-checksums: true
           enable-cache: false
-      - name: Freeze native and source witnesses without production edits
-        run: uv run --no-project --python 3.15 proof/ci-tools/powershell-context-boundaries-r22/verify.py
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: powershell-context-boundaries-candidate-${{ github.sha }}
+          path: ${{ runner.temp }}/powershell-context-boundaries-r22/transfer
+      - name: Verify x64 source gates and exact candidate identity
+        run: uv run --no-project --python 3.15 proof/ci-tools/powershell-context-boundaries-r22/verify.py x64
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
-          name: powershell-context-baseline-${{ github.sha }}
+          name: powershell-context-boundaries-x64-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/powershell-context-boundaries-r22/*.log
+            ${{ runner.temp }}/powershell-context-boundaries-r22/*.json
+          if-no-files-found: error
+          retention-days: 7
+  arm64:
+    needs: prepare
+    runs-on: depot-ubuntu-24.04-arm-8
+    timeout-minutes: 60
+    env:
+      STAGES_SHA256: ${{ needs.prepare.outputs.stages_sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: proof
+          persist-credentials: false
+          sparse-checkout: ci-tools/powershell-context-boundaries-r22
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 83f73f04e7f20bf405dbf4c2de3bd5467c8010bb
+          path: source
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          version: 0.13.9
+          python-version: "3.15"
+          require-checksums: true
+          enable-cache: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: powershell-context-boundaries-candidate-${{ github.sha }}
+          path: ${{ runner.temp }}/powershell-context-boundaries-r22/transfer
+      - name: Verify arm64 source gates and exact candidate identity
+        run: uv run --no-project --python 3.15 proof/ci-tools/powershell-context-boundaries-r22/verify.py arm64
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: powershell-context-boundaries-arm64-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/powershell-context-boundaries-r22/*.log
+            ${{ runner.temp }}/powershell-context-boundaries-r22/*.json
+          if-no-files-found: error
+          retention-days: 7
+  lint:
+    needs: prepare
+    runs-on: depot-ubuntu-24.04-4
+    timeout-minutes: 60
+    env:
+      STAGES_SHA256: ${{ needs.prepare.outputs.stages_sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: proof
+          persist-credentials: false
+          sparse-checkout: ci-tools/powershell-context-boundaries-r22
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 83f73f04e7f20bf405dbf4c2de3bd5467c8010bb
+          path: source
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          version: 0.13.9
+          python-version: "3.15"
+          require-checksums: true
+          enable-cache: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.18.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: powershell-context-boundaries-candidate-${{ github.sha }}
+          path: ${{ runner.temp }}/powershell-context-boundaries-r22/transfer
+      - name: Verify lint source gates and exact candidate identity
+        run: uv run --no-project --python 3.15 proof/ci-tools/powershell-context-boundaries-r22/verify.py lint
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: powershell-context-boundaries-lint-${{ github.sha }}
           path: |
             ${{ runner.temp }}/powershell-context-boundaries-r22/*.log
             ${{ runner.temp }}/powershell-context-boundaries-r22/*.json

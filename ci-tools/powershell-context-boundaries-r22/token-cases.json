@@ -1,0 +1,162 @@
+[
+  {
+    "id": "lf-lf-attached-none-top",
+    "source": "Get-Date`\n`\n| Write-Output\n"
+  },
+  {
+    "id": "lf-lf-attached-none-group",
+    "source": "(Get-Date`\n`\n| Write-Output)\n"
+  },
+  {
+    "id": "lf-lf-attached-space-top",
+    "source": "Get-Date`\n `\n| Write-Output\n"
+  },
+  {
+    "id": "lf-lf-attached-space-group",
+    "source": "(Get-Date`\n `\n| Write-Output)\n"
+  },
+  {
+    "id": "lf-lf-spaced-none-top",
+    "source": "Get-Date `\n`\n| Write-Output\n"
+  },
+  {
+    "id": "lf-lf-spaced-none-group",
+    "source": "(Get-Date `\n`\n| Write-Output)\n"
+  },
+  {
+    "id": "lf-lf-spaced-space-top",
+    "source": "Get-Date `\n `\n| Write-Output\n"
+  },
+  {
+    "id": "lf-lf-spaced-space-group",
+    "source": "(Get-Date `\n `\n| Write-Output)\n"
+  },
+  {
+    "id": "lf-crlf-attached-none-top",
+    "source": "Get-Date`\n`\r\n| Write-Output\r\n"
+  },
+  {
+    "id": "lf-crlf-attached-none-group",
+    "source": "(Get-Date`\n`\r\n| Write-Output)\r\n"
+  },
+  {
+    "id": "lf-crlf-attached-space-top",
+    "source": "Get-Date`\n `\r\n| Write-Output\r\n"
+  },
+  {
+    "id": "lf-crlf-attached-space-group",
+    "source": "(Get-Date`\n `\r\n| Write-Output)\r\n"
+  },
+  {
+    "id": "lf-crlf-spaced-none-top",
+    "source": "Get-Date `\n`\r\n| Write-Output\r\n"
+  },
+  {
+    "id": "lf-crlf-spaced-none-group",
+    "source": "(Get-Date `\n`\r\n| Write-Output)\r\n"
+  },
+  {
+    "id": "lf-crlf-spaced-space-top",
+    "source": "Get-Date `\n `\r\n| Write-Output\r\n"
+  },
+  {
+    "id": "lf-crlf-spaced-space-group",
+    "source": "(Get-Date `\n `\r\n| Write-Output)\r\n"
+  },
+  {
+    "id": "crlf-lf-attached-none-top",
+    "source": "Get-Date`\r\n`\n| Write-Output\n"
+  },
+  {
+    "id": "crlf-lf-attached-none-group",
+    "source": "(Get-Date`\r\n`\n| Write-Output)\n"
+  },
+  {
+    "id": "crlf-lf-attached-space-top",
+    "source": "Get-Date`\r\n `\n| Write-Output\n"
+  },
+  {
+    "id": "crlf-lf-attached-space-group",
+    "source": "(Get-Date`\r\n `\n| Write-Output)\n"
+  },
+  {
+    "id": "crlf-lf-spaced-none-top",
+    "source": "Get-Date `\r\n`\n| Write-Output\n"
+  },
+  {
+    "id": "crlf-lf-spaced-none-group",
+    "source": "(Get-Date `\r\n`\n| Write-Output)\n"
+  },
+  {
+    "id": "crlf-lf-spaced-space-top",
+    "source": "Get-Date `\r\n `\n| Write-Output\n"
+  },
+  {
+    "id": "crlf-lf-spaced-space-group",
+    "source": "(Get-Date `\r\n `\n| Write-Output)\n"
+  },
+  {
+    "id": "crlf-crlf-attached-none-top",
+    "source": "Get-Date`\r\n`\r\n| Write-Output\r\n"
+  },
+  {
+    "id": "crlf-crlf-attached-none-group",
+    "source": "(Get-Date`\r\n`\r\n| Write-Output)\r\n"
+  },
+  {
+    "id": "crlf-crlf-attached-space-top",
+    "source": "Get-Date`\r\n `\r\n| Write-Output\r\n"
+  },
+  {
+    "id": "crlf-crlf-attached-space-group",
+    "source": "(Get-Date`\r\n `\r\n| Write-Output)\r\n"
+  },
+  {
+    "id": "crlf-crlf-spaced-none-top",
+    "source": "Get-Date `\r\n`\r\n| Write-Output\r\n"
+  },
+  {
+    "id": "crlf-crlf-spaced-none-group",
+    "source": "(Get-Date `\r\n`\r\n| Write-Output)\r\n"
+  },
+  {
+    "id": "crlf-crlf-spaced-space-top",
+    "source": "Get-Date `\r\n `\r\n| Write-Output\r\n"
+  },
+  {
+    "id": "crlf-crlf-spaced-space-group",
+    "source": "(Get-Date `\r\n `\r\n| Write-Output)\r\n"
+  },
+  {
+    "id": "ordinary-lf-lf-top",
+    "source": "Get-Date\n`\n| Write-Output\n"
+  },
+  {
+    "id": "ordinary-lf-lf-group",
+    "source": "(Get-Date\n`\n| Write-Output)\n"
+  },
+  {
+    "id": "ordinary-lf-crlf-top",
+    "source": "Get-Date\n`\r\n| Write-Output\r\n"
+  },
+  {
+    "id": "ordinary-lf-crlf-group",
+    "source": "(Get-Date\n`\r\n| Write-Output)\r\n"
+  },
+  {
+    "id": "ordinary-crlf-lf-top",
+    "source": "Get-Date\r\n`\n| Write-Output\n"
+  },
+  {
+    "id": "ordinary-crlf-lf-group",
+    "source": "(Get-Date\r\n`\n| Write-Output)\n"
+  },
+  {
+    "id": "ordinary-crlf-crlf-top",
+    "source": "Get-Date\r\n`\r\n| Write-Output\r\n"
+  },
+  {
+    "id": "ordinary-crlf-crlf-group",
+    "source": "(Get-Date\r\n`\r\n| Write-Output)\r\n"
+  }
+]

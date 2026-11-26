@@ -1,0 +1,68 @@
+[
+  {
+    "id": "near-attached-csv",
+    "kind": "arguments",
+    "source": "Capture-Native --format=csv,noheader\n",
+    "source_sha256": "dd435b6a6182f0692ac998e228e79e9a0dedc3d54fe0557269a32aec09a26f04",
+    "accepted": true,
+    "expected_values": [
+      "--format=csv,noheader"
+    ],
+    "argument_source": "--format=csv,noheader"
+  },
+  {
+    "id": "near-attached-quoted-csv",
+    "kind": "arguments",
+    "source": "Capture-Native --format=\"csv,noheader\"\n",
+    "source_sha256": "afe41b1a994e0c7b0297d1d9bde120c33c763f96b5f7878da298071d49d71a9c",
+    "accepted": true,
+    "expected_values": [
+      "--format=csv,noheader"
+    ],
+    "argument_source": "--format=\"csv,noheader\""
+  },
+  {
+    "id": "near-attached-include",
+    "kind": "arguments",
+    "source": "Capture-Native -I=dir\n",
+    "source_sha256": "d7d82642d0fca347eb79ca6792174e0ea5b0feaabf45b07e4edfd931df6808f9",
+    "accepted": true,
+    "expected_values": [
+      "-I=dir"
+    ],
+    "argument_source": "-I=dir"
+  },
+  {
+    "id": "near-ordinary-parameter",
+    "kind": "arguments",
+    "source": "Capture-Native -Name\n",
+    "source_sha256": "cd4e57cf7fed754eb4ba6d04611e7e09ed081f94ae4f1b4ddc58c6562da93d0d",
+    "accepted": true,
+    "expected_values": [
+      "-Name"
+    ],
+    "argument_source": "-Name"
+  },
+  {
+    "id": "near-ordinary-double-parameter",
+    "kind": "arguments",
+    "source": "Capture-Native --flag\n",
+    "source_sha256": "39a664b8e83e716a3da0f5f512d1512e36a384707184904f70537382461c6b32",
+    "accepted": true,
+    "expected_values": [
+      "--flag"
+    ],
+    "argument_source": "--flag"
+  },
+  {
+    "id": "near-negative-number",
+    "kind": "arguments",
+    "source": "Capture-Native -1\n",
+    "source_sha256": "d361b7c1f05908f37305dd37ca5fb49b4520bcc87d7f9aa0fa6ada1103d0ee9e",
+    "accepted": true,
+    "expected_values": [
+      "-1"
+    ],
+    "argument_source": "-1"
+  }
+]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import gzip
 import hashlib
 import json
@@ -12,26 +13,28 @@ import subprocess
 import sys
 import time
 import urllib.request
+import zipfile
 from typing import cast
 
 WORKSPACE = Path(os.environ["GITHUB_WORKSPACE"])
 SOURCE = WORKSPACE / "source"
-PREVIOUS = WORKSPACE / "pre_source"
-LEGACY = WORKSPACE / "legacy_source"
 PROOF = WORKSPACE / "proof/ci-tools/powershell-context-boundaries-r22"
 EVIDENCE = Path(os.environ["RUNNER_TEMP"]) / "powershell-context-boundaries-r22"
 EVIDENCE.mkdir(exist_ok=True)
+VENDOR = SOURCE / "vendor/tree-sitter-powershell"
 MANIFEST = cast(dict[str, object], json.loads((PROOF / "manifest.json").read_text()))
 ENVIRONMENT = dict(os.environ)
 ENVIRONMENT.update(RUSTUP_TOOLCHAIN="1.100.0", CARGO_INCREMENTAL="0", CARGO_BUILD_JOBS="8", CARGO_TERM_COLOR="never",
                    CARGO_PROFILE_DEV_DEBUG="line-tables-only", CARGO_PROFILE_TEST_DEBUG="line-tables-only",
                    SLOPLINT_REQUIRE_FS_CAPS="1")
+INDEX_ENVIRONMENT = dict(ENVIRONMENT)
+INDEX_ENVIRONMENT["GIT_INDEX_FILE"] = str(EVIDENCE / "candidate.index")
 RESULTS: list[dict[str, object]] = []
 
-def output(args: list[str], cwd: Path = SOURCE) -> str:
-    return subprocess.check_output(args, cwd=cwd, env=ENVIRONMENT, text=True).strip()
+def output(args: list[str], cwd: Path = SOURCE, env: dict[str, str] | None = None) -> str:
+    return subprocess.check_output(args, cwd=cwd, env=ENVIRONMENT if env is None else env, text=True).strip()
 
-def run(name: str, args: list[str], expected: int | None = 0, cwd: Path = SOURCE, limit: int = 1200) -> str:
+def run(name: str, args: list[str], expected: int = 0, cwd: Path = SOURCE, limit: int = 2400) -> str:
     started = time.monotonic()
     process = subprocess.Popen(args, cwd=cwd, env=ENVIRONMENT, text=True, stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT, start_new_session=True)
@@ -43,27 +46,27 @@ def run(name: str, args: list[str], expected: int | None = 0, cwd: Path = SOURCE
         os.killpg(process.pid, signal.SIGKILL)
         text, _ = process.communicate()
     (EVIDENCE / f"{name}.log").write_text(text)
-    RESULTS.append({"name": name, "args": args, "cwd": str(cwd), "exit": process.returncode, "expected": expected,
+    RESULTS.append({"name": name, "args": args, "exit": process.returncode, "expected": expected,
                     "seconds": time.monotonic() - started, "timed_out": timed_out,
                     "log_sha256": hashlib.sha256(text.encode()).hexdigest()})
     (EVIDENCE / "results.json").write_text(json.dumps({"manifest": MANIFEST, "results": RESULTS}, indent=2) + "\n")
-    print(f"BASELINE_EXIT {name} {process.returncode} timed_out={timed_out}\n{text[-25000:]}", flush=True)
-    assert not timed_out and (expected is None or process.returncode == expected), (name, process.returncode, expected, timed_out)
+    print(f"PROBE_EXIT {name} {process.returncode} timed_out={timed_out}\n{text[-25000:]}", flush=True)
+    assert not timed_out and process.returncode == expected, (name, process.returncode, expected, timed_out)
     return text
 
 def download(url: str, digest: str, name: str) -> Path:
     path = EVIDENCE / name
     with urllib.request.urlopen(url, timeout=120) as response, path.open("wb") as handle:
         shutil.copyfileobj(response, handle)
-    assert hashlib.sha256(path.read_bytes()).hexdigest() == digest, name
-    print("VERIFIED_DOWNLOAD " + name + " " + digest, flush=True)
+    actual = hashlib.sha256(path.read_bytes()).hexdigest()
+    assert actual == digest, (name, actual, digest)
+    print(f"VERIFIED_DOWNLOAD {name} {actual}", flush=True)
     return path
 
-def identity(source: Path, head: str, tree: str) -> dict[str, object]:
-    assert output(["git", "rev-parse", "HEAD"], source) == head
-    assert output(["git", "write-tree"], source) == tree
-    assert output(["git", "status", "--porcelain", "--untracked-files=all"], source) == ""
-    index = subprocess.check_output(["git", "ls-files", "--stage", "-z"], cwd=source)
+def full_identity(tree: str, paths: set[str]) -> dict[str, object]:
+    assert output(["git", "rev-parse", "HEAD"]) == MANIFEST["base"]
+    assert output(["git", "write-tree"], env=INDEX_ENVIRONMENT) == tree
+    index = subprocess.check_output(["git", "ls-files", "--stage", "-z"], cwd=SOURCE, env=INDEX_ENVIRONMENT)
     count = 0
     for entry in index.split(b"\0"):
         if not entry:
@@ -71,7 +74,114 @@ def identity(source: Path, head: str, tree: str) -> dict[str, object]:
         metadata, relative = entry.split(b"\t", 1)
         mode, expected, stage = metadata.split()
         assert stage == b"0"
-        path = source / os.fsdecode(relative)
+        path = SOURCE / os.fsdecode(relative)
+        if mode == b"120000":
+            content = os.fsencode(os.readlink(path))
+        else:
+            assert mode in (b"100644", b"100755"), mode
+            content = path.read_bytes()
+            assert bool(path.stat().st_mode & 0o111) == (mode == b"100755"), str(path)
+        actual = hashlib.sha1(f"blob {len(content)}\0".encode() + content).hexdigest()
+        assert actual == expected.decode(), os.fsdecode(relative)
+        count += 1
+    changed = set(output(["git", "diff", "--name-only"]).splitlines())
+    changed.update(output(["git", "ls-files", "--others", "--exclude-standard"]).splitlines())
+    assert changed == paths, (sorted(changed), sorted(paths))
+    result = {"base": MANIFEST["base"], "tree": tree, "tracked_blobs": count,
+              "index_sha256": hashlib.sha256(index).hexdigest()}
+    print("EXACT_SOURCE_IDENTITY " + json.dumps(result, sort_keys=True), flush=True)
+    return result
+
+def install_rust() -> None:
+    run("rust-toolchain", ["rustup", "toolchain", "install", "1.100.0", "--profile", "minimal", "--component", "rustfmt,clippy"])
+    assert output(["rustc", "--version"]).startswith("rustc 1.100.0 ")
+
+def tree_sitter() -> Path:
+    archive = download("https://github.com/tree-sitter/tree-sitter/releases/download/v0.27.1/tree-sitter-linux-x64.gz",
+                       "d01042f94ba3d6827ddc9788e235f75d8366431be42bdf90ade534d960c98b7d", "tree-sitter.gz")
+    binary = EVIDENCE / "tree-sitter"
+    binary.write_bytes(gzip.decompress(archive.read_bytes()))
+    binary.chmod(0o755)
+    return binary
+
+def apply_elements(elements: list[dict[str, str]]) -> None:
+    for item in elements:
+        content = item["content"].encode()
+        assert hashlib.sha256(content).hexdigest() == item["sha256"], item["path"]
+        path = SOURCE / item["path"]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
+
+def native_oracles() -> list[dict[str, object]]:
+    archive = download("https://github.com/PowerShell/PowerShell/releases/download/v7.7.0/powershell-7.7.0-linux-x64.tar.gz",
+                       "c89d9c682d2c403dfe726f3df948e359675235a5bd6fab535776de69729ca0cb", "powershell.tar.gz")
+    powershell = EVIDENCE / "powershell"
+    powershell.mkdir(exist_ok=True)
+    run("extract-powershell", ["tar", "-xzf", str(archive), "-C", str(powershell)])
+    pwsh = powershell / "pwsh"
+    pwsh.chmod(0o755)
+    native_bin = EVIDENCE / "native-bin"
+    native_bin.mkdir(exist_ok=True)
+    capture = native_bin / "Capture-Native"
+    capture.write_text(f"#!{sys.executable}\nimport json\nimport sys\nprint(json.dumps({{'count': len(sys.argv) - 1, 'values': sys.argv[1:]}}, ensure_ascii=True))\n")
+    capture.chmod(0o755)
+    ENVIRONMENT["PATH"] = str(native_bin) + os.pathsep + ENVIRONMENT["PATH"]
+    run("preserved-native-grammar", [str(pwsh), "-NoLogo", "-NoProfile", "-File", str(PROOF / "preserved-grammar-oracle.ps1"), "-CasesPath", str(PROOF / "preserved-grammar-cases.json")])
+    run("preserved-native-literals", [str(pwsh), "-NoLogo", "-NoProfile", "-File", str(PROOF / "preserved-literal-oracle.ps1"), "-CasesPath", str(PROOF / "preserved-literal-cases.json")])
+    text = run("native-new-cases", [str(pwsh), "-NoLogo", "-NoProfile", "-File", str(PROOF / "native-oracle.ps1"), "-CasesPath", str(PROOF / "cases.json")])
+    records = [json.loads(line.removeprefix("NATIVE_CASE ")) for line in text.splitlines() if line.startswith("NATIVE_CASE ")]
+    assert len(records) == 243 and all(item["matches"] for item in records)
+    (EVIDENCE / "native-cases.json").write_text(json.dumps(records, indent=2, sort_keys=True) + "\n")
+    text = run("native-token-boundaries", [str(pwsh), "-NoLogo", "-NoProfile", "-File", str(PROOF / "token-oracle.ps1"), "-CasesPath", str(PROOF / "token-cases.json")])
+    tokens = [json.loads(line.removeprefix("TOKEN_CASE ")) for line in text.splitlines() if line.startswith("TOKEN_CASE ")]
+    expected = cast(list[dict[str, object]], json.loads((PROOF / "token-expected.json").read_text()))
+    assert len(tokens) == 40 and tokens == expected, (len(tokens), len(expected))
+    (EVIDENCE / "native-token-boundaries.json").write_text(json.dumps(tokens, indent=2, sort_keys=True) + "\n")
+    text = run("native-followup-cases", [str(pwsh), "-NoLogo", "-NoProfile", "-File", str(PROOF / "followup-oracle.ps1"), "-CasesPath", str(PROOF / "followup-cases.json")])
+    followup = [json.loads(line.removeprefix("NATIVE_FOLLOWUP ")) for line in text.splitlines() if line.startswith("NATIVE_FOLLOWUP ")]
+    expected_followup = json.loads((PROOF / "followup-native-expected.json").read_text())
+    assert len(followup) == 176 and followup == expected_followup
+    assert all(item["matches"] for item in followup)
+    (EVIDENCE / "followup-native-cases.json").write_text(json.dumps(followup, indent=2, sort_keys=True) + "\n")
+    print("NATIVE_FOLLOWUP_IDENTITY " + hashlib.sha256(json.dumps(followup, sort_keys=True).encode()).hexdigest(), flush=True)
+    text = run("native-near-controls", [str(pwsh), "-NoLogo", "-NoProfile", "-File", str(PROOF / "followup-oracle.ps1"), "-CasesPath", str(PROOF / "near-controls.json")])
+    near = [json.loads(line.removeprefix("NATIVE_FOLLOWUP ")) for line in text.splitlines() if line.startswith("NATIVE_FOLLOWUP ")]
+    assert len(near) == 6 and all(item["matches"] for item in near)
+    (EVIDENCE / "native-near-controls.json").write_text(json.dumps(near, indent=2, sort_keys=True) + "\n")
+    text = run("native-context-cases", [str(pwsh), "-NoLogo", "-NoProfile", "-File", str(PROOF / "context-oracle.ps1"), "-CasesPath", str(PROOF / "context-cases.json")])
+    contexts = [json.loads(line.removeprefix("NATIVE_CONTEXT ")) for line in text.splitlines() if line.startswith("NATIVE_CONTEXT ")]
+    expected_contexts = json.loads((PROOF / "context-native-expected.json").read_text())
+    assert len(contexts) == MANIFEST["context_native_cases"]
+    assert len(expected_contexts) == 442 and contexts[:442] == expected_contexts
+    additional = json.loads((PROOF / "context-cases.json").read_text())[442:]
+    for case, record in zip(additional, contexts[442:], strict=True):
+        if "expected_branches" in case:
+            assert [{"clauses": branch["clauses"], "has_else": branch["has_else"]} for branch in record["branches"]] == case["expected_branches"]
+            assert record["commands"] == case["expected_commands"]
+        print("ADDITIONAL_NATIVE_CONTEXT " + json.dumps(record), flush=True)
+    assert all(item["matches"] for item in contexts)
+    (EVIDENCE / "native-context-cases.json").write_text(json.dumps(contexts, indent=2, sort_keys=True) + "\n")
+    print("FROZEN_NATIVE_CONTEXTS_MATCH " + str(len(contexts)), flush=True)
+    return records
+
+def tree_text(text: str) -> str:
+    start = text.index("(program")
+    return text[start:text.rindex(")") + 1]
+
+
+def unchanged_snapshot(head: str, tree: str) -> dict[str, object]:
+    assert output(["git", "rev-parse", "HEAD"]) == head
+    assert output(["git", "write-tree"]) == tree
+    assert output(["git", "status", "--porcelain", "--untracked-files=all"]) == ""
+    index = subprocess.check_output(["git", "ls-files", "--stage", "-z"], cwd=SOURCE)
+    count = 0
+    for entry in index.split(b"\0"):
+        if not entry:
+            continue
+        metadata, relative = entry.split(b"\t", 1)
+        mode, expected, stage = metadata.split()
+        assert stage == b"0"
+        path = SOURCE / os.fsdecode(relative)
         if mode == b"120000":
             content = os.fsencode(os.readlink(path))
         else:
@@ -81,173 +191,506 @@ def identity(source: Path, head: str, tree: str) -> dict[str, object]:
         assert hashlib.sha1(f"blob {len(content)}\0".encode() + content).hexdigest() == expected.decode(), str(path)
         count += 1
     record = {"head": head, "tree": tree, "tracked_blobs": count, "index_sha256": hashlib.sha256(index).hexdigest()}
-    print("UNCHANGED_SOURCE_IDENTITY " + json.dumps(record, sort_keys=True), flush=True)
+    print("RESTORED_CONTEXT_SNAPSHOT " + json.dumps(record, sort_keys=True), flush=True)
     return record
 
-for name, digest in cast(dict[str, str], MANIFEST["proof_sha256"]).items():
-    assert hashlib.sha256((PROOF / name).read_bytes()).hexdigest() == digest, name
-snapshots = [
-    ("legacy", LEGACY, str(MANIFEST["legacy_base"]), str(MANIFEST["legacy_tree"])),
-    ("previous", PREVIOUS, str(MANIFEST["pre_base"]), str(MANIFEST["pre_tree"])),
-    ("current", SOURCE, str(MANIFEST["base"]), str(MANIFEST["base_tree"])),
-]
-initial = {name: identity(source, head, tree) for name, source, head, tree in snapshots}
-run("rust-toolchain", ["rustup", "toolchain", "install", "1.100.0", "--profile", "minimal", "--component", "rustfmt,clippy"])
-assert output(["rustc", "--version"]).startswith("rustc 1.100.0 ")
-archive = download("https://github.com/tree-sitter/tree-sitter/releases/download/v0.27.1/tree-sitter-linux-x64.gz",
-                   "d01042f94ba3d6827ddc9788e235f75d8366431be42bdf90ade534d960c98b7d", "tree-sitter.gz")
-binary = EVIDENCE / "tree-sitter"
-binary.write_bytes(gzip.decompress(archive.read_bytes()))
-binary.chmod(0o755)
-archive = download("https://github.com/PowerShell/PowerShell/releases/download/v7.7.0/powershell-7.7.0-linux-x64.tar.gz",
-                   "c89d9c682d2c403dfe726f3df948e359675235a5bd6fab535776de69729ca0cb", "powershell.tar.gz")
-powershell = EVIDENCE / "powershell"
-powershell.mkdir()
-run("extract-powershell", ["tar", "-xzf", str(archive), "-C", str(powershell)])
-pwsh = powershell / "pwsh"
-pwsh.chmod(0o755)
-native_bin = EVIDENCE / "native-bin"
-native_bin.mkdir()
-capture = native_bin / "Capture-Native"
-capture.write_text(f"#!{sys.executable}\nimport json\nimport sys\nprint(json.dumps({{'count': len(sys.argv) - 1, 'values': sys.argv[1:]}}, ensure_ascii=True))\n")
-capture.chmod(0o755)
-ENVIRONMENT["PATH"] = str(native_bin) + os.pathsep + ENVIRONMENT["PATH"]
-native_output = run("native-witnesses", [str(pwsh), "-NoLogo", "-NoProfile", "-File", str(PROOF / "native-oracle.ps1"), "-CasesPath", str(PROOF / "cases.json")])
-native = [json.loads(line.removeprefix("NATIVE_CONTEXT ")) for line in native_output.splitlines() if line.startswith("NATIVE_CONTEXT ")]
-cases = cast(list[dict[str, object]], json.loads((PROOF / "cases.json").read_text()))
-assert len(native) == len(cases) == MANIFEST["native_cases"]
-assert all(record["matches"] for record in native)
-(EVIDENCE / "native-cases.json").write_text(json.dumps(native, indent=2, sort_keys=True) + "\n")
-for record in native:
-    print("FROZEN_NATIVE " + json.dumps(record), flush=True)
-case_root = EVIDENCE / "cases"
-case_root.mkdir()
-native_by_id = {record["id"]: record for record in native}
+def baseline_queries() -> dict[str, list[str]]:
+    receipt = json.loads((PROOF / "context-baseline-receipt.json").read_text())
+    root = EVIDENCE / "baseline"
+    archives = [path for path in root.rglob("*") if path.is_file() and zipfile.is_zipfile(path)]
+    assert len(archives) == 1, [str(path) for path in archives]
+    archive = archives[0]
+    archive_digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+    assert archive_digest == "0a76bd3c9df88fd1d3cb3243a58736082a53538421d8d78983cc84567b0e5569"
+    print("VERIFIED_BASELINE_ARTIFACT_ZIP " + archive_digest, flush=True)
+    results = {}
+    for label in ("legacy", "previous", "current"):
+        name = label + "-query-observation"
+        with zipfile.ZipFile(archive) as handle:
+            matches = [member for member in handle.namelist() if Path(member).name == name + ".log"]
+            assert len(matches) == 1, (name, matches)
+            content = handle.read(matches[0])
+        expected = next(item["log_sha256"] for item in receipt["results"] if item["name"] == name)
+        assert hashlib.sha256(content).hexdigest() == expected, name
+        lines = [line for line in content.decode().splitlines() if line.startswith("PUBLIC_QUERY_")]
+        results[label] = lines
+        (EVIDENCE / (name + "-verified.log")).write_bytes(content)
+        print("VERIFIED_BASELINE_QUERY_LOG " + json.dumps({"name": name, "sha256": expected, "lines": len(lines)}), flush=True)
+        for line in lines:
+            print("ORIGINAL_QUERY " + label + " " + line, flush=True)
+    assert len([line for line in results["legacy"] if line.startswith("PUBLIC_QUERY_COMPILE ") and line.endswith(" OK")]) == 5
+    assert len([line for line in results["legacy"] if line.startswith("PUBLIC_QUERY_ROW ")]) == 370
+    return results
 
-def spans(kind: str, content: str, tree_text: str) -> list[str]:
+def original_context_tests() -> None:
+    module_file = SOURCE / "crates/sloplint-syntax/tests/grammar_gaps.rs"
+    path = SOURCE / "crates/sloplint-syntax/tests/grammar_gaps/powershell_context_boundaries.rs"
+    anchor = '#[path = "grammar_gaps/powershell.rs"]\nmod powershell;\n'
+    declaration = '#[path = "grammar_gaps/powershell_context_boundaries.rs"]\nmod powershell_context_boundaries;\n'
+    regression = (PROOF / "context-regressions.rs").read_bytes()
+    snapshots = [
+        ("current", str(MANIFEST["base"]), str(MANIFEST["base_tree"]), 101),
+        ("previous", "3071f522049cbe2d440bc68ca20e8887fdbdaa9a", "171bbe1c7137faf98fb7981f69288120cd18bdf6", 0),
+    ]
+    for label, head, tree, expected in snapshots:
+        if label == "previous":
+            run("previous-source-fetch", ["git", "fetch", "--depth=1", "origin", head])
+            run("previous-source-checkout", ["git", "checkout", "--detach", head])
+        identity = unchanged_snapshot(head, tree)
+        original = module_file.read_bytes()
+        assert not path.exists()
+        try:
+            text = original.decode()
+            assert text.count(anchor) == 1
+            module_file.write_text(text.replace(anchor, anchor + declaration))
+            path.write_bytes(regression)
+            run(label + "-context-format", ["cargo", "fmt", "--all"])
+            print("NARROW_CONTEXT_TEST_SOURCE " + json.dumps({"label": label, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "content": path.read_text()}), flush=True)
+            args = ["cargo", "test", "--locked", "-p", "sloplint-syntax", "--test", "grammar_gaps"]
+            run(label + "-context-tests-compile", [*args, "--no-run"])
+            run(label + "-indented-dash-witness", [*args, "powershell_context_boundaries::indented_bare_dashes_follow_separated_line_continuations", "--", "--exact", "--nocapture"], expected=expected)
+            if label == "current":
+                for control in ("owned_branches_keep_public_fields_and_keyword_ranges", "mixed_native_spaces_keep_a_single_separator", "mixed_case_branches_keep_their_native_ownership"):
+                    run("current-control-" + control, [*args, "powershell_context_boundaries::" + control, "--", "--exact", "--nocapture"])
+        finally:
+            module_file.write_bytes(original)
+            path.unlink()
+            assert unchanged_snapshot(head, tree) == identity
+    run("restore-maintained-source", ["git", "checkout", "--detach", str(MANIFEST["base"])])
+    unchanged_snapshot(str(MANIFEST["base"]), str(MANIFEST["base_tree"]))
+    output(["git", "read-tree", "HEAD"], env=INDEX_ENVIRONMENT)
+    full_identity(str(MANIFEST["base_tree"]), set())
+
+def context_spans(kind: str, content: str, tree: str) -> list[str]:
     encoded = content.encode()
     lines = encoded.splitlines(keepends=True)
-    result = []
-    for match in re.finditer(rf"\({kind} \[(\d+), (\d+)\] - \[(\d+), (\d+)\]", tree_text):
+    spans = []
+    for match in re.finditer(rf"\({kind} \[(\d+), (\d+)\] - \[(\d+), (\d+)\]", tree):
         start_row, start_column, end_row, end_column = map(int, match.groups())
-        begin = sum(map(len, lines[:start_row])) + start_column
-        finish = sum(map(len, lines[:end_row])) + end_column
-        result.append(encoded[begin:finish].decode())
-    return result
+        start = sum(map(len, lines[:start_row])) + start_column
+        end = sum(map(len, lines[:end_row])) + end_column
+        spans.append(encoded[start:end].decode())
+    return spans
 
-for label, source, head, tree in snapshots:
-    library = EVIDENCE / f"parser-libraries-{label}"
+def context_parsers(binary: Path, stage: str, branch_only: bool = False) -> None:
+    cases = json.loads((PROOF / "context-cases.json").read_text())
+    native = {item["id"]: item for item in json.loads((EVIDENCE / "native-context-cases.json").read_text())}
+    historical = json.loads((PROOF / "context-original-observations.json").read_text())
+    case_root = EVIDENCE / ("context-cases-" + stage)
+    case_root.mkdir()
+    library = EVIDENCE / ("context-parser-" + stage)
     library.mkdir()
     ENVIRONMENT["TREE_SITTER_LIBDIR"] = str(library)
-    vendor = source / "vendor/tree-sitter-powershell"
-    records: list[dict[str, object]] = []
+    results = []
+    observations = []
     for index, case in enumerate(cases):
-        content = str(case["source"])
+        if branch_only and case["kind"] != "branch":
+            continue
+        content = case["source"]
         assert hashlib.sha256(content.encode()).hexdigest() == case["source_sha256"], case["id"]
         path = case_root / f"case-{index}.ps1"
         path.write_text(content)
-        result = subprocess.run([str(binary), "parse", str(path)], cwd=vendor, env=ENVIRONMENT, text=True,
-                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False, timeout=30)
-        assert "Failed to load language" not in result.stdout
-        expected = native_by_id[case["id"]]
-        commands = spans("command", content, result.stdout)
-        record: dict[str, object] = {"label": label, "id": case["id"], "exit": result.returncode,
-                                    "accepted": result.returncode == 0, "native_accepted": expected["accepted"],
-                                    "commands": commands, "native_commands": [command["text"] for command in expected["commands"]]}
-        record["acceptance_matches"] = record["accepted"] == expected["accepted"]
+        process = subprocess.run([str(binary), "parse", str(path)], cwd=VENDOR, env=ENVIRONMENT, text=True,
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False, timeout=30)
+        assert "Failed to load language" not in process.stdout
+        expected = native[case["id"]]
+        record = {"id": case["id"], "exit": process.returncode, "accepted": process.returncode == 0,
+                  "native_accepted": expected["accepted"]}
+        if case["id"].startswith("continued-") and "-none-" in case["id"]:
+            record["historical"] = [item for item in historical if item["id"] == case["id"]]
+            record["classification"] = "Older no-indent bare-dash limitation, outside the indented regression."
+            observations.append(record)
+            continue
+        record["matches"] = record["accepted"] == expected["accepted"]
         if expected["accepted"] and record["accepted"]:
-            record["command_extents_match"] = commands == record["native_commands"]
-            record["elseifs"] = len(re.findall(r"\(elseif_clause ", result.stdout))
-            record["elses"] = len(re.findall(r"\(else_clause ", result.stdout))
-            record["branch_structure_matches"] = record["elseifs"] == sum(branch["clauses"] - 1 for branch in expected["branches"]) and record["elses"] == sum(int(branch["has_else"]) for branch in expected["branches"])
+            record["commands"] = context_spans("command", content, process.stdout)
+            record["native_commands"] = [command["text"] for command in expected["commands"]]
+            record["matches"] = record["matches"] and record["commands"] == record["native_commands"]
+            record["elseifs"] = len(re.findall(r"\(elseif_clause ", process.stdout))
+            record["elses"] = len(re.findall(r"\(else_clause ", process.stdout))
+            record["matches"] = record["matches"] and record["elseifs"] == sum(branch["clauses"] - 1 for branch in expected["branches"]) and record["elses"] == sum(int(branch["has_else"]) for branch in expected["branches"])
         if case["kind"] == "redirect":
-            record["generic_words"] = spans("generic_token", content, result.stdout)
-            record["target_nodes"] = spans("redirected_file_name", content, result.stdout)
-        records.append(record)
-        print("PARSER_OBSERVATION " + json.dumps(record), flush=True)
-    (EVIDENCE / f"{label}-parser-cases.json").write_text(json.dumps(records, indent=2, sort_keys=True) + "\n")
-    libraries = [{"path": str(path.relative_to(EVIDENCE)), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()} for path in library.glob("*.so")]
-    assert len(libraries) == 1, libraries
-    print("ISOLATED_PARSER_LIBRARY " + json.dumps({"source": initial[label], "libraries": libraries}), flush=True)
-    assert identity(source, head, tree) == initial[label]
-
-trace_ids = set(cast(list[str], MANIFEST["trace_cases"]))
-for label, source, head, tree in snapshots:
-    scanner = source / "vendor/tree-sitter-powershell/src/scanner.c"
-    saved = scanner.read_bytes()
-    original = saved.decode()
-    dispatch = "    if (scan_bare_dashes(payload, lexer, valid_symbols)) return true;\n    return scan_statement_terminator(payload, lexer, valid_symbols);"
-    instrumented_dispatch = """
-    fprintf(stderr, "EXT_ENTRY col=%u char=%04x valid=%d%d%d%d%d\\n", lexer->get_column(lexer), lexer->lookahead, valid_symbols[0], valid_symbols[1], valid_symbols[2], valid_symbols[3], valid_symbols[4]);
-    bool bare = scan_bare_dashes(payload, lexer, valid_symbols);
-    fprintf(stderr, "EXT_AFTER_BARE accepted=%d col=%u char=%04x result=%d\\n", bare, lexer->get_column(lexer), lexer->lookahead, lexer->result_symbol);
-    if (bare) return true;
-    bool terminator = scan_statement_terminator(payload, lexer, valid_symbols);
-    fprintf(stderr, "EXT_AFTER_TERMINATOR accepted=%d col=%u char=%04x result=%d\\n", terminator, lexer->get_column(lexer), lexer->lookahead, lexer->result_symbol);
-    return terminator;"""
-    assert original.count(dispatch) == 1
-    instrumented = original.replace("#include <wctype.h>", "#include <wctype.h>\n#include <stdio.h>").replace(dispatch, instrumented_dispatch)
-    library = EVIDENCE / f"trace-libraries-{label}"
-    library.mkdir()
-    ENVIRONMENT["TREE_SITTER_LIBDIR"] = str(library)
-    try:
-        scanner.write_text(instrumented)
-        print("TRACE_SOURCE_IDENTITY " + json.dumps({"label": label, "base": head, "original_sha256": hashlib.sha256(saved).hexdigest(), "instrumented_sha256": hashlib.sha256(instrumented.encode()).hexdigest()}), flush=True)
-        for index, case in enumerate(cases):
-            if case["id"] in trace_ids:
-                path = case_root / f"case-{index}.ps1"
-                run(f"trace-{label}-{case['id']}", [str(binary), "parse", str(path)], expected=None, cwd=source / "vendor/tree-sitter-powershell", limit=60)
-    finally:
-        scanner.write_bytes(saved)
-        assert identity(source, head, tree) == initial[label]
+            record["generic_words"] = context_spans("generic_token", content, process.stdout)
+            record["native_locations"] = [item["file"] for item in expected["redirections"]]
+            if case["id"].endswith("-dash"):
+                record["target_scope"] = "Legacy generic-word start and captures; native single-dash target splitting is an older independent limitation."
+        if case["id"] in MANIFEST["trace_cases"] and record["accepted"]:
+            record["tree_sha256"] = hashlib.sha256(tree_text(process.stdout).encode()).hexdigest()
+        results.append(record)
+        if not record["matches"]:
+            print("CONTEXT_PARSER_MISMATCH " + json.dumps(record) + "\n" + process.stdout, flush=True)
+    (EVIDENCE / (stage + "-context-parser.json")).write_text(json.dumps({"results": results, "older_observations": observations}, indent=2) + "\n")
+    expected_count = 258 if branch_only else 432
+    assert len(results) == expected_count, (len(results), expected_count)
+    assert all(record["matches"] for record in results)
+    assert branch_only or len(observations) == 16
     libraries = [{"path": str(path.relative_to(EVIDENCE)), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()} for path in library.glob("*.so")]
     assert len(libraries) == 1
-    print("ISOLATED_TRACE_LIBRARY " + json.dumps({"source": initial[label], "libraries": libraries}), flush=True)
+    print("NATIVE_CONTEXT_PARSERS_MATCH " + json.dumps({"stage": stage, "required": len(results), "older_observations": observations, "libraries": libraries}), flush=True)
 
-modules = cast(list[dict[str, str]], json.loads((PROOF / "frozen-modules.json").read_text()))
-for label, source, head, tree in snapshots:
-    module_file = source / "crates/sloplint-syntax/tests/grammar_gaps.rs"
-    saved_module = module_file.read_bytes()
-    saved: dict[str, bytes | None] = {}
+
+def trace_context_candidate(binary: Path) -> None:
+    scanner = VENDOR / "src/scanner.c"
+    saved = scanner.read_bytes()
+    original = saved.decode()
+    signature = "bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols)\n{"
+    assert original.count(signature) == 1
+    instrumented = original.replace("#include <wctype.h>", "#include <wctype.h>\n#include <stdio.h>")
+    instrumented = instrumented.replace(signature, "static bool traced_context_scan(void *payload, TSLexer *lexer, const bool *valid_symbols)\n{")
+    wrapper = r"""
+bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols)
+{
+    fprintf(stderr, "CANDIDATE_EXT_ENTRY col=%u char=%04x valid=%d%d%d%d%d%d%d\n",
+        lexer->get_column(lexer), lexer->lookahead, valid_symbols[0], valid_symbols[1],
+        valid_symbols[2], valid_symbols[3], valid_symbols[4], valid_symbols[5], valid_symbols[6]);
+    bool accepted = traced_context_scan(payload, lexer, valid_symbols);
+    fprintf(stderr, "CANDIDATE_EXT_RESULT accepted=%d symbol=%d col=%u char=%04x\n",
+        accepted, lexer->result_symbol, lexer->get_column(lexer), lexer->lookahead);
+    return accepted;
+}
+"""
+    instrumented += wrapper
+    library = EVIDENCE / "context-trace-parser"
+    library.mkdir()
+    ENVIRONMENT["TREE_SITTER_LIBDIR"] = str(library)
+    normal = {record["id"]: record for record in json.loads((EVIDENCE / "final-context-parser.json").read_text())["results"]}
+    cases = {case["id"]: case for case in json.loads((PROOF / "context-cases.json").read_text())}
     try:
-        for module in modules:
-            content = module["content"].encode()
-            assert hashlib.sha256(content).hexdigest() == module["sha256"]
-            path = source / module["path"]
-            saved[module["path"]] = path.read_bytes() if path.exists() else None
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(content)
-        anchor = '#[path = "grammar_gaps/powershell.rs"]\nmod powershell;\n'
-        text = module_file.read_text()
-        assert text.count(anchor) == 1
-        additions = "".join(f'#[path = "grammar_gaps/{module["name"]}.rs"]\nmod {module["name"]};\n' for module in modules)
-        module_file.write_text(text.replace(anchor, anchor + additions))
-        run(label + "-format", ["cargo", "fmt", "--all"], cwd=source)
-        frozen = [{"path": module["path"], "content": (source / module["path"]).read_text(),
-                   "sha256": hashlib.sha256((source / module["path"]).read_bytes()).hexdigest()} for module in modules]
-        frozen.append({"path": "crates/sloplint-syntax/tests/grammar_gaps.rs", "content": module_file.read_text(),
-                       "sha256": hashlib.sha256(module_file.read_bytes()).hexdigest()})
-        (EVIDENCE / f"{label}-formatted-frozen-elements.json").write_text(json.dumps(frozen, indent=2) + "\n")
-        for item in frozen:
-            assert len(item["content"].splitlines()) < 600, item["path"]
-            print("FROZEN_TEST_SOURCE " + json.dumps({"label": label, **item}), flush=True)
-        args = ["cargo", "test", "--locked", "-p", "sloplint-syntax", "--test", "grammar_gaps"]
-        run(label + "-frozen-tests-compile", [*args, "--no-run"], cwd=source)
-        tests = [
-            ("continued-dashes", "powershell_context_boundaries::indented_bare_dashes_follow_separated_line_continuations", None),
-            ("keyword-command", "powershell_context_boundaries::keyword_like_executable_after_an_escaped_line_is_a_separate_call", None),
-            ("redirect-query", "powershell_context_boundaries::spaced_dash_redirection_retains_its_legacy_separator_capture", None),
-            ("query-observation", "powershell_context_boundaries::observe_public_redirection_queries", 0),
-        ]
-        for name, test, expected in tests:
-            run(label + "-" + name, [*args, test, "--", "--exact", "--nocapture"], expected=expected, cwd=source)
+        scanner.write_text(instrumented)
+        print("CANDIDATE_TRACE_SOURCE " + json.dumps({"original_sha256": hashlib.sha256(saved).hexdigest(), "instrumented_sha256": hashlib.sha256(instrumented.encode()).hexdigest()}), flush=True)
+        for identifier in MANIFEST["trace_cases"]:
+            path = EVIDENCE / ("trace-" + identifier + ".ps1")
+            path.write_text(cases[identifier]["source"])
+            text = run("candidate-trace-" + identifier, [str(binary), "parse", str(path)], cwd=VENDOR)
+            assert hashlib.sha256(tree_text(text).encode()).hexdigest() == normal[identifier]["tree_sha256"], identifier
+            events = re.findall(r"CANDIDATE_EXT_ENTRY col=\d+ char=[0-9a-f]+ valid=([01]{7})\nCANDIDATE_EXT_RESULT accepted=([01]) symbol=(\d+)", text)
+            assert events
+            guards = [int(symbol) for valid, accepted, symbol in events if accepted == "1" and int(symbol) in (5, 6)]
+            for valid, accepted, symbol in events:
+                if accepted == "1":
+                    assert valid[int(symbol)] == "1", (identifier, valid, symbol)
+            if "-ordinary-" in identifier or identifier.endswith("assigned-else-exe"):
+                assert guards == [], (identifier, guards)
+            if identifier.endswith("assigned-else-block"):
+                assert 5 in guards, (identifier, guards)
+            if identifier == "conditional-mixed-case":
+                assert 5 in guards and 6 in guards, guards
+            print("CANDIDATE_CONTEXT_TRACE_MATCH " + json.dumps({"id": identifier, "guards": guards, "tree_sha256": normal[identifier]["tree_sha256"]}), flush=True)
     finally:
-        module_file.write_bytes(saved_module)
-        for relative, content in saved.items():
-            path = source / relative
-            if content is None:
-                path.unlink()
-            else:
-                path.write_bytes(content)
-        assert identity(source, head, tree) == initial[label]
-print("FROZEN_CONTEXT_BASELINE_COMPLETE " + json.dumps({"sources": initial, "native_cases": len(native), "results": RESULTS}, sort_keys=True), flush=True)
+        scanner.write_bytes(saved)
+    libraries = [{"path": str(path.relative_to(EVIDENCE)), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()} for path in library.glob("*.so")]
+    assert len(libraries) == 1
+    print("ISOLATED_CANDIDATE_TRACE_LIBRARY " + json.dumps(libraries), flush=True)
+
+
+def compare_public_queries(original: dict[str, list[str]]) -> None:
+    module_file = SOURCE / "crates/sloplint-syntax/tests/grammar_gaps.rs"
+    path = SOURCE / "crates/sloplint-syntax/tests/grammar_gaps/powershell_context_observer.rs"
+    original_module = module_file.read_bytes()
+    assert not path.exists()
+    try:
+        path.write_bytes((PROOF / "context-observer.rs").read_bytes())
+        module_file.write_text(original_module.decode() + '\n#[path = "grammar_gaps/powershell_context_observer.rs"]\nmod powershell_context_observer;\n')
+        text = run("candidate-public-query-observation", ["cargo", "test", "--locked", "-p", "sloplint-syntax", "--test", "grammar_gaps", "powershell_context_observer::observe_public_redirection_queries", "--", "--exact", "--nocapture"])
+        actual = [line for line in text.splitlines() if line.startswith("PUBLIC_QUERY_")]
+        ids = {case["id"] for case in json.loads((PROOF / "context-cases.json").read_text()) if case["kind"] == "redirect" and not case["id"].startswith("mixed-") and "-em-" not in case["id"]}
+        assert len(ids) == 62
+        def relevant(lines: list[str]) -> list[str]:
+            return sorted(line for line in lines if line.startswith("PUBLIC_QUERY_COMPILE ") or line.split()[1] in ids)
+        expected = relevant(original["legacy"])
+        observed = relevant(actual)
+        if observed != expected:
+            print("LEGACY_QUERY_MISMATCH " + json.dumps({"missing": sorted(set(expected) - set(observed)), "unexpected": sorted(set(observed) - set(expected))}), flush=True)
+        assert observed == expected
+        print("LEGACY_REDIRECTION_QUERIES_MATCH inputs=62 queries=5", flush=True)
+    finally:
+        module_file.write_bytes(original_module)
+        path.unlink()
+
+def prepare() -> None:
+    install_rust()
+    binary = tree_sitter()
+    native_oracles()
+    queries = baseline_queries()
+    original_context_tests()
+    controls = json.loads((PROOF / "near-controls.json").read_text())
+    control_root = EVIDENCE / "near-controls"
+    control_root.mkdir()
+    control_library = EVIDENCE / "original-control-parser"
+    control_library.mkdir()
+    ENVIRONMENT["TREE_SITTER_LIBDIR"] = str(control_library)
+    original_controls = {}
+    for index, case in enumerate(controls):
+        path = control_root / f"case-{index}.ps1"
+        path.write_text(case["source"])
+        text = run("original-" + case["id"], [str(binary), "parse", str(path)], cwd=VENDOR)
+        original_controls[case["id"]] = tree_text(text)
+    (EVIDENCE / "original-control-trees.json").write_text(json.dumps(original_controls, indent=2) + "\n")
+    old_patch = (VENDOR / "sloplint-grammar.patch").read_bytes()
+    upstream = EVIDENCE / "upstream"
+    run("upstream-init", ["git", "init", "-q", str(upstream)])
+    run("upstream-origin", ["git", "remote", "add", "origin", "https://github.com/airbus-cert/tree-sitter-powershell"], cwd=upstream)
+    run("upstream-fetch", ["git", "fetch", "--depth=1", "origin", "65ea6919e816a7ac142acec7ee72757f89db8439"], cwd=upstream)
+    run("upstream-checkout", ["git", "checkout", "-q", "FETCH_HEAD"], cwd=upstream)
+    previous_patch = EVIDENCE / "previous.patch"
+    previous_patch.write_bytes(old_patch)
+    run("upstream-patch", ["git", "apply", "--index", str(previous_patch)], cwd=upstream)
+    authored = cast(list[dict[str, object]], json.loads((PROOF / "authored-stages.json").read_text()))
+    stages: list[dict[str, object]] = []
+    prior_files: dict[str, str] = {}
+    prior_tree = str(MANIFEST["base_tree"])
+    allowed: set[str] = set()
+    generated = {"vendor/tree-sitter-powershell/src/parser.c", "vendor/tree-sitter-powershell/src/grammar.json",
+                 "vendor/tree-sitter-powershell/src/node-types.json", "vendor/tree-sitter-powershell/sloplint-grammar.patch"}
+    regressions = ["cargo", "test", "--locked", "-p", "sloplint-syntax", "--test", "grammar_gaps", "--target", "x86_64-unknown-linux-gnu", "powershell", "--", "--nocapture"]
+    for stage in authored:
+        name = str(stage["id"])
+        elements = cast(list[dict[str, str]], stage["elements"])
+        apply_elements(elements)
+        allowed.update(item["path"] for item in elements)
+        if stage["regenerate"]:
+            run(name + "-scanner-syntax", ["cc", "-fsyntax-only", "-std=c11", "-I", str(VENDOR / "src"), str(VENDOR / "src/scanner.c")])
+            run(name + "-generate", [str(binary), "generate"], cwd=VENDOR)
+            states = re.search(r"#define STATE_COUNT (\d+)", (VENDOR / "src/parser.c").read_text())
+            assert states is not None
+            notes = VENDOR / "SLOPLINT.md"
+            notes.write_text(re.sub(r"The regenerated parser uses ABI 15 and has [0-9,]+ states.",
+                                   f"The regenerated parser uses ABI 15 and has {int(states.group(1)):,} states.", notes.read_text()))
+            for relative in ("grammar.js", "src/scanner.c"):
+                (upstream / relative).write_bytes((VENDOR / relative).read_bytes())
+            patch = subprocess.check_output(["git", "diff", "--binary", "HEAD", "--", "grammar.js", "src/scanner.c", "test/corpus"], cwd=upstream)
+            patch = b"\n".join(b"" if line == b" " else line for line in patch.split(b"\n"))
+            (VENDOR / "sloplint-grammar.patch").write_bytes(patch)
+            run(name + "-corpus", [str(binary), "test"], cwd=VENDOR)
+        notes = VENDOR / "SLOPLINT.md"
+        patch_content = (VENDOR / "sloplint-grammar.patch").read_bytes()
+        state_count = re.search(r"#define STATE_COUNT (\d+)", (VENDOR / "src/parser.c").read_text())
+        assert state_count is not None
+        text, count = re.subn(r"The regenerated parser uses ABI 15 and has [0-9,]+ states.",
+                             f"The regenerated parser uses ABI 15 and has {int(state_count.group(1)):,} states.", notes.read_text())
+        assert count == 1
+        patch_lines = len(patch_content.splitlines())
+        patch_hunks = sum(line.startswith(b"@@ ") for line in patch_content.splitlines())
+        text, count = re.subn(r"The current patch has [0-9,]+ lines and [0-9,]+ diff hunks.",
+                             f"The current patch has {patch_lines:,} lines and {patch_hunks:,} diff hunks.", text)
+        assert count == 1
+        notes.write_text(text)
+        if name == "conditional-context":
+            context_parsers(binary, name, branch_only=True)
+        run(name + "-format", ["cargo", "fmt", "--all"])
+        changed = set(output(["git", "diff", "--name-only"]).splitlines())
+        changed.update(output(["git", "ls-files", "--others", "--exclude-standard"]).splitlines())
+        assert changed <= allowed | generated, sorted(changed - allowed - generated)
+        for relative in changed:
+            if relative.startswith("crates/"):
+                assert len((SOURCE / relative).read_text().splitlines()) < 600, relative
+        output(["git", "read-tree", "HEAD"], env=INDEX_ENVIRONMENT)
+        output(["git", "add", "--", *sorted(changed)], env=INDEX_ENVIRONMENT)
+        tree = output(["git", "write-tree"], env=INDEX_ENVIRONMENT)
+        identity = full_identity(tree, changed)
+        delta: list[dict[str, str]] = []
+        for relative in sorted(changed):
+            content = (SOURCE / relative).read_text()
+            digest = hashlib.sha256(content.encode()).hexdigest()
+            if prior_files.get(relative) != digest:
+                delta.append({"path": relative, "content": content, "sha256": digest})
+            prior_files[relative] = digest
+        record = {"id": name, "message": stage["message"], "base_tree": prior_tree, "tree": tree,
+                  "identity": identity, "paths": sorted(changed), "elements": delta}
+        stages.append(record)
+        prior_tree = tree
+        print("CANDIDATE_STAGE " + json.dumps({k: v for k, v in record.items() if k != "elements"}, sort_keys=True), flush=True)
+        run(name + "-whitespace", ["git", "diff", "--check"])
+        if not stage["regenerate"]:
+            assert name == "recovery-documentation"
+            continue
+        text = run(str(stage["id"]) + "-powershell-regressions", regressions)
+        native = cast(list[dict[str, object]], json.loads((EVIDENCE / "native-cases.json").read_text()))
+        expected = {str(item["id"]): item["native_count"] for item in native if item["kind"] == "arguments"}
+        observed = re.findall(r"NATIVE_ARGUMENT_CASE ([^\s]+) (\d+)", text)
+        counts = {name: int(count) for name, count in observed}
+        assert len(expected) == 190 and len(observed) == 190 and counts == expected, (len(counts), len(expected))
+        print("NATIVE_ARGUMENT_COUNTS_MATCH 190", flush=True)
+        followup = json.loads((EVIDENCE / "followup-native-cases.json").read_text())
+        expected_dash = {item["id"]: item["native_count"] for item in followup if item["kind"] == "arguments" and "-protected-" not in item["id"]}
+        observed_dash = re.findall(r"NATIVE_DASH_CASE ([^\s]+) (\d+)", text)
+        counts_dash = {name: int(count) for name, count in observed_dash}
+        assert len(expected_dash) == 42 and len(observed_dash) == 42 and counts_dash == expected_dash
+        expected_comma = {item["id"]: item["native_count"] for item in followup if item["kind"] == "arguments_observe"}
+        observed_comma = re.findall(r"NATIVE_COMMA_CASE ([^\s]+) (\d+)", text)
+        assert len(expected_comma) == len(observed_comma) == 18
+        assert {name: int(count) for name, count in observed_comma} == expected_comma
+        print("FOLLOWUP_NATIVE_ARGUMENT_COUNTS_MATCH bare=42 comma=18 protected=12", flush=True)
+        observed_branches = re.findall(r"NATIVE_BRANCH_CASE ([^\s]+)", text)
+        expected_branches = {item["id"] for item in json.loads((PROOF / "followup-cases.json").read_text()) if item["kind"] == "conditional"}
+        assert len(observed_branches) == len(expected_branches) == 96 and set(observed_branches) == expected_branches
+        observed_queries = [line for line in text.splitlines() if line.startswith("LEGACY_SEPARATOR_QUERY ")]
+        expected_queries = json.loads((PROOF / "query-baseline-lines.json").read_text())
+        assert len(observed_queries) == len(expected_queries) == 24 and sorted(observed_queries) == sorted(expected_queries)
+        print("ORIGINAL_CUSTOM_QUERY_CAPTURE_SPANS_MATCH 24", flush=True)
+        if name == "separator-context":
+            observed_continuations = re.findall(r"NATIVE_CONTINUED_DASH_CASE ([^\s]+) (\d+)", text)
+            expected_continuations = {record["id"]: record["native_count"] for record in json.loads((EVIDENCE / "native-context-cases.json").read_text()) if record["id"].startswith("continued-") and "-none-" not in record["id"]}
+            assert len(observed_continuations) == len(expected_continuations) == 96
+            assert {identifier: int(count) for identifier, count in observed_continuations} == expected_continuations
+            print("NATIVE_INDENTED_DASH_COUNTS_MATCH 96", flush=True)
+        assert full_identity(tree, changed) == identity
+    context_parsers(binary, "final")
+    trace_context_candidate(binary)
+    compare_public_queries(queries)
+    assert full_identity(str(stages[-1]["tree"]), set(cast(list[str], stages[-1]["paths"]))) == stages[-1]["identity"]
+    payload = {"manifest": MANIFEST, "stages": stages}
+    data = (json.dumps(payload, indent=2) + "\n").encode()
+    (EVIDENCE / "stages.json").write_bytes(data)
+    digest = hashlib.sha256(data).hexdigest()
+    print("CANDIDATE_ARTIFACT_SHA256 " + digest, flush=True)
+    packed = gzip.compress(data, mtime=0)
+    encoded = base64.b64encode(packed).decode("ascii")
+    (EVIDENCE / "stages.json.gz").write_bytes(packed)
+    print("PACKED_SOURCE_IDENTITY " + json.dumps({"payload_sha256": digest,
+          "gzip_sha256": hashlib.sha256(packed).hexdigest(), "gzip_bytes": len(packed),
+          "payload_bytes": len(data), "base64_bytes": len(encoded),
+          "chunks": (len(encoded) + 23999) // 24000}), flush=True)
+    for part, offset in enumerate(range(0, len(encoded), 24000)):
+        print("PACKED_SOURCE_CHUNK " + json.dumps({"part": part, "content": encoded[offset:offset + 24000]}), flush=True)
+    cases = cast(list[dict[str, object]], json.loads((PROOF / "preserved-grammar-cases.json").read_text()))
+    cases += cast(list[dict[str, object]], json.loads((PROOF / "cases.json").read_text()))
+    cases += cast(list[dict[str, object]], json.loads((PROOF / "token-parser-cases.json").read_text()))
+    controls = cast(list[dict[str, object]], json.loads((PROOF / "terminator-parser-cases.json").read_text()))
+    observed = cast(list[dict[str, object]], json.loads((PROOF / "terminator-native-expected.json").read_text()))
+    assert len(controls) == len(observed) == 24
+    for case, record in zip(controls, observed, strict=True):
+        assert case["source"] == record["source"] and case["accepted"] == record["accepted"]
+        assert sum(item["clauses"] - 1 for item in cast(list[dict[str, int]], record["branches"])) == case["elseifs"]
+        assert sum(int(item["has_else"]) for item in cast(list[dict[str, bool]], record["branches"])) == case["elses"]
+    cases += controls
+    followup = cast(list[dict[str, object]], json.loads((PROOF / "followup-cases.json").read_text()))
+    cases += [case for case in followup if case["kind"] != "observation"]
+    library = EVIDENCE / "candidate-parser-library"
+    library.mkdir()
+    ENVIRONMENT["TREE_SITTER_LIBDIR"] = str(library)
+    case_root = EVIDENCE / "cases"
+    case_root.mkdir(exist_ok=True)
+    results: list[dict[str, object]] = []
+    for index, case in enumerate(cases):
+        path = case_root / f"case-{index}.ps1"
+        content = str(case["source"])
+        if "source_sha256" in case:
+            assert hashlib.sha256(content.encode()).hexdigest() == case["source_sha256"], case["id"]
+        path.write_text(content)
+        process = subprocess.run([str(binary), "parse", str(path)], cwd=VENDOR, env=ENVIRONMENT,
+                                 text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False, timeout=30)
+        assert "Failed to load language" not in process.stdout
+        record = {"id": case["id"], "exit": process.returncode, "accepted": process.returncode == 0, "expected": case["accepted"]}
+        if "elseifs" in case:
+            record["structure_matches"] = (
+                len(re.findall(r"\(elseif_clause ", process.stdout)) == case["elseifs"]
+                and len(re.findall(r"\(else_clause ", process.stdout)) == case["elses"])
+        if str(case.get("kind", "")).startswith("arguments") and case["id"].startswith(("dash-", "comma-")):
+            lines = content.encode().splitlines(keepends=True)
+            words = []
+            for match in re.finditer(r"\(generic_token \[(\d+), (\d+)\] - \[(\d+), (\d+)\]", process.stdout):
+                start_row, start_column, end_row, end_column = map(int, match.groups())
+                start = sum(map(len, lines[:start_row])) + start_column
+                end = sum(map(len, lines[:end_row])) + end_column
+                words.append(content.encode()[start:end].decode())
+            record["generic_words"] = words
+            if case["kind"] == "arguments" and not case.get("protected", False):
+                record["word_matches"] = words == [case["argument_source"]]
+            elif case["kind"] == "arguments_observe":
+                native_record = next(item for item in json.loads((PROOF / "followup-native-expected.json").read_text()) if item["id"] == case["id"])
+                native_argument = native_record["argument_nodes"][0]
+                if native_argument["kind"] == "ArrayLiteralAst":
+                    first = next(token["text"] for token in native_record["tokens"] if token["kind"] == "Generic" and token["flags"] != "CommandName")
+                    record["word_matches"] = first in words and not any("," in word for word in words) and "(array_literal_expression " in process.stdout
+                else:
+                    record["word_matches"] = words == [native_argument["text"]]
+        results.append(record)
+        if record["accepted"] != record["expected"] or not record.get("structure_matches", True) or not record.get("word_matches", True):
+            print("PARSER_MISMATCH " + json.dumps(record) + "\n" + process.stdout, flush=True)
+    (EVIDENCE / "parser-cases.json").write_text(json.dumps(results, indent=2) + "\n")
+    assert len(results) == 653
+    for index, case in enumerate(json.loads((PROOF / "near-controls.json").read_text())):
+        path = EVIDENCE / "near-controls" / f"case-{index}.ps1"
+        text = run("candidate-" + case["id"], [str(binary), "parse", str(path)], cwd=VENDOR)
+        assert tree_text(text) == original_controls[case["id"]], case["id"]
+    print("NATIVE_NEAR_CONTROL_TREES_UNCHANGED 6", flush=True)
+    assert all(item["accepted"] == item["expected"] and item.get("structure_matches", True) and item.get("word_matches", True) for item in results)
+    observations = []
+    for index, case in enumerate(case for case in followup if case["kind"] == "observation"):
+        path = case_root / f"observation-{index}.ps1"
+        path.write_text(str(case["source"]))
+        process = subprocess.run([str(binary), "parse", str(path)], cwd=VENDOR, env=ENVIRONMENT, text=True,
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False, timeout=30)
+        observations.append({"id": case["id"], "native_accepted": True, "pre_r20_accepted": False, "published_r20_accepted": False,
+                             "candidate_accepted": process.returncode == 0, "actual_exit": process.returncode,
+                             "classification": "Native-valid leading escaped command name rejected on both historical snapshots; outside this source repair."})
+    (EVIDENCE / "prior-limit-observations.json").write_text(json.dumps(observations, indent=2) + "\n")
+    print("PRIOR_LIMIT_OBSERVATIONS " + json.dumps(observations), flush=True)
+    libraries = [{"path": str(path.relative_to(EVIDENCE)), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()} for path in library.glob("*.so")]
+    assert len(libraries) == 1
+    print("ISOLATED_CANDIDATE_PARSER " + json.dumps(libraries), flush=True)
+    assert full_identity(str(stages[-1]["tree"]), set(cast(list[str], stages[-1]["paths"]))) == stages[-1]["identity"]
+    with Path(os.environ["GITHUB_OUTPUT"]).open("a") as handle:
+        handle.write(f"stages_sha256={digest}\n")
+    print("CANDIDATE_PREPARED " + str(stages[-1]["tree"]) + " native_parser_cases=653", flush=True)
+
+def apply_stage(stage: dict[str, object]) -> None:
+    apply_elements(cast(list[dict[str, str]], stage["elements"]))
+    paths = cast(list[str], stage["paths"])
+    output(["git", "read-tree", "HEAD"], env=INDEX_ENVIRONMENT)
+    output(["git", "add", "--", *paths], env=INDEX_ENVIRONMENT)
+    assert full_identity(str(stage["tree"]), set(paths)) == stage["identity"]
+
+def validate(mode: str) -> None:
+    data = (EVIDENCE / "transfer/stages.json").read_bytes()
+    assert hashlib.sha256(data).hexdigest() == os.environ["STAGES_SHA256"]
+    payload = cast(dict[str, object], json.loads(data))
+    assert payload["manifest"] == MANIFEST
+    stages = cast(list[dict[str, object]], payload["stages"])
+    install_rust()
+    for stage in stages:
+        apply_stage(stage)
+        assert full_identity(str(stage["tree"]), set(cast(list[str], stage["paths"]))) == stage["identity"]
+    final = stages[-1]
+    if mode in ("x64", "arm64"):
+        target = "x86_64-unknown-linux-gnu" if mode == "x64" else "aarch64-unknown-linux-gnu"
+        assert "host: " + target in output(["rustc", "-vV"])
+        run("clippy", ["cargo", "clippy", "--workspace", "--all-targets", "--locked", "--target", target, "--", "-D", "warnings"])
+        run("workspace", ["cargo", "test", "--workspace", "--locked", "--no-fail-fast", "--target", target])
+        run("release", ["cargo", "build", "--release", "--locked", "--target", target])
+        if mode == "x64":
+            run("self-lint", [str(SOURCE / "target" / target / "release/sloplint"), "check", "crates", "--format", "agent",
+                              "--strictness", "standard", "--mode", "threshold", "--fail-on", "minor"])
+    elif mode == "lint":
+        binary = tree_sitter()
+        run("fmt", ["cargo", "fmt", "--all", "--check"])
+        run("grammar-manifest", ["bash", "scripts/grammars.sh", "check"])
+        run("release-script-selftests", ["bash", "scripts/selftest-release-scripts.sh"])
+        archive = download("https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz",
+                           "9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f", "cargo-deny.tar.gz")
+        run("extract-cargo-deny", ["tar", "-xzf", str(archive), "-C", str(EVIDENCE), "cargo-deny-0.20.2-x86_64-unknown-linux-musl/cargo-deny"])
+        ENVIRONMENT["PATH"] = str(EVIDENCE / "cargo-deny-0.20.2-x86_64-unknown-linux-musl") + os.pathsep + ENVIRONMENT["PATH"]
+        run("cargo-deny", ["cargo", "deny", "check"])
+        ENVIRONMENT["GRAMMARS_TS_BIN"] = str(binary)
+        ENVIRONMENT["GRAMMARS_SCRATCH"] = str(EVIDENCE / "verify-upstream")
+        run("authoritative-grammar-verify", ["bash", "scripts/grammars.sh", "verify", "tree-sitter-powershell"])
+        run("grammar-corpus", [str(binary), "test"], cwd=VENDOR)
+        run("fresh-generation", [str(binary), "generate"], cwd=VENDOR)
+    else:
+        raise AssertionError(mode)
+    run("whitespace", ["git", "diff", "--check"])
+    assert full_identity(str(final["tree"]), set(cast(list[str], final["paths"]))) == final["identity"]
+    receipt = {"mode": mode, "source": final["identity"], "stages_sha256": os.environ["STAGES_SHA256"], "results": RESULTS}
+    (EVIDENCE / "receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")
+    print("CANDIDATE_GATE_PASS " + json.dumps(receipt, sort_keys=True), flush=True)
+
+for name, digest in cast(dict[str, str], MANIFEST["proof_sha256"]).items():
+    assert hashlib.sha256((PROOF / name).read_bytes()).hexdigest() == digest, name
+assert output(["git", "status", "--porcelain", "--untracked-files=all"]) == ""
+output(["git", "read-tree", "HEAD"], env=INDEX_ENVIRONMENT)
+full_identity(str(MANIFEST["base_tree"]), set())
+if sys.argv[1] == "prepare":
+    prepare()
+else:
+    validate(sys.argv[1])
