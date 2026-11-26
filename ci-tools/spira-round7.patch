@@ -56,7 +56,7 @@ index 8ab6d0e..35160e1 100644
  	return nil
  }
 diff --git a/cmd/spira/templates/engines/sqlite/main_test.lgo.tmpl b/cmd/spira/templates/engines/sqlite/main_test.lgo.tmpl
-index 3e995e8..e1f6ca6 100644
+index 3e995e8..3b73059 100644
 --- a/cmd/spira/templates/engines/sqlite/main_test.lgo.tmpl
 +++ b/cmd/spira/templates/engines/sqlite/main_test.lgo.tmpl
 @@ -167,14 +167,23 @@ func TestLoginSurvivesFailedSessionSweep(t *testing.T) {
@@ -79,7 +79,7 @@ index 3e995e8..e1f6ca6 100644
  		}
 +		var logs bytes.Buffer
 +		previous := slog.Default()
-+		slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
++		slog.SetDefault(slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{})))
 +		defer slog.SetDefault(previous)
  		r := web.NewRouter()
  		sessions := &auth.Sessions{Store: &account.DBStore{DB: pool}}

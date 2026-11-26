@@ -7,6 +7,7 @@ on:
       - .github/workflows/spira-required-gates.yml
       - ci-tools/spira-round7.patch
       - ci-tools/spira-regressions.py
+      - ci-tools/spira-jsontext-repro.py
 
 permissions:
   contents: read
@@ -49,9 +50,9 @@ jobs:
         run: |
           mkdir -p "$GITHUB_WORKSPACE/evidence"
           test "$(git rev-parse HEAD)" = 192c1b0b2f8ab195638bcebe0779c6b4f9a39b70
-          printf '%s  %s\n' d50666f660079dfd80fa612b5318be6a7c5902e27e1a4161d2a3c455197bf244 ../probe/ci-tools/spira-round7.patch | sha256sum --check --strict
+          printf '%s  %s\n' e7e375b7782ec70f209a4dc8e059feda2ec3af5089a194e9170f843c20f89e5c ../probe/ci-tools/spira-round7.patch | sha256sum --check --strict
           git apply --index --whitespace=error ../probe/ci-tools/spira-round7.patch
-          test "$(git write-tree)" = c5899054a264b2cbee8d0d3b4dcf2b9c90348682
+          test "$(git write-tree)" = d2d90acfb3516b242e976a564bce5867c2d3b728
           git rev-parse HEAD > "$GITHUB_WORKSPACE/evidence/spira-source.txt"
           git write-tree >> "$GITHUB_WORKSPACE/evidence/spira-source.txt"
           git diff --cached --name-only -z | xargs -0 sha256sum > "$GITHUB_WORKSPACE/evidence/candidate.sha256"
@@ -105,8 +106,19 @@ jobs:
       - name: Eject and build with upstream Go
         if: ${{ !cancelled() && steps.toolchain.outcome == 'success' && steps.candidate.outcome == 'success' }}
         working-directory: spira
-        run: just eject 2>&1 | tee "$GITHUB_WORKSPACE/evidence/eject.log"
+        run: |
+          status=0
+          just eject 2>&1 | tee "$GITHUB_WORKSPACE/evidence/eject.log" || status=$?
+          if [[ -d /tmp/spira-eject/ai ]]; then
+            cp -R /tmp/spira-eject/ai "$GITHUB_WORKSPACE/evidence/export-ai"
+            cp /tmp/spira-eject/go.mod "$GITHUB_WORKSPACE/evidence/export-go.mod"
+          fi
+          exit "$status"
+      - name: Reduce the jsontext export failure
+        if: ${{ !cancelled() && steps.toolchain.outcome == 'success' }}
+        run: GOROOT="$LOGOS_ROOT" uv run --no-project --python 3.13 probe/ci-tools/spira-jsontext-repro.py
       - name: Prove focused regressions fail before repair
+        if: ${{ !cancelled() && steps.toolchain.outcome == 'success' }}
         working-directory: spira
         run: GOROOT="$LOGOS_ROOT" uv run --no-project --python 3.13 ../probe/ci-tools/spira-regressions.py
       - name: Recheck candidate identity
@@ -114,7 +126,7 @@ jobs:
         working-directory: spira
         run: |
           sha256sum --check --strict "$GITHUB_WORKSPACE/evidence/candidate.sha256"
-          test "$(git write-tree)" = c5899054a264b2cbee8d0d3b4dcf2b9c90348682
+          test "$(git write-tree)" = d2d90acfb3516b242e976a564bce5867c2d3b728
           git diff --check
           node --version > "$GITHUB_WORKSPACE/evidence/node-version.txt"
           pnpm --version > "$GITHUB_WORKSPACE/evidence/pnpm-version.txt"
