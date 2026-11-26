@@ -10,7 +10,7 @@
     "id": "guard-complete-prefix-crlf",
     "source": "Capture-Native hi <# note #> ---`\r\n next\r\n",
     "source_sha256": "1ad8f78a6558ce373121917ef2613fc4568a26291faa013bcf9c4c697ef86316",
-    "kind": "runtime-observation",
+    "kind": "observation",
     "accepted": null
   }
 ]

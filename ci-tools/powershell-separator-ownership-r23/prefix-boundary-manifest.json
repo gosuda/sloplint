@@ -10,8 +10,10 @@
   ],
   "mode": "Two bounded prefix controls only: native runtime argv and exact unchanged parser trees on83f/57adc/e7ee. No Rust build, source edit, or candidate application.",
   "proof_sha256": {
-    "prefix-boundary.py": "5177b70f84a039995ab66c3c487078cfe02e283cc842e2423ab53659b75b904c",
-    "prefix-boundary-cases.json": "1090951625fb7008a9a1f699694b6f6733f82046f456718dc4bad4284a8ee479",
-    "native-oracle-prefix.ps1": "20d2814f0c6cc257b540dbe8d2f55befe6fe75163f1549696de09e4b6d3ee1b4"
-  }
+    "prefix-boundary.py": "66df0b9b5c8cfab024b5e7fe6549623c0de181958c9bd8150122e9d2f93688ed",
+    "prefix-boundary-cases.json": "f04aecafc69d71c0726ce0d48d8ce49bd08e1e634bb44dfac67d28d3ed8f2e17",
+    "native-oracle-prefix.ps1": "20d2814f0c6cc257b540dbe8d2f55befe6fe75163f1549696de09e4b6d3ee1b4",
+    "prefix-observer-correction.json": "760d3de0f9369e8ead0f94e243f5e3532d7f4070503cc032f46e2f0521723e42"
+  },
+  "observer_correction": "Only CRLF case kind changes from runtime-observation to observation. Literal source, hashes, native parser observation and all historical parser observations remain unchanged. The exact source has a second native command; its attempted execution failed because next is not an executable. LF retains actual runtime argv observation; CRLF retains both native AST commands with no execution claim."
 }

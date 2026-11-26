@@ -1,0 +1,256 @@
+{
+  "failed_producer": "55492f8a1013fd15a6515a39a515cb737c93389d",
+  "run": 45909666887,
+  "job": 140214690740,
+  "artifact": 15159777444,
+  "zip_sha256": "64fde63d20da8a44e9ca5dc317ad3b67adeced0aafa963e014d1be9a0d16472b",
+  "phase": "native-witnesses",
+  "exit": 1,
+  "change": "Only CRLF case kind changes from runtime-observation to observation. Literal source, hashes, native parser observation and all historical parser observations remain unchanged. The exact source has a second native command; its attempted execution failed because next is not an executable. LF retains actual runtime argv observation; CRLF retains both native AST commands with no execution claim.",
+  "before": [
+    {
+      "id": "guard-complete-prefix-lf",
+      "source": "Capture-Native hi <# note #> ---`\n next\n",
+      "source_sha256": "8ee569688db638f6b6b55d6e0f8a9608d31158a5726dcf38bb63ce4da99d25cf",
+      "kind": "runtime-observation",
+      "accepted": null
+    },
+    {
+      "id": "guard-complete-prefix-crlf",
+      "source": "Capture-Native hi <# note #> ---`\r\n next\r\n",
+      "source_sha256": "1ad8f78a6558ce373121917ef2613fc4568a26291faa013bcf9c4c697ef86316",
+      "kind": "runtime-observation",
+      "accepted": null
+    }
+  ],
+  "after": [
+    {
+      "id": "guard-complete-prefix-lf",
+      "source": "Capture-Native hi <# note #> ---`\n next\n",
+      "source_sha256": "8ee569688db638f6b6b55d6e0f8a9608d31158a5726dcf38bb63ce4da99d25cf",
+      "kind": "runtime-observation",
+      "accepted": null
+    },
+    {
+      "id": "guard-complete-prefix-crlf",
+      "source": "Capture-Native hi <# note #> ---`\r\n next\r\n",
+      "source_sha256": "1ad8f78a6558ce373121917ef2613fc4568a26291faa013bcf9c4c697ef86316",
+      "kind": "observation",
+      "accepted": null
+    }
+  ],
+  "native": [
+    {
+      "id": "guard-complete-prefix-lf",
+      "kind": "runtime-observation",
+      "accepted": true,
+      "source_sha256": "8ee569688db638f6b6b55d6e0f8a9608d31158a5726dcf38bb63ce4da99d25cf",
+      "errors": [],
+      "commands": [
+        {
+          "name": "Capture-Native",
+          "text": "Capture-Native hi <# note #> ---`\n next",
+          "count": 3,
+          "arguments": [
+            {
+              "kind": "StringConstantExpressionAst",
+              "text": "hi",
+              "start": 15,
+              "end": 17
+            },
+            {
+              "kind": "StringConstantExpressionAst",
+              "text": "---`\n",
+              "start": 29,
+              "end": 34
+            },
+            {
+              "kind": "StringConstantExpressionAst",
+              "text": "next",
+              "start": 35,
+              "end": 39
+            }
+          ]
+        }
+      ],
+      "branches": [],
+      "redirections": [],
+      "assignments": [],
+      "tokens": [
+        {
+          "kind": "Generic",
+          "text": "Capture-Native",
+          "flags": "CommandName",
+          "start": 0,
+          "end": 14
+        },
+        {
+          "kind": "Identifier",
+          "text": "hi",
+          "flags": "None",
+          "start": 15,
+          "end": 17
+        },
+        {
+          "kind": "Comment",
+          "text": "<# note #>",
+          "flags": "ParseModeInvariant",
+          "start": 18,
+          "end": 28
+        },
+        {
+          "kind": "Generic",
+          "text": "---`\n",
+          "flags": "None",
+          "start": 29,
+          "end": 34
+        },
+        {
+          "kind": "Identifier",
+          "text": "next",
+          "flags": "None",
+          "start": 35,
+          "end": 39
+        },
+        {
+          "kind": "NewLine",
+          "text": "\n",
+          "flags": "ParseModeInvariant",
+          "start": 39,
+          "end": 40
+        },
+        {
+          "kind": "EndOfInput",
+          "text": "",
+          "flags": "ParseModeInvariant",
+          "start": 41,
+          "end": 41
+        }
+      ],
+      "matches": true,
+      "native_count": 3,
+      "native_values": [
+        "hi",
+        "---\n",
+        "next"
+      ],
+      "argument_nodes": [
+        {
+          "kind": "StringConstantExpressionAst",
+          "text": "hi",
+          "start": 15,
+          "end": 17
+        },
+        {
+          "kind": "StringConstantExpressionAst",
+          "text": "---`\n",
+          "start": 29,
+          "end": 34
+        },
+        {
+          "kind": "StringConstantExpressionAst",
+          "text": "next",
+          "start": 35,
+          "end": 39
+        }
+      ]
+    },
+    {
+      "id": "guard-complete-prefix-crlf",
+      "kind": "runtime-observation",
+      "accepted": true,
+      "source_sha256": "1ad8f78a6558ce373121917ef2613fc4568a26291faa013bcf9c4c697ef86316",
+      "errors": [],
+      "commands": [
+        {
+          "name": "Capture-Native",
+          "text": "Capture-Native hi <# note #> ---`\r",
+          "count": 2,
+          "arguments": [
+            {
+              "kind": "StringConstantExpressionAst",
+              "text": "hi",
+              "start": 15,
+              "end": 17
+            },
+            {
+              "kind": "StringConstantExpressionAst",
+              "text": "---`\r",
+              "start": 29,
+              "end": 34
+            }
+          ]
+        },
+        {
+          "name": "next",
+          "text": "next",
+          "count": 0,
+          "arguments": []
+        }
+      ],
+      "branches": [],
+      "redirections": [],
+      "assignments": [],
+      "tokens": [
+        {
+          "kind": "Generic",
+          "text": "Capture-Native",
+          "flags": "CommandName",
+          "start": 0,
+          "end": 14
+        },
+        {
+          "kind": "Identifier",
+          "text": "hi",
+          "flags": "None",
+          "start": 15,
+          "end": 17
+        },
+        {
+          "kind": "Comment",
+          "text": "<# note #>",
+          "flags": "ParseModeInvariant",
+          "start": 18,
+          "end": 28
+        },
+        {
+          "kind": "Generic",
+          "text": "---`\r",
+          "flags": "None",
+          "start": 29,
+          "end": 34
+        },
+        {
+          "kind": "NewLine",
+          "text": "\n",
+          "flags": "ParseModeInvariant",
+          "start": 34,
+          "end": 35
+        },
+        {
+          "kind": "Identifier",
+          "text": "next",
+          "flags": "CommandName",
+          "start": 36,
+          "end": 40
+        },
+        {
+          "kind": "NewLine",
+          "text": "\r\n",
+          "flags": "ParseModeInvariant",
+          "start": 40,
+          "end": 42
+        },
+        {
+          "kind": "EndOfInput",
+          "text": "",
+          "flags": "ParseModeInvariant",
+          "start": 43,
+          "end": 43
+        }
+      ],
+      "matches": false,
+      "runtime_error": "The term 'next' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again."
+    }
+  ]
+}

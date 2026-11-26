@@ -113,6 +113,18 @@ capture.chmod(0o755)
 ENVIRONMENT["PATH"] = str(native_bin) + os.pathsep + ENVIRONMENT["PATH"]
 
 
+correction = json.loads((PROOF / "prefix-observer-correction.json").read_text())
+assert correction["exit"] == 1
+before, after, actual = correction["before"], correction["after"], correction["native"]
+assert len(before) == len(after) == len(actual) == 2
+assert before[0] == after[0]
+assert {key: value for key, value in before[1].items() if key != "kind"} == {key: value for key, value in after[1].items() if key != "kind"}
+assert before[1]["kind"] == "runtime-observation" and after[1]["kind"] == "observation"
+assert actual[1]["accepted"] and len(actual[1]["commands"]) == 2
+assert actual[1]["commands"][1]["name"] == "next"
+for old, new, native in zip(before, after, actual, strict=True):
+    assert old["source_sha256"] == new["source_sha256"] == native["source_sha256"]
+print("PREFIX_OBSERVER_CORRECTION " + json.dumps(correction), flush=True)
 native_output = run("native-witnesses", [str(pwsh), "-NoLogo", "-NoProfile", "-File", str(PROOF / "native-oracle-prefix.ps1"), "-CasesPath", str(PROOF / "prefix-boundary-cases.json")])
 native = [json.loads(line.removeprefix("NATIVE_CONTEXT ")) for line in native_output.splitlines() if line.startswith("NATIVE_CONTEXT ")]
 cases = cast(list[dict[str, object]], json.loads((PROOF / "prefix-boundary-cases.json").read_text()))
