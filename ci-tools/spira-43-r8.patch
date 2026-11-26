@@ -1,7 +1,7 @@
 diff --git a/websocket/stream_test.lgo b/websocket/stream_test.lgo
 --- a/websocket/stream_test.lgo
 +++ b/websocket/stream_test.lgo
-@@ -1,1122 +1,1127 @@
+@@ -1,1122 +1,1138 @@
 -package websocket_test
 -
 -import (
@@ -2174,6 +2174,17 @@ diff --git a/websocket/stream_test.lgo b/websocket/stream_test.lgo
 +	followup error
 +}
 +
++func reportStreamCancellation(t *testing.T, done chan<- streamCancelResult, result streamCancelResult) {
++	t.Helper()
++	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
++	defer cancel()
++	select {
++	case done <- result:
++	case <-ctx.Done():
++		t.Errorf("stream result was not received: %v", ctx.Err())
++	}
++}
++
 +func TestStreamCancelUnblocksPendingNext(t *testing.T) {
 +	pending := make(chan context.CancelFunc, 1)
 +	reading := make(chan struct{}, 1)
@@ -2182,11 +2193,11 @@ diff --git a/websocket/stream_test.lgo b/websocket/stream_test.lgo
 +		r.Body = &readEntryBody{ReadCloser: r.Body, entered: reading}
 +		c, err := websocket.ServeStream(w, r, websocket.Config{})
 +		if err != nil {
-+			done <- streamCancelResult{read: err}
++			reportStreamCancellation(t, done, streamCancelResult{read: err})
 +			return
 +		}
 +		if c == nil {
-+			done <- streamCancelResult{read: errors.New("serve stream gave no connection")}
++			reportStreamCancellation(t, done, streamCancelResult{read: errors.New("serve stream gave no connection")})
 +			return
 +		}
 +		defer func() {
@@ -2199,14 +2210,14 @@ diff --git a/websocket/stream_test.lgo b/websocket/stream_test.lgo
 +		select {
 +		case pending <- cancel:
 +		case <-r.Context().Done():
-+			done <- streamCancelResult{read: r.Context().Err()}
++			reportStreamCancellation(t, done, streamCancelResult{read: r.Context().Err()})
 +			return
 +		}
 +		_, _, err = c.Next(ctx)
 +		probeCtx, probeCancel := context.WithTimeout(context.Background(), 2*time.Second)
 +		defer probeCancel()
 +		_, _, perr := c.Next(probeCtx)
-+		done <- streamCancelResult{read: err, followup: perr}
++		reportStreamCancellation(t, done, streamCancelResult{read: err, followup: perr})
 +	}))
 +	h := openH2TLS(t, srv)
 +	if !h.advertised {

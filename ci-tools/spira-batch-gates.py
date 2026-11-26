@@ -58,9 +58,13 @@ def run(command: list[str], log: Path, timeout: int = 1800) -> int:
 
 
 def regressions(label: str) -> tuple[Regression, ...]:
+    if label == "30":
+        return (
+        Regression("caller-return-with-held-cleanup", "http3/server.lgo", "\tselect {\n\tcase <-shutDone:\n\tcase <-ctx.Done():\n\t\tcerr := r.closeConn()\n\t\treturn errors.Join(ctx.Err(), cerr)\n\t}\n", "\t<-shutDone\n", "./http3", "^TestH3StopReturnsWhileTransportCleanupBlocked$", ("Stop blocked", "past the 300ms caller deadline")),
+        )
     return (
         Regression("stream-read-cancellation", "websocket/conn.lgo", "\t\tdefer c.joinStreamCancellation(ctx, &err)()\n\t}\n\tif err := c.readDeadline(ctx); err != nil {", "\t}\n\tif err := c.readDeadline(ctx); err != nil {", "./websocket", "^TestStreamCancelUnblocksPendingNext$", ("Next did not return after cancel",)),
-        Regression("stream-read-identity", "websocket/stream_test.lgo", "done <- streamCancelResult{read: err, followup: perr}", "done <- streamCancelResult{read: errors.Join(err, perr)}", "./websocket", "^TestStreamCancelUnblocksPendingNext$", ("follow-up Next = <nil>, want ErrClosed",)),
+        Regression("stream-read-identity", "websocket/stream_test.lgo", "reportStreamCancellation(t, done, streamCancelResult{read: err, followup: perr})", "reportStreamCancellation(t, done, streamCancelResult{read: errors.Join(err, perr)})", "./websocket", "^TestStreamCancelUnblocksPendingNext$", ("follow-up Next = <nil>, want ErrClosed",)),
     )
 
 
