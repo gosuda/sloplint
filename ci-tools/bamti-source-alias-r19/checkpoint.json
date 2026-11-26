@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "captured_at_utc": "2026-11-26T17:26:56Z",
+  "task": "BamTiScript #253 source-level transformed-alias coverage",
+  "status": "Published test-only repair; review thread resolved; this commit retires the isolated proof workflow.",
+  "source": {
+    "repository": "gosuda/bamTiScript",
+    "pull_request": 253,
+    "branch": "followup/constructor-graph-251",
+    "baseline_head": "8daf27bdec1fa9cf6520c13b7b35d7fd58879d82",
+    "published_head": "c5c3ec93ec4b6c355054503f368b2ae874a2bfa0",
+    "actual_main": "a471de394b3f27408839ad8e0ec1642054c0aeee",
+    "verified_and_published_tree": "af2093efcc060260885e7e867c778a1fb35e4505",
+    "edited_path": "crates/bamts-compiler/src/checker/tests.rs",
+    "additions": 50,
+    "deletions": 0,
+    "production_behavior_changed": false,
+    "identity": {
+      "head": "8daf27bdec1fa9cf6520c13b7b35d7fd58879d82",
+      "index_sha256": "d41e54c306125c601a96fe8fe349cbee681ef94bf405c7201402b0d8eacf37d6",
+      "parent": "11e99ee0788613ff6a9fd7d5b0afddf819953850",
+      "tests_sha256": "96aad721eca3d8d98de874d1aa49e333a3f7c4c7f42b1e315f404f61225a7fae",
+      "tracked_blobs": 1609,
+      "tree": "af2093efcc060260885e7e867c778a1fb35e4505"
+    },
+    "identity_checks": 4
+  },
+  "review": {
+    "thread_id": "PRRT_kwDOTlcNv868eydr",
+    "top_comment_id": 4711157810,
+    "evidence_reply_id": 4711699635,
+    "is_resolved": true,
+    "total_threads": 25,
+    "unresolved_threads": 0,
+    "mergeable": true
+  },
+  "native": {
+    "repository": "gosuda/sloplint",
+    "branch": "ci/bamti-source-alias-20261126-r19",
+    "producer": "814bd7d301f4a4e1a0a630e6af90c1110e14de14",
+    "run_id": 45865746729,
+    "job_id": 140067993393,
+    "url": "https://github.com/gosuda/sloplint/actions/runs/45865746729",
+    "runner": "depot-ubuntu-24.04-8",
+    "conclusion": "success",
+    "toolchains": {
+      "rust": "1.97.1",
+      "node": "24.18.0",
+      "typescript": "7.0.2",
+      "quint_cli": "0.32.0",
+      "quint_evaluator": "0.6.0"
+    },
+    "exits": {
+      "authority": 0,
+      "baseline-compile": 0,
+      "baseline-source-assignments": 0,
+      "check": 0,
+      "clippy": 0,
+      "fetch": 0,
+      "fmt": 0,
+      "node-contracts": 0,
+      "npm": 0,
+      "typescript-compatible-root-first": 0,
+      "typescript-compatible-shallow-first": 0,
+      "typescript-incompatible-root-first": 1,
+      "typescript-incompatible-shallow-first": 1,
+      "whitespace": 0,
+      "workspace": 0
+    },
+    "format_input_exit": 0,
+    "formatting_changed_bytes": false,
+    "workspace_elapsed_seconds": 375.38,
+    "npm": {
+      "passed": 266,
+      "failed": 0,
+      "skipped": 5,
+      "skip_pattern": "staged cli-|clean consumer",
+      "scope": "Existing ordinary CI subset, exclusions unchanged"
+    },
+    "artifact": {
+      "id": 15140443876,
+      "size_bytes": 204878,
+      "zip_sha256": "82f7b38f3c1034ab11d5594c77a96236d8aa74dbff32a145defc3b3efa9c3690",
+      "digest_provenance": "GitHub artifact API and native upload log agree; no independent local ZIP-byte hash claimed"
+    }
+  },
+  "source_cases": [
+    {
+      "name": "incompatible-shallow-first",
+      "source_sha256": "6fba048a0eabc3b428aff1904d99d496d6f9bb944a538e645494ee94f4976986",
+      "typescript_exit": 1,
+      "typescript_diagnostics": [
+        "TS2322"
+      ],
+      "bamti_diagnostics": [
+        "BAMTS-C004"
+      ]
+    },
+    {
+      "name": "incompatible-root-first",
+      "source_sha256": "60521bf4863c80831b59b7997edba3d0d89adb08535fb267cd834b2e9e6853f7",
+      "typescript_exit": 1,
+      "typescript_diagnostics": [
+        "TS2322"
+      ],
+      "bamti_diagnostics": [
+        "BAMTS-C004"
+      ]
+    },
+    {
+      "name": "compatible-shallow-first",
+      "source_sha256": "0b456c8baf9173bf7d43eafc1b1310c872dccc77be8065231c87841dd70f175b",
+      "typescript_exit": 0,
+      "typescript_diagnostics": [],
+      "bamti_diagnostics": []
+    },
+    {
+      "name": "compatible-root-first",
+      "source_sha256": "14838aefaa7c2471a27be7f72bd8edd5722d32dc586b6830c46e149b9fadd38e",
+      "typescript_exit": 0,
+      "typescript_diagnostics": [],
+      "bamti_diagnostics": []
+    }
+  ],
+  "verdict": "The unchanged 8daf implementation already matches the independent TypeScript 7.0.2 oracle on all four byte-identical source programs. Added only the missing end-to-end scanner/parser/binder/checker regression; no TypeTable preparation in the test.",
+  "regular_pr_checks": {
+    "run_id": 45867667858,
+    "status_at_capture": "in_progress",
+    "observed_checks": [
+      {
+        "name": "Formal",
+        "status": "in_progress",
+        "conclusion": null,
+        "url": "https://github.com/gosuda/bamTiScript/actions/runs/45867667858/job/140074570049"
+      },
+      {
+        "name": "Quality",
+        "status": "in_progress",
+        "conclusion": null,
+        "url": "https://github.com/gosuda/bamTiScript/actions/runs/45867667858/job/140074569911"
+      },
+      {
+        "name": "Preflight",
+        "status": "in_progress",
+        "conclusion": null,
+        "url": "https://github.com/gosuda/bamTiScript/actions/runs/45867667858/job/140074569410"
+      }
+    ]
+  },
+  "scope": "Listed source gates only. No claim of product-root or BH1 completion; .outline/GATES.md remains authoritative.",
+  "retirement": {
+    "workflow_removed": ".github/workflows/bamti-source-alias-r19.yml",
+    "parent": "814bd7d301f4a4e1a0a630e6af90c1110e14de14",
+    "source_proof_files_retained": true
+  }
+}
