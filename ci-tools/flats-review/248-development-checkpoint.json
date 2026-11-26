@@ -1,0 +1,466 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-26 15:27:08 UTC",
+  "author_model": "gpt-6.2-astra",
+  "stage": "implementation development gates; independent implementation review and final-testing stage not completed",
+  "candidate": {
+    "repository": "gosuda/flats",
+    "commit": "fa3138995337182fa03087ec0f3514d3fda87a3e",
+    "tree": "f485609d7cdd5a9bda962ce964643adeae868bfb",
+    "one_parent": "863801718fce4cb188b072cd29e0e170a3096af2",
+    "branch": "ci/flats-sheet-candidate-20261126-r13",
+    "maintained_pr": 248,
+    "maintained_head": "863801718fce4cb188b072cd29e0e170a3096af2",
+    "actual_main": "c7cd9d07c9e841f4430772f1193b2c09e757411f"
+  },
+  "boundaries": {
+    "main_merge": false,
+    "maintained_pr_updated": false,
+    "application_dependency_product_spec_preserved": true,
+    "flats_full_integration": "needs product input for S1 XLSX/workbook versus CSV-first contract; conflict and PR-integrated checks remain open",
+    "blocked_repositories_untouched": true
+  },
+  "design": {
+    "record": "https://github.com/gosuda/sloplint/blob/63f8d62557caea32a07c077f432c4f0e1f85d18a/ci-tools/flats-review/D3.md",
+    "receipt": "https://github.com/gosuda/sloplint/blob/28143b7a1a3549a61a0b1ca6837c13e69b764af9/ci-tools/flats-review/D3-review.md",
+    "correction_impact_rounds": "3 of 3 used",
+    "review_invocation_retries": "1 of 2 used"
+  },
+  "producer": {
+    "repository": "gosuda/sloplint",
+    "branch": "ci/remaining-runner-gates-20261126",
+    "commit": "97c6a6a92c02304f62d6e4aa4c2080ba76bde3e7",
+    "tree": "c1047cc065a039e871b50e6646c96d1fc8bf81ac",
+    "workflow": ".github/workflows/flats-unit-b-development.yml",
+    "directory": "ci-tools/flats-unit-b-development",
+    "run": 45848678520,
+    "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520",
+    "retire": "Leave active producer intact while jobs run; remove owned workflow additively only after completion and fresh branch check."
+  },
+  "identity_proof": {
+    "patch_sha256": "ef5a4d9e50a8995a4b9d7d90eab46da55719c06491fb17dfb9065739a5ba6568",
+    "method": "Checkout immutable base, verify patch SHA256, fetch candidate raw commit and assert sole parent/tree, git apply --index, assert git write-tree and ten file digests, require clean worktree against candidate index after gates.",
+    "native_prepare": "Passed on Linux and Windows; macOS pending at snapshot."
+  },
+  "coverage": {
+    "regular_shards": 11,
+    "regular_jobs": 9,
+    "routine_race_lanes": 12,
+    "race_runner": "depot-ubuntu-24.04",
+    "race_job_minutes": 210,
+    "windows_runner": "depot-windows-2025",
+    "windows_job_minutes": 75,
+    "windows_sheet_test_timeout": "30m",
+    "macos_runner": "depot-macos-latest",
+    "macos_job_minutes": 20,
+    "cache": "Empty per-job GOCACHE/GOMODCACHE; GOENV=off and empty GOCACHEPROG asserted in child processes. No cache save or restore.",
+    "json_events": "Complete run, skip, pass, fail event lists per executed Go command, plus raw JSON logs, retained in job artifacts.",
+    "baseline_limitation": "No new broad native baseline execution or complete old-vs-new native run-name comparison claimed. Isolated source proof is not an actual PR-event check."
+  },
+  "jobs": [
+    {
+      "id": 140008967018,
+      "name": "fast",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008967018",
+      "status": "completed",
+      "conclusion": "failure",
+      "labels": [
+        "depot-ubuntu-24.04-4"
+      ],
+      "runner": "depot-x0dx5p5vpj",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": "2026-11-26T15:24:31Z",
+      "prepare": "success",
+      "active_step": null
+    },
+    {
+      "id": 140008967356,
+      "name": "sheet-browser",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008967356",
+      "status": "completed",
+      "conclusion": "success",
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-70wzsfq2fl",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": "2026-11-26T15:25:19Z",
+      "prepare": "success",
+      "active_step": null
+    },
+    {
+      "id": 140008967428,
+      "name": "notebook-memory",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008967428",
+      "status": "in_progress",
+      "conclusion": null,
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-f0v9j5bk6n",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": null,
+      "prepare": "success",
+      "active_step": "Run authentic development gates"
+    },
+    {
+      "id": 140008967484,
+      "name": "tests (docs)",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008967484",
+      "status": "completed",
+      "conclusion": "success",
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-2vbkszlb3k",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": "2026-11-26T15:26:49Z",
+      "prepare": "success",
+      "active_step": null
+    },
+    {
+      "id": 140008967497,
+      "name": "macos",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008967497",
+      "status": "queued",
+      "conclusion": null,
+      "labels": [
+        "depot-macos-latest"
+      ],
+      "runner": "",
+      "started_at": "2026-11-26T15:23:53Z",
+      "completed_at": null,
+      "prepare": null,
+      "active_step": null
+    },
+    {
+      "id": 140008967557,
+      "name": "race",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008967557",
+      "status": "in_progress",
+      "conclusion": null,
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-q8rp1gv8t9",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": null,
+      "prepare": "success",
+      "active_step": "Run authentic development gates"
+    },
+    {
+      "id": 140008967563,
+      "name": "windows",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008967563",
+      "status": "in_progress",
+      "conclusion": null,
+      "labels": [
+        "depot-windows-2025"
+      ],
+      "runner": "depot-dh0lqg682t",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": null,
+      "prepare": "success",
+      "active_step": "Run authentic development gates"
+    },
+    {
+      "id": 140008967572,
+      "name": "netbird",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008967572",
+      "status": "in_progress",
+      "conclusion": null,
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-mss47435cs",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": null,
+      "prepare": "success",
+      "active_step": "Run authentic development gates"
+    },
+    {
+      "id": 140008967613,
+      "name": "docs-contracts",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008967613",
+      "status": "in_progress",
+      "conclusion": null,
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-cm4g6xq0d8",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": null,
+      "prepare": "success",
+      "active_step": "Run authentic development gates"
+    },
+    {
+      "id": 140008967650,
+      "name": "large-memory-race (source)",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008967650",
+      "status": "in_progress",
+      "conclusion": null,
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-1ngqsvxdmx",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": null,
+      "prepare": "success",
+      "active_step": "Run authentic development gates"
+    },
+    {
+      "id": 140008967694,
+      "name": "large-memory-race (reader)",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008967694",
+      "status": "in_progress",
+      "conclusion": null,
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-1pqht08jd6",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": null,
+      "prepare": "success",
+      "active_step": "Run authentic development gates"
+    },
+    {
+      "id": 140008967699,
+      "name": "docs-web",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008967699",
+      "status": "completed",
+      "conclusion": "success",
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-5mwcv0xb20",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": "2026-11-26T15:24:19Z",
+      "prepare": "success",
+      "active_step": null
+    },
+    {
+      "id": 140008967737,
+      "name": "legacy-build",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008967737",
+      "status": "in_progress",
+      "conclusion": null,
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-z96b0blfwb",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": null,
+      "prepare": "success",
+      "active_step": "Run authentic development gates"
+    },
+    {
+      "id": 140008967774,
+      "name": "container",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008967774",
+      "status": "in_progress",
+      "conclusion": null,
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-scjxfng507",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": null,
+      "prepare": "success",
+      "active_step": "Run authentic development gates"
+    },
+    {
+      "id": 140008967847,
+      "name": "tests (docs-budget)",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008967847",
+      "status": "completed",
+      "conclusion": "success",
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-21r2j5lw4v",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": "2026-11-26T15:26:33Z",
+      "prepare": "success",
+      "active_step": null
+    },
+    {
+      "id": 140008967864,
+      "name": "large-memory-race (markdown)",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008967864",
+      "status": "in_progress",
+      "conclusion": null,
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-5g18hf209z",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": null,
+      "prepare": "success",
+      "active_step": "Run authentic development gates"
+    },
+    {
+      "id": 140008967977,
+      "name": "tests (sheet)",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008967977",
+      "status": "in_progress",
+      "conclusion": null,
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-900dzm14hq",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": null,
+      "prepare": "success",
+      "active_step": "Run authentic development gates"
+    },
+    {
+      "id": 140008967978,
+      "name": "tests (board)",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008967978",
+      "status": "in_progress",
+      "conclusion": null,
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-3rsc3p9r5x",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": null,
+      "prepare": "success",
+      "active_step": "Run authentic development gates"
+    },
+    {
+      "id": 140008968001,
+      "name": "tests (runtime-soak)",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008968001",
+      "status": "completed",
+      "conclusion": "success",
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-k23sksqx1b",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": "2026-11-26T15:25:47Z",
+      "prepare": "success",
+      "active_step": null
+    },
+    {
+      "id": 140008968075,
+      "name": "tests (other)",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008968075",
+      "status": "in_progress",
+      "conclusion": null,
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-zgpgmvxmg1",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": null,
+      "prepare": "success",
+      "active_step": "Run authentic development gates"
+    },
+    {
+      "id": 140008968088,
+      "name": "tests (sheet-undo-2)",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008968088",
+      "status": "in_progress",
+      "conclusion": null,
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-74mnrdk6r8",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": null,
+      "prepare": "success",
+      "active_step": "Run authentic development gates"
+    },
+    {
+      "id": 140008968116,
+      "name": "tests (runtime)",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008968116",
+      "status": "in_progress",
+      "conclusion": null,
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-vf48ddg3m7",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": null,
+      "prepare": "success",
+      "active_step": "Run authentic development gates"
+    },
+    {
+      "id": 140008968165,
+      "name": "tests (sheet-undo-1)",
+      "url": "https://github.com/gosuda/sloplint/actions/runs/45848678520/job/140008968165",
+      "status": "completed",
+      "conclusion": "success",
+      "labels": [
+        "depot-ubuntu-24.04"
+      ],
+      "runner": "depot-cgb2hbvp0z",
+      "started_at": "2026-11-26T15:23:54Z",
+      "completed_at": "2026-11-26T15:26:14Z",
+      "prepare": "success",
+      "active_step": null
+    }
+  ],
+  "observed": {
+    "docs_web": "success, including source identity after gates",
+    "fast": {
+      "job": 140008967018,
+      "result": "failure",
+      "go_format": 0,
+      "ci_helpers": 1,
+      "image_helpers": 0,
+      "approval_helpers": 0,
+      "actionlint": 1,
+      "artifact": 15132506435,
+      "artifact_sha256": "b7cbec18319a8e0b0ce0f6ae8386fb600bc7518420f9b514274d5d33c5e55fc5",
+      "source_finding": "One old assertion at scripts/test_ci_shards.py236 still expects per-Sheet matrix/cache rows.",
+      "harness_finding": "actionlint v1.7.7 requires -config-file, not -config.",
+      "source_identity_after": "success"
+    },
+    "long_native": "race and Windows executing; macOS queued; do not infer success from setup"
+  },
+  "correction": {
+    "file": "ci-tools/flats-review/248-development-correction.json",
+    "path": "scripts/test_ci_shards.py",
+    "before_sha256": "9dbc69e6c9505e5035cae711308e5b19f8025e07bf4096c8b72360739073a039",
+    "sha256": "472209b3e2053503916a6222873dcc29cad681d2fb973fbbe8ad9dc16067260f",
+    "scope": "Replace obsolete matrix-row assertion with exactly-once membership in actual sequential race loop and race-all cache assertion. Existing package, selectors, timeout, and subtest coverage assertions untouched.",
+    "state": "Prepared only; coordinator must combine and run focused helpers/actionlint on corrected source before implementation acceptance."
+  },
+  "producer_failures": [
+    {
+      "run": 45847769571,
+      "head": "e6b6fcc56774be50362ee89a99171a3022b72e32",
+      "result": "rejected before jobs; runner context unavailable in job-level env",
+      "fix": "derive artifact directory from RUNNER_TEMP inside Python; leave runner context only in permitted step inputs",
+      "source": "https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability"
+    },
+    {
+      "run": 45848108190,
+      "head": "8c63f30813cd476167ab456737f986f64c2fd3bd",
+      "result": "exact candidate prepare passed; incorrect GOENV reported-path assertion stopped all commands",
+      "observed": {
+        "process_GOENV": "off",
+        "go_env_GOENV": "",
+        "go_env_GOCACHEPROG": ""
+      },
+      "fix": "assert explicit process GOENV=off and its empty reported file path; retain empty GOCACHEPROG assertion; sparse checkout only public proof paths to reduce unrelated host setup"
+    }
+  ],
+  "parent_oracle": {
+    "run": 45845270299,
+    "job": 139997172612,
+    "artifact": 15130772128,
+    "artifact_sha256": "a1236f5bbd7d1bb1c1c6151e2f4767dce1b1518ad431b0184e1567ed5cc61d5b",
+    "status": "Coordinator reported success: real-writer old race RED/fixed GREEN; actual lifecycle four mutation controls old missed/new rejected; clean controls, existing harness and approval-boundary-census pass. Separate owned proof; not repeated here."
+  },
+  "next": [
+    "Coordinator monitor existing 23-job run and retain artifacts/logs; this agent yields slot for independent review.",
+    "Combine sole stale-assertion correction after fresh refs; correct actionlint invocation and run focused gates without restarting long lanes unnecessarily.",
+    "Require eligible different-model implementation acceptance before final-testing stage, and separate final-testing acceptance; no publication/merge claim.",
+    "Full actual-main integration stays needs-input; do not change product specifications or update closed PRs."
+  ]
+}
