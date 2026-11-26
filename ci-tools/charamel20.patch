@@ -1,0 +1,78 @@
+--- a/bin/crush/lib/shell_screen.ml
++++ b/bin/crush/lib/shell_screen.ml
+@@ -1552,14 +1552,20 @@
+         (List.rev reversed, rest)
+     | word :: rest -> command_words ~batch (word :: reversed) rest
+   in
+-  let action flag rest =
+-    let batch = program = "find" && List.mem flag [ "-exec"; "-execdir" ] in
+-    let command, rest = command_words ~batch [] rest in
+-    if List.exists (fun word -> not word.fixed) command then review sink computed_program;
+-    (match command with
+-    | name :: _ when String.contains name.value '{' -> review sink computed_program
+-    | _ -> analyze sink ~depth command);
+-    rest
++  let actions = ref [] in
++  let action flag words =
++    match List.find_opt (fun (start, _) -> start == words) !actions with
++    | Some (_, rest) -> rest
++    | None ->
++        let batch = program = "find" && List.mem flag [ "-exec"; "-execdir" ] in
++        let command, rest = command_words ~batch [] words in
++        actions := (words, rest) :: !actions;
++        if List.exists (fun word -> not word.fixed) command then
++          review sink computed_program;
++        (match command with
++        | name :: _ when String.contains name.value '{' -> review sink computed_program
++        | _ -> analyze sink ~depth command);
++        rest
+   in
+   let rec ambiguous = function
+     | [] -> ()
+--- a/bin/crush/lib/tools_shell.ml
++++ b/bin/crush/lib/tools_shell.ml
+@@ -94,7 +94,7 @@
+       "printenv";
+     ]
+   in
+-  if command = "fd" then not (has_option_prefix [ "--exec"; "-x" ] args)
++  if command = "fd" then not (has_option_prefix [ "--exec"; "-x"; "-X" ] args)
+   else if command = "rg" then not (has_option_prefix [ "--pre"; "--pre-glob" ] args)
+   else List.mem command safe || (command = "env" && args = [])
+ 
+--- a/test/crush/test_tools_shell.ml
++++ b/test/crush/test_tools_shell.ml
+@@ -110,6 +110,12 @@
+   Alcotest.(check bool)
+     "find exec is mutable" false
+     (Tools_shell.is_read_only "find . -exec cat {} \\;");
++  List.iter
++    (fun action ->
++      Alcotest.(check bool)
++        ("fd " ^ action ^ " is mutable") false
++        (Tools_shell.is_read_only ("fd -g README.md " ^ action ^ " touch changed")))
++    [ "-x"; "-X"; "--exec"; "--exec-batch" ];
+   Alcotest.(check bool)
+     "sed in-place is mutable" false
+     (Tools_shell.is_read_only "sed -i s/a/b/ file");
+@@ -434,6 +440,11 @@
+       ({|find . -exec printf '%s' "$label" \;|}, "review");
+     ]
+ 
++let test_nested_fd_actions () =
++  let command = String.concat "" (List.init 24 (fun _ -> "fd --color never -X ")) in
++  check_posix_verdicts
++    [ (command ^ "printf ready", "review"); (command ^ "./cu''rl.exe", "blocked") ]
++
+ let test_ansi_c_bash_equivalence () =
+   if not Sys.win32 then (
+     if Option.is_none (Charamel_os.Exe.find "bash") then Alcotest.skip ();
+@@ -572,6 +583,8 @@
+     Test_tools_test_support.case "parameter quote context" `Quick test_parameter_quotes;
+     Test_tools_test_support.case "command lookup mode" `Quick test_command_lookup;
+     Test_tools_test_support.case "find data positions" `Quick test_find_data_slots;
++    Test_tools_test_support.case "nested fd actions are screened once" `Quick
++      test_nested_fd_actions;
+     Test_tools_test_support.case "ANSI-C NUL matches bash" `Quick
+       test_ansi_c_bash_equivalence;
+     Test_tools_test_support.case "screen requires review" `Quick

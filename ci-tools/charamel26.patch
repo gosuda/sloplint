@@ -1,0 +1,18 @@
+--- a/test/net/test_net_https.ml
++++ b/test/net/test_net_https.ml
+@@ -282,12 +282,13 @@
+       let anchor = Lazy.force shared_anchor in
+       let priv, cert = sign_leaf ~ca_priv:anchor.priv ~ca_cert:anchor.cert () in
+       let client = Lwt_unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
+-      let accepted, accept = Lwt.wait () in
++      let accepted, accept = Lwt.task () in
+       Lwt.finalize
+         (fun () ->
+           Lwt_unix.with_timeout 5. (fun () ->
+               with_tls_server
+-                ~on_accept:(fun () -> Lwt.wakeup_later accept ())
++                ~on_accept:(fun () ->
++                  if Lwt.is_sleeping accepted then Lwt.wakeup_later accept ())
+                 ~cert ~priv
+                 (fun port ->
+                   Lwt_unix.connect client (Unix.ADDR_INET (Unix.inet_addr_loopback, port))

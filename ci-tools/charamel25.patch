@@ -1,98 +1,96 @@
-diff --git a/bin/crush/lib/agent.ml b/bin/crush/lib/agent.ml
-index 24a7d35..51a81e2 100644
---- a/bin/crush/lib/agent.ml
-+++ b/bin/crush/lib/agent.ml
-@@ -580,7 +580,15 @@ let execute_calls t turn_sw calls =
-           (fun job ->
-             match job.promise with Some promise -> Lwt.cancel promise | None -> ())
-           jobs;
--        Lwt.return_unit);
-+        Lwt_list.iter_p
-+          (fun job ->
-+            match job.promise with
-+            | None -> Lwt.return_unit
-+            | Some promise ->
-+                Lwt.catch
-+                  (fun () -> promise >|= fun _ -> ())
-+                  (function Lwt.Canceled -> Lwt.return_unit | exn -> Lwt.fail exn))
-+          jobs);
-   Lwt_list.iter_s
-     (fun job ->
-       emit t (Tool_started { id = job.call.id; name = job.call.name; input = job.input }))
-diff --git a/bin/crush/lib/hooks.mli b/bin/crush/lib/hooks.mli
-index e91bbb3..e8538e9 100644
+--- a/bin/crush/lib/hooks.ml
++++ b/bin/crush/lib/hooks.ml
+@@ -63,11 +63,12 @@
+ 
+ let run_command t ~timeout ~command ~payload =
+   let child = ref None in
++  let completed = ref false in
+   let cleanup () =
+     match !child with
+     | None -> Lwt.return_unit
+     | Some process ->
+-        if Charamel_os.Process.group_alive process then
++        if (not !completed) && Charamel_os.Process.group_alive process then
+           Charamel_os.Process.kill_tree process;
+         Lwt.protected (Charamel_os.Process.await process) >|= fun _ -> ()
+   in
+@@ -88,6 +89,7 @@
+     Lwt.both stdout stderr >>= fun (stdout, stderr) ->
+     input >>= fun () ->
+     Lwt.protected (Charamel_os.Process.await process) >|= fun code ->
++    completed := true;
+     Done (code, stdout, stderr)
+   in
+   Lwt.finalize
 --- a/bin/crush/lib/hooks.mli
 +++ b/bin/crush/lib/hooks.mli
-@@ -2,8 +2,8 @@
- 
+@@ -3,7 +3,8 @@
      Hooks receive one bounded JSON request on standard input. Pre-tool hooks authorize a
      call, may replace its decoded input, and fail closed; lifecycle hooks are
--    observational. Each invocation owns its process until it is reaped. Cancellation
--    and timeout stop the process group before the invocation settles. On Windows,
-+    observational. Each invocation owns its process until it is reaped. Cancellation and
-+    timeout stop the process group before the invocation settles. On Windows,
+     observational. Each invocation owns its process until it is reaped. Cancellation and
+-    timeout stop the process group before the invocation settles. On Windows,
++    timeout stop the process group before the invocation settles. After normal exit
++    and drained streams, detached descendants may continue. On Windows,
      process-group termination has the child-only scope of
      {!Charamel_os.Process.kill_tree}. *)
  
-diff --git a/test/crush/test_agent.ml b/test/crush/test_agent.ml
-index ad2b529..83854b3 100644
---- a/test/crush/test_agent.ml
-+++ b/test/crush/test_agent.ml
-@@ -90,8 +90,8 @@ let config ~base_url (model : Charamel_fantasy.Model.t) =
-     models = { large = Some selected; small = Some selected };
-   }
+--- a/test/crush/test_hooks.ml
++++ b/test/crush/test_hooks.ml
+@@ -303,6 +303,50 @@
+           | () -> Alcotest.fail "timed-out hook left a child process"
+           | exception Unix.Unix_error (Unix.ESRCH, _, _) -> ())
  
--let with_agent ?(hooks_config : Config.hook list = [])
--    ?(clock = Charamel_os.Time.lwt) ~queue ~fallback f =
-+let with_agent ?(hooks_config : Config.hook list = []) ?(clock = Charamel_os.Time.lwt)
-+    ~queue ~fallback f =
-   Test_tools_test_support.with_scratch (fun root ->
-       let old_data = Sys.getenv_opt "XDG_DATA_HOME" in
-       Unix.putenv "XDG_DATA_HOME" root;
-@@ -297,8 +297,8 @@ let body_outcome_survives_stop_turn () =
-        exit 2; else exit 0; fi"
-     in
-     let post =
--      "if grep -q allowed.txt; then printf '%s\\n' \"$$\" > .post-pid; printf \
--       'ready\\n' > .body-ready; read release < .post-release; fi; exit 0"
-+      "if grep -q allowed.txt; then printf '%s\\n' \"$$\" > .post-pid; printf 'ready\\n' \
-+       > .body-ready; read release < .post-release; fi; exit 0"
-     in
-     let hooks_config : Config.hook list =
-       [
-@@ -368,7 +368,9 @@ let post_hook_time_is_not_tool_time () =
-         {
-           event = Config.Post_tool;
-           matcher = None;
--          command = "cat >/dev/null; printf 'ready\\n' > .timing-ready; read release < .timing-release";
-+          command =
-+            "cat >/dev/null; printf 'ready\\n' > .timing-ready; read release < \
-+             .timing-release";
-           timeout_s = 30;
-         };
-       ]
-@@ -397,11 +399,10 @@ let post_hook_time_is_not_tool_time () =
-             await (Lwt_io.close release))
-           (fun () ->
-             Test_tools_test_support.write_file
--              (Filename.concat root "allowed.txt") "allowed-body";
-+              (Filename.concat root "allowed.txt")
-+              "allowed-body";
-             let pending = Agent.prompt agent "read the file" in
--            ignore
--              (await
--                 (Lwt_unix.with_timeout 5. (fun () -> Lwt_io.read_line ready)));
-+            ignore (await (Lwt_unix.with_timeout 5. (fun () -> Lwt_io.read_line ready)));
-             advance 10.;
-             await (Lwt_io.write_line release "resume");
-             await (Lwt_io.flush release);
-@@ -411,8 +412,7 @@ let post_hook_time_is_not_tool_time () =
-             let timings =
-               List.filter_map
-                 (function
--                  | Agent.Tool_finished { elapsed_ms; _ } -> Some elapsed_ms
--                  | _ -> None)
-+                  | Agent.Tool_finished { elapsed_ms; _ } -> Some elapsed_ms | _ -> None)
-                 !events
-             in
-             Alcotest.(check (list int)) "post-hook time excluded" [ 0 ] timings))
++let successful_hook_keeps_detached_worker () =
++  if Sys.win32 then Alcotest.skip ()
++  else
++    with_environment (fun root ->
++        let release_path = Filename.concat root "worker-release" in
++        let finished_path = Filename.concat root "worker-finished" in
++        Unix.mkfifo release_path 0o600;
++        Unix.mkfifo finished_path 0o600;
++        let open_fifo path =
++          Unix.openfile path [ Unix.O_RDWR; Unix.O_NONBLOCK ] 0
++          |> Lwt_unix.of_unix_file_descr
++        in
++        let release = Lwt_io.of_fd ~mode:Lwt_io.output (open_fifo release_path) in
++        let finished = Lwt_io.of_fd ~mode:Lwt_io.input (open_fifo finished_path) in
++        let pid_path = Filename.concat root "worker.pid" in
++        let completed = ref false in
++        Fun.protect
++          ~finally:(fun () ->
++            if (not !completed) && Sys.file_exists pid_path then (
++              let pid = int_of_string (String.trim (read_payload root "worker.pid")) in
++              try Unix.kill pid Sys.sigkill with
++              | Unix.Unix_error (Unix.ESRCH, _, _) -> ());
++            await (Lwt_io.close release);
++            await (Lwt_io.close finished))
++          (fun () ->
++            let command =
++              "cat >/dev/null; (read release < worker-release; printf 'done\\n' > \
++               worker-finished) </dev/null >/dev/null 2>&1 & printf '%s\\n' \"$!\" > \
++               worker.pid"
++            in
++            let runner = runner root [ hook ~event:Config.Post_tool ~command () ] in
++            await
++            @@ Hooks.post_tool runner ~session:"s" ~tool:"write"
++                 ~input:(Jsont.Json.null ()) ~output:"done" ~is_error:false;
++            await (Lwt_io.write_line release "continue");
++            await (Lwt_io.flush release);
++            let message =
++              await
++              @@ Lwt_unix.with_timeout 5. (fun () -> Lwt_io.read_line finished)
++            in
++            completed := true;
++            Alcotest.(check string) "detached worker finishes after hook returns" "done"
++              message))
++
+ let cases =
+   [
+     Test_tools_test_support.case "pre-tool allow can rewrite input" `Quick rewritten_input;
+@@ -331,4 +375,6 @@
+       lifecycle_payload;
+     Test_tools_test_support.case "timeout cleans descendant process group" `Quick
+       descendant_cleanup;
++    Test_tools_test_support.case "successful hook preserves detached worker" `Quick
++      successful_hook_keeps_detached_worker;
+   ]

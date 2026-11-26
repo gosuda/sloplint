@@ -18,9 +18,9 @@ class Candidate:
 
 
 CANDIDATES = (
-    Candidate(25, "d7a01482cc11ab2408b9b8fff9a40ab8c597a525", "d95199a70ebbfbced46b47a1c3b5798775a30ede65919f41d1b33f804fc97027"),
-    Candidate(27, "abd498274ad77511b584229c12102493946a24d2", "20ecb00e258e4b9b98d478a82a9e266e23cdce10ec18e84d5374d0c3664674ff"),
-    Candidate(28, "514a5720a788747b1fb1f7c1281a311013e40fd4", "8de4b5916018b79fb8e46e92549d40e8fc94969397104be93778dfdebcd22919"),
+    Candidate(20, "0e6dc5a27a7d269bc987e520ab70a6c1f03fd9db", "ff6995809e4bf80073035e8a424a8706aacef2d1bf9e89052560fb67488472f2"),
+    Candidate(25, "7ff215abf9c7bddb3a75ba172428cc8bbed824f5", "f77cf0363c1938a1cce2126803b28dd8943dff0ff0d4ae2fd0408970ede81a77"),
+    Candidate(26, "3f09ab25b4d102778ab02a7d1bb86a7a2c1e6601", "d8b5c6454261166f212d61d510534002b59b8908a46f0faacaef0afa88c1445b"),
 )
 BASE = "84e5ff153f781c7e2d02804a5c24997858f618ab"
 WORKSPACE = Path(os.environ["GITHUB_WORKSPACE"])
@@ -64,6 +64,34 @@ def save_candidate(candidate: Candidate, folder: Path) -> str:
     return tree
 
 
+def count_screen_visits(candidate: Candidate, folder: Path) -> bool:
+    module = SOURCE / "bin/crush/lib/shell_screen.ml"
+    repaired = module.read_text()
+    old = subprocess.check_output(["git", "show", f"{candidate.head}:bin/crush/lib/shell_screen.ml"], cwd=SOURCE, text=True)
+    outputs: dict[str, int] = {}
+    for phase, source in (("red", old), ("green", repaired)):
+        work = folder / f"screen-{phase}"
+        work.mkdir()
+        prefix = 'and analyze_program sink ~depth program args =\n'
+        assert source.count(prefix) == 1
+        instrumented = 'let analysis_visits = ref 0\n' + source.replace(prefix, prefix + '  incr analysis_visits;\n')
+        (work / "shell_screen.ml").write_text(instrumented)
+        (work / "shell_screen.mli").write_text((SOURCE / "bin/crush/lib/shell_screen.mli").read_text() + '\nval analysis_visits : int ref\n')
+        (work / "driver.ml").write_text('''let () =
+  let depth = 12 in
+  let command = String.concat "" (List.init depth (fun _ -> "fd --color never -X ")) ^ "printf ready" in
+  (match Shell_screen.screen Shell_screen.Posix command with
+  | Shell_screen.Review _ -> ()
+  | _ -> failwith "nested unknown-option actions require review");
+  let visits = !(Shell_screen.analysis_visits) in
+  Printf.printf "depth=%d visits=%d expected=%d\\n" depth visits (depth + 1);
+  if visits <> depth + 1 then exit 1
+''')
+        subprocess.run(["ocamlc", "-strict-sequence", "-strict-formats", "-short-paths", "-principal", "-o", "check", "shell_screen.mli", "shell_screen.ml", "driver.ml"], cwd=work, check=True)
+        outputs[phase] = run([str(work / "check")], folder / f"screen-visits-{phase}.log")
+    return outputs == {"red": 1, "green": 0}
+
+
 def check(candidate: Candidate) -> dict[str, object]:
     folder = EVIDENCE / f"pr{candidate.number}"
     folder.mkdir(parents=True, exist_ok=True)
@@ -83,23 +111,23 @@ def check(candidate: Candidate) -> dict[str, object]:
     result["fmt"] = run(["dune", "build", "@fmt"], folder / "fmt.log")
     result["build"] = run(["dune", "build", "--profile", "release"], folder / "build.log")
     result["tests"] = run(["dune", "runtest", "--profile", "release"], folder / "tests.log")
-    if candidate.number == 28 and result["build"] == 0:
-        module = SOURCE / "bin/crush/lib/catalog_cache.ml"
+    if candidate.number == 20 and result["build"] == 0:
+        result["screen_visits"] = count_screen_visits(candidate, folder)
+    if candidate.number == 25 and result["build"] == 0:
+        module = SOURCE / "bin/crush/lib/hooks.ml"
         repaired = module.read_bytes()
-        test_source = (SOURCE / "test/crush/test_cli.ml").read_text().split("let cases =", 1)[1]
+        test_source = (SOURCE / "test/crush/test_hooks.ml").read_text().split("let cases =", 1)[1]
         names = re.findall(r'Test_tools_test_support.case\s+"([^"]+)"', test_source)
-        case_index = names.index("trust works without a cache directory")
-        args = ["dune", "exec", "--profile", "release", "test/crush/test_crush.exe", "--", "test", "cli", str(case_index), "--verbose"]
+        case_index = names.index("successful hook preserves detached worker")
+        args = ["dune", "exec", "--profile", "release", "test/crush/test_crush.exe", "--", "test", "hooks", str(case_index), "--verbose"]
         try:
-            module.write_bytes(subprocess.check_output(["git", "show", f"{candidate.head}:bin/crush/lib/catalog_cache.ml"], cwd=SOURCE))
-            assert run(["dune", "build", "--profile", "release", "bin/crush/main.exe"], folder / "cache-path-red-build.log") == 0
-            code = run(args, folder / "cache-path-red.log")
-            red_log = (folder / "cache-path-red.log").read_text(errors="replace")
-            result["cache_path_red"] = code != 0 and "trust succeeds without a cache path" in red_log
+            module.write_bytes(subprocess.check_output(["git", "show", f"{candidate.head}:bin/crush/lib/hooks.ml"], cwd=SOURCE))
+            code = run(args, folder / "detached-worker-red.log")
+            red_log = (folder / "detached-worker-red.log").read_text(errors="replace")
+            result["detached_worker_red"] = code != 0 and "Lwt_unix.Timeout" in red_log
         finally:
             module.write_bytes(repaired)
-        assert run(["dune", "build", "--profile", "release", "bin/crush/main.exe"], folder / "cache-path-green-build.log") == 0
-        result["cache_path_green"] = run(args, folder / "cache-path-green.log")
+        result["detached_worker_green"] = run(args, folder / "detached-worker-green.log")
     git("diff", "--exit-code")
     assert git("write-tree") == result["tree"]
     (folder / "results.json").write_text(json.dumps(result, indent=2) + "\n")
@@ -115,8 +143,9 @@ def main() -> int:
         results[str(candidate.number)] = check(candidate)
         (EVIDENCE / "results.json").write_text(json.dumps(results, indent=2) + "\n")
     passed = all(all(result[name] == 0 for name in ("format_sources", "fmt", "build", "tests")) for result in results.values())
-    final = results["28"]
-    passed = passed and final.get("cache_path_red") is True and final.get("cache_path_green") == 0
+    passed = passed and results["20"].get("screen_visits") is True
+    final = results["25"]
+    passed = passed and final.get("detached_worker_red") is True and final.get("detached_worker_green") == 0
     return 0 if passed else 1
 
 
