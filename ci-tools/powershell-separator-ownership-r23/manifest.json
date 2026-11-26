@@ -1,0 +1,36 @@
+{
+  "base": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
+  "base_tree": "f518b3943c6b86af53c334175309303c3d79f38b",
+  "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+  "previous_base": "83f73f04e7f20bf405dbf4c2de3bd5467c8010bb",
+  "previous_tree": "703b3a5a445883598bfb7ef05c263a76d6629235",
+  "mode": "Freeze native filename/token extents, complete parser snapshots and actual public Query outcomes on unchanged source. New matrix observations are not assumed valid; six primary format-mark redirects and the reported comment source must be native-valid.",
+  "native_cases": 483,
+  "primary_ids": [
+    "redirect-zwsp-1-bare-space",
+    "redirect-zwsp-2-bare-space",
+    "redirect-bom-1-bare-space",
+    "redirect-bom-2-bare-space",
+    "redirect-wj-1-bare-space",
+    "redirect-wj-2-bare-space",
+    "comment-single-parameter-space"
+  ],
+  "threads": [
+    "PRRT_kwDOVOMFM868j3zg",
+    "PRRT_kwDOVOMFM868j30i"
+  ],
+  "r22": {
+    "head": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
+    "tree": "f518b3943c6b86af53c334175309303c3d79f38b",
+    "proof_run": 45893490495,
+    "ordinary_run": 45895428017,
+    "retirement": "a10db6900c5ed16b4be9530ca240d2624b1c98b5"
+  },
+  "proof_sha256": {
+    "cases.json": "e1e72ad2cecdb5c48b27ec3175c9ede47f52cf1d1940e14e3e2ee17478fa23c2",
+    "cases.tsv": "d8ba7a81483e81e41199ebebb4a071f993af60c9e7ad561acf7233b3350be583",
+    "native-oracle.ps1": "521d82f956d0192f33e5b2ba51996ef20b16590957c16172d51298e6fe3dffcd",
+    "frozen-modules.json": "6d05d246b31da4dabcf506fc0c16b17c723719e409526fdf40b9595cb5865836",
+    "verify.py": "914c53234b89f47958595d5c27a1eaf462e4cc5c0420cf0687207498cf872069"
+  }
+}
