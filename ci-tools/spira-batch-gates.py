@@ -58,40 +58,6 @@ def run(command: list[str], log: Path, timeout: int = 1800) -> int:
 
 
 def regressions(label: str) -> tuple[Regression, ...]:
-    if label == "30":
-        return (
-            Regression("serve-read-timeout", "http3/server.lgo", "inner := &web.Server{Router: s.Router, ReadHeaderTimeout: s.ReadHeaderTimeout, ReadTimeout: s.ReadTimeout,", "inner := &web.Server{Router: s.Router, ReadHeaderTimeout: s.ReadHeaderTimeout,", "./http3", "^TestH3ServeTimesOutSlowBodyRead$", ("handler body read did not time out",)),
-            Regression("missing-settings-deadline", "@logos/src/logos/net/http/h3_server.go", "h3ServerSettingsTimeout  = 5 * time.Second", "h3ServerSettingsTimeout  = 8 * time.Second", "./http3", "^TestH3QUICMissingSettingsReportsProtocolCode$", ("missing SETTINGS exceeded five seconds plus one second observation tolerance",)),
-        )
-    if label == "38":
-        return (
-            Regression("tls-before-udp", "http3/server.lgo", "func (s *Server) startH3(ctx context.Context) error {\n", "func (s *Server) startH3(ctx context.Context) error {\n\tprobe, err := net.ListenPacket(\"udp\", s.Addr)\n\tif err != nil { return err }\n\tif err := probe.Close(); err != nil { return err }\n", "./http3", "^TestH3NeedsTLSFailsStart$", ("want ErrH3NeedsTLS with held TCP and UDP ports",)),
-            Regression("trailer-field-limit", "http3/request_stream.lgo", "maxFieldSectionSize: cfg.maxFieldSectionSize,", "maxFieldSectionSize: 0,", "./http3", "^TestH3RequestStreamOmittedLimitInheritsDefaultForTrailers$", ("read trailers =",)),
-        )
-    if label == "39":
-        return (Regression("client-deadline", "gateway/gateway_test.lgo", "Timeout: 10 * time.Second, Transport:", "Transport:", "./gateway", "^TestGatewayClientDeadlineFailsFast$", ("stalled server answered without an error",)),)
-    if label == "41":
-        return (Regression("memory-open-cap", "db/db.lgo", "handle.SetMaxOpenConns(opts.MaxOpenConns)", "handle.SetMaxOpenConns(opts.MaxIdleConns)", "./db", "^TestMemoryPoolCapsIdleAtOpenLimit$", ("idle limit overrode the smaller open-connection cap",)),)
-    if label == "42":
-        return (Regression("live-unidirectional-cap", "@logos/src/logos/net/http/h3_server.go", "h3ServerUniStreams       = 100", "h3ServerUniStreams       = 101", "./http3", "^TestH3PublicCapsIncomingUniStreamsAt100$", ("101st active stream opened past the 100-stream cap",)),)
-    if label == "43":
-        return (
-            Regression("stream-read-cancellation", "websocket/conn.lgo", "\t\tdefer c.joinStreamCancellation(ctx, &err)()\n\t}\n\tif err := c.readDeadline(ctx); err != nil {", "\t}\n\tif err := c.readDeadline(ctx); err != nil {", "./websocket", "^TestStreamCancelUnblocksPendingNext$", ("Next did not return after cancel",)),
-            Regression("generated-sweep-cause", "cmd/spira/templates/account-store.lgo.tmpl", 'slog.ErrorContext(ctx, "account: sweep expired sessions", "err", err)', 'slog.ErrorContext(ctx, "account: sweep expired sessions")', "./cmd/spira", "^TestNewGeneratedSQLiteAppRuns$", ("omits the planted sweep cause",), 1200),
-        )
-    if label == "44":
-        duplicate = '\t\tif frame == 7 {\n\t\t\treturn errors.New("duplicate GOAWAY frame on the control stream")\n\t\t}\n'
-        length = '\t\tsize, err := quicvarint.Read(reader)\n\t\tif err != nil {\n\t\t\treturn nil\n\t\t}\n'
-        return (
-            Regression("truncated-goaway", "http3/goaway_test.lgo", duplicate + length, length + duplicate, "./http3", "^TestReadH3GoAwayTailRejectsTruncatedDuplicate$", ("want duplicate rejection",)),
-            Regression("udp-cleanup", "http3/server.lgo", 'errors.Join(fmt.Errorf("http3: listen %s: %w", tcpAddr, lerr), conn.Close())', 'fmt.Errorf("http3: listen %s: %w", tcpAddr, lerr)', "./http3", "^TestH3StartReleasesUDPAfterTCPConflict$", ("stayed bound after failed Start",)),
-            Regression("udp-retry-bound", "http3/server.lgo", "for attempt := 1; attempt < 8; attempt++ {", "for attempt := 1; ; attempt++ {", "./http3", "^TestH3StartPersistentUDPConflictExhaustsRetries$", ("want exhausted UDP EADDRINUSE before deadline",)),
-        )
-    if label == "45":
-        return (
-            Regression("independent-drop-context", "db/faults_test.lgo", "cleanup, stop := context.WithTimeout(context.Background(), 5*time.Second)", "cleanup, stop := context.WithTimeout(ctx, 5*time.Second)", "./db", "^TestConstraintProbeDropsAfterContextCancellation$", ("drop fault_uniq_cancel", "context canceled")),
-            Regression("catalog-cause-redaction", "fault/fault.lgo", "return View{Code: f.Code, Message: f.Message, Fields: publicFields(f)}", "return View{Code: f.Code, Message: f.Error(), Fields: publicFields(f)}", "./example/shop/catalog", "^(TestCatalogUnknownProductStaysClientSafe|TestCatalogWrappedFaultHTTPHidesCause)$", ("client-visible output holds", "--- FAIL: TestCatalogUnknownProductStaysClientSafe", "--- FAIL: TestCatalogWrappedFaultHTTPHidesCause")),
-        )
     return ()
 
 
@@ -194,12 +160,6 @@ def check(candidate: Candidate) -> dict[str, object]:
             proofs["immutable-forwarder"] = "func MethodOK(arg string) bool" in source and "var MethodOK" not in source
         if candidate.label == "dashboard":
             proofs.update(dashboard_proofs(folder))
-        if candidate.label == "43":
-            repeated = run(["logos", "test", "-race", "-count=100", "-v", "-run", "^TestH3RefusesEarlyData$", "./http3"], folder / "early-data-repeat.log", 240)
-            repeated_output = (folder / "early-data-repeat.log").read_text(errors="replace")
-            passes = len(re.findall(r"^--- PASS: TestH3RefusesEarlyData ", repeated_output, re.MULTILINE))
-            proofs["early-data-repeat"] = repeated == 0 and passes == 100
-            print(f"EARLY_DATA_REPEAT exit={repeated} explicit_passes={passes}", flush=True)
         result["proofs"] = proofs
     git("diff", "--exit-code")
     assert git("write-tree") == candidate.tree

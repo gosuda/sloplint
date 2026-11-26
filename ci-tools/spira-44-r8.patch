@@ -1,7 +1,7 @@
 diff --git a/http3/http3_test.lgo b/http3/http3_test.lgo
 --- a/http3/http3_test.lgo
 +++ b/http3/http3_test.lgo
-@@ -1,1728 +1,1793 @@
+@@ -1,1793 +1,1793 @@
 -package http3_test
 -
 -import (
@@ -1532,12 +1532,77 @@ diff --git a/http3/http3_test.lgo b/http3/http3_test.lgo
 -			return
 -		}
 -		if elapsed := time.Since(started); elapsed != 70*time.Millisecond {
--			t.Fatalf("retry duration = %v, want seven 10ms waits", elapsed)
+-			t.Fatalf("retry duration = %v, want the 70ms retry budget", elapsed)
 -		}
 -		if addr := server.BoundUDPAddrForTest(); addr != "" {
 -			t.Fatalf("UDP bound after exhausted retries: %s", addr)
 -		}
 -	})
+-}
+-
+-func releaseH3RetryPort(ctx context.Context, packet net.PacketConn, attempt int) error {
+-	timer := time.NewTimer(time.Duration(attempt)*10*time.Millisecond - 5*time.Millisecond)
+-	defer timer.Stop()
+-	select {
+-	case <-timer.C:
+-		if err := packet.Close(); err != nil {
+-			return fmt.Errorf("release UDP before retry %d: %w", attempt, err)
+-		}
+-		return nil
+-	case <-ctx.Done():
+-		return ctx.Err()
+-	}
+-}
+-
+-func driveH3RetryInterval(ctx context.Context, probe *h3ConflictProbe, attempt int) error {
+-	if attempt == 0 {
+-		if err := probe.packet.Close(); err != nil {
+-			return fmt.Errorf("release UDP before initial bind: %w", err)
+-		}
+-		return startH3DuringConflict(ctx, probe)
+-	}
+-	go group (ctx) {
+-		go startH3DuringConflict(ctx, probe)
+-		go releaseH3RetryPort(ctx, probe.packet, attempt)
+-	}
+-	return nil
+-}
+-
+-func TestH3StartRetriesAtEveryInterval(t *testing.T) {
+-	for attempt := 0; attempt < 8; attempt++ {
+-		t.Run(fmt.Sprintf("attempt-%d", attempt), func(t *testing.T) {
+-			synctest.Test(t, func(t *testing.T) {
+-				tcp, packet := bindH3CallerSockets(t)
+-				defer closeH3CallerSockets(t, tcp, packet)
+-				cert, _ := testCert(t)
+-				server := &http3.Server{Addr: tcp.Addr().String(), Router: web.NewRouter(), TLS: &tls.Config{Certificates: []tls.Certificate{cert}}, H3: true}
+-				defer stopH3Server(t, server)
+-				ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+-				defer cancel()
+-				probe := &h3ConflictProbe{server: server, packet: packet, result: make(chan error, 1)}
+-				started := time.Now()
+-				if err := driveH3RetryInterval(ctx, probe, attempt); err != nil {
+-					t.Fatalf("retry %d probe: %v", attempt, err)
+-					return
+-				}
+-				elapsed := time.Since(started)
+-				select {
+-				case err := <-probe.result:
+-					op, ok := errors.AsType[*net.OpError](err)
+-					if !ok || op.Op != "listen" || op.Net != "tcp" || !errors.Is(err, syscall.EADDRINUSE) {
+-						t.Fatalf("retry %d = %v, want TCP listen EADDRINUSE after UDP release", attempt, err)
+-						return
+-					}
+-				case <-ctx.Done():
+-					t.Fatalf("retry %d returned no result: %v", attempt, ctx.Err())
+-					return
+-				}
+-				if want := time.Duration(attempt) * 10 * time.Millisecond; elapsed != want {
+-					t.Fatalf("retry %d reached TCP conflict after %v, want %v", attempt, elapsed, want)
+-				}
+-			})
+-		})
+-	}
 -}
 -
 -type h3ReplyCase struct {
@@ -3274,7 +3339,7 @@ diff --git a/http3/http3_test.lgo b/http3/http3_test.lgo
 +	select {
 +	case <-timer.C:
 +		if err := packet.Close(); err != nil {
-+			return fmt.Errorf("release UDP before retry %d: %w", attempt, err)
++			return fmt.Errorf("http3: release UDP before retry %d: %w", attempt, err)
 +		}
 +		return nil
 +	case <-ctx.Done():
@@ -3285,7 +3350,7 @@ diff --git a/http3/http3_test.lgo b/http3/http3_test.lgo
 +func driveH3RetryInterval(ctx context.Context, probe *h3ConflictProbe, attempt int) error {
 +	if attempt == 0 {
 +		if err := probe.packet.Close(); err != nil {
-+			return fmt.Errorf("release UDP before initial bind: %w", err)
++			return fmt.Errorf("http3: release UDP before initial bind: %w", err)
 +		}
 +		return startH3DuringConflict(ctx, probe)
 +	}
@@ -3523,357 +3588,3 @@ diff --git a/http3/http3_test.lgo b/http3/http3_test.lgo
 +		t.Fatal("client connection stayed open after the shutdown deadline")
 +	}
 +}
-diff --git a/docs/specs/http3.md b/docs/specs/http3.md
---- a/docs/specs/http3.md
-+++ b/docs/specs/http3.md
-@@ -1,175 +1,175 @@
--# http3
--
--`http3.Server` serves HTTP/3 through `logos/net/http.H3Server`. `Start` opens one UDP listener on the same port as the TCP listener. The router answers HTTP/3 requests with the same stages and replies as other versions.
--
--`H3Server` runs over the `github.com/quic-go/quic-go` transport. It clones the TLS configuration for UDP, requires TLS 1.3, and sets ALPN to `h3`.
--
--## Interface
--
--```lgo
--type Server struct {
--	Addr              string = ":8080"
--	Router            *web.Router
--	ReadHeaderTimeout time.Duration = 5 * time.Second
--	ShutdownGrace     time.Duration = 20 * time.Second
--	TLS               *tls.Config?
--	H2C               bool
--	H3                bool
--	// unexported fields
--}
--
--func (s *Server) AltSvc() web.Stage
--func (s *Server) Start(ctx context.Context) error
--func (s *Server) Serve(ctx context.Context, l net.Listener, conn net.PacketConn) error
--func (s *Server) Stop(ctx context.Context) error
--
--var ErrH3NeedsTLS = fault.New("http3.h3_needs_tls", fault.Internal, "HTTP/3 needs a TLS configuration.")
--var ErrListenUDP = fault.New("http3.listen_udp", fault.Internal, "The UDP listener failed to open.")
--var ErrH3Serve = fault.New("http3.h3_serve", fault.Internal, "The HTTP/3 server failed.")
--var ErrH3Shutdown = fault.New("http3.h3_shutdown", fault.Internal, "The HTTP/3 shutdown failed.")
--func Faults() []*fault.Error
--```
--
--The other fields keep the meaning that [web](web.md) gives them, except `ReadHeaderTimeout`, which bounds the TCP listener only. `H3` turns HTTP/3 on.
--
--## Requirements
--
--### Listener and discovery
--
--- `H3` MUST stay false unless the application wants HTTP/3.
--- When `H3` is true, `Start` MUST open one UDP listener on `Addr` before it returns.
--- The UDP listener MUST use the same port as the TCP listener.
--- When `Addr` holds port 0, `Start` MUST bind TCP first on port 0, then UDP on the bound TCP port.
--- On a UDP conflict `Start` MUST release both sockets and MUST try again a bounded number of times.
--- `Serve` MUST serve the caller sockets instead of binding `Addr`.
--- `Serve` MUST NOT close the caller sockets when it fails.
--- When `H3` is true and `TLS` is nil, `Start` MUST fail and MUST NOT listen.
--- The UDP listener MUST negotiate only ALPN `h3`.
--- The UDP listener MUST use TLS 1.3 with no older version.
--- `ReadHeaderTimeout` MUST bound the TCP listener header reads only.
--- `ReadHeaderTimeout` MUST NOT be presented as bounding HTTP/3 header reads.
--- The TCP listener MUST keep the ALPN list that [web](web.md) fixes.
--- Each HTTPS response MUST carry `Alt-Svc: h3=":<port>"; ma=2592000` while the UDP listener is open, with the actual UDP port.
--- A cleartext response MUST NOT carry that header.
--- A response when `H3` is false MUST NOT carry that header.
--- The router MUST run the same stages for an HTTP/3 request as for other versions.
--- The router MUST write the same replies for an HTTP/3 request as for other versions.
--- `AltSvc` MUST set `Alt-Svc` with the bound UDP port on an HTTPS request while the server runs.
--- The stage MUST skip a cleartext request, a stopped server and a server with `H3` false.
--- `Start` MUST NOT add the stage to the router itself.
--- When `H3` is false, `Start` MUST serve TCP only and open no UDP listener.
--
--### Limits and timeouts
--
--These limits and timeouts apply to the LoGOs backend that `http3.Server` uses.
--
--- The backend MUST use `http.DefaultMaxHeaderBytes` (1 MiB) because `http3.Server` sets no `MaxHeaderBytes`.
--- The backend MUST advertise this value in `SETTINGS_MAX_FIELD_SECTION_SIZE` (RFC 9114 section 7.2.4.1).
--- This value MUST limit the encoded request header block and the decoded field section separately. Each decoded field MUST count its name and value in bytes plus 32 bytes.
--- If either limit is exceeded, the backend MUST stop reading the stream with `H3_EXCESSIVE_LOAD` and MUST attempt status 431.
--- The backend MUST omit `SETTINGS_QPACK_MAX_TABLE_CAPACITY` and `SETTINGS_QPACK_BLOCKED_STREAMS`. Both MUST default to 0 (RFC 9204 section 5).
--- If a header block refers to the dynamic table, the backend MUST close the connection with `QPACK_DECOMPRESSION_FAILED`.
--- A client MUST keep at most 100 bidirectional streams and 100 unidirectional streams open per connection.
--- The backend MUST cap incoming streams at 100 bidirectional and 100 unidirectional per connection.
--- The initial QUIC receive window MUST be 1 MiB per stream and 1 MiB per connection (RFC 9000 section 4).
--- The QUIC send buffer MUST hold at most 1 MiB per stream. A write MUST wait for space if the buffer is full.
--- The backend MUST set the QUIC handshake timeout to 5 seconds.
--- After the QUIC handshake, the backend MUST wait up to 5 seconds for client SETTINGS. On timeout it MUST close the connection with `H3_MISSING_SETTINGS`.
--- The server MUST use a local idle timeout of 30 seconds. It MUST send no `max_idle_timeout` transport parameter or keep-alive packets.
--- If the client advertises a smaller nonzero idle timeout, the server MUST use that value. QUIC MUST set each handshake and idle timer to at least three times the probe timeout (RFC 9000 section 10.1).
--- The backend MUST set no separate request header deadline. A stream waiting for request headers MUST count against the bidirectional stream limit.
--- `Stop` MUST use a separate drain deadline. The QUIC idle timeout MUST remain in effect during the drain and MAY close an idle connection first.
--
--### Shutdown
--
--- `Stop` MUST close the UDP listener before it returns, after the drain or the timeout ends it.
--- `Stop` MUST send GOAWAY on HTTP/3 connections, then wait for open requests until `ShutdownGrace` ends (RFC 9114).
--- `Stop` MUST return at the caller deadline when that deadline is sooner.
--- `Stop` MUST close HTTP/3 connections when shutdown times out.
--- `Stop` of a server that is not started MUST return a nil error.
--- On each connection with an open HTTP/3 control stream, a graceful drain MUST send one GOAWAY frame.
--- The GOAWAY identifier MUST be the next client bidirectional stream ID after the highest admitted request stream. If the backend admitted no request stream, the identifier MUST be 0.
--- Once the drain starts, the backend MUST admit no new request streams. It MUST reject new request streams on open connections with `H3_REQUEST_REJECTED` so the client can retry the request.
--- The backend MUST reject request stream IDs at or above `2^62 - 4`.
--- The cap MUST leave room for the GOAWAY identifier in a variable-length integer.
--- The control stream MUST reject an attempt to send a GOAWAY identifier greater than the previous one.
--- The backend MUST wait for admitted requests to finish and for QUIC to acknowledge GOAWAY. If both complete and the connection remains open, it MUST close the connection with `H3_NO_ERROR`.
--- A client GOAWAY frame MUST NOT stop requests. If a client GOAWAY identifier exceeds the previous one, the backend MUST close the connection with `H3_ID_ERROR`.
--
--### Early data
--
--- The server MUST refuse 0-RTT early data, because early data replays and a replayed request could run twice.
--- When a client attempts TLS session resumption, the QUIC layer MUST clear the early data flag on the session. The server MUST accept no 0-RTT data and MUST keep no 0-RTT replay window.
--- The QUIC backend MUST issue no session tickets. The server MAY resume with a ticket from another issuer if the TLS configuration accepts it.
--- A restart MUST NOT drop the ability to resume a session established before the restart.
--- The TLS configuration MUST retain a valid ticket key for such a session, or recover its state with `UnwrapSession`.
--- `http3.Server` MUST NOT manage ticket key storage or rotation.
--- `SessionTicketsDisabled` on the effective TLS configuration MUST disable resumption.
--- Extended CONNECT over HTTP/3 MUST stay unbuilt in this server.
--- The server MUST answer an extended CONNECT request with 501 and MUST NOT pass it to the router.
--- `H3Server` MUST send `SETTINGS_ENABLE_CONNECT_PROTOCOL = 1`.
--- Peers MAY therefore attempt extended CONNECT.
--- The backend MUST answer extended CONNECT with 501 and MUST NOT call the request handler.
--
--### Faults
--
--- A nil `TLS` with `H3` MUST map to `http3.h3_needs_tls`.
--- A UDP listen failure MUST map to `http3.listen_udp` with the address in the cause.
--- An HTTP/3 serve failure MUST map to `http3.h3_serve` with the cause.
--- An HTTP/3 shutdown failure MUST map to `http3.h3_shutdown` with the cause.
--
--### Code table
--
--| Code | Kind | Message |
--| --- | --- | --- |
--| `http3.h3_needs_tls` | internal | "HTTP/3 needs a TLS configuration." |
--| `http3.listen_udp` | internal | "The UDP listener failed to open." |
--| `http3.h3_serve` | internal | "The HTTP/3 server failed." |
--| `http3.h3_shutdown` | internal | "The HTTP/3 shutdown failed." |
--
--## Errors
--
--- A nil `TLS` with `H3` MUST map to `http3.h3_needs_tls`.
--- A UDP listen failure MUST map to `http3.listen_udp` with the address in the cause.
--- An HTTP/3 serve failure MUST map to `http3.h3_serve` with the cause.
--- An HTTP/3 shutdown failure MUST map to `http3.h3_shutdown` with the cause. `Stop` then closes the HTTP/3 server and joins that error.
--- Public views MUST NOT carry addresses, ports or transport details.
--
--## Proof
--
--- `TestH3NeedsTLSFailsStart` proves that H3 without TLS fails to start and opens no listener.
--- `TestH3SharesRouterWithTCP` proves that the same route answers over both listeners.
--- `TestH3AltSvcOnHTTPSOnly` proves the header value on HTTPS and its absence on cleartext and when `H3` is false.
--- `TestH3AltSvcIgnoresRegistrationOrder` proves that discovery works whether the stage is added before or after route registration.
--- `TestH3RequiresTLS13` proves that a pre-1.3 handshake on the UDP listener fails.
--- `TestH3StopDrainsWithinGrace` proves that `Stop` waits for a live HTTP/3 request.
--- `TestH3StopClosesUDPListener` proves that the UDP port rebinds right after `Stop`.
--- `TestH3StopShutsTCPWhileH3Drains` proves that TCP stops accepting while an HTTP/3 request drains.
--- `TestH3RefusesExtendedConnect` proves that an extended CONNECT request answers 501 without reaching the router while plain H3 traffic still passes.
--- `TestH3StopMeetsCallerDeadline` proves that `Stop` returns at the caller deadline with a stuck handler.
--- `TestH3RefusesEarlyData` sends QUIC 0-RTT data and checks that the server resumes the TLS session without accepting that data.
--- `TestH3StopClosesOnTimeout` proves that a timed-out shutdown ends the HTTP/3 request.
--- `TestH3AltSvcAbsentWhenH3False` proves no header without `H3`.
--- `TestFaultsMatchSpecCodeTable` proves `Faults` matches the code table without duplicates.
--- `TestFaultPublicHidesSecrets` proves public views hide secrets and hostile text.
--- `TestH3ServeWithoutH3OpensNoUDP` proves that `Serve` with `H3` false serves TCP from the caller listener without TLS and binds no UDP.
--- `TestH3RejectsNonH3ALPNOnUDP` proves that the UDP listener negotiates only ALPN `h3`, including for `GetConfigForClient` configs, without mutating the caller configs.
--- `TestH3ServeUsesCallerSocketsAndKeepsThemOnFailure` proves that `Serve` answers on both caller sockets and leaves them usable after a missing router, missing TLS, or a busy server.
--- `TestH3StartSucceedsAfterTransientUDPConflict` proves that `Start` succeeds after a transient UDP conflict clears.
--- `TestH3StartPersistentUDPConflictExhaustsRetries` proves that persistent contention returns UDP `EADDRINUSE` after seven waits, before the caller deadline.
--- `TestH3StartReleasesUDPAfterTCPConflict` requires TCP listen `EADDRINUSE` and proves the acquired UDP socket was released.
--- `TestH3StartReleasesUDPAfterTCPConflict` proves that a TCP conflict closes the bound UDP socket.
--- `TestH3RunsStagesAndRepliesLikeTCP` proves that one router runs the same stages and writes the same data, page, and problem replies over UDP and TCP.
--- `TestH3AltSvcEdgeCases` proves that `Start` installs no stage, that disabled `H3` binds no UDP, and that a stopped server advertises nothing.
--- `TestH3StopSendsGOAWAYBeforeDrain` proves that `Stop` sends one GOAWAY frame on the control stream before the in-flight request drains.
--- `TestH3StopClosesClientConnectionOnTimeout` proves that a timed-out `Stop` maps to `http3.h3_shutdown` with the deadline cause and that the client connection closes.
--- `TestH3StopBeforeStartReturnsNil` proves that `Stop` before `Start` returns nil.
--- `TestH3ServeAndShutdownFaultsMap` proves that serve failures map to `http3.h3_serve` and shutdown failures to `http3.h3_shutdown`, each keeping its cause, and that the UDP cause names the address.
--- `TestH3DatagramsStayDisabled` proves that a datagram-offering client sees no QUIC datagram support and no HTTP/3 datagram setting from the server.
--
--## Not in scope
--
--- WebTransport. No requirement names it.
--- Datagrams (RFC 9297). The server advertises neither QUIC nor HTTP/3 datagram support.
--- An HTTP/3 client. `client` stays on TCP.
--- A 0-RTT opt-in. The server refuses early data with no per-route exception.
-+# http3
-+
-+`http3.Server` serves HTTP/3 through `logos/net/http.H3Server`. `Start` opens one UDP listener on the same port as the TCP listener. The router answers HTTP/3 requests with the same stages and replies as other versions.
-+
-+`H3Server` runs over the `github.com/quic-go/quic-go` transport. It clones the TLS configuration for UDP, requires TLS 1.3, and sets ALPN to `h3`.
-+
-+## Interface
-+
-+```lgo
-+type Server struct {
-+	Addr              string = ":8080"
-+	Router            *web.Router
-+	ReadHeaderTimeout time.Duration = 5 * time.Second
-+	ShutdownGrace     time.Duration = 20 * time.Second
-+	TLS               *tls.Config?
-+	H2C               bool
-+	H3                bool
-+	// unexported fields
-+}
-+
-+func (s *Server) AltSvc() web.Stage
-+func (s *Server) Start(ctx context.Context) error
-+func (s *Server) Serve(ctx context.Context, l net.Listener, conn net.PacketConn) error
-+func (s *Server) Stop(ctx context.Context) error
-+
-+var ErrH3NeedsTLS = fault.New("http3.h3_needs_tls", fault.Internal, "HTTP/3 needs a TLS configuration.")
-+var ErrListenUDP = fault.New("http3.listen_udp", fault.Internal, "The UDP listener failed to open.")
-+var ErrH3Serve = fault.New("http3.h3_serve", fault.Internal, "The HTTP/3 server failed.")
-+var ErrH3Shutdown = fault.New("http3.h3_shutdown", fault.Internal, "The HTTP/3 shutdown failed.")
-+func Faults() []*fault.Error
-+```
-+
-+The other fields keep the meaning that [web](web.md) gives them, except `ReadHeaderTimeout`, which bounds the TCP listener only. `H3` turns HTTP/3 on.
-+
-+## Requirements
-+
-+### Listener and discovery
-+
-+- `H3` MUST stay false unless the application wants HTTP/3.
-+- When `H3` is true, `Start` MUST open one UDP listener on `Addr` before it returns.
-+- The UDP listener MUST use the same port as the TCP listener.
-+- When `Addr` holds port 0, `Start` MUST bind TCP first on port 0, then UDP on the bound TCP port.
-+- On a UDP conflict `Start` MUST release both sockets and MUST try again a bounded number of times.
-+- `Serve` MUST serve the caller sockets instead of binding `Addr`.
-+- `Serve` MUST NOT close the caller sockets when it fails.
-+- When `H3` is true and `TLS` is nil, `Start` MUST fail and MUST NOT listen.
-+- The UDP listener MUST negotiate only ALPN `h3`.
-+- The UDP listener MUST use TLS 1.3 with no older version.
-+- `ReadHeaderTimeout` MUST bound the TCP listener header reads only.
-+- `ReadHeaderTimeout` MUST NOT be presented as bounding HTTP/3 header reads.
-+- The TCP listener MUST keep the ALPN list that [web](web.md) fixes.
-+- Each HTTPS response MUST carry `Alt-Svc: h3=":<port>"; ma=2592000` while the UDP listener is open, with the actual UDP port.
-+- A cleartext response MUST NOT carry that header.
-+- A response when `H3` is false MUST NOT carry that header.
-+- The router MUST run the same stages for an HTTP/3 request as for other versions.
-+- The router MUST write the same replies for an HTTP/3 request as for other versions.
-+- `AltSvc` MUST set `Alt-Svc` with the bound UDP port on an HTTPS request while the server runs.
-+- The stage MUST skip a cleartext request, a stopped server and a server with `H3` false.
-+- `Start` MUST NOT add the stage to the router itself.
-+- When `H3` is false, `Start` MUST serve TCP only and open no UDP listener.
-+
-+### Limits and timeouts
-+
-+These limits and timeouts apply to the LoGOs backend that `http3.Server` uses.
-+
-+- The backend MUST use `http.DefaultMaxHeaderBytes` (1 MiB) because `http3.Server` sets no `MaxHeaderBytes`.
-+- The backend MUST advertise this value in `SETTINGS_MAX_FIELD_SECTION_SIZE` (RFC 9114 section 7.2.4.1).
-+- This value MUST limit the encoded request header block and the decoded field section separately. Each decoded field MUST count its name and value in bytes plus 32 bytes.
-+- If either limit is exceeded, the backend MUST stop reading the stream with `H3_EXCESSIVE_LOAD` and MUST attempt status 431.
-+- The backend MUST omit `SETTINGS_QPACK_MAX_TABLE_CAPACITY` and `SETTINGS_QPACK_BLOCKED_STREAMS`. Both MUST default to 0 (RFC 9204 section 5).
-+- If a header block refers to the dynamic table, the backend MUST close the connection with `QPACK_DECOMPRESSION_FAILED`.
-+- A client MUST keep at most 100 bidirectional streams and 100 unidirectional streams open per connection.
-+- The backend MUST cap incoming streams at 100 bidirectional and 100 unidirectional per connection.
-+- The initial QUIC receive window MUST be 1 MiB per stream and 1 MiB per connection (RFC 9000 section 4).
-+- The QUIC send buffer MUST hold at most 1 MiB per stream. A write MUST wait for space if the buffer is full.
-+- The backend MUST set the QUIC handshake timeout to 5 seconds.
-+- After the QUIC handshake, the backend MUST wait up to 5 seconds for client SETTINGS. On timeout it MUST close the connection with `H3_MISSING_SETTINGS`.
-+- The server MUST use a local idle timeout of 30 seconds. It MUST send no `max_idle_timeout` transport parameter or keep-alive packets.
-+- If the client advertises a smaller nonzero idle timeout, the server MUST use that value. QUIC MUST set each handshake and idle timer to at least three times the probe timeout (RFC 9000 section 10.1).
-+- The backend MUST set no separate request header deadline. A stream waiting for request headers MUST count against the bidirectional stream limit.
-+- `Stop` MUST use a separate drain deadline. The QUIC idle timeout MUST remain in effect during the drain and MAY close an idle connection first.
-+
-+### Shutdown
-+
-+- `Stop` MUST close the UDP listener before it returns, after the drain or the timeout ends it.
-+- `Stop` MUST send GOAWAY on HTTP/3 connections, then wait for open requests until `ShutdownGrace` ends (RFC 9114).
-+- `Stop` MUST return at the caller deadline when that deadline is sooner.
-+- `Stop` MUST close HTTP/3 connections when shutdown times out.
-+- `Stop` of a server that is not started MUST return a nil error.
-+- On each connection with an open HTTP/3 control stream, a graceful drain MUST send one GOAWAY frame.
-+- The GOAWAY identifier MUST be the next client bidirectional stream ID after the highest admitted request stream. If the backend admitted no request stream, the identifier MUST be 0.
-+- Once the drain starts, the backend MUST admit no new request streams. It MUST reject new request streams on open connections with `H3_REQUEST_REJECTED` so the client can retry the request.
-+- The backend MUST reject request stream IDs at or above `2^62 - 4`.
-+- The cap MUST leave room for the GOAWAY identifier in a variable-length integer.
-+- The control stream MUST reject an attempt to send a GOAWAY identifier greater than the previous one.
-+- The backend MUST wait for admitted requests to finish and for QUIC to acknowledge GOAWAY. If both complete and the connection remains open, it MUST close the connection with `H3_NO_ERROR`.
-+- A client GOAWAY frame MUST NOT stop requests. If a client GOAWAY identifier exceeds the previous one, the backend MUST close the connection with `H3_ID_ERROR`.
-+
-+### Early data
-+
-+- The server MUST refuse 0-RTT early data, because early data replays and a replayed request could run twice.
-+- When a client attempts TLS session resumption, the QUIC layer MUST clear the early data flag on the session. The server MUST accept no 0-RTT data and MUST keep no 0-RTT replay window.
-+- The QUIC backend MUST issue no session tickets. The server MAY resume with a ticket from another issuer if the TLS configuration accepts it.
-+- A restart MUST NOT drop the ability to resume a session established before the restart.
-+- The TLS configuration MUST retain a valid ticket key for such a session, or recover its state with `UnwrapSession`.
-+- `http3.Server` MUST NOT manage ticket key storage or rotation.
-+- `SessionTicketsDisabled` on the effective TLS configuration MUST disable resumption.
-+- Extended CONNECT over HTTP/3 MUST stay unbuilt in this server.
-+- The server MUST answer an extended CONNECT request with 501 and MUST NOT pass it to the router.
-+- `H3Server` MUST send `SETTINGS_ENABLE_CONNECT_PROTOCOL = 1`.
-+- Peers MAY therefore attempt extended CONNECT.
-+- The backend MUST answer extended CONNECT with 501 and MUST NOT call the request handler.
-+
-+### Faults
-+
-+- A nil `TLS` with `H3` MUST map to `http3.h3_needs_tls`.
-+- A UDP listen failure MUST map to `http3.listen_udp` with the address in the cause.
-+- An HTTP/3 serve failure MUST map to `http3.h3_serve` with the cause.
-+- An HTTP/3 shutdown failure MUST map to `http3.h3_shutdown` with the cause.
-+
-+### Code table
-+
-+| Code | Kind | Message |
-+| --- | --- | --- |
-+| `http3.h3_needs_tls` | internal | "HTTP/3 needs a TLS configuration." |
-+| `http3.listen_udp` | internal | "The UDP listener failed to open." |
-+| `http3.h3_serve` | internal | "The HTTP/3 server failed." |
-+| `http3.h3_shutdown` | internal | "The HTTP/3 shutdown failed." |
-+
-+## Errors
-+
-+- A nil `TLS` with `H3` MUST map to `http3.h3_needs_tls`.
-+- A UDP listen failure MUST map to `http3.listen_udp` with the address in the cause.
-+- An HTTP/3 serve failure MUST map to `http3.h3_serve` with the cause.
-+- An HTTP/3 shutdown failure MUST map to `http3.h3_shutdown` with the cause. `Stop` then closes the HTTP/3 server and joins that error.
-+- Public views MUST NOT carry addresses, ports or transport details.
-+
-+## Proof
-+
-+- `TestH3NeedsTLSFailsStart` proves that H3 without TLS fails to start and opens no listener.
-+- `TestH3SharesRouterWithTCP` proves that the same route answers over both listeners.
-+- `TestH3AltSvcOnHTTPSOnly` proves the header value on HTTPS and its absence on cleartext and when `H3` is false.
-+- `TestH3AltSvcIgnoresRegistrationOrder` proves that discovery works whether the stage is added before or after route registration.
-+- `TestH3RequiresTLS13` proves that a pre-1.3 handshake on the UDP listener fails.
-+- `TestH3StopDrainsWithinGrace` proves that `Stop` waits for a live HTTP/3 request.
-+- `TestH3StopClosesUDPListener` proves that the UDP port rebinds right after `Stop`.
-+- `TestH3StopShutsTCPWhileH3Drains` proves that TCP stops accepting while an HTTP/3 request drains.
-+- `TestH3RefusesExtendedConnect` proves that an extended CONNECT request answers 501 without reaching the router while plain H3 traffic still passes.
-+- `TestH3StopMeetsCallerDeadline` proves that `Stop` returns at the caller deadline with a stuck handler.
-+- `TestH3RefusesEarlyData` sends QUIC 0-RTT data and checks that the server resumes the TLS session without accepting that data.
-+- `TestH3StopClosesOnTimeout` proves that a timed-out shutdown ends the HTTP/3 request.
-+- `TestH3AltSvcAbsentWhenH3False` proves no header without `H3`.
-+- `TestFaultsMatchSpecCodeTable` proves `Faults` matches the code table without duplicates.
-+- `TestFaultPublicHidesSecrets` proves public views hide secrets and hostile text.
-+- `TestH3ServeWithoutH3OpensNoUDP` proves that `Serve` with `H3` false serves TCP from the caller listener without TLS and binds no UDP.
-+- `TestH3RejectsNonH3ALPNOnUDP` proves that the UDP listener negotiates only ALPN `h3`, including for `GetConfigForClient` configs, without mutating the caller configs.
-+- `TestH3ServeUsesCallerSocketsAndKeepsThemOnFailure` proves that `Serve` answers on both caller sockets and leaves them usable after a missing router, missing TLS, or a busy server.
-+- `TestH3StartSucceedsAfterTransientUDPConflict` proves that `Start` succeeds after a transient UDP conflict clears.
-+- `TestH3StartPersistentUDPConflictExhaustsRetries` proves that persistent contention exhausts the 70ms retry budget before the caller deadline.
-+- `TestH3StartRetriesAtEveryInterval` uses held TCP and timed UDP releases to prove the initial bind and each 10ms retry.
-+- `TestH3StartReleasesUDPAfterTCPConflict` requires TCP listen `EADDRINUSE` and proves the acquired UDP socket was released.
-+- `TestH3RunsStagesAndRepliesLikeTCP` proves that one router runs the same stages and writes the same data, page, and problem replies over UDP and TCP.
-+- `TestH3AltSvcEdgeCases` proves that `Start` installs no stage, that disabled `H3` binds no UDP, and that a stopped server advertises nothing.
-+- `TestH3StopSendsGOAWAYBeforeDrain` proves that `Stop` sends one GOAWAY frame on the control stream before the in-flight request drains.
-+- `TestH3StopClosesClientConnectionOnTimeout` proves that a timed-out `Stop` maps to `http3.h3_shutdown` with the deadline cause and that the client connection closes.
-+- `TestH3StopBeforeStartReturnsNil` proves that `Stop` before `Start` returns nil.
-+- `TestH3ServeAndShutdownFaultsMap` proves that serve failures map to `http3.h3_serve` and shutdown failures to `http3.h3_shutdown`, each keeping its cause, and that the UDP cause names the address.
-+- `TestH3DatagramsStayDisabled` proves that a datagram-offering client sees no QUIC datagram support and no HTTP/3 datagram setting from the server.
-+
-+## Not in scope
-+
-+- WebTransport. No requirement names it.
-+- Datagrams (RFC 9297). The server advertises neither QUIC nor HTTP/3 datagram support.
-+- An HTTP/3 client. `client` stays on TCP.
-+- A 0-RTT opt-in. The server refuses early data with no per-route exception.
