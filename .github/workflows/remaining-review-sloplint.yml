@@ -1,0 +1,111 @@
+name: Verify sloplint summary review
+on:
+  push:
+    branches: [ci/remaining-review-gates-20261126-r8]
+    paths:
+      - .github/workflows/remaining-review-sloplint.yml
+      - ci-tools/remaining-review/**
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+    working-directory: source
+jobs:
+  lint:
+    runs-on: depot-ubuntu-24.04-4
+    timeout-minutes: 30
+    env:
+      CARGO_DENY_VERSION: 0.20.2
+      CARGO_DENY_SHA256: 9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: probe
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/sloplint
+          ref: b63bf25021eb5d807909ed61e494b3e4e52b8ba8
+          path: source
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          version: "0.13.9"
+          python-version: "3.15"
+          require-checksums: true
+          enable-cache: false
+      - name: Verify and apply frozen candidate
+        run: uv run --no-project --python 3.15 ../probe/ci-tools/remaining-review/verify.py sloplint prepare
+      - name: Check formatting
+        run: cargo fmt --all --check
+      - name: Verify grammar manifest
+        run: bash scripts/grammars.sh check
+      - name: Verify release scripts
+        run: bash scripts/selftest-release-scripts.sh
+      - name: Install cargo-deny
+        run: |
+          dir="cargo-deny-$CARGO_DENY_VERSION-x86_64-unknown-linux-musl"
+          curl --fail --silent --show-error --location --retry 3 --output "$RUNNER_TEMP/$dir.tar.gz" "https://github.com/EmbarkStudios/cargo-deny/releases/download/$CARGO_DENY_VERSION/$dir.tar.gz"
+          printf '%s\n' "$CARGO_DENY_SHA256  $RUNNER_TEMP/$dir.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/$dir.tar.gz" -C "$RUNNER_TEMP" "$dir/cargo-deny"
+          printf '%s\n' "$RUNNER_TEMP/$dir" >> "$GITHUB_PATH"
+      - name: Audit dependencies
+        run: cargo deny check
+      - name: Final source identity
+        run: uv run --no-project --python 3.15 ../probe/ci-tools/remaining-review/verify.py sloplint lint
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: sloplint-summary-lint-${{ github.sha }}
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 7
+  test:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: depot-ubuntu-24.04-8
+            target: x86_64-unknown-linux-gnu
+          - runner: depot-ubuntu-24.04-arm-8
+            target: aarch64-unknown-linux-gnu
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_DEV_DEBUG: line-tables-only
+      CARGO_PROFILE_TEST_DEBUG: line-tables-only
+      SLOPLINT_REQUIRE_FS_CAPS: "1"
+      PROOF_TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: probe
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/sloplint
+          ref: b63bf25021eb5d807909ed61e494b3e4e52b8ba8
+          path: source
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          version: "0.13.9"
+          python-version: "3.15"
+          require-checksums: true
+          enable-cache: false
+      - name: Verify and apply frozen candidate
+        run: uv run --no-project --python 3.15 ../probe/ci-tools/remaining-review/verify.py sloplint prepare
+      - run: rustup target add ${{ matrix.target }}
+      - name: Run every normal PR compilation and test gate
+        run: uv run --no-project --python 3.15 ../probe/ci-tools/remaining-review/verify.py sloplint test
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: sloplint-summary-${{ matrix.target }}-${{ github.sha }}
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 7
