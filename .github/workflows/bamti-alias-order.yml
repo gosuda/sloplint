@@ -1,0 +1,55 @@
+name: Observe transformed alias union order
+on:
+  push:
+    branches: [ci/bamti-alias-order-20261126-r15]
+    paths:
+      - .github/workflows/bamti-alias-order.yml
+      - ci-tools/bamti-alias-order/**
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+    working-directory: source
+jobs:
+  quality:
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 20
+    env:
+      CARGO_TERM_COLOR: never
+      CARGO_BUILD_JOBS: "8"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: probe
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/bamTiScript
+          ref: 87be57b3bdee04bdc9606d0fadde7912b20a52a6
+          path: source
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          version: 0.13.9
+          python-version: "3.15"
+          require-checksums: true
+          enable-cache: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.18.0
+      - name: Install pinned languages and oracle
+        run: |
+          rustup toolchain install 1.97.1 --profile minimal --component rustfmt,clippy,rust-src
+          test "$(node --version)" = v24.18.0
+          rustc --version
+          npm ci
+      - name: Observe pinned authority and published-source regression
+        run: uv run --no-project --python 3.15 ../probe/ci-tools/bamti-alias-order/verify.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: bamti-alias-order-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/bamti-alias-order-evidence
+          if-no-files-found: error
+          retention-days: 7
