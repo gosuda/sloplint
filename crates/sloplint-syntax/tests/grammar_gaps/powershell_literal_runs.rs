@@ -395,3 +395,48 @@ fn variable_ends_before_astral_letter() {
         command.args[0].shape
     );
 }
+
+#[test]
+fn unicode_escape_counts_as_one_escaped_character() {
+    let analysis = run_clean("Write-Host $r/\"`u{1F600}x$id\"\n");
+    let command = call(&analysis, "Write-Host");
+    assert_eq!(command.args.len(), 1);
+    assert!(
+        matches!(
+            command.args[0].shape,
+            ArgShape::Concat { longest_static: 1 }
+        ),
+        "shape: {:?}",
+        command.args[0].shape
+    );
+}
+
+#[test]
+fn uppercase_unicode_escape_counts_as_one_escaped_character() {
+    let analysis = run_clean("Write-Host $r/\"`U{1F600}x$id\"\n");
+    let command = call(&analysis, "Write-Host");
+    assert_eq!(command.args.len(), 1);
+    assert!(
+        matches!(
+            command.args[0].shape,
+            ArgShape::Concat { longest_static: 1 }
+        ),
+        "shape: {:?}",
+        command.args[0].shape
+    );
+}
+
+#[test]
+fn verbatim_unicode_escape_stays_literal() {
+    let analysis = run_clean("Write-Host $r/'`u{1F600}x'\"$id\"\n");
+    let command = call(&analysis, "Write-Host");
+    assert_eq!(command.args.len(), 1);
+    assert!(
+        matches!(
+            command.args[0].shape,
+            ArgShape::Concat { longest_static: 11 }
+        ),
+        "shape: {:?}",
+        command.args[0].shape
+    );
+}

@@ -102,7 +102,9 @@ pub(super) fn ps_word_static_run(raw: &str, dynamics: &[(usize, usize)]) -> u32 
         if ch == '`' {
             best = best.max(run);
             run = 0;
-            if let Some(escaped) = raw[offset..].chars().next() {
+            if let Some(end) = ps_word_unicode_escape_end(&raw[offset..]) {
+                offset += end;
+            } else if let Some(escaped) = raw[offset..].chars().next() {
                 offset += escaped.len_utf8();
             }
         } else if ch == '\'' && quote == PsWordQuote::Bare {
@@ -129,4 +131,19 @@ pub(super) fn ps_word_static_run(raw: &str, dynamics: &[(usize, usize)]) -> u32 
         }
     }
     narrow(best.max(run))
+}
+
+// Length of a valid backtick-Unicode escape (`u{1F600}, `u and hex digits
+// case-insensitive) in bytes, measured from after the backtick. PowerShell
+// decodes the whole sequence to one character, so the word scanner consumes
+// it as one escape. Anything else is not a Unicode escape: the caller falls
+fn ps_word_unicode_escape_end(raw: &str) -> Option<usize> {
+    let body = raw.strip_prefix('u').or_else(|| raw.strip_prefix('U'))?;
+    let hex = body.strip_prefix('{')?;
+    let close = hex.find('}')?;
+    let digits = &hex[..close];
+    if !(1..=6).contains(&digits.len()) || !digits.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return None;
+    }
+    Some(1 + 1 + digits.len() + 1)
 }
