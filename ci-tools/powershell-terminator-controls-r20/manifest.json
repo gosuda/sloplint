@@ -7,8 +7,14 @@
   "stages_sha256": "a8e8d3a2073c3ce0090c0bd138c14dfdd7eea54f77d945b1b4008c9405210156",
   "mode": "Read-only native control observations and lossless candidate transport; parser mismatches are recorded, not claimed as passing gates.",
   "proof_sha256": {
-    "verify.py": "a46ef2bc63a54d5a0aa9281d904a1d8d90d8e34d82ad61b51a72950411f62ce8",
+    "verify.py": "ef3c5bd4042c23fe68b692fbb4b7cf1ffc2c8d3afb704942c823a509802c61d8",
     "oracle.ps1": "93ac928992409e8774f4501cdfe3c6e646581c31700d27f4526933b3cf5d30ef",
     "cases.json": "51b30ef86a1b388bab592538a71acc19754133d4230f71028ccc177df68c0da2"
+  },
+  "source_transport": {
+    "producer": "f8a359032242b2e90a2d474e7f06aa779ba029a7",
+    "run": 45874488604,
+    "job": 140097992716,
+    "outcome": "ZIP/payload/gzip/file digests verified. Observer stopped before native cases because its alternate Git index was not initialized. Corrected below; no native control result is claimed for that run."
   }
 }

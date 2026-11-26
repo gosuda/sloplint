@@ -85,10 +85,9 @@ encoded = base64.b64encode(packed).decode("ascii")
 print("PACKED_SOURCE_IDENTITY " + json.dumps({"artifact": metadata, "payload_sha256": hashlib.sha256(data).hexdigest(),
       "gzip_sha256": hashlib.sha256(packed).hexdigest(), "gzip_bytes": len(packed),
       "payload_bytes": len(data), "base64_bytes": len(encoded), "chunks": (len(encoded) + 23999) // 24000}), flush=True)
-for part, offset in enumerate(range(0, len(encoded), 24000)):
-    print("PACKED_SOURCE_CHUNK " + json.dumps({"part": part, "content": encoded[offset:offset + 24000]}), flush=True)
 
 assert output(["git", "rev-parse", "HEAD"]) == MANIFEST["base"]
+output(["git", "read-tree", "HEAD"])
 assert output(["git", "status", "--porcelain", "--untracked-files=all"]) == ""
 archive = download("https://github.com/tree-sitter/tree-sitter/releases/download/v0.27.1/tree-sitter-linux-x64.gz",
                    "d01042f94ba3d6827ddc9788e235f75d8366431be42bdf90ade534d960c98b7d", "tree-sitter.gz")
