@@ -1,0 +1,128 @@
+{
+  "schema": 1,
+  "scope": "Sloplint PR137 PowerShell review follow-up",
+  "state": "published",
+  "publication": {
+    "head": "61c88ec4d492dd1ab72f76b15b84fa9434cccfaa",
+    "tree": "589aff2ec97f6e6f8179453ff6882fe19b3b65b2",
+    "parent": "ff5d3cea76549cba1fa5fc47cf568162bea9ee3f",
+    "branch": "fix/powershell-review-boundaries-20261126",
+    "published_at": "2026-11-26T17:01:31.947Z"
+  },
+  "candidate": {
+    "head": "31bbd8486f485f20c93ab1511d039744339ec670",
+    "tree": "589aff2ec97f6e6f8179453ff6882fe19b3b65b2",
+    "branch": "ci/powershell-candidate-20261126-r15",
+    "parent": "95f8d650552bd31fd5f5737bd9e457fec8ef8a55"
+  },
+  "baseline": {
+    "producer": "b90577eedc1cb57f37a28044b77f94dee2a20a81",
+    "run": 45857207108,
+    "job": 140038590707,
+    "artifact": 15137305159,
+    "digest": "caf3a3d1b29ae7418ecad9fe1d5911ef9e9c7c81dbf24440b9714ff5ebaa62ac",
+    "native_grammar_cases": 27,
+    "native_literal_cases": 38,
+    "expected_rust_exit": 101,
+    "failing_regressions": 4,
+    "other_literal_tests_passed": 29
+  },
+  "rejected_candidate": {
+    "producer": "5dc8f838df72283e5a39fc5ca86ac6b2480b702b",
+    "run": 45857777224,
+    "job": 140040566051,
+    "tree": "62b2f06af29344b69f946b8427758313fb8eeb89",
+    "reason": "Three native Unicode whitespace controls failed because the internal grammar still treated the characters as word text."
+  },
+  "x64": {
+    "producer": "68278709f5020fd77dbb172e0823a04d82099f36",
+    "run": 45858799234,
+    "job": 140044075798,
+    "tree": "1b8c7820f29387ed08b2932bbf25faaa0ce5fe5b",
+    "artifact": 15137082378,
+    "digest": "d9a9a5aeaef19ffe2f36aa451b05944039b5fd3ddd6f2997be68c66aac5060cc",
+    "native_grammar_cases": 178,
+    "native_literal_cases": 39,
+    "passed": [
+      "scanner syntax",
+      "fresh generation",
+      "native grammar and runtime oracles",
+      "all frozen parser cases",
+      "grammar corpus",
+      "authoritative upstream patch verification",
+      "grammar manifest",
+      "fmt",
+      "PowerShell regressions",
+      "old CLI RED101",
+      "current CLI GREEN0",
+      "full Clippy",
+      "full workspace",
+      "release",
+      "self-lint"
+    ],
+    "aggregate_conclusion": "failure",
+    "reason": "Only final whitespace check failed: single-space blank context prefixes in generated patch.",
+    "patch_only_correction": {
+      "old_sha256": "c36dc9cf2c4da3bee0328335a4195433b5c153be50e4fa3c397aede55e6b820d",
+      "new_sha256": "f7eb65fb4164e6e0ef75adbd89dde3560c781a3ec1b3c666e13812f923f70630",
+      "blank_context_lines": 75,
+      "scope": "Only unified diff blank context prefixes. All grammar, scanner, parser, crate and fixture bytes are unchanged from the successful x64 source gates."
+    }
+  },
+  "final": {
+    "producer": "46305bd1437b1e8c6251612b0968756e4f9b99a7",
+    "run": 45862209359,
+    "source": "31bbd8486f485f20c93ab1511d039744339ec670",
+    "tree": "589aff2ec97f6e6f8179453ff6882fe19b3b65b2",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 140055844833,
+        "runner": "depot-ubuntu-24.04-4",
+        "artifact": 15139420138,
+        "digest": "2927bb4e74e5f1c6b1c9232ab673f0e2b986ae1a637454fb9cba9b8023ec0436",
+        "passed": [
+          "fmt",
+          "grammar manifest",
+          "66 release script controls",
+          "cargo-deny",
+          "authoritative patch reapplication",
+          "fresh generation",
+          "269 corpus parses",
+          "whitespace",
+          "all 4897 tracked blobs before and after"
+        ]
+      },
+      {
+        "id": 140055845349,
+        "runner": "depot-ubuntu-24.04-arm-8",
+        "artifact": 15139386059,
+        "digest": "753f72eeb21fb2694d098df2dccf4199307b286984530d1b42e0d54e9e74d246",
+        "passed": [
+          "native ARM64 identity",
+          "full Clippy",
+          "full workspace no-fail-fast",
+          "release build",
+          "all 4897 tracked blobs before and after"
+        ]
+      }
+    ],
+    "checkpoint": "https://github.com/gosuda/sloplint/blob/abe97cb10fc1f9fbc0cab87832ba645d8d4a3bf3/ci-tools/sloplint-native-r15/checkpoint.json",
+    "probe_retired": "abe97cb10fc1f9fbc0cab87832ba645d8d4a3bf3"
+  },
+  "external_drift": {
+    "commit": "ff5d3cea76549cba1fa5fc47cf568162bea9ee3f",
+    "changes": "Only collapses an if-let in the duplicate inline scanner. The verified replacement removes that duplicate and passes full Clippy. Publication preserves ff5 as parent and exactly reuses the verified tree."
+  },
+  "resolved_threads": [
+    "PRRT_kwDOVOMFM868denq",
+    "PRRT_kwDOVOMFM868dep6",
+    "PRRT_kwDOVOMFM868desh",
+    "PRRT_kwDOVOMFM868deuo",
+    "PRRT_kwDOVOMFM868dewa",
+    "PRRT_kwDOVOMFM868deyK"
+  ],
+  "publication_limits": "No merge, auto-merge, force push or amend. Ordinary PR CI and future review are separate from the immutable native source proof.",
+  "retirement": "This commit removes the owned powershell-round14 workflow and verification inputs; immutable historical inputs and final source remain reachable.",
+  "updated_at": "2026-11-26T17:04:30.702Z"
+}
