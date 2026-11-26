@@ -1,6 +1,6 @@
 # Gosuda CI and PR reconciliation
 
-Observed through 2026-11-26T21:18:48.387Z. This is a finite snapshot, not an atomic organization-wide transaction.
+Observed through 2026-11-26T21:51:58.282Z. This is a finite snapshot, not an atomic organization-wide transaction.
 
 ## Runner result
 
@@ -48,11 +48,13 @@ These are changes to repository-controlled workflows. No billing saving or unive
 
 Each completed repair has an immutable checkpoint linking its source tree, native run and probe retirement. Earlier failed or expected-failure controls remain in that evidence; they are not presented as passing full runs.
 
-## Published repair with later findings
+## Verified publications with later findings
 
-[gosuda/sloplint #137](https://github.com/gosuda/sloplint/pull/137) is published at [`57adc9fff126`](https://github.com/gosuda/sloplint/commit/57adc9fff126a9826e0fb0be921c28e6cdb08391). Its [native verification](https://github.com/gosuda/sloplint/actions/runs/45893490495) completed successfully for source tree `f518b3943c6b86af53c334175309303c3d79f38b`. The [ordinary PR workflow](https://github.com/gosuda/sloplint/actions/runs/45895428017) is success.
+[gosuda/sloplint #137](https://github.com/gosuda/sloplint/pull/137) has a verified publication at [`57adc9fff126`](https://github.com/gosuda/sloplint/commit/57adc9fff126a9826e0fb0be921c28e6cdb08391). Its [native verification](https://github.com/gosuda/sloplint/actions/runs/45893490495) passed for source tree `f518b3943c6b86af53c334175309303c3d79f38b`, and its [ordinary PR workflow](https://github.com/gosuda/sloplint/actions/runs/45895428017) completed success.
 
-2 later source findings remain open. The separate verification-tree question was resolved by matching the published commit, native candidate and ordinary-CI merge tree. The [immutable checkpoint](https://github.com/gosuda/sloplint/blob/a10db6900c5ed16b4be9530ca240d2624b1c98b5/ci-tools/powershell-context-boundaries-r22/checkpoint.json) preserves the passing gates, failed experiments, baseline controls and retired verification workflow.
+2 later findings remain open. The source-identity analysis thread is resolved. Two source findings are assigned to the r23 owner; the native baseline is complete and a bounded grammar experiment is being prepared.
+
+The [immutable checkpoint](https://github.com/gosuda/sloplint/blob/03a275c9b8b72820d5bcb0925e43da127d0e25b9/ci-tools/powershell-context-boundaries-r22/checkpoint.json) records the exact verified source, native results and temporary-workflow retirement.
 
 ## Remaining review and conflict work
 
