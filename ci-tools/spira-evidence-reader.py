@@ -7,7 +7,7 @@ import zipfile
 from pathlib import Path
 
 ARTIFACTS = (
-    (15107752648, "81f354c0a85e48b8dccd45220230c84d97d04fc00ebe22789b9910cf17ff232d"),
+    (15109530924, "5e49c7007da0b2f7a8a4dec7ac29429a433f78153dc45bc303490921c557b7b6"),
 )
 
 def main() -> None:
