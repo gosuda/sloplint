@@ -50,6 +50,13 @@ headers (`NSObjCRuntime.h`, `NSAvailability.h`), not the preprocessor output.
   `NODE_PATH=<repo>/vendor tree-sitter test`.
 - It rewrites `src/parser.c`, `src/grammar.json`, `src/node-types.json` and
   `src/tree_sitter/*.h`. There is no `src/scanner.c`.
+- 2026-11-26 refresh: regenerated against the current patched C base after
+  lane #94 carried the upstream tree-sitter-c PR #331/#329 shapes into
+  `vendor/tree-sitter-c` (optional case-range `end`, inline enum underlying
+  types, `[sized_type_specifier, enum_specifier]` conflict). Only
+  `src/grammar.json` changed; `src/parser.c` and `src/node-types.json` are
+  byte-identical, so parsing behavior is unchanged. `tree-sitter test`
+  109/109 before and after; `grammars.sh verify tree-sitter-objc` passes.
 - Regenerating the unpatched grammar with 0.27.1 moves the parser from ABI 14
   to ABI 15 with no rule and no node-kind change (454 kinds before and after).
 - `test/corpus/sloplint_*.txt` holds 33 new guard cases (upstream corpus
