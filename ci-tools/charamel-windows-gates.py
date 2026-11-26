@@ -88,9 +88,12 @@ def windows_policy() -> dict[str, object]:
     suffix = ["-File", str(sentinel), "-Melt", marker]
     red, red_output = run("restricted-original-launcher", old_command + suffix, restricted)
     green, green_output = run("restricted-candidate-launcher", new_command + suffix, restricted)
+    diagnostic = " ".join(red_output.split())
     reproduced = (
-        red != 0 and "LAUNCH_SENTINEL:" not in red_output
-        and ("PSSecurityException" in red_output or "scripts is disabled" in red_output)
+        red == 1 and "LAUNCH_SENTINEL:" not in red_output
+        and "running scripts is disabled" in diagnostic
+        and "SecurityError:" in diagnostic
+        and "FullyQualifiedErrorId : UnauthorizedAccess" in diagnostic
     )
     executed = green == 0 and f"LAUNCH_SENTINEL:{marker}" in green_output
     emitted = next(

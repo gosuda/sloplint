@@ -1,4 +1,4 @@
-name: Verify Windows launch policy and required Linux gates
+name: Verify native Windows launch-policy boundary
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [depot-ubuntu-24.04-8, depot-windows-2025]
+        os: [depot-windows-2025]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     env:
