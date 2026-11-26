@@ -2,20 +2,20 @@
   "repo": "gosuda/sloplint",
   "head": "a348ebf00e3de3d28311d05d8ce338405a98c5b3",
   "base": "d0ac6b35a4ac4e81ec04e7ac9edbf37cb09bd2ad",
-  "tree": "2251d488696c949333af73b80e8cad9b6f198e71",
-  "patch_sha256": "b567c9914079fc392043b4ce10426814fc026dfd131252872b28e062f59e89f6",
+  "tree": "0b2ef6af1cb7a914e32602143fd0a694d6120785",
+  "patch_sha256": "507b564a94869375bdad302bd8ca9af72d700e0cb9ebcb9f521595a0451deaa3",
   "files": {
     "crates/sloplint-core/src/text.rs": "4c0c02bd851771d1e8c808b3cd14a2a37415ce9011257ebf11c0685a1514aff7",
     "crates/sloplint-syntax/src/lang/powershell/calls.rs": "c452b251a7ec569e9dee88849d60d9443222d11d73e5d430aa6e1741995ad67d",
-    "vendor/tree-sitter-powershell/src/scanner.c": "db9ee62bdac73d24254c57ca4e1934514b2599367594b7744635a95c3b8a9908",
-    "crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs": "9441f9b58eeddc9fc8f87a0963414a4cbc5663fdb422ef701a2e1370ffc76290",
+    "vendor/tree-sitter-powershell/src/scanner.c": "ec893f34b6495189dd9e21f8803c2052ae52ca0460e68844f38b9e5e8c3e84e9",
+    "crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs": "5cbc7573910b41f1b096de16a71c8b4f42b2571329c210e0f550d08bb083ed6c",
     "crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/b.ps1": "d2cae182631a6f4c0aaf48d05360e24d7038a70eee4d2a97b857b38c2d7386aa",
     "crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/c.ps1": "b3ee729dd6bf75ad47e08116835d40da4a09fa477796e6f7fc39b54ff36c13a0",
     "crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/e.ps1": "88eab25b8b7a45cb8e68b5173a2c1ace7c89a92cd9440d35bc4f436777e7e07a",
     "crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/f.ps1": "a075efa049ceb165a8d63fbe259fbe3098ffb157ddc7112e11fd507384c634c4",
     "crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/expected.txt": "62c78becd1b1915486b72024b9a4f710ed99f9463ff6f6c4f7e1ac19e3b261d7",
     "crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-miss__powershell/expected.txt": "5b5ba3b1b009408314bbcbd3cd202f456aa51bf7e254fdfd56d76f02664bcd90",
-    "vendor/tree-sitter-powershell/sloplint-grammar.patch": "f8bfa082e486dc5b9f58cdcb8242f3642dc4730d483d2038e04f7a68a68ff641",
-    "vendor/tree-sitter-powershell/SLOPLINT.md": "a788f90cbd59f43bcef7c6c3ff7124f966947eec6e4a66b54d1f1f57a3fc6aa8"
+    "vendor/tree-sitter-powershell/sloplint-grammar.patch": "41756e991edae4a88a2982a4d5ac3e974fd2c24f2519bb3db89745b08ce5dde5",
+    "vendor/tree-sitter-powershell/SLOPLINT.md": "67554c8ae5eae5386fd4b3e447d76e44bd8b85f0bc5a82484c5481e7661b0994"
   }
 }

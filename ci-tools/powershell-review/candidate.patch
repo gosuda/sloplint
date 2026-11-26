@@ -1000,7 +1000,7 @@ diff --git a/crates/sloplint-syntax/src/lang/powershell/calls.rs b/crates/slopli
 diff --git a/vendor/tree-sitter-powershell/src/scanner.c b/vendor/tree-sitter-powershell/src/scanner.c
 --- a/vendor/tree-sitter-powershell/src/scanner.c
 +++ b/vendor/tree-sitter-powershell/src/scanner.c
-@@ -54,126 +54,167 @@
+@@ -54,126 +54,130 @@
          lexer->mark_end(lexer);
  
          bool saw_newline = false;
@@ -1247,51 +1247,14 @@ diff --git a/vendor/tree-sitter-powershell/src/scanner.c b/vendor/tree-sitter-po
 +    lexer->advance(lexer, false);
 +    int32_t next = lexer->lookahead;
 +    if (next == '{' || next == '(') return false;
-+    if (next == '
-+    if (iswalnum(next) || next == '_') return false;
-+    lexer->mark_end(lexer);
-+    lexer->result_symbol = LOOSE_DOLLAR;
-+    return true;
-+}
-+
-+bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols)
-+{
-+    if (valid_symbols[METHOD_BLOCK_HEAD] &&
-+        (lexer->lookahead == '.' || lexer->lookahead == ':')) {
-+        return scan_method_block_head(lexer);
-+    }
-+    if (scan_loose_dollar(payload, lexer, valid_symbols)) return true;
-+    // The statement terminator consumes nothing, so it must be tried last: when
-+    // both are valid, a `--` has to win over the empty terminator.
-+    if (scan_bare_dashes(payload, lexer, valid_symbols)) return true;
-+    return scan_statement_terminator(payload, lexer, valid_symbols);
-+}
-+
-+void *tree_sitter_powershell_external_scanner_create()
-+{
-+    return NULL;
-+}
-+
-+void tree_sitter_powershell_external_scanner_destroy(void *p)
-+{
-+}
-+
-+unsigned tree_sitter_powershell_external_scanner_serialize(void *payload, char *buffer)
-+{
-+    return 0;
-+}
-+
-+void tree_sitter_powershell_external_scanner_deserialize(void *payload, const char *buffer, unsigned length)
-+{
-+}
-+ || next == '^' || next == '?') return false;
++    if (next == '$' || next == '^' || next == '?') return false;
      if (iswalnum(next) || next == '_') return false;
      lexer->mark_end(lexer);
      lexer->result_symbol = LOOSE_DOLLAR;
 diff --git a/crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs b/crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs
 --- a/crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs
 +++ b/crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs
-@@ -1,115 +1,163 @@
+@@ -1,115 +1,169 @@
  //! Argument boundaries retain protected text and validate interpolation.
  
 -use super::powershell::{call, run, run_clean};
@@ -1545,7 +1508,9 @@ diff --git a/crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs b/cra
 +            let source = format!("Get-Date{ending}{space}{ending}| Write-Output{ending}");
 +            assert!(run(&source).parse_error.is_some(), "{source:?}");
 +        }
-+        run_clean(&format!("if ($true) {{ 1 }}{ending}{ending}else {{ 2 }}{ending}"));
++        run_clean(&format!(
++            "if ($true) {{ 1 }}{ending}{ending}else {{ 2 }}{ending}"
++        ));
 +    }
 +}
 +
@@ -1563,7 +1528,11 @@ diff --git a/crates/sloplint-syntax/tests/grammar_gaps/powershell_words.rs b/cra
 +        let ArgShape::Concat { longest_static } = arguments[0].shape else {
 +            panic!("expected an interpolated path: {source}");
 +        };
-+        assert_eq!(longest_static >= 8, searchable, "{source}: {longest_static}");
++        assert_eq!(
++            longest_static >= 8,
++            searchable,
++            "{source}: {longest_static}"
++        );
      }
  }
 diff --git a/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/expected.txt b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/expected.txt
@@ -1584,7 +1553,7 @@ diff --git a/crates/sloplint/tests/fixtures/grep/contiguous-log-literal-near-mis
 diff --git a/vendor/tree-sitter-powershell/sloplint-grammar.patch b/vendor/tree-sitter-powershell/sloplint-grammar.patch
 --- a/vendor/tree-sitter-powershell/sloplint-grammar.patch
 +++ b/vendor/tree-sitter-powershell/sloplint-grammar.patch
-@@ -774,153 +774,312 @@
+@@ -774,153 +774,275 @@
  
       attribute_name: ($) => $.type_spec,
  diff --git a/src/scanner.c b/src/scanner.c
@@ -1737,7 +1706,7 @@ diff --git a/vendor/tree-sitter-powershell/sloplint-grammar.patch b/vendor/tree-
 -+    }
 +--- a/src/scanner.c
 ++++ b/src/scanner.c
-+@@ -6,84 +6,228 @@
++@@ -6,84 +6,191 @@
 + 
 + enum TOKEN_TYPE {
 +     STATEMENT_TERMINATOR,
@@ -1990,44 +1959,7 @@ diff --git a/vendor/tree-sitter-powershell/sloplint-grammar.patch b/vendor/tree-
 ++    lexer->advance(lexer, false);
 ++    int32_t next = lexer->lookahead;
 ++    if (next == '{' || next == '(') return false;
-++    if (next == '
-++    if (iswalnum(next) || next == '_') return false;
-++    lexer->mark_end(lexer);
-++    lexer->result_symbol = LOOSE_DOLLAR;
-++    return true;
-++}
-++
-++bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols)
-++{
-++    if (valid_symbols[METHOD_BLOCK_HEAD] &&
-++        (lexer->lookahead == '.' || lexer->lookahead == ':')) {
-++        return scan_method_block_head(lexer);
-++    }
-++    if (scan_loose_dollar(payload, lexer, valid_symbols)) return true;
-++    // The statement terminator consumes nothing, so it must be tried last: when
-++    // both are valid, a `--` has to win over the empty terminator.
-++    if (scan_bare_dashes(payload, lexer, valid_symbols)) return true;
-++    return scan_statement_terminator(payload, lexer, valid_symbols);
-++}
-++
-++void *tree_sitter_powershell_external_scanner_create()
-++{
-++    return NULL;
-++}
-++
-++void tree_sitter_powershell_external_scanner_destroy(void *p)
-++{
-++}
-++
-++unsigned tree_sitter_powershell_external_scanner_serialize(void *payload, char *buffer)
-++{
-++    return 0;
-++}
-++
-++void tree_sitter_powershell_external_scanner_deserialize(void *payload, const char *buffer, unsigned length)
-++{
-++}
-++ || next == '^' || next == '?') return false;
+++    if (next == '$' || next == '^' || next == '?') return false;
 ++    if (iswalnum(next) || next == '_') return false;
 ++    lexer->mark_end(lexer);
 ++    lexer->result_symbol = LOOSE_DOLLAR;
@@ -2122,7 +2054,7 @@ diff --git a/vendor/tree-sitter-powershell/SLOPLINT.md b/vendor/tree-sitter-powe
 +| Case-insensitive numbers, cast operands, type names and generic ranks, bitwise and membership operators | No issue or PR identified for these changes |
 +| String text and here-string escapes, statement terminators, method-block scanner | No issue or PR identified for these changes |
 +
-+The current patch has 1,716 lines and 37 diff hunks. It includes the
++The current patch has 1,679 lines and 37 diff hunks. It includes the
  native argument corpus along with the grammar and scanner changes.
  
  ## Round 1 grammar changes
