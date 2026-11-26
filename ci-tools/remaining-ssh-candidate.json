@@ -1,0 +1,87 @@
+{
+  "label": "ssh-chat-1",
+  "repository": "gosuda/ssh-chat",
+  "source_repository": "fatheradvisor/ssh-chat",
+  "number": 1,
+  "head": "1dd8ea93aad5a9a1543db75d05c3609ac0dcdc3e",
+  "branch": "main",
+  "base_ref": "main",
+  "base_sha": "179d41e6e32c79fe2619b1f718d560edb2a8c33a",
+  "tree": "d63f594dbf051a052b6dc9be269da8640d1751c7",
+  "patch": "remaining-ssh-final.patch",
+  "patch_sha256": "d1dce1dcb1162beeeba0250fdb979d166171c1b56bec4771c6e1e9b334ead6dd",
+  "files": [
+    {
+      "path": "Dockerfile",
+      "sha256": "57ea2b444fc53330062565f317e2a8f0739722d53199a10ea39ca3cfed412b19"
+    },
+    {
+      "path": "chat/ban.go",
+      "sha256": "5dffd7cd4d7f33581820636ab58f90487b80f560c91ed4a193c44d65eead9b71"
+    },
+    {
+      "path": "chat/client.go",
+      "sha256": "54c0d331b05e79d5fcec645ab535d3af8cffa72d0d835b5a29e8af74ee30deed"
+    },
+    {
+      "path": "chat/db.go",
+      "sha256": "f1814a87559770496a01b56055a58d908ece442c7c1ecabae7129a762a695657"
+    },
+    {
+      "path": "chat/memory.go",
+      "sha256": "6b2609d663fd011ace3033d8c7af29459a7c7296bd2bf75b3ab2473339ea3711"
+    },
+    {
+      "path": "chat/message_stream_test.go",
+      "sha256": "44dabb523cd381e368e2be1860ca000b25ccb6145b94095a8a5375da4171a883"
+    },
+    {
+      "path": "chat/null.go",
+      "sha256": "fe671c2866b920f28ebe3ea551b1fb1f8972c0b3ae71d73e87a01ca5e515e2f1"
+    },
+    {
+      "path": "chat/server.go",
+      "sha256": "7fcc06818bea33d76447e8a7daa776765bdc63215f9473f3ebd9e1456c2f361a"
+    },
+    {
+      "path": "chat/types.go",
+      "sha256": "37b20bf3a2bbbbb974835ab1004fa0d34ff7d8da87bd536d28606feaa14e0c16"
+    },
+    {
+      "path": "client.go",
+      "sha256": "f6ea19a16c6c45ed3c93e9a7006e126d558ca1d10acdc3982cf5bd9135f1e344"
+    },
+    {
+      "path": "go.mod",
+      "sha256": "726252f84e65960d6e34c91dc19dab2100213d7f1de6ee7c0fa0e916321304aa"
+    },
+    {
+      "path": "go.sum",
+      "sha256": "e6cdb2a0062cddf916b15a426c6cfcec48de64d74501cbfc2255a058a126fc8b"
+    },
+    {
+      "path": "main.go",
+      "sha256": null
+    },
+    {
+      "path": "middleware.go",
+      "sha256": "937c6537904e57f93908e98a7aa74ea6ae9018079504bec2e7c1472e2f5b92a6"
+    },
+    {
+      "path": "middleware_test.go",
+      "sha256": "364c29ce1c1999a841041afae847f0e8acedad373863ac48c17399301a6f462a"
+    },
+    {
+      "path": "on-premise/systemd-units/ssh-chat.service",
+      "sha256": "e482747cf15cb9452517ef9daccde27287d12babe2e85122754663cabec39166"
+    },
+    {
+      "path": "types/ban.go",
+      "sha256": "d80cf6795350cd0bfd1ae776d1b3369e8307838be4d435f5ef188aa0a9c15ab7"
+    },
+    {
+      "path": "types/connlimit.go",
+      "sha256": "6ec7a256c449c99557c95b9687af81152a4f0e28fd49731b00da5ef39e13f94d"
+    }
+  ]
+}
