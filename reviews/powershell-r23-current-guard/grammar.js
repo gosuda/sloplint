@@ -989,9 +989,8 @@ export default grammar({
       prec.right(
         choice(
           $.command_parameter,
-          // A separator must belong to this command argument before the
-          // comment guard can select its parameter or dash-format word.
-          // Redirections cannot finish an empty target through this path.
+          // Keep the separator and its comment guard in one command argument.
+          // Comments remain extras before the existing parameter and word rules.
           seq(
             $.command_argument_sep,
             $._commented_argument,

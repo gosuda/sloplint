@@ -1,11 +1,11 @@
 {
   "base": "e7ee97e84246863766ec7465777a035134533feb",
   "base_tree": "5d2a547a693d073ad9739311e7b653baa96a08d6",
-  "status": "Authored diagnostic proposal only; native baseline and candidate gates pending.",
+  "status": "Frozen final authored proposal. Native unchanged-source baselines completed; candidate experiment and full publication gates have not run.",
   "scope": "Replace unconditional comment command element with a zero-width context guard after a separator consumed by that same command argument. Preserve the externally authored format-mark token and all global extras/separator rules.",
   "files": {
-    "grammar_sha256": "ce73c3d494db81f5e873c2234abb63c90bf0e65b5d969c767c353651ca214a48",
-    "scanner_sha256": "6c29f1be37ed4fd2cc0b03016404a9acc3510749106357f764d7a156c0140065"
+    "grammar_sha256": "3432baacb8c4fbb7d29ac02bd3b8580988f85b1cbe795795154f90cbe3095d4d",
+    "scanner_sha256": "6dac1b1103c9364eb540b5a07eb8c89ccfe53f7c5623409321413b451ac10213"
   },
   "hypotheses": [
     {
@@ -46,5 +46,32 @@
     "---9"
   ],
   "guard_baseline_run": 45907682159,
-  "reconciliation_run": 45908737910
+  "reconciliation_run": 45908737910,
+  "delta_from_c17adc63": "Only two explanatory grammar comments replace the unverified universal redirect claim. Scanner preserves an already complete parameter prefix when the following character is a backtick: if (!named && c == '`'). No grammar structure or other scanner behavior changed.",
+  "native_reconciliation": {
+    "producer": "8e21f8343fb84954514d274a65d46932b80f7b90",
+    "run": 45908737910,
+    "job": 140211698514,
+    "artifact": 15158893506,
+    "zip_sha256": "47566cdd96fd146d7209a8ee2897ec6962e2d859e76b795e2fa6a60bf90c9730",
+    "payload_sha256": "5317d091919632510e93ce933e98ea6a0fe5514b3a213d1d7fcb25b1309dbeeb",
+    "gzip_sha256": "6c4f227856e93d3f01e47b72e8a10dc896677693f4434f82096d690d681eed2f",
+    "payload_bytes": 6859705,
+    "gzip_bytes": 355067,
+    "base64_bytes": 473424,
+    "formatted_observer_sha256": "2151f94ae80983f087bbde46e4c6b1749a522487d541289e018b3b70fd63458b"
+  },
+  "prefix_control": {
+    "producer": "d143bde157a369c2aaaffc6fe5f38938d04e814f",
+    "run": 45910252434,
+    "job": 140216620412,
+    "artifact": 15159249262,
+    "zip_sha256": "597ef3c89aeedc4cd9963bb68ac12ff9cc94cb2d004a03ac62aef1be707b773d",
+    "payload_sha256": "f614b5ad2c7701e64bd58fd5d5d3f596eb809a87a2acb95cc264bf979ae08262",
+    "gzip_sha256": "2edcb37454b968016c6310a254afbf172710d08422decbfbe4e094603eea70b5",
+    "payload_bytes": 8494,
+    "gzip_bytes": 2237,
+    "base64_bytes": 2984
+  },
+  "existing_limit": "Native attached CRLF produces two commands; original83f, previous57adc and currente7ee parsers join them. This proposal only preserves historical comment ownership in that control."
 }

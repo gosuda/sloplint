@@ -87,7 +87,7 @@ static bool scan_commented_argument(TSLexer *lexer)
     // Bare '-' and '--' remain owned by their existing external token.
     bool named = dashes >= 3 || (dashes >= 2 && c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
         c == '_' || c == '?' || c == 0x200B || c == 0xFEFF || c == 0x2060;
-    if (c == '`') {
+    if (!named && c == '`') {
         skip(lexer);
         c = lexer->lookahead;
         named = c != 0 && c != '\r' && c != '\n';
