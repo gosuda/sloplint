@@ -114,8 +114,10 @@ Date: 2026-11-24.
   comments, raw string literals with matched `#` counts, and the
   layout-sensitive `_indent`, `_dedent`, `_newline` tokens that delimit
   tactic and do-block bodies, extended with `mark_end`-guarded word
-  peeks, replay-free multi-level dedents, and widened identifier
-  characters (see the grammar patch). The indentation stack is the
+  peeks, replay-free multi-level dedents, widened identifier
+  characters, and token-end marks on completed block comments and raw
+  strings so a same-line token after `by` keeps its full span
+  (see the grammar patch). The indentation stack is the
   complete serialized scanner state.
 - `tree-sitter test` builds the plain `src/parser.c` (see "Corpus
   results"). After a fresh clone, first inflate the
