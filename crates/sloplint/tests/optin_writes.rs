@@ -362,6 +362,31 @@ fn ratchet_cli_runs_are_stable() {
 }
 
 #[test]
+fn default_agent_output_is_stable_for_threshold_and_ratchet_runs() {
+    let (_tmp, root) = tempdir();
+    seed(&root);
+    set_baseline(&root, BASELINE);
+    let recorded = cli(&root, &["baseline", "--no-cache"]);
+    assert!(recorded.status.success(), "{}", text(&recorded.stderr));
+    for mode in ["threshold", "ratchet"] {
+        let args = ["check", "--no-cache", "--mode", mode];
+        let first = cli(&root, &args);
+        let second = cli(&root, &args);
+        for output in [&first, &second] {
+            assert!(output.status.success(), "{}", text(&output.stderr));
+            assert!(
+                text(&output.stdout)
+                    .lines()
+                    .any(|line| line.starts_with("summary: strictness=standard files=1 ")),
+                "default output must contain a completed agent summary: {}",
+                text(&output.stdout)
+            );
+        }
+        assert_eq!(first.stdout, second.stdout, "default output in {mode} mode");
+    }
+}
+
+#[test]
 fn help_states_the_publication_contract() {
     let (_tmp, root) = tempdir();
     for (args, needles) in [
