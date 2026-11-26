@@ -573,3 +573,261 @@ index 051cafe9..8ef4ca6b 100644
      }
  
      /**
+diff --git a/test/corpus/modules.txt b/test/corpus/modules.txt
+--- a/test/corpus/modules.txt
++++ b/test/corpus/modules.txt
+@@ -111,8 +111,10 @@
+ =============|||
+-Blank File Parse Error
+-:error
++Blank file parses clean
+ =============|||
++
+ -------------|||
+ 
++(source_file)
++
+ =============|||
+ Missing Module Terminator
+diff --git a/test/corpus/pluscal/sloplint_fifo_decls.txt b/test/corpus/pluscal/sloplint_fifo_decls.txt
+new file mode 100644
+--- /dev/null
++++ b/test/corpus/pluscal/sloplint_fifo_decls.txt
+@@ -0,0 +1,237 @@
++==================|||
++PlusCal P-Syntax Fifo Declarations
++==================|||
++---- MODULE Test ----
++(* --algorithm Test
++fifos ch1, ch2;
++begin
++  skip
++end algorithm; *)
++====
++-------------|||
++
++(source_file
++  (module
++    (header_line)
++    (identifier)
++    (header_line)
++    (block_comment
++      (pcal_algorithm
++        (pcal_algorithm_start)
++        (identifier)
++        (pcal_fifo_decls
++          (identifier)
++          (identifier))
++        (pcal_algorithm_body
++          (pcal_skip)))
++      (block_comment_text))
++    (double_line)))
++
++==================|||
++PlusCal C-Syntax Channels And Recursive Define
++==================|||
++---- MODULE Test ----
++(* --algorithm Test {
++  channels ch;
++  define {
++    RECURSIVE Fact(_)
++    Fact(n) == IF n = 0 THEN 1 ELSE n * Fact(n-1)
++  }
++  { skip }
++} *)
++====
++-------------|||
++
++(source_file
++  (module
++    (header_line)
++    (identifier)
++    (header_line)
++    (block_comment
++      (pcal_algorithm
++        (pcal_algorithm_start)
++        (identifier)
++        (pcal_fifo_decls
++          (identifier))
++        (pcal_definitions
++          (recursive_declaration
++            (operator_declaration
++              (identifier)
++              (placeholder)))
++          (operator_definition
++            (identifier)
++            (identifier)
++            (def_eq)
++            (if_then_else
++              (bound_infix_op
++                (identifier_ref)
++                (eq)
++                (nat_number))
++              (nat_number)
++              (bound_infix_op
++                (identifier_ref)
++                (mul)
++                (bound_op
++                  (identifier_ref)
++                  (bound_infix_op
++                    (identifier_ref)
++                    (minus)
++                    (nat_number)))))))
++        (pcal_algorithm_body
++          (pcal_skip))))
++    (double_line)))
++
++==================|||
++PlusCal P-Syntax Vars Fifos And Recursive Define
++==================|||
++---- MODULE Test ----
++(* --algorithm Test
++variables x = 0
++fifo q;
++define
++  RECURSIVE Sum(_)
++  Sum(n) == IF n = 0 THEN 0 ELSE n + Sum(n-1)
++end define;
++begin
++  x := Sum(3)
++end algorithm; *)
++====
++-------------|||
++
++(source_file
++  (module
++    (header_line)
++    (identifier)
++    (header_line)
++    (block_comment
++      (pcal_algorithm
++        (pcal_algorithm_start)
++        (identifier)
++        (pcal_var_decls
++          (pcal_var_decl
++            (identifier)
++            (nat_number)))
++        (pcal_fifo_decls
++          (identifier))
++        (pcal_definitions
++          (recursive_declaration
++            (operator_declaration
++              (identifier)
++              (placeholder)))
++          (operator_definition
++            (identifier)
++            (identifier)
++            (def_eq)
++            (if_then_else
++              (bound_infix_op
++                (identifier_ref)
++                (eq)
++                (nat_number))
++              (nat_number)
++              (bound_infix_op
++                (identifier_ref)
++                (plus)
++                (bound_op
++                  (identifier_ref)
++                  (bound_infix_op
++                    (identifier_ref)
++                    (minus)
++                    (nat_number)))))))
++        (pcal_algorithm_body
++          (pcal_assign
++            (pcal_lhs
++              (identifier_ref))
++            (assign)
++            (bound_op
++              (identifier_ref)
++              (nat_number)))))
++      (block_comment_text))
++    (double_line)))
++
++==================|||
++fifo/channel keywords still name variables; indexed fifo domains
++==================|||
++
++---- MODULE M ----
++(*
++--algorithm A
++variables x = 0; channel = 1; fifo = 2;
++fifos ch[Agents], q1, q2;
++begin
++  x := ch
++end algorithm;
++*)
++====
++-------------|||
++
++(source_file
++  (module
++    (header_line)
++    (identifier)
++    (header_line)
++    (block_comment
++      (pcal_algorithm
++        (pcal_algorithm_start)
++        (identifier)
++        (pcal_var_decls
++          (pcal_var_decl
++            (identifier)
++            (nat_number))
++          (pcal_var_decl
++            (identifier)
++            (nat_number))
++          (pcal_var_decl
++            (identifier)
++            (nat_number)))
++        (pcal_fifo_decls
++          (identifier)
++          (identifier_ref)
++          (identifier)
++          (identifier))
++        (pcal_algorithm_body
++          (pcal_assign
++            (pcal_lhs
++              (identifier_ref))
++            (assign)
++            (identifier_ref))))
++      (block_comment_text))
++    (double_line)))
++
++
++==================|||
++C-syntax channel and indexed fifo declarations
++==================|||
++
++---- MODULE M ----
++(*
++--algorithm C {
++  variables x = 0;
++  channel ch;
++  fifo fq[Procs];
++  { skip }
++}*)
++====
++-------------|||
++
++(source_file
++  (module
++    (header_line)
++    (identifier)
++    (header_line)
++    (block_comment
++      (pcal_algorithm
++        (pcal_algorithm_start)
++        (identifier)
++        (pcal_var_decls
++          (pcal_var_decl
++            (identifier)
++            (nat_number)))
++        (pcal_fifo_decls
++          (identifier))
++        (pcal_fifo_decls
++          (identifier)
++          (identifier_ref))
++        (pcal_algorithm_body
++          (pcal_skip))))
++    (double_line)))
++
