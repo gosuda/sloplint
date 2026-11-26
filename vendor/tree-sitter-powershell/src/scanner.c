@@ -69,7 +69,11 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool 
             else if (!iswspace(lexer->lookahead)) {
                 // A line break ends the statement, except when the next
                 // line continues an if statement: `}` newline `else {`.
-                if (saw_newline) return !at_else_keyword(lexer);
+                // A leading pipe continues the pipeline: `hello` newline `| Out-String`.
+                if (saw_newline) {
+                    if (lexer->lookahead == '|') return false;
+                    return !at_else_keyword(lexer);
+                }
                 return false;
             }
             skip(lexer);
