@@ -1,0 +1,104 @@
+diff --git a/bin/crush/lib/catalog_cache.ml b/bin/crush/lib/catalog_cache.ml
+index 119546a..d176f82 100644
+--- a/bin/crush/lib/catalog_cache.ml
++++ b/bin/crush/lib/catalog_cache.ml
+@@ -22,8 +22,13 @@ let catalog_json = function
+   | _ -> Error "providers cache must be an object"
+ 
+ let read ~fs_root =
+-  let filename = Path.under ~root:fs_root (path ()) in
+-  Lwt.catch
++  let filename =
++    try Ok (Path.under ~root:fs_root (path ()))
++    with Invalid_argument message -> Error message
++  in
++  match filename with
++  | Error message -> Lwt.return (Error message)
++  | Ok filename -> Lwt.catch
+     (fun () ->
+       Lwt_unix.lstat filename >>= fun stat ->
+       if stat.Unix.st_kind <> Unix.S_REG then
+diff --git a/bin/crush/lib/catalog_cache.mli b/bin/crush/lib/catalog_cache.mli
+index 5d244d5..7920921 100644
+--- a/bin/crush/lib/catalog_cache.mli
++++ b/bin/crush/lib/catalog_cache.mli
+@@ -4,8 +4,8 @@ val path : unit -> string
+ (** [path ()] is the catalog file in the process's XDG cache directory. *)
+ 
+ val read : fs_root:string -> (string, string) result Lwt.t
+-(** [read ~fs_root] reads the regular cache file under [fs_root]. Files larger than
+-    10 MiB and unreadable files return an error. *)
++(** [read ~fs_root] reads the regular cache file under [fs_root]. An unavailable cache
++    directory, files larger than 10 MiB and unreadable files return an error. *)
+ 
+ val load : fs_root:string -> Charamel_fantasy.Provider_info.t list Lwt.t
+ (** [load ~fs_root] returns the decoded cache, or the embedded catalog when the cache
+diff --git a/test/crush/test_cli.ml b/test/crush/test_cli.ml
+index 0f2fd38..1167d0c 100644
+--- a/test/crush/test_cli.ml
++++ b/test/crush/test_cli.ml
+@@ -398,6 +398,36 @@ let trust_hint_controls_are_copy_safe () =
+                ~haystack:diagnostics)))
+     [ "tab\tdir"; "line\ndir\n"; "control\x01dir" ]
+ 
++let trust_without_cache_directory () =
++  let executable =
++    match binary_path () with Some path -> path | None -> Alcotest.skip ()
++  in
++  Test_tools_test_support.with_scratch (fun root ->
++      let config = Filename.concat root "config" in
++      Test_tools_test_support.mkdir_p config;
++      write_private (Filename.concat root "crush.json")
++        {|{"providers":{"openai":{"type":"openai"}}}|};
++      let env =
++        [|
++          "XDG_CONFIG_HOME=" ^ config;
++          "PATH=" ^ Option.value (Sys.getenv_opt "PATH") ~default:"/usr/bin:/bin";
++        |]
++      in
++      let run () =
++        await
++        @@ Test_support.run_cli ~exe:executable ~env ~cwd:root ~timeout:20.
++             [ "trust"; "--cwd"; root ]
++      in
++      let status, output, error = run () in
++      Alcotest.(check int) ("trust succeeds without a cache path: " ^ error) 0 status;
++      Alcotest.(check bool) "provider approval is recorded" true
++        (Test_support.contains ~needle:"Trusted " ~haystack:output);
++      let status, output, error = run () in
++      Alcotest.(check int) ("approved project reloads: " ^ error) 0 status;
++      Alcotest.(check bool) "the saved approval is reused" true
++        (Test_support.contains ~needle:"No project configuration needs trust."
++           ~haystack:output))
++
+ let cases =
+   [
+     Test_tools_test_support.case "dirs uses child environment" `Quick dirs_command;
+@@ -431,4 +461,6 @@ let cases =
+       trust_output_sanitizes_control_chars;
+     Test_tools_test_support.case "trust hints preserve paths without raw controls" `Quick
+       trust_hint_controls_are_copy_safe;
++    Test_tools_test_support.case "trust works without a cache directory" `Quick
++      trust_without_cache_directory;
+   ]
+diff --git a/test/crush/test_config.ml b/test/crush/test_config.ml
+index cc34e65..167e424 100644
+--- a/test/crush/test_config.ml
++++ b/test/crush/test_config.ml
+@@ -572,7 +572,15 @@ let check_refreshed_catalog_model_survives_override () =
+                  candidate.Charamel_fantasy.Model.id
+                  = model.Charamel_fantasy.Model.id)
+                provider.Charamel_fantasy.Provider_info.models)
+-           resolved))
++           resolved);
++      write (xdg ^ "/crush/crush.json")
++        (Fmt.str {|{"models":{"large":{"provider":"openai","model":%S}}}|}
++           existing.Charamel_fantasy.Model.id);
++      Alcotest.(check string)
++        "an embedded model removed by the refresh loses the trust exception"
++        "<none>"
++        (selected_provider (load_or_fail ~env nested).Config.config.Config.models
++           "large"))
+ 
+ let check_missing_catalog_model_drops_home_selection () =
+   with_config_tree (fun ~root ~xdg ~project ~nested ->

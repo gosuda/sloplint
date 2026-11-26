@@ -1,0 +1,94 @@
+diff --git a/bin/crush/lib/shell_screen.ml b/bin/crush/lib/shell_screen.ml
+index 6a2f682..c3d7511 100644
+--- a/bin/crush/lib/shell_screen.ml
++++ b/bin/crush/lib/shell_screen.ml
+@@ -1438,7 +1438,8 @@ and exec_commands sink ~depth program flags args =
+   let switches =
+     if program = "find" then
+       [
+-        "-H"; "-L"; "-P"; "-daystart"; "-follow"; "-warn"; "-nowarn";
++        "-H"; "-L"; "-P"; "-O0"; "-O1"; "-O2"; "-O3";
++        "-daystart"; "-follow"; "-warn"; "-nowarn";
+         "-noleaf"; "-ignore_readdir_race"; "-noignore_readdir_race";
+         "-depth"; "-xdev"; "-mount"; "-print"; "-print0"; "-ls";
+         "-prune"; "-quit"; "-delete"; "-true"; "-false"; "-empty";
+@@ -1449,6 +1450,7 @@ and exec_commands sink ~depth program flags args =
+       [
+         "-H"; "--hidden"; "-I"; "--no-ignore"; "-L"; "--follow";
+         "-s"; "--case-sensitive"; "-i"; "--ignore-case"; "-F"; "--fixed-strings";
++        "-g"; "--glob";
+         "-a"; "--absolute-path"; "-l"; "--list-details"; "-0"; "--print0";
+         "-q"; "--quiet"; "--help"; "--version";
+       ]
+@@ -1477,29 +1479,31 @@ and exec_commands sink ~depth program flags args =
+   in
+   let rec ambiguous = function
+     | [] -> ()
++    | word :: _ when program = "fd" && word.fixed && word.value = "--" -> ()
+     | word :: rest when word.fixed && List.mem word.value flags ->
+         ambiguous (action word.value rest)
+     | _ :: rest -> ambiguous rest
+   in
+-  let rec scan = function
++  let rec scan ~ambiguous_checked = function
+     | [] -> ()
+     | flag :: file :: format :: rest
+       when program = "find" && flag.fixed && flag.value = "-fprintf" ->
+         if not (file.single && format.single) then review sink computed_program;
+-        scan rest
++        scan ~ambiguous_checked rest
+     | flag :: operand :: rest when flag.fixed && List.mem flag.value data_flags ->
+         if not operand.single then review sink computed_program;
+-        scan rest
++        scan ~ambiguous_checked rest
+     | word :: rest when program = "fd" && word.fixed && word.value = "--" ->
+         if List.exists (fun word -> not word.single) rest then
+           review sink computed_program
+     | word :: rest when word.fixed && List.mem word.value flags ->
+-        scan (action word.value rest)
++        scan ~ambiguous_checked (action word.value rest)
+     | word :: rest when word.fixed && is_option word ->
+-        if List.mem word.value switches then scan rest
++        if List.mem word.value switches then scan ~ambiguous_checked rest
+         else (
+           review sink wrapper_syntax;
+-          ambiguous rest)
++          if not ambiguous_checked then ambiguous rest;
++          scan ~ambiguous_checked:true rest)
+     | word :: rest ->
+         let fixed_path_prefix =
+           List.exists
+@@ -1508,9 +1512,9 @@ and exec_commands sink ~depth program flags args =
+         in
+         if (not word.fixed) && not (word.single && fixed_path_prefix) then
+           review sink computed_program;
+-        scan rest
++        scan ~ambiguous_checked rest
+   in
+-  scan args
++  scan ~ambiguous_checked:false args
+ 
+ and shell_code sink ~depth program args =
+   let finish ~command_string =
+diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
+index 774f42c..c6802be 100644
+--- a/test/crush/test_tools_shell.ml
++++ b/test/crush/test_tools_shell.ml
+@@ -401,6 +401,17 @@ let test_wrapper_operands () =
+ let test_find_data_slots () =
+   check_posix_verdicts
+     [
++      ("fd -g README.md", "clear");
++      ("fd --glob README.md", "clear");
++      ("find -O0 . -print", "clear");
++      ("find -O1 . -print", "clear");
++      ("find -O2 . -print", "clear");
++      ("find -O3 . -print", "clear");
++      ("fd --color never -- -x ./links.com", "review");
++      ("fd --future-option -- -X ./links.com", "review");
++      ({|find -O3 . -name -exec -exec ./cu''rl.exe '{}' \;|}, "blocked");
++      ({|find . -future-option -name -exec -exec ./cu''rl.exe '{}' \;|}, "blocked");
++      ({|find . -future-option -fprintf out -exec -execdir ./cu''rl.exe '{}' \;|}, "blocked");
+       ({|find . -name "$pattern" -print|}, "clear");
+       ({|find . -maxdepth "$depth" -mindepth "$minimum" -type "$kind"|}, "clear");
+       ({|find . -maxdepth $depth -type "$kind"|}, "review");
