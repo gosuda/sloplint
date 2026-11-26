@@ -1,111 +1,15 @@
---- a/bin/crush/lib/models.ml
-+++ b/bin/crush/lib/models.ml
-@@ -423,8 +423,11 @@
-       Lwt.catch (fun () -> Lwt_unix.chmod path 0o700) (fun _ -> Lwt.return_unit)
-       >|= fun () -> Ok ()
- 
--let save_catalog ~fs_root ~etag providers =
--  let filename = cache_path fs_root in
-+let cache_destination fs_root =
-+  try Ok (cache_path fs_root)
-+  with Invalid_argument message -> Error (`Io ("providers.json", message))
-+
-+let write_catalog ~filename ~etag providers =
-   let parent = Filename.dirname filename in
-   prepare_dir parent >>= function
-   | Error _ as failure -> Lwt.return failure
-@@ -436,11 +439,19 @@
-           | Ok () -> Ok ()
-           | Error (`Io (path, message)) -> Error (`Io (path, message))))
- 
-+let save_catalog ~fs_root ~etag providers =
-+  match cache_destination fs_root with
-+  | Error error -> Lwt.return (Error error)
-+  | Ok filename -> write_catalog ~filename ~etag providers
-+
- let update_catalog ?source ~fs_root () =
--  cache_etag fs_root >>= fun etag ->
--  Charamel_fantasy.Catalog.fetch ?base_url:source ?etag () >>= function
--  | Error `Not_modified -> Lwt.return (Ok Not_modified)
--  | Error (#Charamel_fantasy.Error.t as error) -> Lwt.return (Error (`Fetch error))
--  | Ok (providers, new_etag) ->
--      save_catalog ~fs_root ~etag:new_etag providers
--      >|= Result.map (fun () -> Updated new_etag)
-+  match cache_destination fs_root with
-+  | Error error -> Lwt.return (Error error)
-+  | Ok filename -> (
-+      cache_etag fs_root >>= fun etag ->
-+      Charamel_fantasy.Catalog.fetch ?base_url:source ?etag () >>= function
-+      | Error `Not_modified -> Lwt.return (Ok Not_modified)
-+      | Error (#Charamel_fantasy.Error.t as error) -> Lwt.return (Error (`Fetch error))
-+      | Ok (providers, new_etag) ->
-+          write_catalog ~filename ~etag:new_etag providers
-+          >|= Result.map (fun () -> Updated new_etag))
+diff --git a/bin/crush/lib/models.mli b/bin/crush/lib/models.mli
+index a9b8eb9..d40571b 100644
 --- a/bin/crush/lib/models.mli
 +++ b/bin/crush/lib/models.mli
-@@ -86,11 +86,11 @@
-   Charamel_fantasy.Provider_info.t list ->
-   (unit, update_error) result Lwt.t
- (** [save_catalog ~fs_root ~etag providers] atomically writes the provider cache in its
--    JSON object shape. *)
-+    JSON object shape. An unavailable cache directory returns [Io]. *)
+@@ -90,7 +90,8 @@ val save_catalog :
  
  val update_catalog :
    ?source:string -> fs_root:string -> unit -> (update_result, update_error) result Lwt.t
--(** [update_catalog ?source ~fs_root ()] refreshes the cache from the catalog endpoint.
--    Existing ETags are sent conditionally. A [304] leaves the cache untouched and returns
--    [Not_modified]. Transport, HTTP, and write failures leave the previous cache
--    untouched. *)
-+(** [update_catalog ?source ~fs_root ()] refreshes the cache from the catalog endpoint. An
-+    unavailable cache directory returns [Io] before any network request. Existing ETags
-+    are sent conditionally. A [304] leaves the cache untouched and returns [Not_modified].
-+    Transport, HTTP, and write failures leave the previous cache untouched. *)
---- a/test/crush/test_cli.ml
-+++ b/test/crush/test_cli.ml
-@@ -315,6 +315,37 @@
-           Alcotest.(check bool)
-             "the refresh is confirmed" true
-             (Test_support.contains ~needle:"Updated provider catalog" ~haystack:output)))
-+
-+let update_providers_without_cache_directory () =
-+  let executable =
-+    match binary_path () with Some path -> path | None -> Alcotest.skip ()
-+  in
-+  Test_tools_test_support.with_scratch (fun root ->
-+      let config = Filename.concat root "config" in
-+      Test_tools_test_support.mkdir_p config;
-+      let env =
-+        [|
-+          "XDG_CONFIG_HOME=" ^ config;
-+          "PATH=" ^ Option.value (Sys.getenv_opt "PATH") ~default:"/usr/bin:/bin";
-+        |]
-+      in
-+      let requests = ref 0 in
-+      Test_tools_test_support.with_http_server ~content_type:"application/json"
-+        ~body:(fun () ->
-+          incr requests;
-+          providers_catalog_body)
-+        (fun port ->
-+          let status, _, error =
-+            await
-+            @@ Test_support.run_cli ~exe:executable ~env ~cwd:root ~timeout:20.
-+                 [ "update-providers"; "--source"; Fmt.str "http://127.0.0.1:%d" port ]
-+          in
-+          Alcotest.(check bool) "refresh refuses an unavailable cache" true (status <> 0);
-+          Alcotest.(check bool)
-+            ("refresh reports the unavailable cache path; stderr: " ^ error) true
-+            (Test_support.contains ~needle:"providers.json:"
-+               ~haystack:error);
-+          Alcotest.(check int) "no download without a cache destination" 0 !requests))
- 
- let trust_hint_names_cwd () =
-   Test_tools_test_support.with_scratch (fun root ->
-@@ -463,6 +494,8 @@
-       update_providers_rejects_the_embedded_source;
-     Test_tools_test_support.case "update-providers refreshes from a fixture" `Quick
-       update_providers_refreshes_from_a_fixture;
-+    Test_tools_test_support.case "update-providers needs a cache directory" `Quick
-+      update_providers_without_cache_directory;
-     Test_tools_test_support.case "trust hint names the run directory" `Quick
-       trust_hint_names_cwd;
-     Test_tools_test_support.case "trust output sanitizes control characters" `Quick
+-(** [update_catalog ?source ~fs_root ()] refreshes the cache from the catalog endpoint. An
+-    unavailable cache directory returns [Io] before any network request. Existing ETags
++(** [update_catalog ?source ~fs_root ()] refreshes the cache from the catalog endpoint. If
++    no cache path can be resolved, it returns [Io] before any network request. Write
++    permissions are checked when the fetched catalog is saved. Existing ETags
+     are sent conditionally. A [304] leaves the cache untouched and returns [Not_modified].
+     Transport, HTTP, and write failures leave the previous cache untouched. *)

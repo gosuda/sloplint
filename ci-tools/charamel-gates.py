@@ -18,8 +18,7 @@ class Candidate:
 
 
 CANDIDATES = (
-    Candidate(20, "7dbfc581cc8743413897bfa6bce45d95e948ae75", "df7e134c2bdc6cc8b734d596ce065ad323fc03e7027b234c7537f1147e099b4b"),
-    Candidate(25, "c7b945965cb20dd29573b1e1a3d184cd067c0445", "4fd499614bfb15f8f843d8ea1ea2771a3cddc70ce013de6dcde7adbb403fa9fe"),
+    Candidate(28, "f831b14a8a6620ee7289541b5ea53ef40e325ba3", "049df3eeb3df4b4a1162117bb91d8505e1397f91cf624a82cf026edbded415fd"),
 )
 BASE = "84e5ff153f781c7e2d02804a5c24997858f618ab"
 WORKSPACE = Path(os.environ["GITHUB_WORKSPACE"])
@@ -142,8 +141,8 @@ def main() -> int:
         results[str(candidate.number)] = check(candidate)
         (EVIDENCE / "results.json").write_text(json.dumps(results, indent=2) + "\n")
     passed = all(all(result[name] == 0 for name in ("format_sources", "fmt", "build", "tests")) for result in results.values())
-    passed = passed and results["20"].get("fd_operands") is True
-    passed = passed and all(results["25"].get(name) is True for name in ("explicit_cancel", "external_cancel", "closed_post_hook", "detached_failure"))
+    required = {"20": ("fd_operands",), "25": ("explicit_cancel", "external_cancel", "closed_post_hook", "detached_failure")}
+    passed = passed and all(all(result.get(name) is True for name in required.get(number, ())) for number, result in results.items())
     return 0 if passed else 1
 
 
