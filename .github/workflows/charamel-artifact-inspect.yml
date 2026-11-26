@@ -1,0 +1,37 @@
+name: Inspect captured Charamel Windows failure
+
+on:
+  push:
+    branches: [ci/charamel-required-gates-20261126-r7]
+    paths: [.github/workflows/charamel-artifact-inspect.yml]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  inspect:
+    runs-on: depot-ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          enable-cache: false
+      - name: Verify and print existing failure artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15105609295/zip -o evidence.zip
+          echo '04ef8dd1d793798233ac99ad15a192747d86fd6d1d6b410e0534d2e20165f888  evidence.zip' | sha256sum --check -
+          uv run --no-project --python 3.13 - <<'PY'
+          import json
+          from zipfile import ZipFile
+          with ZipFile("evidence.zip") as archive:
+              print("ARTIFACT_FILES", json.dumps(archive.namelist()))
+              for name in ("identity.json", "tests.log"):
+                  print(f"BEGIN {name}")
+                  print(archive.read(name).decode("utf-8", errors="replace"))
+                  print(f"END {name}")
+          PY
