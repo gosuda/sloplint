@@ -14,7 +14,11 @@ const PREC = {
 // parameter -p, a colon, and then the word V="$($m.x)".
 const WORD_SQ = /'[^']*'/.source;
 const WORD_DQ = /"([^"`]|`.)*"/.source;
-const WORD_ESC = /`./.source;
+const WORD_ESC = /`[^\r\n]/.source;
+const ARGUMENT_ESC = /`[^\n]/.source;
+const PARAMETER_WORD = /-+/.source +
+  '(' + /[a-zA-Z_?\-]/.source + '|' + WORD_ESC + ')' +
+  '(' + /[a-zA-Z0-9_?\-]/.source + '|' + WORD_ESC + ')*';
 
 /**
  * The repeated tail of a command-line word.
@@ -22,7 +26,7 @@ const WORD_ESC = /`./.source;
  * @param {string} plain regex source of one plain character
  */
 function wordTail(plain) {
-  return '(' + [plain, WORD_SQ, WORD_DQ, WORD_ESC].join('|') + ')*';
+  return '(' + [plain, WORD_SQ, WORD_DQ, ARGUMENT_ESC].join('|') + ')*';
 }
 
 export default grammar({
@@ -32,6 +36,7 @@ export default grammar({
     $._statement_terminator,
     $._bare_dashes,
     $._method_block_head,
+    $._loose_dollar,
   ],
 
   extras: ($) => [
@@ -134,24 +139,24 @@ export default grammar({
         $.verbatim_here_string_characters,
       ),
 
+    _expandable_string_part: ($) =>
+      choice(
+        // sloplint: lexical precedence keeps a text run that starts at
+        // white space or `#` after a variable or an escape ("`n## x",
+        // "$a ## y") from being read as a comment extra.
+        token.immediate(prec(1, /[^\$\"`]+/)),
+        $.variable,
+        $.sub_expression,
+        token.immediate(/\$(`.{1}|`\r?\n|[\s\\])/),
+        token.immediate(/`.{1}|`\r?\n/),
+        token.immediate('""'),
+        $._loose_dollar,
+      ),
+
     expandable_string_literal: ($) =>
       seq(
         /\"(\s*\#*)*/, // this is a trick to avoid tree-sitter allowing comment between tokens, as string should be tokenize but powershell allow subexpression inside it...
-        repeat(
-          choice(
-            // sloplint: lexical precedence keeps a text run that starts at
-            // white space or `#` after a variable or an escape ("`n## x",
-            // "$a ## y") from being read as a comment extra.
-            token.immediate(prec(1, /[^\$\"`]+/)),
-            $.variable,
-            $.sub_expression,
-            token.immediate(/\$(`.{1}|`\r?\n|[\s\\])/),
-            token.immediate(/`.{1}|`\r?\n/),
-            token.immediate('""'),
-            token.immediate('$'),
-          ),
-        ),
-        repeat(token.immediate('$')),
+        repeat($._expandable_string_part),
         token.immediate(/(\s*\#*)*\"/),
       ),
 
@@ -169,7 +174,7 @@ export default grammar({
             token.immediate(/(\r?\n)+[^\"\r\n`]/),
             token.immediate(/(\r?\n)+(`.{1}|`\r?\n)/),
             token.immediate(/(\r?\n)+\"[^@]/),
-            token.immediate('$'),
+            $._loose_dollar,
             token.immediate(/`.{1}|`\r?\n/),
           ),
         ),
@@ -357,63 +362,81 @@ export default grammar({
 
     // Commands
     generic_token: ($) =>
-      token(
-        choice(
-          new RegExp(
-            /[^()$"'\-{}@|\[`&\s]/.source + wordTail(/[^&\s()}|;,"'`]/.source),
-          ),
-          // sloplint: option with an attached value, as in -I=dir,
-          // --go_out=$dir or -buildmode=c-shared. A bare -Name or -Name:
-          // stays a command_parameter. Commas belong to the value, as in
-          // --format=csv,noheader: native commands receive one string
-          // (about_Parsing, argument mode).
-          new RegExp(
-            /-+[a-zA-Z_?\-`][a-zA-Z0-9_?\-`]*/.source +
-              /[^a-zA-Z0-9_?\-`\s:<>&(){}|;,"'$@\[]/.source +
-              wordTail(/[^&\s()}|;"'`]/.source),
-          ),
-          // sloplint: dash-colon word, as in --:warning: the colon does not
-          // delimit a standalone `--` token, so the whole word is one
-          // generic token (see scanner.c: `:` is not a bare-dash delimiter).
-          new RegExp(
-            /-+:/.source +
-              /[^&\s()}|;,"'`]/.source +
-              wordTail(/[^&\s()}|;"'`]/.source),
-          ),
-          // sloplint: word that starts with a variable and continues as a
-          // path, as in $env:TEMP\x.ps1 or ${root}/bin.
-          /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)[\\\/][^\&\s\(\)\}\|;,]*/,
-          // sloplint: bare escape sequence used as a word, as in
-          // Write-Host `r`n — expandable-string content without quotes.
-          new RegExp(WORD_ESC + wordTail(/[^&\s()}|;,"'`]/.source)),
-          // sloplint: word that interleaves a variable head with quoted or
-          // plain segments, as in $x"cat"$y — a single expandable word.
-          new RegExp(
-            /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)/.source +
+      choice(
+        $._variable_path_word,
+        token(
+          choice(
+            new RegExp(
+              /[^()$"'\-{}@|\[`&\s\u00A0]/.source + wordTail(/[^&\s\u00A0()}|;,"'`]/.source),
+            ),
+            // sloplint: option with an attached value, as in -I=dir,
+            // --go_out=$dir or -buildmode=c-shared. A bare -Name or -Name:
+            // stays a command_parameter. Commas belong to the value, as in
+            // --format=csv,noheader: native commands receive one string
+            // (about_Parsing, argument mode).
+            new RegExp(
+              PARAMETER_WORD +
+                /[^a-zA-Z0-9_?\-`\s\u00A0:<>&(){}|;,"'$@\[]/.source +
+                wordTail(/[^&\s\u00A0()}|;"'`]/.source),
+            ),
+            // sloplint: dash-colon word, as in --:warning: the colon does not
+            // delimit a standalone `--` token, so the whole word is one
+            // generic token (see scanner.c: `:` is not a bare-dash delimiter).
+            // Unquoted, unescaped commas end the word so `--:first,second` is a
+            // list; quoted or escaped commas stay inside. A quoted or escaped
+            // segment may follow the colon at once, as in `--:"warning text"`.
+            new RegExp(
+              /-+:/.source +
+                '(' + /[^&\s\u00A0()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + ARGUMENT_ESC + ')' +
+                wordTail(/[^&,\s\u00A0()}|;"'`]/.source),
+            ),
+            // sloplint: bare escape sequence used as a word, as in
+            // Write-Host `r`n — expandable-string content without quotes.
+            new RegExp(WORD_ESC + wordTail(/[^&\s\u00A0()}|;,"'`]/.source)),
+            // sloplint: word that interleaves a variable head with quoted or
+            // plain segments, as in $x"cat"$y — a single expandable word.
+            new RegExp(
+              /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)/.source +
+                '(' + WORD_SQ + '|' + WORD_DQ + ')' +
+                wordTail(/[^&\s\u00A0()}|;,]/.source),
+            ),
+            // sloplint: a variable head followed by `..` or by a `.` that
+            // does not open a member name is argument-mode text, as in
+            // `to $EndDate...` or `$v..$w`. `$v.foo` stays member access:
+            // neither alternative takes a single `.` before an identifier
+            // char.
+            new RegExp(
+              /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)/.source +
+                '(' +
+                  /\.{2,}[^&\s\u00A0()}|;,"'`]*/.source + '|' +
+                  /\.[^&\s\u00A0()}|;,"'`a-zA-Z0-9_$][^&\s\u00A0()}|;,"'`]*/.source +
+                ')',
+            ),
+            // sloplint: word that starts with a quoted segment and keeps
+            // going as one expandable argument word, as in "a"`n"b" or
+            // 'a'`n'b'. At least one continuation is required, so a bare
+            // "a" still lexes as expandable_string.
+            new RegExp(
               '(' + WORD_SQ + '|' + WORD_DQ + ')' +
-              wordTail(/[^&\s()}|;,]/.source),
+                '(' +
+                  /[^&\s\u00A0()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + ARGUMENT_ESC +
+                ')+',
+            ),
           ),
-          // sloplint: a variable head followed by `..` or by a `.` that
-          // does not open a member name is argument-mode text, as in
-          // `to $EndDate...` or `$v..$w`. `$v.foo` stays member access:
-          // neither alternative takes a single `.` before an identifier
-          // char.
-          new RegExp(
-            /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)/.source +
-              '(' +
-                /\.{2,}[^&\s()}|;,"'`]*/.source + '|' +
-                /\.[^&\s()}|;,"'`a-zA-Z0-9_$][^&\s()}|;,"'`]*/.source +
-              ')',
-          ),
-          // sloplint: word that starts with a quoted segment and keeps
-          // going as one expandable argument word, as in "a"`n"b" or
-          // 'a'`n'b'. At least one continuation is required, so a bare
-          // "a" still lexes as expandable_string.
-          new RegExp(
-            '(' + WORD_SQ + '|' + WORD_DQ + ')' +
-              '(' +
-                /[^&\s()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + WORD_ESC +
-              ')+',
+        ),
+      ),
+
+    // sloplint: variable-prefixed paths stay one argument, but expandable
+    // quoted segments must parse their variables and subexpressions.
+    _variable_path_word: ($) =>
+      seq(
+        token(/\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)[\\\/]/),
+        repeat(
+          choice(
+            token.immediate(/[^&\s\u00A0()}|;,"'`]+/),
+            token.immediate(new RegExp(ARGUMENT_ESC)),
+            token.immediate(new RegExp(WORD_SQ)),
+            seq(token.immediate('"'), $._expandable_string_literal_immediate),
           ),
         ),
       ),
@@ -437,9 +460,9 @@ export default grammar({
         token(
           choice(
             // `-Name`, `-Name1`, `--long-flag`, `-A5`
-            /-+[a-zA-Z_?\-`][a-zA-Z0-9_?\-`]*/,
+            new RegExp(PARAMETER_WORD),
             // `--format=%H`, `--pretty=format:"%B"`: a native option with an attached value
-            /--?[a-zA-Z_][a-zA-Z0-9_\-]*=([^\s"'`;|&(){}]|"[^"\r\n]*"|'[^'\r\n]*')*/,
+            /--?[a-zA-Z_][a-zA-Z0-9_\-]*=([^\s\u00A0"'`;|&(){}]|"[^"\r\n]*"|'[^'\r\n]*')*/,
           ),
         ),
         // A bare `--` or `-` argument (see scanner.c).
@@ -854,18 +877,8 @@ export default grammar({
 
     _expandable_string_literal_immediate: ($) =>
       seq(
-        repeat(
-          choice(
-            /[^\$"`]+/,
-            $.variable,
-            /\$`(.{1}|`\r?\n)/,
-            /`.{1}|`\r?\n/,
-            '""',
-            $.sub_expression,
-          ),
-        ),
-        repeat('$'),
-        '"',
+        repeat($._expandable_string_part),
+        token.immediate('"'),
       ),
 
     _string_literal_immediate: ($) =>
@@ -877,7 +890,7 @@ export default grammar({
     command_name: ($) =>
       seq(
         choice(
-          /[^\{\}\(\);,\|\&`"'\s\r\n\[\]\+\-\*\/\$@<\!]+/,
+          /[^\{\}\(\);,\|\&`"'\s\u00A0\r\n\[\]\+\-\*\/\$@<\!]+/,
           // tree-sitter does not allow to control lexer
           // each start keyword into _statement rule must be present here
           // https://github.com/airbus-cert/tree-sitter-powershell/issues/24
@@ -913,7 +926,8 @@ export default grammar({
         ),
         repeat(
           choice(
-            token.immediate(/[^\{\}\(\);,\|\&"'\s\r\n]+/),
+            token.immediate(/[^\{\}\(\);,\|\&`"'\s\u00A0\r\n]+/),
+            token.immediate(new RegExp(WORD_ESC)),
             seq(token.immediate('"'), $._expandable_string_literal_immediate),
             seq(token.immediate('\''), $._string_literal_immediate),
             token.immediate('""'),
@@ -960,18 +974,24 @@ export default grammar({
 
     // Generic token is hard to manage
     // So a definition is that a generic token must have to begin by one or more space char
-    // sloplint: tabs separate arguments like spaces, so an attached option
-    // lexes as generic_token after either (see calls.rs: parameter is opaque).
-    command_argument_sep: ($) => prec.right(choice(repeat1(choice(' ', '\t')), ':')),
+    // sloplint: tabs and NBSP separate arguments like spaces, so an attached
+    // option lexes as generic_token after any of them (see calls.rs:
+    // parameter is opaque). Format characters (U+200B, U+FEFF, U+2060) stay
+    // out: they are extras, not separators.
+    command_argument_sep: ($) => prec.right(choice(repeat1(choice(' ', '\t', '\u00A0')), ':')),
 
     // Adapt the grammar to have same behavior
 
+    // sloplint: a parenthesized list may start at once after `--`, as in
+    // `--(Get-Date), (Get-Date)`: the commas continue the array without an
+    // intervening separator.
     _command_argument: ($) =>
       prec.right(
         PREC.PARAM,
         choice(
           seq($.command_argument_sep, optional($.generic_token)),
           seq($.command_argument_sep, $._command_argument_list),
+          alias($._command_list_from_paren, $.array_literal_expression),
           $.parenthesized_expression,
           $.script_block_expression,
         ),
@@ -996,7 +1016,21 @@ export default grammar({
         seq($.generic_token, repeat1(seq(',', $._command_list_element))),
       ),
 
-    _command_list_element: ($) => choice($.generic_token, $.unary_expression),
+    _command_list_from_paren: ($) =>
+      prec.left(
+        seq($.parenthesized_expression, repeat1(seq(',', $._command_list_element))),
+      ),
+
+    _command_list_element: ($) =>
+      choice(
+        $.generic_token,
+        $.unary_expression,
+        alias($._command_list_parameter, $.generic_token),
+      ),
+
+    _command_list_parameter: ($) =>
+      token(new RegExp(PARAMETER_WORD)),
+
 
     verbatim_command_argument: ($) =>
       seq('--%', $._verbatim_command_argument_chars),

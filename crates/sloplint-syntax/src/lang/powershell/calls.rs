@@ -174,13 +174,47 @@ pub(crate) fn ps_arg_value(n: Node<'_>) -> Node<'_> {
     node
 }
 
+fn ps_generic_static(cx: &Cx<'_, '_>, node: Node<'_>) -> u32 {
+    let mut dynamics = Vec::new();
+    let mut stack = vec![node];
+    while let Some(current) = stack.pop() {
+        if current.kind() == "variable" || current.kind() == "sub_expression" {
+            dynamics.push(current);
+        } else {
+            stack.extend(named_children(current));
+        }
+    }
+    dynamics.sort_by_key(|d| d.start_byte());
+    let end = node.end_byte();
+    let mut gaps = Vec::new();
+    let mut cursor = node.start_byte();
+    for dynamic in &dynamics {
+        gaps.push(slice(
+            cx.src,
+            cursor.min(dynamic.start_byte()),
+            dynamic.start_byte(),
+        ));
+        cursor = cursor.max(dynamic.end_byte());
+    }
+    gaps.push(slice(cx.src, cursor.min(end), end));
+    longest_static_chunk(&gaps)
+}
+
 fn ps_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     let node = ps_arg_value(n);
     match node.kind() {
         "string_literal" => ps_string_shape(cx, node),
-        "generic_token" => ArgShape::Str {
-            longest_static: narrow(text(cx, node).chars().count()),
-        },
+        "generic_token" => {
+            if subtree_has_kind(node, "variable") || subtree_has_kind(node, "sub_expression") {
+                ArgShape::Concat {
+                    longest_static: ps_generic_static(cx, node),
+                }
+            } else {
+                ArgShape::Str {
+                    longest_static: narrow(text(cx, node).chars().count()),
+                }
+            }
+        }
         "variable" => ArgShape::Ident(ps_var_name(text(cx, node))),
         "command_parameter" => ArgShape::Other,
         "additive_expression" | "additive_argument_expression" => {
@@ -200,7 +234,6 @@ fn ps_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
         _ => ArgShape::Other,
     }
 }
-
 fn ps_spine_is_plus(cx: &Cx<'_, '_>, n: Node<'_>) -> bool {
     let mut cursor = n.walk();
     n.children(&mut cursor)

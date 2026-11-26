@@ -112,6 +112,10 @@
           "named": true
         },
         {
+          "type": "parenthesized_expression",
+          "named": true
+        },
+        {
           "type": "unary_expression",
           "named": true
         }
@@ -1466,6 +1470,25 @@
         },
         {
           "type": "script_block",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "generic_token",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "sub_expression",
+          "named": true
+        },
+        {
+          "type": "variable",
           "named": true
         }
       ]
@@ -3493,10 +3516,6 @@
     "named": false
   },
   {
-    "type": "$",
-    "named": false
-  },
-  {
     "type": "$$",
     "named": false
   },
@@ -4114,10 +4133,6 @@
     "named": false
   },
   {
-    "type": "generic_token",
-    "named": true
-  },
-  {
     "type": "hexadecimal_integer_literal",
     "named": true
   },
@@ -4231,6 +4246,10 @@
   },
   {
     "type": "}",
+    "named": false
+  },
+  {
+    "type": " ",
     "named": false
   }
 ]
