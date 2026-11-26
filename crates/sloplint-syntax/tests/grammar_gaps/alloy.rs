@@ -313,4 +313,3 @@ fn infix_qual_call_records_call_fact() {
             .collect::<Vec<_>>()
     );
 }
-
