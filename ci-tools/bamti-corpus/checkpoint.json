@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "status": "completed-diagnostic-workflow-retired",
+  "published_head": "87be57b3bdee04bdc9606d0fadde7912b20a52a6",
+  "verified_source_tree": "297c6e935be36332f35fa5c0a53e23742a6d8f7c",
+  "final_producer": {
+    "repository": "gosuda/sloplint",
+    "branch": "ci/bamti-cycle-proof-20261126-r9",
+    "commit": "f9482e0d2a0c209c0454e6dbd80186a63666a3da",
+    "run": 45840793132,
+    "job": 139981578250,
+    "artifact": 15129955677,
+    "zip_sha256": "21762f2781777a8a674997ce3a071ce3250384ca4df51c7305710def61bc4c5b"
+  },
+  "diagnostics": {
+    "old_candidate_tree": "8d0c179639a7a4b4e91ab32d5512019c9d2c27db",
+    "old_candidate_full_run": 45825320396,
+    "old_candidate_corpus_run": 45830112612,
+    "external_2c56_diagnostic_run": 45833062305,
+    "capacity_diagnostic_run": 45834339102,
+    "expired_variant_diagnostic_run": 45835681818,
+    "hot_refutation_trace_run": 45836783253,
+    "pre_ordering_candidate_tree": "c74ac2655d1de2c99a743273b67e938ff6b01367",
+    "pre_ordering_run": 45838842666
+  },
+  "evidence_checkpoint_commit": "cee81d50e03bd1dcdbdadd126e1e3c7c13b605e1",
+  "evidence_checkpoint_path": "ci-tools/bamti-cycle/checkpoint.json"
+}
