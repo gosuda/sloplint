@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "scope": "BamTiScript PR253 isolated empty-inference refutation repair",
+  "published": {
+    "repository": "gosuda/bamTiScript",
+    "pr": 253,
+    "head": "11e99ee0788613ff6a9fd7d5b0afddf819953850",
+    "parent": "87be57b3bdee04bdc9606d0fadde7912b20a52a6",
+    "tree": "75cd637c1902afd2947db63b4291c2fc89bba656",
+    "relations_sha256": "2065d40eabc613ffd30d094122dae6a84cf218edde33b559f3e8a2d7a02015a5"
+  },
+  "producer": {
+    "repository": "gosuda/sloplint",
+    "commit": "68578fe714e8993768b200e9c6b9925a26b43be8",
+    "run": 45850170296,
+    "job": 140014156945,
+    "artifact": 15132359744,
+    "zip_sha256": "5b565367cf2c631cb4b7d14335269252710fbea4a50872b97109f20768cf0b2d"
+  },
+  "gates": {
+    "baseline": {
+      "head": "87be57b3bdee04bdc9606d0fadde7912b20a52a6",
+      "exit": 101,
+      "comparisons": 20479,
+      "required_max_exclusive": 128
+    },
+    "typescript": {
+      "incompatible": 1,
+      "compatible": 0
+    },
+    "relations": 75,
+    "all_required_source_gates_exit": 0,
+    "full_workspace": true,
+    "full_corpus": true,
+    "node_contracts": 3,
+    "npm_gate": "Existing staged-package exclusions preserved",
+    "root_product_completion_claimed": false,
+    "bh1_performance_claimed": false
+  },
+  "review": {
+    "resolved_thread": "PRRT_kwDOTlcNv868cUXq",
+    "reply": 4710646356,
+    "alias_order_thread": "PRRT_kwDOTlcNv868cUV8",
+    "alias_order_status": "Open; separate source candidate on r17",
+    "commit_history_thread": "PRRT_kwDOTlcNv868cUZf",
+    "commit_history_status": "Open"
+  },
+  "retirement": "Workflow removed additively after source publication; immutable producer and evidence remain.",
+  "observed_at": "2026-11-26T15:48:30.404Z"
+}
