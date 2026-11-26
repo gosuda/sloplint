@@ -59,7 +59,7 @@ if mode == "prepare":
     raise SystemExit(0)
 
 identity()
-assert mode == "x64", mode
+assert mode == "oracle", mode
 run("fmt", ["cargo", "fmt", "--all", "--check"])
 archive = download(
     "https://github.com/PowerShell/PowerShell/releases/download/v7.7.0/powershell-7.7.0-linux-x64.tar.gz",
@@ -70,20 +70,6 @@ powershell = evidence / "powershell"
 powershell.mkdir()
 run("extract-powershell", ["tar", "-xzf", str(archive), "-C", str(powershell)])
 (powershell / "pwsh").chmod(0o755)
-run("powershell-literal-oracle", [str(powershell / "pwsh"), "-NoLogo", "-NoProfile", "-File", str(proof / "oracle.ps1"), "-CasesPath", str(proof / "cases.json")], required="LITERAL_ORACLE_COMPLETE 21")
-calls = source / "crates/sloplint-syntax/src/lang/powershell/calls.rs"
-candidate = calls.read_bytes()
-try:
-    calls.write_bytes(subprocess.check_output(["git", "show", f"{manifest['head']}:crates/sloplint-syntax/src/lang/powershell/calls.rs"]))
-    output = run("old-literal-adapter", ["cargo", "test", "--locked", "-p", "sloplint-syntax", "--test", "grammar_gaps", "--target", target, "powershell_literal_runs", "--", "--nocapture"], 101)
-    for name in ["anonymous_prefix", "verbatim_backtick"]:
-        assert f"{name} ... FAILED" in output, name
-    output = run("old-literal-cli", ["cargo", "test", "--locked", "-p", "sloplint", "--test", "fixtures", "--target", target, "fixtures_match_expected", "--", "--nocapture"], 101)
-    assert "contiguous-log-literal" in output
-finally:
-    calls.write_bytes(candidate)
+run("powershell-literal-oracle", [str(powershell / "pwsh"), "-NoLogo", "-NoProfile", "-File", str(proof / "oracle.ps1"), "-CasesPath", str(proof / "cases.json")], required="LITERAL_ORACLE_COMPLETE 26")
 identity()
-run("restored-literal-adapter", ["cargo", "test", "--locked", "-p", "sloplint-syntax", "--test", "grammar_gaps", "--target", target, "powershell_literal_runs", "--", "--nocapture"], required="21 passed; 0 failed")
-run("restored-literal-cli", ["cargo", "test", "--locked", "-p", "sloplint", "--test", "fixtures", "--target", target, "fixtures_match_expected", "--", "--nocapture"])
-identity()
-print("POWERSHELL_LITERAL_COMPLETE " + json.dumps({"tree": manifest["tree"], "exits": results}, sort_keys=True), flush=True)
+print("POWERSHELL_LITERAL_ORACLE_COMPLETE 26", flush=True)

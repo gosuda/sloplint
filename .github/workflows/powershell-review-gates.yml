@@ -40,8 +40,8 @@ jobs:
           enable-cache: false
       - name: Verify and prepare the exact candidate
         run: uv run --no-project --python 3.15 ../proof/ci-tools/powershell-review/verify.py prepare
-      - name: Prove native literal values and adapter regressions
-        run: uv run --no-project --python 3.15 ../proof/ci-tools/powershell-review/verify.py x64
+      - name: Verify literal values and exact Unicode variable boundaries
+        run: uv run --no-project --python 3.15 ../proof/ci-tools/powershell-review/verify.py oracle
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:

@@ -145,5 +145,40 @@
     "longest": 6,
     "expected": "__ROOT__/ab__DATE__cdefgh",
     "source": "Write-Host $r/ab\"$(Get-Date)\"cdefgh\n"
+  },
+  {
+    "name": "roman_numeral_is_literal",
+    "word": "$r/foo$Ⅳ/bar\"$id\"",
+    "longest": 10,
+    "expected": "__ROOT__/foo$Ⅳ/bar__ID__",
+    "source": "Write-Host $r/foo$Ⅳ/bar\"$id\"\n"
+  },
+  {
+    "name": "numeric_fraction_is_literal",
+    "word": "$r/foo$½/bar\"$id\"",
+    "longest": 10,
+    "expected": "__ROOT__/foo$½/bar__ID__",
+    "source": "Write-Host $r/foo$½/bar\"$id\"\n"
+  },
+  {
+    "name": "astral_letter_is_literal",
+    "word": "$r/foo$𝒜/bar\"$id\"",
+    "longest": 10,
+    "expected": "__ROOT__/foo$𝒜/bar__ID__",
+    "source": "Write-Host $r/foo$𝒜/bar\"$id\"\n"
+  },
+  {
+    "name": "unicode_decimal_variable",
+    "word": "$r/foo$٢/bar\"$id\"",
+    "longest": 4,
+    "expected": "__ROOT__/foo__DIGIT__/bar__ID__",
+    "source": "Write-Host $r/foo$٢/bar\"$id\"\n"
+  },
+  {
+    "name": "variable_ends_before_astral_letter",
+    "word": "$r/a$foo𝒜/bar\"$id\"",
+    "longest": 5,
+    "expected": "__ROOT__/a__FOO__𝒜/bar__ID__",
+    "source": "Write-Host $r/a$foo𝒜/bar\"$id\"\n"
   }
 ]

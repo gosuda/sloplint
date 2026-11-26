@@ -1,7 +1,14 @@
 diff --git a/crates/sloplint-syntax/src/lang/powershell/calls.rs b/crates/sloplint-syntax/src/lang/powershell/calls.rs
 --- a/crates/sloplint-syntax/src/lang/powershell/calls.rs
 +++ b/crates/sloplint-syntax/src/lang/powershell/calls.rs
-@@ -174,30 +174,133 @@
+@@ -1,3 +1,6 @@
++use std::sync::LazyLock;
++
++use regex::Regex;
+ use sloplint_core::facts::{Arg, ArgShape, CallKind};
+ use sloplint_core::text::longest_static_chunk_with_escape;
+ use tree_sitter::Node;
+@@ -174,30 +177,146 @@
      node
  }
  
@@ -10,6 +17,19 @@ diff --git a/crates/sloplint-syntax/src/lang/powershell/calls.rs b/crates/slopli
 +    Bare,
 +    Expandable,
 +    Verbatim,
++}
++
++// PowerShell scans variable names as UTF-16 chars in the Letter and
++// Decimal_Number categories. Other numeric and alphabetic Unicode properties
++// are broader, so Rust's is_alphanumeric is not the same predicate.
++fn ps_word_name_char(ch: char) -> bool {
++    if ch.is_ascii() {
++        return ch.is_ascii_alphanumeric();
++    }
++    static NAME_CHAR: LazyLock<Regex> =
++        LazyLock::new(|| Regex::new(r"^[\p{L}\p{Nd}]$").expect("constant character class"));
++    let mut utf8 = [0; 4];
++    ch.len_utf16() == 1 && NAME_CHAR.is_match(ch.encode_utf8(&mut utf8))
 +}
 +
 +// The grammar hides a variable-path word's leading variable in an anonymous
@@ -33,7 +53,7 @@ diff --git a/crates/sloplint-syntax/src/lang/powershell/calls.rs b/crates/slopli
 +    if matches!(first, '$' | '?' | '^') {
 +        return Some(1 + first.len_utf8());
 +    }
-+    if first != '_' && !first.is_alphanumeric() {
++    if !matches!(first, '_' | ':') && !ps_word_name_char(first) {
 +        return None;
 +    }
 +    let mut end = 1 + first.len_utf8();
@@ -41,7 +61,7 @@ diff --git a/crates/sloplint-syntax/src/lang/powershell/calls.rs b/crates/slopli
 +        if ch == ':' && tail[offset..].starts_with("::") {
 +            break;
 +        }
-+        if !ch.is_alphanumeric() && !matches!(ch, '_' | '?' | ':') {
++        if !ps_word_name_char(ch) && !matches!(ch, '_' | '?' | ':') {
 +            break;
 +        }
 +        end = 1 + offset + ch.len_utf8();
@@ -150,7 +170,7 @@ diff --git a/crates/sloplint-syntax/src/lang/powershell/calls.rs b/crates/slopli
  }
  
  fn ps_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
-@@ -205,7 +308,13 @@
+@@ -205,7 +324,13 @@
      match node.kind() {
          "string_literal" => ps_string_shape(cx, node),
          "generic_token" => {
@@ -181,7 +201,7 @@ diff --git a/crates/sloplint-syntax/tests/grammar_gaps/powershell_literal_runs.r
 new file mode 100644
 --- /dev/null
 +++ b/crates/sloplint-syntax/tests/grammar_gaps/powershell_literal_runs.rs
-@@ -0,0 +1,322 @@
+@@ -0,0 +1,397 @@
 +//! Interpolated command words must measure the literal value, excluding
 +//! hidden variable prefixes and quote syntax. Named AST holes still delimit
 +//! subexpressions; backticks are literal inside single-quoted segments.
@@ -504,6 +524,81 @@ new file mode 100644
 +        command.args[0].shape
 +    );
 +}
++
++#[test]
++fn roman_numeral_is_literal() {
++    let analysis = run_clean("Write-Host $r/foo$Ⅳ/bar\"$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 10 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn numeric_fraction_is_literal() {
++    let analysis = run_clean("Write-Host $r/foo$½/bar\"$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 10 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn astral_letter_is_literal() {
++    let analysis = run_clean("Write-Host $r/foo$𝒜/bar\"$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 10 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn unicode_decimal_variable() {
++    let analysis = run_clean("Write-Host $r/foo$٢/bar\"$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 4 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
++
++#[test]
++fn variable_ends_before_astral_letter() {
++    let analysis = run_clean("Write-Host $r/a$foo𝒜/bar\"$id\"\n");
++    let command = call(&analysis, "Write-Host");
++    assert_eq!(command.args.len(), 1);
++    assert!(
++        matches!(
++            command.args[0].shape,
++            ArgShape::Concat { longest_static: 5 }
++        ),
++        "shape: {:?}",
++        command.args[0].shape
++    );
++}
 diff --git a/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/d.ps1 b/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powershell/d.ps1
 new file mode 100644
 --- /dev/null
@@ -528,3 +623,36 @@ diff --git a/crates/sloplint/tests/fixtures/grep/contiguous-log-literal__powersh
  b.ps1:2 info grep/contiguous-log-literal
  c.ps1:2 info grep/contiguous-log-literal
 +d.ps1:2 info grep/contiguous-log-literal
+diff --git a/Cargo.toml b/Cargo.toml
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -44,6 +44,7 @@
+ tree-sitter-dafny = { path = "vendor/tree-sitter-dafny" }
+ tree-sitter-racket = { path = "vendor/tree-sitter-racket" }
+ rayon = "1.12.0"
++regex = "1.13.2"
+ ignore = "0.4.35"
+ globset = "0.4.22"
+ serde = { version = "1.0.229", features = ["derive"] }
+diff --git a/Cargo.lock b/Cargo.lock
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -1019,6 +1019,7 @@
+ name = "sloplint-syntax"
+ version = "0.1.0"
+ dependencies = [
++ "regex",
+  "sloplint-core",
+  "tree-sitter",
+  "tree-sitter-alloy",
+diff --git a/crates/sloplint-syntax/Cargo.toml b/crates/sloplint-syntax/Cargo.toml
+--- a/crates/sloplint-syntax/Cargo.toml
++++ b/crates/sloplint-syntax/Cargo.toml
+@@ -9,6 +9,7 @@
+ workspace = true
+ 
+ [dependencies]
++regex = { workspace = true }
+ sloplint-core = { workspace = true }
+ tree-sitter = { workspace = true }
+ tree-sitter-alloy = { workspace = true }

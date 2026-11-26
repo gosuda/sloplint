@@ -11,6 +11,8 @@ $env:TEMP = '__ROOT__'
 $id = '__ID__'
 $middle = '__MID__'
 $π = '__PI__'
+$foo = '__FOO__'
+Set-Variable -Name '٢' -Value '__DIGIT__'
 $cases = Get-Content -LiteralPath $CasesPath -Raw | ConvertFrom-Json
 foreach ($case in $cases) {
     $tokens = $null
