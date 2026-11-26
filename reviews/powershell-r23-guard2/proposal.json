@@ -1,0 +1,165 @@
+{
+  "base": "e7ee97e84246863766ec7465777a035134533feb",
+  "base_tree": "5d2a547a693d073ad9739311e7b653baa96a08d6",
+  "status": "Second bounded diagnostic proposal only. First guard candidate failed nine frozen public captures; no publication is authorized by that failed result.",
+  "rejected": {
+    "producer": "7f83c425202d090e82b44c7713a937d5cd64dcf7",
+    "run": 45911049430,
+    "job": 140219232030,
+    "artifact": 15159819732,
+    "zip_sha256": "144a81988e49a55be94261d2d0eeb853cdf88b04b8d7984c339f17539728b824",
+    "payload_sha256": "c516e662b2fe41b73241c82214626e56ffe31e7e55570ce2a2b6aed946604f02",
+    "gzip_sha256": "37a85d54e4a7ff694b57d4f803fd5eb8387103589d511859e86c54a6e8248f9d",
+    "payload_bytes": 5967760,
+    "gzip_bytes": 313862,
+    "base64_bytes": 418484
+  },
+  "changes": [
+    "Defer each context guard when a later block comment follows explicit horizontal separator text, preserving the historical split between separator-owned earlier comments and the final adjacent comment group.",
+    "Append external COMMENTED_REDIRECT at slot8, offered only after the redirected filename's own separator.",
+    "Recognize the existing parameter-stem plus attached-value generic-word prefix in that redirect context. Bare named parameters, negatives, dash-format and plain words keep their existing paths; preserve complete valid parameter escapes.",
+    "Keep comments as extras, public node names and source spans; do not make comment a command element and do not change target optionality."
+  ],
+  "files": {
+    "grammar_sha256": "213dfd728746463bdc1831e8458e959e0b843d9c216105d6216a90ec074c9fc8",
+    "scanner_sha256": "9585a11787bed671288d8a6a650a7efe1744c01b7b0f73d2454c8faf087276ef"
+  },
+  "frozen_failures": [
+    {
+      "kind": "old-comment-query:separator-comment",
+      "id": "comment-redirect-single-dash",
+      "expected": [
+        "OWNERSHIP_QUERY_ROW comment-redirect-single-dash separator-comment error=false partial=false timeout=false hits=0"
+      ],
+      "actual": [
+        "OWNERSHIP_QUERY_HIT comment-redirect-single-dash separator-comment 18 3c23206e6f746520233e",
+        "OWNERSHIP_QUERY_ROW comment-redirect-single-dash separator-comment error=false partial=false timeout=false hits=1"
+      ],
+      "source": "Write-Output hi > <# note #> -output.log\n"
+    },
+    {
+      "kind": "old-comment-query:separator-comment",
+      "id": "comment-redirect-repeated-dash",
+      "expected": [
+        "OWNERSHIP_QUERY_ROW comment-redirect-repeated-dash separator-comment error=false partial=false timeout=false hits=0"
+      ],
+      "actual": [
+        "OWNERSHIP_QUERY_HIT comment-redirect-repeated-dash separator-comment 18 3c23206f6e6520233e",
+        "OWNERSHIP_QUERY_HIT comment-redirect-repeated-dash separator-comment 27 3c232074776f20233e",
+        "OWNERSHIP_QUERY_ROW comment-redirect-repeated-dash separator-comment error=false partial=false timeout=false hits=2"
+      ],
+      "source": "Write-Output hi > <# one #><# two #> -output.log\n"
+    },
+    {
+      "kind": "old-comment-query:separator-comment",
+      "id": "comment-redirect-multiline-dash",
+      "expected": [
+        "OWNERSHIP_QUERY_ROW comment-redirect-multiline-dash separator-comment error=false partial=false timeout=false hits=0"
+      ],
+      "actual": [
+        "OWNERSHIP_QUERY_HIT comment-redirect-multiline-dash separator-comment 18 3c23206f6e650a2074776f20233e",
+        "OWNERSHIP_QUERY_ROW comment-redirect-multiline-dash separator-comment error=false partial=false timeout=false hits=1"
+      ],
+      "source": "Write-Output hi > <# one\n two #> -output.log\n"
+    },
+    {
+      "kind": "guard-old-comment:direct-comment",
+      "id": "comment-guard-lf-spaced-blocks",
+      "expected": [
+        "OWNERSHIP_QUERY_HIT comment-guard-lf-spaced-blocks direct-comment 27 3c232074776f20233e",
+        "OWNERSHIP_QUERY_ROW comment-guard-lf-spaced-blocks direct-comment error=false partial=false timeout=false hits=1"
+      ],
+      "actual": [
+        "OWNERSHIP_QUERY_HIT comment-guard-lf-spaced-blocks direct-comment 16 3c23206f6e6520233e",
+        "OWNERSHIP_QUERY_HIT comment-guard-lf-spaced-blocks direct-comment 27 3c232074776f20233e",
+        "OWNERSHIP_QUERY_ROW comment-guard-lf-spaced-blocks direct-comment error=false partial=false timeout=false hits=2"
+      ],
+      "source": "Write-Output hi <# one #> \t<# two #> -NoEnumerate\n"
+    },
+    {
+      "kind": "guard-old-comment:separator-comment",
+      "id": "comment-guard-lf-spaced-blocks",
+      "expected": [
+        "OWNERSHIP_QUERY_HIT comment-guard-lf-spaced-blocks separator-comment 16 3c23206f6e6520233e",
+        "OWNERSHIP_QUERY_ROW comment-guard-lf-spaced-blocks separator-comment error=false partial=false timeout=false hits=1"
+      ],
+      "actual": [
+        "OWNERSHIP_QUERY_ROW comment-guard-lf-spaced-blocks separator-comment error=false partial=false timeout=false hits=0"
+      ],
+      "source": "Write-Output hi <# one #> \t<# two #> -NoEnumerate\n"
+    },
+    {
+      "kind": "guard-old-comment:element-separator",
+      "id": "comment-guard-lf-spaced-blocks",
+      "expected": [
+        "OWNERSHIP_QUERY_HIT comment-guard-lf-spaced-blocks element-separator 12 20",
+        "OWNERSHIP_QUERY_HIT comment-guard-lf-spaced-blocks element-separator 15 203c23206f6e6520233e2009",
+        "OWNERSHIP_QUERY_ROW comment-guard-lf-spaced-blocks element-separator error=false partial=false timeout=false hits=2"
+      ],
+      "actual": [
+        "OWNERSHIP_QUERY_HIT comment-guard-lf-spaced-blocks element-separator 12 20",
+        "OWNERSHIP_QUERY_HIT comment-guard-lf-spaced-blocks element-separator 15 20",
+        "OWNERSHIP_QUERY_ROW comment-guard-lf-spaced-blocks element-separator error=false partial=false timeout=false hits=2"
+      ],
+      "source": "Write-Output hi <# one #> \t<# two #> -NoEnumerate\n"
+    },
+    {
+      "kind": "guard-old-comment:direct-comment",
+      "id": "comment-guard-crlf-spaced-blocks",
+      "expected": [
+        "OWNERSHIP_QUERY_HIT comment-guard-crlf-spaced-blocks direct-comment 27 3c232074776f20233e",
+        "OWNERSHIP_QUERY_ROW comment-guard-crlf-spaced-blocks direct-comment error=false partial=false timeout=false hits=1"
+      ],
+      "actual": [
+        "OWNERSHIP_QUERY_HIT comment-guard-crlf-spaced-blocks direct-comment 16 3c23206f6e6520233e",
+        "OWNERSHIP_QUERY_HIT comment-guard-crlf-spaced-blocks direct-comment 27 3c232074776f20233e",
+        "OWNERSHIP_QUERY_ROW comment-guard-crlf-spaced-blocks direct-comment error=false partial=false timeout=false hits=2"
+      ],
+      "source": "Write-Output hi <# one #> \t<# two #> -NoEnumerate\r\n"
+    },
+    {
+      "kind": "guard-old-comment:separator-comment",
+      "id": "comment-guard-crlf-spaced-blocks",
+      "expected": [
+        "OWNERSHIP_QUERY_HIT comment-guard-crlf-spaced-blocks separator-comment 16 3c23206f6e6520233e",
+        "OWNERSHIP_QUERY_ROW comment-guard-crlf-spaced-blocks separator-comment error=false partial=false timeout=false hits=1"
+      ],
+      "actual": [
+        "OWNERSHIP_QUERY_ROW comment-guard-crlf-spaced-blocks separator-comment error=false partial=false timeout=false hits=0"
+      ],
+      "source": "Write-Output hi <# one #> \t<# two #> -NoEnumerate\r\n"
+    },
+    {
+      "kind": "guard-old-comment:element-separator",
+      "id": "comment-guard-crlf-spaced-blocks",
+      "expected": [
+        "OWNERSHIP_QUERY_HIT comment-guard-crlf-spaced-blocks element-separator 12 20",
+        "OWNERSHIP_QUERY_HIT comment-guard-crlf-spaced-blocks element-separator 15 203c23206f6e6520233e2009",
+        "OWNERSHIP_QUERY_ROW comment-guard-crlf-spaced-blocks element-separator error=false partial=false timeout=false hits=2"
+      ],
+      "actual": [
+        "OWNERSHIP_QUERY_HIT comment-guard-crlf-spaced-blocks element-separator 12 20",
+        "OWNERSHIP_QUERY_HIT comment-guard-crlf-spaced-blocks element-separator 15 20",
+        "OWNERSHIP_QUERY_ROW comment-guard-crlf-spaced-blocks element-separator error=false partial=false timeout=false hits=2"
+      ],
+      "source": "Write-Output hi <# one #> \t<# two #> -NoEnumerate\r\n"
+    }
+  ],
+  "bounded_extra_controls": [
+    {
+      "id": "redirect-double-gap-0",
+      "source": "Write-Output hi >  <# note #> -output.log\n",
+      "source_sha256": "9af48e422a4737fae79ed242623654df0b94af75824be2ed613aacc7930fe448",
+      "kind": "observation",
+      "accepted": null
+    },
+    {
+      "id": "redirect-double-gap-1",
+      "source": "Write-Output hi >  <# note #> -​first\n",
+      "source_sha256": "3a2b928aa183af74c881c062acf1f39c76fe5a81f251ee1abbfabbff0cfb17b4",
+      "kind": "observation",
+      "accepted": null
+    }
+  ],
+  "extra_control_reason": "Two pre-comment spaces could let an empty redirect consume the first separator and expose a following command guard. Freeze native and exact historical/current parser target extents for these two existing target classes before applying the candidate. No broader matrix expansion."
+}
