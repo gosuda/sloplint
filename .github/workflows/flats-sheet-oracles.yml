@@ -1,0 +1,58 @@
+name: Verify Sheet maintenance and persisted lifecycle oracles
+on:
+  push:
+    branches: [ci/flats-sheet-oracles-20261126-r13]
+    paths:
+      - .github/workflows/flats-sheet-oracles.yml
+      - ci-tools/flats-sheet-oracles/**
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+jobs:
+  oracles:
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: proof
+          persist-credentials: false
+          sparse-checkout: ci-tools/flats-sheet-oracles
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/flats
+          ref: 863801718fce4cb188b072cd29e0e170a3096af2
+          path: old
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/flats
+          ref: fa3138995337182fa03087ec0f3514d3fda87a3e
+          path: candidate
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: 1.27.4
+          cache: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          version: 0.13.9
+          python-version: "3.15"
+          enable-cache: false
+      - name: Compare the old and fixed oracles on their exact sources
+        run: uv run --no-project --python 3.15 proof/ci-tools/flats-sheet-oracles/verify.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: flats-sheet-oracles-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/flats-sheet-oracles/results.json
+            ${{ runner.temp }}/flats-sheet-oracles/*.log
+            ${{ runner.temp }}/flats-sheet-oracles/lifecycle-controls/**
+            /tmp/fso/flats-lifecycle-gate.*/evidence.json
+            /tmp/fso/flats-lifecycle-gate.*/*/serve.log
+          if-no-files-found: error
+          retention-days: 7

@@ -1,0 +1,71 @@
+{
+  "scope": "D3 Unit B development-time real-writer race and real product-host lifecycle controls",
+  "sources": [
+    {
+      "name": "old",
+      "head": "863801718fce4cb188b072cd29e0e170a3096af2",
+      "tree": "694cdc915dd69701b80e911b5faa55c2e5d5f1a7"
+    },
+    {
+      "name": "candidate",
+      "head": "fa3138995337182fa03087ec0f3514d3fda87a3e",
+      "tree": "f485609d7cdd5a9bda962ce964643adeae868bfb"
+    }
+  ],
+  "proof_sha256": {
+    "verify.py": "e79bc457875977be911089ce09c1e55046c685abdaba93fd1a614b66e4c8c4fe",
+    "old-race.go": "4583cde8702041278bb54cb8db5178a1d4e19f890b18d340c337c07b35959e05",
+    "candidate-race.go": "892d1856959c1ab0cdcb7880daa369086104285ed1a273d63215bac8736520eb",
+    "lifecycle-controls.py": "423beb5ccaf73625612ff5e64aca7be623d4d2d4722bbf36ed261a712ed3bce7",
+    "original-gate.py": "98e07ec7984c8becf9f43094e068c7bc2a5905a9fca54b318a83dcdb9c0838b2"
+  },
+  "source_paths": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "cc3422c4109ef6b346d2beb251b59b0e74723f51b141f2f4d99259fc18b502d4"
+    },
+    {
+      "path": ".github/workflows/notebook-memory-race.yml",
+      "sha256": "63279ee5466f919fecd272100ffc7a3dada94d2a0b77024ff861f9cc2dd639ce"
+    },
+    {
+      "path": "scripts/test_ci_cache.py",
+      "sha256": "aa43bef93c70c9b8e9e76d378e0322acb3473ac889d350b28c38161e38fb22e1"
+    },
+    {
+      "path": "scripts/test_ci_changes.py",
+      "sha256": "4cced72d6c20975afaa8bd122a172ff8562e6121a28c82d1877b386afcbfb285"
+    },
+    {
+      "path": "scripts/test_ci_lifecycle_workflows.py",
+      "sha256": "ae39a878ae356052c42d758d707aa16f958456b368e796ee56468f7fe8850380"
+    },
+    {
+      "path": "scripts/test_ci_shards.py",
+      "sha256": "9dbc69e6c9505e5035cae711308e5b19f8025e07bf4096c8b72360739073a039"
+    },
+    {
+      "path": "docs/gates.md",
+      "sha256": "a67647b13ef78d960222d746677a2266d754d47e515c1d7c2e865d6fc2960d63"
+    },
+    {
+      "path": "internal/app/backupcmd_test.go",
+      "sha256": "783ef8201634315fb63a62c5dfb7bbd57536060c7ae52237306f1b3aa771d752"
+    },
+    {
+      "path": "internal/sheet/first_commit_test.go",
+      "sha256": "0c2e99b2b72035b9c20d1c81bfe4b541a38321a3c8ab93bc6583f2c05e506994"
+    },
+    {
+      "path": "internal/lifecyclecheck/gate.py",
+      "sha256": "4a8f3f0dbf513bb64eb8d0f443e89ab975d0f40cf9624c34a8c32e5e3021ec38"
+    }
+  ],
+  "go": "1.27.4",
+  "python": "3.15",
+  "limitations": [
+    "The focused lifecycle gate is not full-suite acceptance or proof of a human approval boundary.",
+    "The race probe places the before-snapshot after the concurrent fault installation, so actual maintenance cleanup cannot invalidate the existing rollback comparison.",
+    "Maintained PR248 remains unchanged; no main integration is implied."
+  ]
+}
