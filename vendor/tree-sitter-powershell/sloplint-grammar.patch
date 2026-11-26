@@ -1,5 +1,5 @@
 diff --git a/grammar.js b/grammar.js
-index 1f8b448..9c7470d 100644
+index 1f8b448..1a2a046 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -7,29 +7,71 @@ const PREC = {
@@ -210,13 +210,25 @@ index 1f8b448..9c7470d 100644
          reservedWord('-in'),
          reservedWord('-ine'),
          reservedWord('-inotcontains'),
-@@ -306,19 +366,107 @@ export default grammar({
+@@ -306,19 +366,119 @@ export default grammar({
 
      // Commands
      generic_token: ($) =>
 -      token(/[^\(\)\$\"\'\-\{\}@\|\[`\&\s][^\&\s\(\)\}\|;,]*/),
 +      choice(
 +        $._variable_path_word,
++        // A format mark after a dash-only prefix starts a literal word.
++        // Prefer this token over attached options so an unescaped comma
++        // keeps its native array boundary; protected segments stay inside.
++        token(
++          prec(
++            1,
++            new RegExp(
++              /-+[\u200B\uFEFF\u2060]/.source +
++                wordTail(/[^&\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000()}|;,"'`]/.source),
++            ),
++          ),
++        ),
 +        token(
 +          choice(
 +            new RegExp(
@@ -321,7 +333,7 @@ index 1f8b448..9c7470d 100644
            ),
          ),
          // A bare `--` or `-` argument (see scanner.c).
-@@ -399,6 +547,13 @@ export default grammar({
+@@ -399,6 +559,13 @@ export default grammar({
            $.inlinescript_statement,
            $.parallel_statement,
            $.sequence_statement,
@@ -335,7 +347,7 @@ index 1f8b448..9c7470d 100644
            seq($.pipeline, $._statement_terminator),
            // `npm run dev &` (PowerShell 7): runs the pipeline as a background job
            seq($.pipeline, $.background_operator),
-@@ -416,6 +571,7 @@ export default grammar({
+@@ -416,6 +583,7 @@ export default grammar({
            reservedWord('if'),
            '(',
            field('condition', $.pipeline),
@@ -343,7 +355,7 @@ index 1f8b448..9c7470d 100644
            ')',
            $.statement_block,
            field('elseif_clauses', optional($.elseif_clauses)),
-@@ -430,6 +586,7 @@ export default grammar({
+@@ -430,6 +598,7 @@ export default grammar({
          reservedWord('elseif'),
          '(',
          field('condition', $.pipeline),
@@ -351,7 +363,7 @@ index 1f8b448..9c7470d 100644
          ')',
          $.statement_block,
        ),
-@@ -466,7 +623,7 @@ export default grammar({
+@@ -466,7 +635,7 @@ export default grammar({
 
      switch_condition: ($) =>
        choice(
@@ -360,7 +372,7 @@ index 1f8b448..9c7470d 100644
          seq(reservedWord('-file'), $.switch_filename),
        ),
 
-@@ -476,16 +633,18 @@ export default grammar({
+@@ -476,16 +645,18 @@ export default grammar({
 
      switch_clauses: ($) => repeat1($.switch_clause),
 
@@ -381,7 +393,7 @@ index 1f8b448..9c7470d 100644
 
      foreach_statement: ($) =>
        seq(
-@@ -495,6 +654,7 @@ export default grammar({
+@@ -495,6 +666,7 @@ export default grammar({
          $.variable,
          reservedWord('in'),
          $.pipeline,
@@ -389,7 +401,7 @@ index 1f8b448..9c7470d 100644
          ')',
          $.statement_block,
        ),
-@@ -556,7 +716,7 @@ export default grammar({
+@@ -556,7 +728,7 @@ export default grammar({
          $.statement_block,
        ),
 
@@ -398,7 +410,7 @@ index 1f8b448..9c7470d 100644
 
      do_statement: ($) =>
        seq(
-@@ -568,8 +728,11 @@ export default grammar({
+@@ -568,8 +740,11 @@ export default grammar({
          ')',
        ),
 
@@ -410,7 +422,7 @@ index 1f8b448..9c7470d 100644
          choice(
            reservedWord('function'),
            reservedWord('filter'),
-@@ -578,10 +741,19 @@ export default grammar({
+@@ -578,10 +753,19 @@ export default grammar({
          $.function_name,
          optional($.function_parameter_declaration),
          '{',
@@ -431,7 +443,7 @@ index 1f8b448..9c7470d 100644
      function_name: ($) => $._command_token,
 
      function_parameter_declaration: ($) =>
-@@ -598,7 +770,9 @@ export default grammar({
+@@ -598,7 +782,9 @@ export default grammar({
 
      label: ($) => token(seq(':', /[a-zA-Z_][a-zA-Z0-9_]*/)),
 
@@ -442,7 +454,7 @@ index 1f8b448..9c7470d 100644
 
      trap_statement: ($) =>
        seq(reservedWord('trap'), optional($.type_literal), $.statement_block),
-@@ -710,18 +884,8 @@ export default grammar({
+@@ -710,18 +896,8 @@ export default grammar({
 
      _expandable_string_literal_immediate: ($) =>
        seq(
@@ -463,7 +475,7 @@ index 1f8b448..9c7470d 100644
        ),
 
      _string_literal_immediate: ($) =>
-@@ -733,7 +897,7 @@ export default grammar({
+@@ -733,7 +909,7 @@ export default grammar({
      command_name: ($) =>
        seq(
          choice(
@@ -472,7 +484,7 @@ index 1f8b448..9c7470d 100644
            // tree-sitter does not allow to control lexer
            // each start keyword into _statement rule must be present here
            // https://github.com/airbus-cert/tree-sitter-powershell/issues/24
-@@ -754,10 +918,25 @@ export default grammar({
+@@ -754,10 +930,25 @@ export default grammar({
            new RegExp(caseInsensitive('for-')),
            new RegExp(caseInsensitive('while-')),
            new RegExp(caseInsensitive('parallel-')),
@@ -499,7 +511,7 @@ index 1f8b448..9c7470d 100644
              seq(token.immediate('"'), $._expandable_string_literal_immediate),
              seq(token.immediate('\''), $._string_literal_immediate),
              token.immediate('""'),
-@@ -766,7 +945,8 @@ export default grammar({
+@@ -766,7 +957,8 @@ export default grammar({
          ),
        ),
 
@@ -509,7 +521,7 @@ index 1f8b448..9c7470d 100644
 
      // Use to parse command path
      path_command_name: ($) =>
-@@ -781,41 +961,84 @@ export default grammar({
+@@ -781,41 +973,84 @@ export default grammar({
        prec.right(
          choice(
            $.command_parameter,
@@ -609,7 +621,7 @@ index 1f8b448..9c7470d 100644
      verbatim_command_argument: ($) =>
        seq('--%', $._verbatim_command_argument_chars),
 
-@@ -827,8 +1050,10 @@ export default grammar({
+@@ -827,8 +1062,10 @@ export default grammar({
          seq($.file_redirection_operator, $.redirected_file_name),
        ),
 
@@ -621,7 +633,7 @@ index 1f8b448..9c7470d 100644
 
      // Class
      class_attribute: ($) =>
-@@ -857,13 +1082,26 @@ export default grammar({
+@@ -857,13 +1094,26 @@ export default grammar({
          '(',
          optional($.class_method_parameter_list),
          ')',
@@ -648,7 +660,7 @@ index 1f8b448..9c7470d 100644
          token(reservedWord('class')),
          $.simple_name,
          optional(seq(':', $.simple_name, repeat(seq(',', $.simple_name)))),
-@@ -884,6 +1122,7 @@ export default grammar({
+@@ -884,6 +1134,7 @@ export default grammar({
      // Enums
      enum_statement: ($) =>
        seq(
@@ -656,7 +668,7 @@ index 1f8b448..9c7470d 100644
          token(reservedWord('enum')),
          $.simple_name,
          '{',
-@@ -895,7 +1134,20 @@ export default grammar({
+@@ -895,7 +1146,20 @@ export default grammar({
        seq($.simple_name, optional(seq('=', $.integer_literal))),
 
      // Expressions
@@ -678,7 +690,7 @@ index 1f8b448..9c7470d 100644
 
      logical_expression: ($) =>
        prec.left(
-@@ -1008,7 +1260,35 @@ export default grammar({
+@@ -1008,7 +1272,35 @@ export default grammar({
      pre_decrement_expression: ($) => seq('--', $.unary_expression),
 
      cast_expression: ($) =>
@@ -715,7 +727,7 @@ index 1f8b448..9c7470d 100644
 
      attributed_variable: ($) => seq($.type_literal, $.variable),
 
-@@ -1034,7 +1314,7 @@ export default grammar({
+@@ -1034,7 +1326,7 @@ export default grammar({
          $.variable,
        ),
 
@@ -724,7 +736,7 @@ index 1f8b448..9c7470d 100644
 
      sub_expression: ($) =>
        seq('$(', field('statements', optional($.statement_list)), ')'),
-@@ -1042,8 +1322,12 @@ export default grammar({
+@@ -1042,8 +1334,12 @@ export default grammar({
      array_expression: ($) =>
        seq('@(', field('statements', optional($.statement_list)), ')'),
 
@@ -738,7 +750,7 @@ index 1f8b448..9c7470d 100644
 
      hash_literal_expression: ($) =>
        seq('@{', optional($.hash_literal_body), '}'),
-@@ -1101,11 +1385,17 @@ export default grammar({
+@@ -1101,11 +1397,17 @@ export default grammar({
          $.invokation_foreach_expression,
        ),
 
@@ -758,7 +770,7 @@ index 1f8b448..9c7470d 100644
          $.script_block_expression,
        ),
 
-@@ -1145,10 +1435,13 @@ export default grammar({
+@@ -1145,10 +1447,13 @@ export default grammar({
            $.comparison_argument_expression,
            seq(
              $.bitwise_argument_expression,
@@ -775,7 +787,7 @@ index 1f8b448..9c7470d 100644
              ),
              $.comparison_argument_expression,
            ),
-@@ -1213,32 +1506,49 @@ export default grammar({
+@@ -1213,32 +1518,49 @@ export default grammar({
 
      type_literal: ($) => seq('[', $.type_spec, ']'),
 

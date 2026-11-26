@@ -39,7 +39,11 @@ and loses every other finding for that file.
 Command argument separators and the external bare-dash scanner use PowerShell's
 whitespace set without CR and LF. The same 23 characters delimit command names
 and bare arguments; quoted and backtick-escaped spaces remain inside one word.
-U+200B, U+FEFF and U+2060 remain literal text after a dash prefix.
+U+200B, U+FEFF and U+2060 remain literal text after a dash prefix. A dedicated
+word alternative owns single and repeated dashes followed by those marks.
+Its lexical precedence preserves an unescaped comma as an array boundary;
+quoted and escaped commas remain inside the word. Named attached options,
+such as `--format=csv,noheader`, retain their existing token rule.
 
 PowerShell 7.7.0 native argv captures cover each separator after a command name,
 between arguments, and before and after single and double dashes. Rust adapter

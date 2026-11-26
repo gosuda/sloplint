@@ -62,6 +62,8 @@ mod powershell_assignment_escapes;
 mod powershell_continuations;
 #[path = "grammar_gaps/powershell_escaped_lines.rs"]
 mod powershell_escaped_lines;
+#[path = "grammar_gaps/powershell_format_dash_words.rs"]
+mod powershell_format_dash_words;
 #[path = "grammar_gaps/powershell_literal_runs.rs"]
 mod powershell_literal_runs;
 #[path = "grammar_gaps/powershell_plain_escapes.rs"]

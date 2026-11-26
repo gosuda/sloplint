@@ -368,6 +368,18 @@ export default grammar({
     generic_token: ($) =>
       choice(
         $._variable_path_word,
+        // A format mark after a dash-only prefix starts a literal word.
+        // Prefer this token over attached options so an unescaped comma
+        // keeps its native array boundary; protected segments stay inside.
+        token(
+          prec(
+            1,
+            new RegExp(
+              /-+[\u200B\uFEFF\u2060]/.source +
+                wordTail(/[^&\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000()}|;,"'`]/.source),
+            ),
+          ),
+        ),
         token(
           choice(
             new RegExp(
