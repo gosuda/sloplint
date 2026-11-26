@@ -47,32 +47,47 @@ def identity() -> None:
 identity()
 instrument = PROOF / "instrument.patch"
 assert hashlib.sha256(instrument.read_bytes()).hexdigest() == MANIFEST["instrument_sha256"]
-frozen = (PROOF / "frozen-tests.rs").read_bytes()
-assert hashlib.sha256(frozen).hexdigest() == MANIFEST["frozen_tests_sha256"]
+patch = PROOF / "candidate.patch"
+assert hashlib.sha256(patch.read_bytes()).hexdigest() == MANIFEST["patch_sha256"]
+frozen = (PROOF / "saturation-test.rs").read_bytes()
+assert hashlib.sha256(frozen).hexdigest() == MANIFEST["saturation_test_sha256"]
+counter = (PROOF / "count-instrumentation.rs").read_bytes()
+assert hashlib.sha256(counter).hexdigest() == MANIFEST["count_instrumentation_sha256"]
 tests = SOURCE / "crates/bamts-compiler/src/program/tests.rs"
 saved_tests = tests.read_bytes()
 assert hashlib.sha256(saved_tests).hexdigest() == MANIFEST["original_tests_sha256"]
 relation = SOURCE / "crates/bamts-compiler/src/checker/relations.rs"
 saved_relation = relation.read_bytes()
-marker = "    /// Regression for nested contextual hits:"
-assert saved_relation.decode().count(marker) == 1
+run("fetch-exact-baseline", ["git", "fetch", "--no-tags", "--depth=1", "origin", str(MANIFEST["baseline_head"])], 60)
+baseline = subprocess.check_output(["git", "show", str(MANIFEST["baseline_head"]) + ":crates/bamts-compiler/src/checker/relations.rs"], cwd=SOURCE)
+assert hashlib.sha256(baseline).hexdigest() == MANIFEST["baseline_relations_sha256"]
 try:
-    relation.write_text(saved_relation.decode().replace(marker, frozen.decode() + marker))
+    relation.write_bytes(baseline)
+    run("apply-rejected-candidate", ["git", "apply", str(patch)], 30)
+    candidate = relation.read_text()
+    assert hashlib.sha256(relation.read_bytes()).hexdigest() == MANIFEST["candidate_relations_sha256"]
     run("apply-instrumentation", ["git", "apply", str(instrument)], 30)
     assert hashlib.sha256(tests.read_bytes()).hexdigest() == MANIFEST["instrumented_tests_sha256"]
-    print("INSTRUMENTED_RELATIONS_SHA256 " + hashlib.sha256(relation.read_bytes()).hexdigest(), flush=True)
+    marker = "    /// Regression for nested contextual hits:"
+    assert candidate.count(marker) == 1
+    candidate = candidate.replace(marker, frozen.decode() + marker)
+    count_marker = "        let (from, to) = (self.table.get(source), self.table.get(target));"
+    assert candidate.count(count_marker) == 1
+    candidate = candidate.replace(count_marker, counter.decode() + count_marker)
+    cache_limit = "const RELATION_CACHE_CAPACITY: usize = 4096;"
+    assert candidate.count(cache_limit) == 1
     test_args = ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib"]
-    run("current-compile", [*test_args, "--no-run"], 600)
-    for test in [
-        "shared_recursive_graph_reuses_completed_exact_cycles",
-        "transformed_recursive_aliases_do_not_reuse_provisional_success",
-        "shared_transformed_recursive_graph_reuses_completed_cycles",
+    for name, content in [
+        ("bounded", candidate),
+        ("unbounded-diagnostic", candidate.replace(cache_limit, "const RELATION_CACHE_CAPACITY: usize = usize::MAX;")),
     ]:
-        run(test, [*test_args, f"checker::relations::tests::{test}", "--", "--exact", "--nocapture"], 180, required=False)
-    run("current-corpus", [*test_args, "program::tests::lowers_and_verifies_every_manifest_pinned_corpus_program", "--", "--exact", "--nocapture", "--test-threads=1"], 180, required=False)
+        relation.write_text(content)
+        print(f"DIAGNOSTIC_VARIANT {name} sha256=" + hashlib.sha256(relation.read_bytes()).hexdigest(), flush=True)
+        run(f"{name}-compile", [*test_args, "--no-run"], 600)
+        run(f"{name}-saturation", [*test_args, "checker::relations::tests::shared_active_cycle_scales_after_context_cache_saturation", "--", "--exact", "--nocapture"], 180, required=False)
+        run(f"{name}-corpus", [*test_args, "program::tests::lowers_and_verifies_every_manifest_pinned_corpus_program", "--", "--exact", "--nocapture", "--test-threads=1"], 180, required=False)
 finally:
     relation.write_bytes(saved_relation)
     tests.write_bytes(saved_tests)
 identity()
-print("CURRENT_HEAD_DIAGNOSTIC_COMPLETE " + json.dumps(RESULTS, sort_keys=True), flush=True)
-assert all(result["exit"] == 0 and not result["timed_out"] for result in RESULTS.values()), "Current head failed a frozen control; see actual exits above."
+print("CAPACITY_DIAGNOSTIC_COMPLETE " + json.dumps(RESULTS, sort_keys=True), flush=True)

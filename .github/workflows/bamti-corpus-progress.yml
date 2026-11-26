@@ -1,4 +1,4 @@
-name: Verify current recursive cache revision
+name: Diagnose pending relation cache capacity
 on:
   push:
     branches: [ci/bamti-corpus-progress-20261126-r12]
@@ -42,7 +42,7 @@ jobs:
         run: |
           rustup toolchain install 1.97.1 --profile minimal
           npm ci
-      - name: Check current source with frozen controls and restored identity
+      - name: Compare bounded and unbounded diagnostic cache with restored source
         run: uv run --no-project --python 3.15 ../probe/ci-tools/bamti-corpus/verify.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()

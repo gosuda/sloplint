@@ -9,5 +9,11 @@
   "frozen_tests_sha256": "31c6133868562bb0f2aec630270386ba00f4ee2e59b62e28fe76415cd6bf7aeb",
   "instrument_sha256": "23fce780f777bf0061bb4a04f35f565ba514d7ea899d30e027c503975480dc4a",
   "original_tests_sha256": "05821e12b287a788d0c88107024af740c77cf39cce6a6ccbcf58dbb1d9b659bf",
-  "instrumented_tests_sha256": "7610748940e67c6c17049f152dc8ab59d1e8d492331eaf5d52939c4ae1bb7321"
+  "instrumented_tests_sha256": "7610748940e67c6c17049f152dc8ab59d1e8d492331eaf5d52939c4ae1bb7321",
+  "baseline_head": "3997bdda7b98cf16e2872e5331a3ddcc86475ea1",
+  "baseline_relations_sha256": "0bebc26396c82c6cd9b8fffa948bdc9fb75447c22368188b446e2031bc064f49",
+  "candidate_relations_sha256": "84b355e31c5c9be95b5304407f0124f3739d5a2e3716ea87d61b7da25e15fa51",
+  "patch_sha256": "a9fbc890c20576a17215405f31beb34f24c3acb7332e6a27efc3ad4c73d8169a",
+  "saturation_test_sha256": "8c37c3295b0cdc537a080f6dc3a54f8b67e10ae82f0babc936adbb0781f05648",
+  "count_instrumentation_sha256": "bda9c69f6e307ab80c15404fc763051617585357fe1bef1a14053f9fd23d5445"
 }
