@@ -9,7 +9,7 @@
   "native_cases": 442,
   "proof_sha256": {
     "verify.py": "f72753fbe56ff40f12eba14c36a2aad811cd39c49be9596ff5a47c247b295f14",
-    "native-oracle.ps1": "0d4d5560040c21044a1d20558682f67a51f9c3aa9da5cfa9297ca3b20ccd8a8c",
+    "native-oracle.ps1": "f12ffdc84bb8baff23054e3d321527f367b5f1116692be2563f14654630ca2e2",
     "cases.json": "b8f84e56a7a16452223ce9bd5ab4e2907304a9ce034e34b15c94fdd1efea1023",
     "frozen-modules.json": "773724b18c7968bcedf2ed945614e576b04ecaa2ccee82ab88a19fd2481530b6"
   },
@@ -31,5 +31,16 @@
     "PRRT_kwDOVOMFM868ieqJ",
     "PRRT_kwDOVOMFM868iema"
   ],
-  "mode": "Observe native PowerShell and three immutable parsers, record actual public-API regression exits and query spans without assuming hypotheses pass, temporarily trace scanner callbacks, and restore every original source blob."
+  "mode": "Observe native PowerShell and three immutable parsers, record actual public-API regression exits and query spans without assuming hypotheses pass, temporarily trace scanner callbacks, and restore every original source blob.",
+  "initial_harness_failure": {
+    "producer": "efb5396412659ded632c97b569903dbbd3497937",
+    "run": 45887876459,
+    "job": 140143002219,
+    "phase": "native-witnesses",
+    "exit": 1,
+    "reason": "The observer used FileRedirectionAst.File; the pinned native public API exposes Location. No product source was changed or source tests run.",
+    "artifact": 15149539190,
+    "zip_sha256": "2c7f25a987a9b1eea869f66a35b6fb620d4785303df4129c71d4b597c163be1a",
+    "api_source": "https://github.com/PowerShell/PowerShell/blob/5c95ed61735c05eb99543aabf196529b5f267602/src/System.Management.Automation/engine/parser/ast.cs"
+  }
 }

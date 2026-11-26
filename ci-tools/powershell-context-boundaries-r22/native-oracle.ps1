@@ -20,7 +20,7 @@ foreach ($case in $cases) {
         errors=@($errors | ForEach-Object { $_.ErrorId })
         commands=@($commands | ForEach-Object { [ordered]@{name=$_.GetCommandName(); text=$_.Extent.Text; count=$_.CommandElements.Count-1; arguments=@($_.CommandElements | Select-Object -Skip 1 | ForEach-Object { [ordered]@{kind=$_.GetType().Name; text=$_.Extent.Text; start=$_.Extent.StartOffset; end=$_.Extent.EndOffset} })} })
         branches=@($branches | ForEach-Object { [ordered]@{clauses=$_.Clauses.Count; has_else=$null -ne $_.ElseClause; text=$_.Extent.Text} })
-        redirections=@($ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FileRedirectionAst] }, $true) | ForEach-Object { [ordered]@{file=$_.File.Extent.Text; text=$_.Extent.Text; start=$_.Extent.StartOffset; end=$_.Extent.EndOffset} })
+        redirections=@($ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FileRedirectionAst] }, $true) | ForEach-Object { [ordered]@{file=$_.Location.Extent.Text; text=$_.Extent.Text; start=$_.Extent.StartOffset; end=$_.Extent.EndOffset} })
         assignments=@($assignments | ForEach-Object { [ordered]@{right_kind=$_.Right.GetType().Name; right_text=$_.Right.Extent.Text} })
         tokens=@($tokens | ForEach-Object { [ordered]@{kind=$_.Kind.ToString(); text=$_.Text; flags=$_.TokenFlags.ToString(); start=$_.Extent.StartOffset; end=$_.Extent.EndOffset} })
         matches=$null -eq $case.accepted -or $accepted -eq $case.accepted
