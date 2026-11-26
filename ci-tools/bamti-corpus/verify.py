@@ -51,8 +51,10 @@ patch = PROOF / "candidate.patch"
 assert hashlib.sha256(patch.read_bytes()).hexdigest() == MANIFEST["patch_sha256"]
 frozen = (PROOF / "saturation-test.rs").read_bytes()
 assert hashlib.sha256(frozen).hexdigest() == MANIFEST["saturation_test_sha256"]
-counter = (PROOF / "count-instrumentation.rs").read_bytes()
-assert hashlib.sha256(counter).hexdigest() == MANIFEST["count_instrumentation_sha256"]
+counter = (PROOF / "detailed-profiler.rs").read_bytes()
+assert hashlib.sha256(counter).hexdigest() == MANIFEST["detailed_profiler_sha256"]
+alias_test = (PROOF / "alias-completion-test.rs").read_bytes()
+assert hashlib.sha256(alias_test).hexdigest() == MANIFEST["alias_completion_test_sha256"]
 tests = SOURCE / "crates/bamts-compiler/src/program/tests.rs"
 saved_tests = tests.read_bytes()
 assert hashlib.sha256(saved_tests).hexdigest() == MANIFEST["original_tests_sha256"]
@@ -70,25 +72,48 @@ try:
     assert hashlib.sha256(tests.read_bytes()).hexdigest() == MANIFEST["instrumented_tests_sha256"]
     marker = "    /// Regression for nested contextual hits:"
     assert candidate.count(marker) == 1
-    candidate = candidate.replace(marker, frozen.decode() + marker)
+    candidate = candidate.replace(marker, frozen.decode() + alias_test.decode() + marker)
+    field_marker = "    #[cfg(test)]\n    computed_relations: Cell<usize>,"
+    field_extra = (
+        "    #[cfg(test)]\n"
+        "    diagnostic_visits: RefCell<HashMap<RelationKey, usize>>,\n"
+        "    #[cfg(test)]\n"
+        "    diagnostic_outcomes: RefCell<HashMap<RelationKey, (bool, Vec<RelationKey>, bool)>>,\n"
+        "    #[cfg(test)]\n"
+        "    diagnostic_alias_assumptions: RefCell<HashSet<RelationKey>>,\n"
+    )
+    assert candidate.count(field_marker) == 1
+    candidate = candidate.replace(field_marker, field_extra + field_marker)
+    init_marker = "            #[cfg(test)]\n            computed_relations: Cell::new(0),"
+    init_extra = (
+        "            #[cfg(test)]\n"
+        "            diagnostic_visits: RefCell::new(HashMap::new()),\n"
+        "            #[cfg(test)]\n"
+        "            diagnostic_outcomes: RefCell::new(HashMap::new()),\n"
+        "            #[cfg(test)]\n"
+        "            diagnostic_alias_assumptions: RefCell::new(HashSet::new()),\n"
+    )
+    assert candidate.count(init_marker) == 1
+    candidate = candidate.replace(init_marker, init_extra + init_marker)
+    alias_marker = "        if let Some(assumption) = alias_assumption {\n"
+    assert candidate.count(alias_marker) == 1
+    candidate = candidate.replace(alias_marker, alias_marker + "            #[cfg(test)]\n            self.diagnostic_alias_assumptions.borrow_mut().insert(assumption);\n")
+    completion_marker = "        // A clean hit has no dependency bookkeeping"
+    assert candidate.count(completion_marker) == 1
+    candidate = candidate.replace(completion_marker, "        #[cfg(test)]\n        self.diagnostic_outcomes.borrow_mut().insert(relation, (result, frame.assumptions.iter().copied().collect(), frame.env_sensitive));\n" + completion_marker)
     count_marker = "        let (from, to) = (self.table.get(source), self.table.get(target));"
     assert candidate.count(count_marker) == 1
     candidate = candidate.replace(count_marker, counter.decode() + count_marker)
     cache_limit = "const RELATION_CACHE_CAPACITY: usize = 4096;"
     assert candidate.count(cache_limit) == 1
     test_args = ["cargo", "test", "--locked", "-p", "bamts-compiler", "--lib"]
-    entry_marker = "                let entries = cache.entry(relation).or_default();\n"
-    assert candidate.count(entry_marker) == 1
-    eviction = (PROOF / "expired-eviction.rs").read_bytes()
-    assert hashlib.sha256(eviction).hexdigest() == MANIFEST["expired_eviction_sha256"]
-    recycled = candidate.replace(entry_marker, entry_marker + eviction.decode())
     for name, content in [
-        ("recycle-bounded", recycled),
-        ("recycle-unbounded-diagnostic", recycled.replace(cache_limit, "const RELATION_CACHE_CAPACITY: usize = usize::MAX;")),
+        ("unbounded-diagnostic", candidate.replace(cache_limit, "const RELATION_CACHE_CAPACITY: usize = usize::MAX;")),
     ]:
         relation.write_text(content)
         print(f"DIAGNOSTIC_VARIANT {name} sha256=" + hashlib.sha256(relation.read_bytes()).hexdigest(), flush=True)
         run(f"{name}-compile", [*test_args, "--no-run"], 600)
+        run(f"{name}-alias-completion", [*test_args, "checker::relations::tests::completed_alias_approximations_do_not_prove_changed_arguments", "--", "--exact", "--nocapture"], 180, required=False)
         run(f"{name}-saturation", [*test_args, "checker::relations::tests::shared_active_cycle_scales_after_context_cache_saturation", "--", "--exact", "--nocapture"], 180, required=False)
         run(f"{name}-corpus", [*test_args, "program::tests::lowers_and_verifies_every_manifest_pinned_corpus_program", "--", "--exact", "--nocapture", "--test-threads=1"], 180, required=False)
 finally:
