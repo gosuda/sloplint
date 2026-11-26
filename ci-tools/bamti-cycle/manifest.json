@@ -4,10 +4,12 @@
   "base": "a471de394b3f27408839ad8e0ec1642054c0aeee",
   "base_tree": "288aee8e82289ff70b2e5230b91c06d584f22910",
   "original_relations_sha256": "9b01db3bbca0c5a3845ae9af3a395c1006afe224f210bd43b85008c7bbc35519",
-  "input_relations_sha256": "019f8ebced14387d8cee6141cabd450881d56f6dbd4d2002fdef61038fc3b938",
+  "input_relations_sha256": "3479aaa39ad13441b543153d340ad3a12b12e5b6c0303f11fe62911d194834d9",
   "historical_candidates": {
     "rejected_tree": "8d0c179639a7a4b4e91ab32d5512019c9d2c27db",
     "current_head_diagnostic": "a1b06337a37679d0e60b011e284e13143b793118",
     "hot_trace": "20c10b109bb723bc19a76cb2ef4e3c0d729ec0aa"
-  }
+  },
+  "ordering_control_core_sha256": "d101befeda4f0e67412955c7a86322842de5b0c2ca2305661d25bd3851be4c63",
+  "ordering_mutation_sha256": "747bf67d83b453842e1a02ae4b5f003b036a92936dd208c97ccbac09ab8800d3"
 }

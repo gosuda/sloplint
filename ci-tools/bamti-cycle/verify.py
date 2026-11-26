@@ -89,6 +89,10 @@ elif sys.argv[1] == "verify":
     alias = oracle / "changed-argument.ts"
     alias.write_text("type A<T> = { next: A<T[]>; value: T };\ntype B<T> = { next: B<T[]>; value: string };\ndeclare const value: A<string[]>;\nconst result: B<string[]> = value;\n")
     run("typescript-changed-argument", ["node", "node_modules/typescript/bin/tsc", "--ignoreConfig", "--noEmit", "--strict", "--skipLibCheck", "--pretty", "false", str(alias)], 1, "error TS2322:", limit=30)
+    nominal = oracle / "retained-alias-refutation.ts"
+    nominal.write_text("interface Marker { marker: number }\ntype A<T> = { a: A<T[]>; z: T };\ntype B<T> = { a: B<T[]>; z: Marker };\ndeclare const root: A<string>;\ndeclare const nested: A<string[]>;\nconst first: B<string> = root;\nconst second: B<string[]> = nested;\n")
+    output = run("typescript-retained-alias-refutation", ["node", "node_modules/typescript/bin/tsc", "--ignoreConfig", "--noEmit", "--strict", "--skipLibCheck", "--pretty", "false", str(nominal)], 1, "error TS2322:", limit=30)
+    assert output.count("error TS2322:") == 2
     candidate = RELATION.read_bytes()
     baseline = subprocess.check_output(["git", "show", "HEAD:crates/bamts-compiler/src/checker/relations.rs"], cwd=SOURCE).decode()
     marker = "#[cfg(test)]\nmod tests {"
@@ -101,6 +105,16 @@ elif sys.argv[1] == "verify":
         run("baseline-shared-refutation", [*args, "checker::relations::tests::shared_recursive_refutations_do_not_recompute_union_branches", "--", "--exact", "--nocapture"], 101, "shared recursive refutation recomputed", limit=180)
         run("baseline-shared-transformed", [*args, "checker::relations::tests::shared_transformed_recursive_graph_reuses_completed_cycles", "--", "--exact", "--nocapture"], 101, "shared transformed recursive graph recomputed", limit=180)
         run("baseline-saturated-active-cycle", [*args, "checker::relations::tests::shared_active_cycle_scales_after_context_cache_saturation", "--", "--exact", "--nocapture"], 101, "shared active cycle recomputed", limit=180)
+    finally:
+        RELATION.write_bytes(candidate)
+    mutation = cast(dict[str, str], json.loads((PROOF / "ordering-mutation.json").read_text()))
+    assert hashlib.sha256((PROOF / "ordering-mutation.json").read_bytes()).hexdigest() == INPUTS["ordering_mutation_sha256"]
+    assert candidate.decode().count(mutation["new"]) == 1
+    control = candidate.decode().replace(mutation["new"], mutation["old"])
+    assert hashlib.sha256(control.split(marker, 1)[0].encode()).hexdigest() == INPUTS["ordering_control_core_sha256"]
+    try:
+        RELATION.write_text(control)
+        run("prior-candidate-ordering-control", [*args, "checker::relations::tests::completed_refutation_dominates_retained_alias_assumption_after_saturation", "--", "--exact", "--nocapture"], 101, "matching relation cache variants disagree on compatibility")
     finally:
         RELATION.write_bytes(candidate)
     identity()
