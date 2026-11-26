@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-11-26 14:55:38 UTC",
+  "repository": "gosuda/bamTiScript",
+  "pull_request": 253,
+  "previous_head": "2c56f2165c237c591a684164d934ab67a1f2de4b",
+  "published_head": "87be57b3bdee04bdc9606d0fadde7912b20a52a6",
+  "actual_head": "87be57b3bdee04bdc9606d0fadde7912b20a52a6",
+  "actual_base": "a471de394b3f27408839ad8e0ec1642054c0aeee",
+  "source_tree": "297c6e935be36332f35fa5c0a53e23742a6d8f7c",
+  "source_path": "crates/bamts-compiler/src/checker/relations.rs",
+  "source_sha256": "3479aaa39ad13441b543153d340ad3a12b12e5b6c0303f11fe62911d194834d9",
+  "producer": {
+    "repository": "gosuda/sloplint",
+    "branch": "ci/bamti-cycle-proof-20261126-r9",
+    "commit": "f9482e0d2a0c209c0454e6dbd80186a63666a3da",
+    "run": 45840793132,
+    "job": 139981578250,
+    "artifact": 15129955677,
+    "zip_sha256": "21762f2781777a8a674997ce3a071ce3250384ca4df51c7305710def61bc4c5b"
+  },
+  "gates": {
+    "relation_tests": 74,
+    "recursive_union_tests": 2,
+    "full_corpus_exit": 0,
+    "fmt_exit": 0,
+    "workspace_check_exit": 0,
+    "clippy_exit": 0,
+    "full_workspace_exit": 0,
+    "node_contract_tests": 3,
+    "node_contract_exit": 0,
+    "npm_exit": 0
+  },
+  "expected_negative_controls": {
+    "current_head_refutation_count": 20477,
+    "current_head_transformed_count": 12287,
+    "current_head_saturated_active_count": 12287,
+    "current_head_control_exits": 101,
+    "prior_candidate_ordering_exit": 101
+  },
+  "review": {
+    "resolved_thread": "PRRT_kwDOTlcNv868aY4F",
+    "reply": 4710046596,
+    "unresolved": []
+  },
+  "historical_rejected": {
+    "old_candidate_tree": "8d0c179639a7a4b4e91ab32d5512019c9d2c27db",
+    "old_candidate_full_run": 45825320396,
+    "old_candidate_corpus_run": 45830112612,
+    "external_2c56_diagnostic_run": 45833062305,
+    "capacity_diagnostic_run": 45834339102,
+    "expired_variant_diagnostic_run": 45835681818,
+    "hot_refutation_trace_run": 45836783253,
+    "pre_ordering_candidate_tree": "c74ac2655d1de2c99a743273b67e938ff6b01367",
+    "pre_ordering_run": 45838842666
+  },
+  "scope": "Source-change gates and ordinary CI subset. No TypeScript product-root or BH1 benchmark completion claim.",
+  "retirement": "Owned probe workflow deleted additively; immutable producer commits and evidence retained.",
+  "evidence_repository_main_at_retirement": "dc99ed955cf78862a6f8811289f606de1fb50dfa"
+}
