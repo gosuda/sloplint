@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 WORKSPACE = Path(os.environ["GITHUB_WORKSPACE"])
@@ -12,6 +13,8 @@ SOURCE = WORKSPACE / "candidate"
 PROBE = WORKSPACE / "probe"
 EVIDENCE = WORKSPACE / "evidence"
 EVIDENCE.mkdir(exist_ok=True)
+sys.stdout.reconfigure(encoding="utf-8")
+sys.stderr.reconfigure(encoding="utf-8")
 
 
 def git(*arguments: str) -> str:
@@ -61,6 +64,12 @@ def mutation(label: str, original: str, replacement: str, diagnostic: str) -> di
 def main() -> int:
     manifest = json.loads((PROBE / "ci-tools/charamel-windows-candidate.json").read_text())
     assert git("rev-parse", "HEAD") == manifest["head"]
+    baseline: dict[str, object] = {"head": manifest["head"], "tree": git("write-tree")}
+    if os.name == "nt":
+        baseline["tests"] = run(["opam", "exec", "--switch=rd", "--", "dune", "runtest", "--profile", "release", "--force"], "baseline-tests")
+        git("diff", "--exit-code")
+        print(f"BASELINE_RESULT {json.dumps(baseline, sort_keys=True)}", flush=True)
+        (EVIDENCE / "baseline.json").write_text(json.dumps(baseline, indent=2) + "\n", encoding="utf-8", newline="\n")
     patch = PROBE / "ci-tools/charamel-windows-candidate.patch"
     assert hashlib.sha256(patch.read_bytes()).hexdigest() == manifest["patch_sha256"]
     git("apply", "--index", "--whitespace=error", str(patch))
@@ -76,15 +85,18 @@ def main() -> int:
     identity = {"candidate": manifest, "platform": os.environ["RUNNER_OS"], "files": files}
     (EVIDENCE / "identity.json").write_text(json.dumps(identity, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(f"IDENTITY {json.dumps(identity, sort_keys=True)}", flush=True)
-    result: dict[str, object] = {"candidate": manifest, "platform": os.environ["RUNNER_OS"]}
+    result: dict[str, object] = {"candidate": manifest, "platform": os.environ["RUNNER_OS"], "baseline": baseline}
     for name, command in (
         ("fmt", ["dune", "build", "@fmt"]),
         ("build", ["dune", "build", "--profile", "release"]),
-        ("tests", ["dune", "runtest", "--profile", "release"]),
+        ("tests", ["dune", "runtest", "--profile", "release", "--force"]),
     ):
         result[name] = run(["opam", "exec", "--switch=rd", "--", *command], name)
     proofs: dict[str, dict[str, object]] = {}
     if os.name == "nt":
+        console = run(["opam", "exec", "--switch=rd", "--", "dune", "build", "--profile", "release", "@test/melt/windows-console", "--force"], "native-console", 180)
+        console_log = (EVIDENCE / "native-console.log").read_text(encoding="utf-8", errors="replace")
+        result["native_console"] = {"exit": console, "native_pass": console == 0 and "PASS: native console input" in console_log}
         proofs["stdout-independent"] = mutation(
             "stdout-independent",
             "  let echo_off () =\n    let input_mode = mode input in",
