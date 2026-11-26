@@ -1,0 +1,26 @@
+{
+  "base": "e7ee97e84246863766ec7465777a035134533feb",
+  "base_tree": "5d2a547a693d073ad9739311e7b653baa96a08d6",
+  "previous_base": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
+  "previous_tree": "f518b3943c6b86af53c334175309303c3d79f38b",
+  "mode": "Read-only implementation reconciliation after external comments-as-elements and mark-leading lexical fixes. Freeze both new reported witnesses plus complete existing ownership, continuation, redirection and line-boundary observations. No candidate source is applied.",
+  "native_cases": 801,
+  "primary_ids": [
+    "external-comment-adjacent-word",
+    "external-comment-redirect-number"
+  ],
+  "new_cases": 65,
+  "query_count": 21,
+  "source_delta_commits": [
+    "7fe4b0f54a245f929361bb5d5836a0fc3063fd8e",
+    "e7ee97e84246863766ec7465777a035134533feb"
+  ],
+  "proof_sha256": {
+    "external-boundary.py": "8b89d1becf6e905863b12aca0f509cb30a36b98350f54a2f78316b801f3945cf",
+    "external-boundary-cases.json": "c1f8af63b0bcec4ea5f7919caa5789b2da647e319adb0f310718032250d1dc06",
+    "external-boundary-cases.tsv": "3a1e3f286d87e40e9179563f767662e48ef768e8053b31a3126c7303d4d18a94",
+    "external-boundary-modules.json": "506ec24d0bba7aa8b696198f13b04963870c2073c15f5f4a5b8c2f96ed85cc0e",
+    "native-oracle.ps1": "521d82f956d0192f33e5b2ba51996ef20b16590957c16172d51298e6fe3dffcd",
+    "guard-boundary-success-receipt.json": "fad468856d8a0c8e14b06b975860ab39814148e75d2e615846d8207742473aa5"
+  }
+}
