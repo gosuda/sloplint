@@ -1,0 +1,18 @@
+{
+  "repo": "gosuda/spira",
+  "head": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+  "previous": "17f0996c42c6406f72cbf95a06913a6f2044c74b",
+  "tree": "96b27c2ee5c46c50eb34382bba07982849f4963d",
+  "patch_sha256": "29d19a59855ac886853df6bbb577d212d2a49c5faed809655265a77e41310935",
+  "files": {
+    "docs/specs/http3.md": "8d8f9098fee78ef304020430a77e1e3f3d41fcd45a1bb27cb15176cf6dc5510e",
+    "http3/http3_test.lgo": "75c190415ed8213d9b61508ef05ac86b824075d117edd219f3036ef42d79fec3"
+  },
+  "feature_sha256": "1cc6528dac65c58a9ab4c3ac81ec4ebfb89120b30d4d265631a75a26c870c106",
+  "logos": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+  "logos_tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+  "prior_cap_control": {
+    "run": 45783118232,
+    "artifact": 15100100040
+  }
+}
