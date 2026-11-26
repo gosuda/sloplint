@@ -1,0 +1,179 @@
+diff --git a/db/db.lgo b/db/db.lgo
+index eb38e75..a4902d4 100644
+--- a/db/db.lgo
++++ b/db/db.lgo
+@@ -148,14 +148,18 @@ func isInMemorySQLite(d Dialect, dsn string) bool {
+ 	if _, ok := d.(SQLite); !ok {
+ 		return false
+ 	}
+-	name, query, _ := strings.Cut(dsn, "?")
++	name, _, _ := strings.Cut(dsn, "?")
+ 	if name == ":memory:" {
+ 		return true
+ 	}
+-	if rest, ok := strings.CutPrefix(name, "file:"); ok {
+-		if path, err := url.PathUnescape(rest); err == nil && path == ":memory:" {
+-			return true
+-		}
++	uri, ok := strings.CutPrefix(dsn, "file:")
++	if !ok {
++		return false
++	}
++	uri, _, _ = strings.Cut(uri, "#")
++	name, query, _ := strings.Cut(uri, "?")
++	if path, err := url.PathUnescape(name); err == nil && path == ":memory:" {
++		return true
+ 	}
+ 	params, err := url.ParseQuery(query)
+ 	if err != nil {
+diff --git a/db/inmemory_test.lgo b/db/inmemory_test.lgo
+index a0fcd0d..1ea95b7 100644
+--- a/db/inmemory_test.lgo
++++ b/db/inmemory_test.lgo
+@@ -26,7 +26,9 @@ func openRawPool(t *testing.T, dsn string, opts ...db.PoolOptions) *db.Pool {
+ 		panic(fmt.Sprintf("db_test: start %s: %v", dsn, serr))
+ 	}
+ 	t.Cleanup(func() {
+-		if serr := pool.Stop(context.Background()); serr != nil {
++		stopCtx, stopCancel := context.WithTimeout(context.Background(), 5*time.Second)
++		defer stopCancel()
++		if serr := pool.Stop(stopCtx); serr != nil {
+ 			t.Errorf("stop: %v", serr)
+ 		}
+ 	})
+@@ -35,7 +37,9 @@ func openRawPool(t *testing.T, dsn string, opts ...db.PoolOptions) *db.Pool {
+ 
+ func execKeep(t *testing.T, q db.Querier, query string, args ...any) {
+ 	t.Helper()
+-	if _, err := db.Exec(t.Context(), q, query, args...); err != nil {
++	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
++	defer cancel()
++	if _, err := db.Exec(ctx, q, query, args...); err != nil {
+ 		t.Fatalf("exec: %v", err)
+ 	}
+ }
+@@ -53,6 +57,40 @@ func countKeepRows(t *testing.T, ctx context.Context, pool *db.Pool) int {
+ 	return got[0]
+ }
+ 
++func TestPlainFilenameMemoryQueryKeepsExpiry(t *testing.T) {
++	path := filepath.Join(t.TempDir(), "plain.db")
++	pool := openRawPool(t, path+"?mode=memory",
++		db.PoolOptions{ConnMaxLifetime: time.Nanosecond})
++	execKeep(t, pool, "CREATE TABLE keep (n integer not null)")
++	execKeep(t, pool, "INSERT INTO keep (n) VALUES (1)")
++	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
++	defer cancel()
++	if n := countKeepRows(t, ctx, pool); n != 1 {
++		t.Fatalf("file-backed rows = %d, want 1", n)
++	}
++	if _, err := os.Stat(path); err != nil {
++		t.Fatalf("plain filename did not open a real file: %v", err)
++	}
++	if pool.Stats().MaxLifetimeClosed == 0 {
++		t.Fatal("plain filename query disabled connection expiry")
++	}
++}
++
++func TestMemoryURIFragmentKeepsRows(t *testing.T) {
++	pool := openRawPool(t, "file:spira_keep_fragment?cache=shared&mode=memory#shop",
++		db.PoolOptions{MaxOpenConns: 1, ConnMaxLifetime: time.Nanosecond})
++	execKeep(t, pool, "CREATE TABLE keep (n integer not null)")
++	execKeep(t, pool, "INSERT INTO keep (n) VALUES (1)")
++	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
++	defer cancel()
++	if n := countKeepRows(t, ctx, pool); n != 1 {
++		t.Fatalf("fragmented memory URI lost rows: %d", n)
++	}
++	if pool.Stats().MaxLifetimeClosed != 0 {
++		t.Fatal("fragmented memory URI allowed connection expiry")
++	}
++}
++
+ // TestInMemorySharedPoolSurvivesExpiry proves that pool expiry never deletes
+ // the shop's shared in-memory database: with tiny lifetimes the old code let
+ // the last connection close, and the next query found no tables.
+diff --git a/db/pool_limits_test.lgo b/db/pool_limits_test.lgo
+index eab9a94..eac7b77 100644
+--- a/db/pool_limits_test.lgo
++++ b/db/pool_limits_test.lgo
+@@ -36,7 +36,9 @@ func openSplitPool(t *testing.T, name string, first db.PoolOptions, second db.Po
+ 			t.Errorf("Stop: %v", serr)
+ 		}
+ 	})
+-	if serr := pool.Start(t.Context()); serr != nil {
++	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
++	defer cancel()
++	if serr := pool.Start(ctx); serr != nil {
+ 		panic("db_test: start with options failed")
+ 	}
+ 	return pool
+@@ -93,3 +95,25 @@ func TestOpenHonorsTimeoutOptions(t *testing.T) {
+ 		t.Fatalf("MaxLifetimeClosed = %d, want at least 1: the second option set was ignored", evicted)
+ 	}
+ }
++
++func TestOpenHonorsSecondIdleTimeout(t *testing.T) {
++	pool := openSplitPool(t, "idle-timeout.db",
++		db.PoolOptions{MaxOpenConns: 2},
++		db.PoolOptions{ConnMaxIdleTime: time.Nanosecond},
++	)
++	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
++	defer cancel()
++	ticker := time.NewTicker(10 * time.Millisecond)
++	defer ticker.Stop()
++	for pool.Stats().MaxIdleTimeClosed == 0 {
++		select {
++		case <-ticker.C:
++		case <-ctx.Done():
++			t.Fatalf("second idle timeout was ignored: %+v", pool.Stats())
++			return
++		}
++	}
++	if pool.Stats().MaxLifetimeClosed != 0 {
++		t.Fatal("lifetime expiry masked the idle-timeout assertion")
++	}
++}
+diff --git a/docs/specs/db.md b/docs/specs/db.md
+index 5de5397..59ac7f0 100644
+--- a/docs/specs/db.md
++++ b/docs/specs/db.md
+@@ -106,18 +106,22 @@ func ClassifyDriverError(d Dialect, cause error) error
+ - `DialectOf` MUST return `MSSQL` for the driver name `sqlserver`.
+ - `Open` MUST record the dialect that `DialectOf` returns for that driver and DSN.
+ - `Open` MUST bound each pool.
+-- SQLite pools MUST allow 4 open connections and 2 idle connections.
+-- Network engine pools MUST allow 10 open connections and 5 idle connections.
+-- Each pool MUST expire connections after 30 minutes of lifetime.
+-- Each pool MUST close connections idle for 5 minutes.
++- By default, SQLite pools MUST allow 4 open connections and 2 idle connections.
++- By default, network engine pools MUST allow 10 open connections and 5 idle connections.
++- File-backed and network pools MUST default to 30-minute lifetime expiry and 5-minute idle expiry.
+ - Outside in-memory SQLite DSNs, a nonzero `PoolOptions` field MUST override its default.
+ - When several `PoolOptions` sets arrive, `Open` MUST take each field from the first set that leaves it nonzero.
+ - `Open` MUST disable age and idle eviction for in-memory SQLite DSNs.
+-- `Open` MUST retain one idle connection for in-memory SQLite DSNs.
++- An in-memory SQLite pool MUST preserve its resolved open-connection limit.
++- An in-memory SQLite pool MUST raise a resolved idle-connection limit below one to one.
++- It MUST preserve larger resolved idle-connection limits, including explicit values.
++- Only `file:` URI query parameters MUST affect SQLite memory classification.
++- SQLite URI fragments MUST NOT affect memory classification.
+ - `Open` MUST keep a zero `PoolOptions` field on its dialect default.
+ - `Pool` MUST implement [app.Part](app.md).
+ - `Start` MUST ping the database.
+ - `Stop` MUST close each prepared statement before it closes the database handle.
++- `Stop` MUST return when the caller deadline expires, even while a statement remains active.
+ - After such a return, the close MUST continue and finish when the statement ends.
+ - The package MUST NOT import a database driver.
+ 
+@@ -233,6 +237,10 @@ func ClassifyDriverError(d Dialect, cause error) error
+ 
+ ## Proof
+ 
++- `TestPlainFilenameMemoryQueryKeepsExpiry` proves that a plain filename with `mode=memory` retains lifetime expiry and file contents.
++- `TestMemoryURIFragmentKeepsRows` proves that a URI fragment cannot re-enable expiry for shared memory.
++- `TestOpenHonorsSecondIdleTimeout` proves that the second option set controls idle expiry independently of lifetime expiry.
++
+ - `TestDialectOfMatchesEachDriverName` proves the four driver names.
+ - `TestOpenRejectsUnknownDriver` and `TestOpenRejectsMysqlWithoutParseTime` prove the two open refusals.
+ - `TestDialectOfRejectsParseTimeInThePassword` proves that `parseTime=true` outside the query part does not count.

@@ -22,9 +22,9 @@ EVIDENCE = Path(os.environ["GITHUB_WORKSPACE"]) / "evidence"
 CASES = (
     Regression(
         "unicode-package",
-        "cmd/sqlc-gen-spira/names.lgo",
-        'func isGoIdent(s string) bool {\n',
-        'func isGoIdent(s string) bool {\n\tfor _, r := range s {\n\t\tif r > unicode.MaxASCII {\n\t\t\treturn false\n\t\t}\n\t}\n',
+        "cmd/sqlc-gen-spira/gen.lgo",
+        '\tif name == "_" || !token.IsIdentifier(name) {\n',
+        '\tif name == "_" || !token.IsIdentifier(name) || strings.IndexFunc(name, func(r rune) bool { return r > 127 }) != -1 {\n',
         ("logos", "test", "-race", "-count=1", "-v", "-run", "^TestPackageNameAcceptsUnicode$", "./cmd/sqlc-gen-spira"),
         "--- FAIL: TestPackageNameAcceptsUnicode",
     ),

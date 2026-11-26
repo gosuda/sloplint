@@ -1,0 +1,39 @@
+diff --git a/http3/http3_test.lgo b/http3/http3_test.lgo
+index e39a1b8..57f0d83 100644
+--- a/http3/http3_test.lgo
++++ b/http3/http3_test.lgo
+@@ -182,18 +182,16 @@ func assertH3ALPN(t *testing.T, udpAddr string, pool *x509.CertPool) {
+ func TestH3NeedsTLSFailsStart(t *testing.T) {
+ 	r := web.NewRouter()
+ 	r.Handle("GET", "/hello", h3Hello)
+-	heldTCP, terr := net.Listen("tcp", "127.0.0.1:0")
+-	if terr != nil {
+-		t.Fatalf("hold tcp port: %v", terr)
++	heldTCP, heldUDP := bindH3CallerSockets(t)
++	if heldTCP == nil || heldUDP == nil {
++		t.Fatal("paired sockets were not bound")
+ 		return
+ 	}
+-	defer func() {
+-		if cerr := heldTCP.Close(); cerr != nil {
+-			t.Errorf("close held tcp port: %v", cerr)
+-		}
+-	}()
++	defer closeH3CallerSockets(t, heldTCP, heldUDP)
+ 	s := &http3.Server{Addr: heldTCP.Addr().String(), Router: r, H3: true}
+-	err := s.Start(context.Background())
++	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
++	defer cancel()
++	err := s.Start(ctx)
+ 	if err == nil {
+ 		cctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+ 		defer cancel()
+@@ -204,7 +202,7 @@ func TestH3NeedsTLSFailsStart(t *testing.T) {
+ 		return
+ 	}
+ 	if !errors.Is(err, http3.ErrH3NeedsTLS) {
+-		t.Fatalf("start error = %v, want ErrH3NeedsTLS with a held TCP port", err)
++		t.Fatalf("start error = %v, want ErrH3NeedsTLS with held TCP and UDP ports", err)
+ 		return
+ 	}
+ 	if addr := s.BoundUDPAddrForTest(); addr != "" {

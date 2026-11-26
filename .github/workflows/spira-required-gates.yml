@@ -5,9 +5,10 @@ on:
     branches: [ci/spira-required-gates-20261126-r7]
     paths:
       - .github/workflows/spira-required-gates.yml
-      - ci-tools/spira-round7.patch
+      - ci-tools/spira-*-r8.patch
+      - ci-tools/spira-candidates.json
+      - ci-tools/spira-batch-gates.py
       - ci-tools/spira-regressions.py
-      - ci-tools/spira-jsontext-repro.py
 
 permissions:
   contents: read
@@ -41,23 +42,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: gosuda/LoGOs
-          ref: 05f2570fce079d467556979a3d599c3e892d6876
+          ref: 2cfe17218b4d3311c5746b94a1858bf3fe9a3e45
           persist-credentials: false
           path: logos
-      - name: Verify and apply the exact candidate
-        id: candidate
-        working-directory: spira
-        run: |
-          mkdir -p "$GITHUB_WORKSPACE/evidence"
-          test "$(git rev-parse HEAD)" = 192c1b0b2f8ab195638bcebe0779c6b4f9a39b70
-          printf '%s  %s\n' e7e375b7782ec70f209a4dc8e059feda2ec3af5089a194e9170f843c20f89e5c ../probe/ci-tools/spira-round7.patch | sha256sum --check --strict
-          git apply --index --whitespace=error ../probe/ci-tools/spira-round7.patch
-          test "$(git write-tree)" = d2d90acfb3516b242e976a564bce5867c2d3b728
-          git rev-parse HEAD > "$GITHUB_WORKSPACE/evidence/spira-source.txt"
-          git write-tree >> "$GITHUB_WORKSPACE/evidence/spira-source.txt"
-          git diff --cached --name-only -z | xargs -0 sha256sum > "$GITHUB_WORKSPACE/evidence/candidate.sha256"
-          git diff --exit-code
-          git diff --cached --check
+      - name: Prepare the evidence directory
+        run: mkdir -p "$GITHUB_WORKSPACE/evidence"
       - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
         with:
           go-version: '1.27.4'
@@ -75,6 +64,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           archive="$RUNNER_TEMP/sloplint-cli.zip"
           gh api /repos/gosuda/sloplint/actions/artifacts/15091303567/zip > "$archive"
           printf '%s  %s\n' e362f672d39498374a637a68ded7f57205b415e68006a4dc4a4a882405f5af33 "$archive" | sha256sum --check --strict
@@ -88,7 +78,8 @@ jobs:
         id: toolchain
         working-directory: logos
         run: |
-          test "$(git rev-parse HEAD)" = 05f2570fce079d467556979a3d599c3e892d6876
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 2cfe17218b4d3311c5746b94a1858bf3fe9a3e45
           git rev-parse HEAD > "$GITHUB_WORKSPACE/evidence/logos-source.txt"
           git rev-parse HEAD^{tree} >> "$GITHUB_WORKSPACE/evidence/logos-source.txt"
           export GOROOT_BOOTSTRAP="$(go env GOROOT)"
@@ -100,37 +91,11 @@ jobs:
       - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
         with:
           enable-cache: false
-      - name: Run the complete Spira gate
-        working-directory: spira
-        run: just gate 2>&1 | tee "$GITHUB_WORKSPACE/evidence/gate.log"
-      - name: Eject and build with upstream Go
-        if: ${{ !cancelled() && steps.toolchain.outcome == 'success' && steps.candidate.outcome == 'success' }}
+      - name: Run authentic gates and regression proofs for every exact candidate
         working-directory: spira
         run: |
-          status=0
-          just eject 2>&1 | tee "$GITHUB_WORKSPACE/evidence/eject.log" || status=$?
-          if [[ -d /tmp/spira-eject/ai ]]; then
-            cp -R /tmp/spira-eject/ai "$GITHUB_WORKSPACE/evidence/export-ai"
-            cp /tmp/spira-eject/go.mod "$GITHUB_WORKSPACE/evidence/export-go.mod"
-          fi
-          exit "$status"
-      - name: Reduce the jsontext export failure
-        if: ${{ !cancelled() && steps.toolchain.outcome == 'success' }}
-        run: GOROOT="$LOGOS_ROOT" uv run --no-project --python 3.13 probe/ci-tools/spira-jsontext-repro.py
-      - name: Prove focused regressions fail before repair
-        if: ${{ !cancelled() && steps.toolchain.outcome == 'success' }}
-        working-directory: spira
-        run: GOROOT="$LOGOS_ROOT" uv run --no-project --python 3.13 ../probe/ci-tools/spira-regressions.py
-      - name: Recheck candidate identity
-        if: ${{ !cancelled() && steps.candidate.outcome == 'success' }}
-        working-directory: spira
-        run: |
-          sha256sum --check --strict "$GITHUB_WORKSPACE/evidence/candidate.sha256"
-          test "$(git write-tree)" = d2d90acfb3516b242e976a564bce5867c2d3b728
-          git diff --check
-          node --version > "$GITHUB_WORKSPACE/evidence/node-version.txt"
-          pnpm --version > "$GITHUB_WORKSPACE/evidence/pnpm-version.txt"
-          just --version > "$GITHUB_WORKSPACE/evidence/just-version.txt"
+          set -euo pipefail
+          GOROOT="$LOGOS_ROOT" uv run --no-project --python 3.13 ../probe/ci-tools/spira-batch-gates.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: ${{ !cancelled() }}
         with:
