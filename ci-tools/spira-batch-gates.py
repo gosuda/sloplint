@@ -126,6 +126,40 @@ def memory_classification(candidate: Candidate, folder: Path) -> bool:
     return reproduced and green == 0
 
 
+def dashboard_proofs(folder: Path) -> dict[str, bool]:
+    command = ["pnpm", "--dir", "frontend", "exec", "vitest", "run", "test/live.test.ts", "-t", "dashboard row"]
+    tests = SOURCE / "frontend/test/live.test.ts"
+    parser = SOURCE / "frontend/test/dom-stubs.ts"
+    saved_tests = tests.read_text()
+    saved_parser = parser.read_text()
+    spy = 'const swapSpy = vi.spyOn(htmx, "swap");'
+    bypass = 'const swapSpy = vi.spyOn(htmx, "swap").mockImplementation(() => {});'
+    assert saved_tests.count(spy) == 2
+    try:
+        tests.write_text(saved_tests.replace(spy, bypass))
+        red = run(command, folder / "dashboard-no-swap-red.log", 120)
+        reproduced = red != 0 and "AssertionError" in (folder / "dashboard-no-swap-red.log").read_text()
+        old_tests = subprocess.check_output(["git", "show", "HEAD:frontend/test/live.test.ts"], cwd=SOURCE, text=True)
+        assert old_tests.count(spy) == 2
+        tests.write_text(old_tests.replace(spy, bypass))
+        old_oracle = run(command, folder / "dashboard-old-oracle.log", 120)
+    finally:
+        tests.write_text(saved_tests)
+    green = run(command, folder / "dashboard-no-swap-green.log", 120)
+    binding = '\tvi.stubGlobal("DOMParser", TemplateDOMParser);\n'
+    assert saved_parser.count(binding) == 1
+    try:
+        parser.write_text(saved_parser.replace(binding, ""))
+        parser_red = run(command, folder / "dashboard-parser-red.log", 120)
+        parser_reproduced = parser_red != 0 and "AssertionError" in (folder / "dashboard-parser-red.log").read_text()
+    finally:
+        parser.write_text(saved_parser)
+    parser_green = run(command, folder / "dashboard-parser-green.log", 120)
+    result = {"command": command, "red": red, "old_oracle": old_oracle, "green": green, "parser_red": parser_red, "parser_green": parser_green}
+    (folder / "dashboard-proof-results.json").write_text(json.dumps(result, indent=2) + "\n")
+    return {"actual-row-oracle": reproduced and old_oracle == 0 and green == 0, "fragment-parser": parser_reproduced and parser_green == 0}
+
+
 def check(candidate: Candidate) -> dict[str, object]:
     folder = EVIDENCE / candidate.label
     folder.mkdir(parents=True)
@@ -162,6 +196,8 @@ def check(candidate: Candidate) -> dict[str, object]:
         if candidate.label == "40":
             source = (SOURCE / "cmd/sqlc-gen-spira/export_test.lgo").read_text()
             proofs["immutable-forwarder"] = "func MethodOK(arg string) bool" in source and "var MethodOK" not in source
+        if candidate.label == "dashboard":
+            proofs.update(dashboard_proofs(folder))
         result["proofs"] = proofs
     git("diff", "--exit-code")
     assert git("write-tree") == candidate.tree

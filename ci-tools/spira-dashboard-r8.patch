@@ -1,0 +1,93 @@
+diff --git a/frontend/test/dom-stubs.ts b/frontend/test/dom-stubs.ts
+index 3683299..5c9ebd0 100644
+--- a/frontend/test/dom-stubs.ts
++++ b/frontend/test/dom-stubs.ts
+@@ -20,6 +20,31 @@ class FakeXPathEvaluator {
+ 	}
+ }
+ 
++// happy-dom drops table rows while DOMParser reads template contents.
++// Use its fragment parser for htmx's own template wrapper, as browsers do.
++class TemplateDOMParser extends DOMParser {
++	override parseFromString(
++		input: string,
++		type: DOMParserSupportedType,
++	): Document {
++		const parsed = super.parseFromString(input, type);
++		const prefix = '<body><template class="internal-htmx-wrapper">';
++		const suffix = "</template></body>";
++		if (
++			type === "text/html" &&
++			input.startsWith(prefix) &&
++			input.endsWith(suffix)
++		) {
++			const template = parsed.querySelector("template");
++			if (!template) {
++				throw new Error("htmx fragment wrapper is missing");
++			}
++			template.innerHTML = input.slice(prefix.length, -suffix.length);
++		}
++		return parsed;
++	}
++}
++
+ function realmBase(node: object, base: string): object {
+ 	let current: unknown = (node as { constructor: unknown }).constructor;
+ 	while (
+@@ -35,6 +60,7 @@ function realmBase(node: object, base: string): object {
+ }
+ 
+ export function stubDomGlobals(): void {
++	vi.stubGlobal("DOMParser", TemplateDOMParser);
+ 	vi.stubGlobal("XPathEvaluator", FakeXPathEvaluator);
+ 	vi.stubGlobal("XPathResult", {});
+ 	vi.stubGlobal("Document", realmBase(document, "Document"));
+diff --git a/frontend/test/live.test.ts b/frontend/test/live.test.ts
+index 4ded556..f909c6f 100644
+--- a/frontend/test/live.test.ts
++++ b/frontend/test/live.test.ts
+@@ -152,12 +152,6 @@ test("resume applies the instance updates paused in the region", () => {
+ });
+ 
+ test("resume replays the bare dashboard row paused in the region", async () => {
+-	// The retained row payload must reach htmx.swap with the sink swap style
+-	// when the region resumes, and it must target the dashboard row with the
+-	// replayed content: the swap spy alone cannot tell a delivered payload
+-	// from a dropped one. happy-dom's DOMParser drops a bare tr, so htmx
+-	// cannot apply the oob swap in this environment; parse the payload in a
+-	// table context instead and require the target row to exist.
+ 	const { default: htmx } = await import("htmx.org");
+ 	const swapSpy = vi.spyOn(htmx, "swap");
+ 	try {
+@@ -179,10 +173,8 @@ test("resume replays the bare dashboard row paused in the region", async () => {
+ 				settleDelay: htmx.config.defaultSettleDelay,
+ 			},
+ 		);
+-		const row = document.createElement("template");
+-		row.innerHTML = `<table><tbody>${down}</tbody></table>`;
+-		expect(row.content.textContent).toBe("shopdown");
+ 		expect(fixtureElement("instance-shop").tagName).toBe("TR");
++		expect(fixtureElement("instance-shop").textContent).toBe("shopdown");
+ 	} finally {
+ 		swapSpy.mockRestore();
+ 	}
+@@ -250,17 +242,8 @@ test("resume keeps the quiet dashboard row when a busier row outlasts it", async
+ 		for (const call of swapSpy.mock.calls) {
+ 			expect(call[0]).toBe(fixtureElement("admin-sink"));
+ 		}
+-		// happy-dom's DOMParser drops a bare tr, so htmx cannot apply the oob
+-		// swap in this environment; parse each replayed payload in a table
+-		// context instead and require the target row to exist in the fixture.
+-		const shopRow = document.createElement("template");
+-		shopRow.innerHTML = `<table><tbody>${payloads[0]}</tbody></table>`;
+-		expect(shopRow.content.textContent).toBe("shopdown");
+-		expect(fixtureElement("instance-shop").tagName).toBe("TR");
+-		const cartRow = document.createElement("template");
+-		cartRow.innerHTML = `<table><tbody>${payloads[1]}</tbody></table>`;
+-		expect(cartRow.content.textContent).toBe("cartdown");
+-		expect(fixtureElement("instance-cart").tagName).toBe("TR");
++		expect(fixtureElement("instance-shop").textContent).toBe("shopdown");
++		expect(fixtureElement("instance-cart").textContent).toBe("cartdown");
+ 	} finally {
+ 		swapSpy.mockRestore();
+ 	}
