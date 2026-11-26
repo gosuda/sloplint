@@ -126,7 +126,7 @@ major_at = 18                          # minor_at still comes from the preset
 level = "minor"                       # enables a rule the standard profile leaves off
 ```
 
- A `[languages.<key>]` table sets `log_callees`, the call names the language treats as log calls. `grep/contiguous-log-literal` and `slop/zombie-catch` read it. `sloplint init` writes one such table per language with the default names. `grep/contiguous-log-literal` does not run on Lean or TLA+, including with configured log callees: Lean elaborator diagnostics and `#do` test scaffolding do not provide a reliable syntactic signal for this rule, and TLA+ `Print` and `PrintT` calls can serve as test oracles in test models, so flagging them is noise; TLC also checks invariants and reports counterexamples without either call.
+ A `[languages.<key>]` table sets `log_callees`, the call names the language treats as log calls. `grep/contiguous-log-literal` and `slop/zombie-catch` read it. `sloplint init` writes one such table per language with the default names. `grep/contiguous-log-literal` does not run on Lean or TLA+, including with configured log callees: Lean elaborator diagnostics and `#do` test scaffolding do not provide a reliable syntactic signal for this rule, and TLA+ `Print` and `PrintT` calls can serve as test oracles in test models, so flagging them is noise.
 
 ### Ratchet mode
 
