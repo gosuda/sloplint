@@ -58,13 +58,8 @@ def run(command: list[str], log: Path, timeout: int = 1800) -> int:
 
 
 def regressions(label: str) -> tuple[Regression, ...]:
-    if label == "30":
-        return (
-        Regression("caller-return-with-held-cleanup", "http3/server.lgo", "\tselect {\n\tcase <-shutDone:\n\tcase <-ctx.Done():\n\t\tcerr := r.closeConn()\n\t\treturn errors.Join(ctx.Err(), cerr)\n\t}\n", "\t<-shutDone\n", "./http3", "^TestH3StopReturnsWhileTransportCleanupBlocked$", ("Stop blocked", "past the 300ms caller deadline")),
-        )
     return (
-        Regression("stream-read-cancellation", "websocket/conn.lgo", "\t\tdefer c.joinStreamCancellation(ctx, &err)()\n\t}\n\tif err := c.readDeadline(ctx); err != nil {", "\t}\n\tif err := c.readDeadline(ctx); err != nil {", "./websocket", "^TestStreamCancelUnblocksPendingNext$", ("Next did not return after cancel",)),
-        Regression("stream-read-identity", "websocket/stream_test.lgo", "reportStreamCancellation(t, done, streamCancelResult{read: err, followup: perr})", "reportStreamCancellation(t, done, streamCancelResult{read: errors.Join(err, perr)})", "./websocket", "^TestStreamCancelUnblocksPendingNext$", ("follow-up Next = <nil>, want ErrClosed",)),
+        Regression("caller-return-with-held-cleanup", "http3/server.lgo", "\tselect {\n\tcase <-shutDone:\n\tcase <-ctx.Done():\n\t\tcerr := r.closeConn()\n\t\treturn errors.Join(ctx.Err(), cerr)\n\t}\n", "\t<-shutDone\n", "./http3", "^TestH3StopReturnsWhileTransportCleanupBlocked$", ("Stop blocked", "past the 300ms caller deadline")),
     )
 
 
@@ -129,6 +124,42 @@ def dashboard_proofs(folder: Path) -> dict[str, bool]:
     return {"actual-row-oracle": reproduced and old_oracle == 0 and green == 0, "fragment-parser": parser_reproduced and parser_green == 0}
 
 
+def shutdown_error_composition_proof(folder: Path) -> bool:
+    server = SOURCE / "http3/server.lgo"
+    tests = SOURCE / "http3/http3_shutdown_cleanup_test.lgo"
+    saved_server = server.read_text()
+    saved_tests = tests.read_text()
+    old_tests = subprocess.check_output(["git", "show", "HEAD:http3/http3_shutdown_cleanup_test.lgo"], cwd=SOURCE, text=True)
+    selection = "\t\treturn errors.Join(ctx.Err(), cerr)\n"
+    replacement = "\t\treturn errors.Join(ctx.Err(), cerr, ErrH3Shutdown.Wrap(ctx.Err()))\n"
+    assert saved_server.count(selection) == 1
+    command = ["logos", "test", "-race", "-count=1", "-v", "-run", "^TestH3StopReturnsWhileTransportCleanupBlocked$", "./http3"]
+    try:
+        server.write_text(saved_server.replace(selection, replacement))
+        tests.write_text(old_tests)
+        old_green = run(command, folder / "shutdown-error-old-oracle.log", 120)
+        old_output = (folder / "shutdown-error-old-oracle.log").read_text(errors="replace")
+        tests.write_text(saved_tests)
+        red = run(command, folder / "shutdown-error-composition-red.log", 120)
+        red_output = (folder / "shutdown-error-composition-red.log").read_text(errors="replace")
+        reproduced = red != 0 and "caller cancellation included unfinished shutdown fault" in red_output
+    finally:
+        server.write_text(saved_server)
+        tests.write_text(saved_tests)
+    green = run(command, folder / "shutdown-error-composition-green.log", 120)
+    green_output = (folder / "shutdown-error-composition-green.log").read_text(errors="replace")
+    marker = "--- PASS: TestH3StopReturnsWhileTransportCleanupBlocked "
+    skipped = "--- SKIP: TestH3StopReturnsWhileTransportCleanupBlocked "
+    executed = marker in old_output and marker in green_output and skipped not in old_output and skipped not in green_output
+    result = {"old_oracle": old_green, "red": red, "reproduced": reproduced, "green": green, "explicit_passes": executed}
+    (folder / "shutdown-error-composition-results.json").write_text(json.dumps(result, indent=2) + "\n")
+    print(f"SHUTDOWN_ERROR_PROOF {json.dumps(result, sort_keys=True)}", flush=True)
+    for line in green_output.splitlines():
+        if line.startswith("--- PASS:") or line.startswith("--- SKIP:"):
+            print(line, flush=True)
+    return old_green == 0 and reproduced and green == 0 and executed
+
+
 def check(candidate: Candidate) -> dict[str, object]:
     folder = EVIDENCE / candidate.label
     folder.mkdir(parents=True)
@@ -167,6 +198,7 @@ def check(candidate: Candidate) -> dict[str, object]:
             proofs["immutable-forwarder"] = "func MethodOK(arg string) bool" in source and "var MethodOK" not in source
         if candidate.label == "dashboard":
             proofs.update(dashboard_proofs(folder))
+        proofs["shutdown-error-composition"] = shutdown_error_composition_proof(folder)
         result["proofs"] = proofs
     git("diff", "--exit-code")
     assert git("write-tree") == candidate.tree
