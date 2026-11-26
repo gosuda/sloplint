@@ -45,7 +45,10 @@ for source in cast(list[Source], manifest["sources"]):
     print("CODEMIRROR_IDENTITY " + json.dumps(record, sort_keys=True), flush=True)
     method = reader.index("    readRange(")
     method_end = reader.index("\n    }\n", method) + len("\n    }\n")
-    print("DOMREADER_READRANGE " + source["name"] + "\n" + reader[method:method_end], flush=True)
+    print("DOMREADER_COMPLETE " + source["name"] + "\n" + reader, flush=True)
+    for term in ("function isEmptyToEnd(", "new DOMReader("):
+        pos = text.index(term)
+        print("DOM_READER_CONTEXT " + source["name"] + " " + term + "\n" + text[max(0, pos-600):pos+1800], flush=True)
     assert git("status", "--porcelain", "--untracked-files=all") == ""
     assert git("write-tree") == source["tree"]
 (evidence / "identities.json").write_text(json.dumps(records, indent=2) + "\n")

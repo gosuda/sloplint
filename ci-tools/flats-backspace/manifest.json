@@ -1,6 +1,6 @@
 {
   "repo": "gosuda/flats",
-  "purpose": "Development-time native browser proof; temporary authored build-input correction, no maintained source publication or stage acceptance",
+  "purpose": "Read exact DOMReader instance state and range boundaries before another candidate",
   "sources": [
     {
       "name": "old",
@@ -9,11 +9,6 @@
     },
     {
       "name": "baseline",
-      "head": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
-      "tree": "91efebe5baab56592f04481d3516dc3a2163d5e4"
-    },
-    {
-      "name": "candidate",
       "head": "c7cd9d07c9e841f4430772f1193b2c09e757411f",
       "tree": "91efebe5baab56592f04481d3516dc3a2163d5e4"
     }
