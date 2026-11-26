@@ -1,0 +1,322 @@
+[
+  {
+    "id": "comment-guard-lf-line-named",
+    "source": "Write-Output hi # note\n-NoEnumerate\n",
+    "source_sha256": "581fb605b19e7750ae62863b77ad28ad3152dc155940035ef0a01affc4a143d0",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "line-boundary"
+  },
+  {
+    "id": "comment-guard-lf-block-named",
+    "source": "Write-Output hi <# note #>\n-NoEnumerate\n",
+    "source_sha256": "cb62694c35184b030a618fa835165475841725e3a4af440d3370a1671dd6ed6b",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "line-boundary"
+  },
+  {
+    "id": "comment-guard-lf-blank-named",
+    "source": "Write-Output hi <# note #>\n\n-NoEnumerate\n",
+    "source_sha256": "b340ff570a06a9d806dce0a9a9d2a6074526ff7633ee5ff1480738b5fc2bf135",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "line-boundary"
+  },
+  {
+    "id": "comment-guard-lf-split-blocks",
+    "source": "Write-Output hi <# one #>\n<# two #> -NoEnumerate\n",
+    "source_sha256": "2cd87366358323e09f17069a9c5e73b027ae5c6ecd23880e8aca796a2fb7cf7d",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "line-boundary"
+  },
+  {
+    "id": "comment-guard-lf-block-then-line",
+    "source": "Write-Output hi <# one #> # two\n-NoEnumerate\n",
+    "source_sha256": "34b165c367ea81857b53c6f45c5007bdcc24d1709307e83fc7beea50b852257e",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "line-boundary"
+  },
+  {
+    "id": "comment-guard-lf-semicolon-named",
+    "source": "Write-Output hi <# one #>; -NoEnumerate\n",
+    "source_sha256": "0658e25b380962f86a18f4721c0785426b402f2b78c3bc92bb0c6a09e05745f9",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "line-boundary"
+  },
+  {
+    "id": "comment-guard-lf-multiline-inside",
+    "source": "Write-Output hi <# one\n two #> -NoEnumerate\n",
+    "source_sha256": "d77c9e555a2b81f832ea6f18f1076d649ef90bba1c95052695d304cefc547c3d",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "positive"
+  },
+  {
+    "id": "comment-guard-lf-escaped-line",
+    "source": "Write-Output hi <# one #> `\n -NoEnumerate\n",
+    "source_sha256": "d5becd494c0b042b2148fb878ae03de3e530886887a9fc1eec1e482e719ecadc",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "positive"
+  },
+  {
+    "id": "comment-guard-lf-spaced-blocks",
+    "source": "Write-Output hi <# one #> \t<# two #> -NoEnumerate\n",
+    "source_sha256": "c09d450e55892160dfcb1bf0a1bc558981bfff8f47d9ef52a2c96eda57baefea",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "positive"
+  },
+  {
+    "id": "comment-guard-lf-plain-word",
+    "source": "Write-Output hi <# one #> after\n",
+    "source_sha256": "bee574896abb82b88982abfb4e34310609970411d34ec30191ce7ab6f3584f7c",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "unchanged"
+  },
+  {
+    "id": "comment-guard-lf-bare-dashes",
+    "source": "Write-Output hi <# one #> --\n",
+    "source_sha256": "11bb1790a7b9320e0c470bb4c934514f492bc2465191bc107943a706aef74986",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "unchanged"
+  },
+  {
+    "id": "comment-guard-lf-negative-number",
+    "source": "Write-Output hi <# one #> -1\n",
+    "source_sha256": "0f6938c8ac8e35d2eee9414a37e93cd441b1fbb2f4806ef9660760fd1259d5dd",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "unchanged"
+  },
+  {
+    "id": "comment-guard-lf-negative-variable",
+    "source": "Write-Output hi <# one #> -$value\n",
+    "source_sha256": "2166dc242b43fb2a7d6d446d003895f648296cc72748ce8183972563f1bea104",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "unchanged"
+  },
+  {
+    "id": "comment-guard-lf-negative-group",
+    "source": "Write-Output hi <# one #> -(1 + 2)\n",
+    "source_sha256": "b69813d36de73b21da9f21131833a26e24062f20f89577b2021b434c5f23c726",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "unchanged"
+  },
+  {
+    "id": "comment-guard-lf-stop-parsing",
+    "source": "Write-Output hi <# one #> --% literal | text\n",
+    "source_sha256": "dc93b7608da576de40d74e2cb2b4201f173afe64eda9ce950b3180f208fdf5f7",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "unchanged"
+  },
+  {
+    "id": "comment-guard-lf-escaped-negative",
+    "source": "Write-Output hi <# one #> -`\n1\n",
+    "source_sha256": "973d418774a05f112c860df5325c9368d2995ef04fe08e7dc15568d9ecfac59f",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "unchanged"
+  },
+  {
+    "id": "comment-guard-lf-escaped-name",
+    "source": "Write-Output hi <# one #> -`Name\n",
+    "source_sha256": "7d85d30d56641802446238bae7d3cd25db6b3ee8a2219a46e8d14fe3c6305d54",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "positive"
+  },
+  {
+    "id": "comment-guard-lf-unterminated",
+    "source": "Write-Output hi <# one -NoEnumerate\n",
+    "source_sha256": "e5129932c3c2d95e89d43983f67e8c24fd50e67d931a2a1fc40d8666f6aa56d6",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "unchanged"
+  },
+  {
+    "id": "comment-guard-lf-line-with-escape",
+    "source": "Write-Output hi # one `\n-NoEnumerate\n",
+    "source_sha256": "34f6e07ef248e4c5420b433e0ba98724cb5fdb8a79d97dcc9d09274a20a9c251",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "line-boundary"
+  },
+  {
+    "id": "comment-guard-lf-next-command",
+    "source": "Write-Output hi <# one #>\nWrite-Output next\n",
+    "source_sha256": "879c66646fd6dbf3103fe4889fba2af15a85ea84d6b879d7f352bc9c2a1d8d34",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "line-boundary"
+  },
+  {
+    "id": "comment-guard-crlf-line-named",
+    "source": "Write-Output hi # note\r\n-NoEnumerate\r\n",
+    "source_sha256": "ad1016a3459d273c4796c2bce911d24d509a7849247cd2d6f4e4c7cd79a266a9",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "line-boundary"
+  },
+  {
+    "id": "comment-guard-crlf-block-named",
+    "source": "Write-Output hi <# note #>\r\n-NoEnumerate\r\n",
+    "source_sha256": "d285eaa8c129415df341ad4e6f863bf9afa2ec8a65a6f2ba03b1f3fb297ae516",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "line-boundary"
+  },
+  {
+    "id": "comment-guard-crlf-blank-named",
+    "source": "Write-Output hi <# note #>\r\n\r\n-NoEnumerate\r\n",
+    "source_sha256": "fe6f22a342027babb8cce6918a0777012bf9dc7773577b93802dfba76bf9d2f8",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "line-boundary"
+  },
+  {
+    "id": "comment-guard-crlf-split-blocks",
+    "source": "Write-Output hi <# one #>\r\n<# two #> -NoEnumerate\r\n",
+    "source_sha256": "9b291b7c7be9df4706daf6995bafca4137791905105e6f7c09a54bc3eaeea828",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "line-boundary"
+  },
+  {
+    "id": "comment-guard-crlf-block-then-line",
+    "source": "Write-Output hi <# one #> # two\r\n-NoEnumerate\r\n",
+    "source_sha256": "e45388c4a0785d1ed00403377c4bc57e9d0a9ad27bb7dabb98514acbad3a0134",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "line-boundary"
+  },
+  {
+    "id": "comment-guard-crlf-semicolon-named",
+    "source": "Write-Output hi <# one #>; -NoEnumerate\r\n",
+    "source_sha256": "847937636d26db24242a42e176763a7f61334a675e1af60c384a1eb40531e4fe",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "line-boundary"
+  },
+  {
+    "id": "comment-guard-crlf-multiline-inside",
+    "source": "Write-Output hi <# one\r\n two #> -NoEnumerate\r\n",
+    "source_sha256": "bed67f8d5b5f3e7136bc4529834a0338a06550b58917c7c00529108b32a8c6e2",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "positive"
+  },
+  {
+    "id": "comment-guard-crlf-escaped-line",
+    "source": "Write-Output hi <# one #> `\r\n -NoEnumerate\r\n",
+    "source_sha256": "00a7832fb62d07dbfaca7f1bdeee9c0cbf2fb50595dfe276febc1bdbf2dda8e2",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "positive"
+  },
+  {
+    "id": "comment-guard-crlf-spaced-blocks",
+    "source": "Write-Output hi <# one #> \t<# two #> -NoEnumerate\r\n",
+    "source_sha256": "665be5686137604aeba949b4b576d7c50ce176d015862ee96818fb7a13bb027f",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "positive"
+  },
+  {
+    "id": "comment-guard-crlf-plain-word",
+    "source": "Write-Output hi <# one #> after\r\n",
+    "source_sha256": "2f3f61decbadba1817e0f6374da186127e271dc815c6e87d1de3d3bac7ef549b",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "unchanged"
+  },
+  {
+    "id": "comment-guard-crlf-bare-dashes",
+    "source": "Write-Output hi <# one #> --\r\n",
+    "source_sha256": "e67e81fc07b05c4ccb6c05d3bd6d82bd0aa2eeba0b2c7e1e9f03ea237d663a6a",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "unchanged"
+  },
+  {
+    "id": "comment-guard-crlf-negative-number",
+    "source": "Write-Output hi <# one #> -1\r\n",
+    "source_sha256": "3e937a1238830465618386a28c9eac05ee0bf19efc19dadfe1d9c5dc276d1a53",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "unchanged"
+  },
+  {
+    "id": "comment-guard-crlf-negative-variable",
+    "source": "Write-Output hi <# one #> -$value\r\n",
+    "source_sha256": "dd79ff26245d11c42163a4f72a7053f3c883186b3a02f09fee040a8a329f411d",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "unchanged"
+  },
+  {
+    "id": "comment-guard-crlf-negative-group",
+    "source": "Write-Output hi <# one #> -(1 + 2)\r\n",
+    "source_sha256": "74ce30d91325646f1f07f8791e95ff1d4bdf01f57b4cda6c5430a2f3335f02c0",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "unchanged"
+  },
+  {
+    "id": "comment-guard-crlf-stop-parsing",
+    "source": "Write-Output hi <# one #> --% literal | text\r\n",
+    "source_sha256": "b85a5f14fc6e7610fe30397523e4e96be40e00e27492a91e6e51a9159a61c34e",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "unchanged"
+  },
+  {
+    "id": "comment-guard-crlf-escaped-negative",
+    "source": "Write-Output hi <# one #> -`\r\n1\r\n",
+    "source_sha256": "3d4c933f5824449c4b87c8182259654d5b4fcd76a0b1e9c1f48ea7761af11267",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "unchanged"
+  },
+  {
+    "id": "comment-guard-crlf-escaped-name",
+    "source": "Write-Output hi <# one #> -`Name\r\n",
+    "source_sha256": "0fee55a406cae68ec2220172ff3f57b85478393ffcd93459f1981a1898b7c8fe",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "positive"
+  },
+  {
+    "id": "comment-guard-crlf-unterminated",
+    "source": "Write-Output hi <# one -NoEnumerate\r\n",
+    "source_sha256": "1b55a8096b2c05293aa9ea7b65c2aa762c71b02ce6b034240fb5fb27cbff2148",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "unchanged"
+  },
+  {
+    "id": "comment-guard-crlf-line-with-escape",
+    "source": "Write-Output hi # one `\r\n-NoEnumerate\r\n",
+    "source_sha256": "ced8e5d148e685a54859354d78e0e9febcfb6b954cc671a6a39f6dbdd1b5fe39",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "line-boundary"
+  },
+  {
+    "id": "comment-guard-crlf-next-command",
+    "source": "Write-Output hi <# one #>\r\nWrite-Output next\r\n",
+    "source_sha256": "60513632160b4a8dd27ddb075e4ce9524f21f89e85046a97d77d719a1608fd8c",
+    "kind": "observation",
+    "accepted": null,
+    "scope": "line-boundary"
+  }
+]
