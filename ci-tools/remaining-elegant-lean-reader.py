@@ -45,7 +45,7 @@ def main() -> None:
         rows = re.sub(r"\x1b\[[0-9;]*m", "", raw).splitlines()
         selected: set[int] = set()
         for index, row in enumerate(rows):
-            if row.startswith("error: ") or row.startswith("Some required targets"):
+            if "error:" in row or "LaneBandsFindRouteClearProof" in row or "LaneEndsPinEnds" in row or row.startswith("Some required targets"):
                 selected.update(range(max(0, index - 1), min(len(rows), index + 12)))
         excerpt = "\n".join(f"{index + 1}: {rows[index]}" for index in sorted(selected))
         (output / "lean-failure-excerpts.txt").write_text(excerpt + "\n")

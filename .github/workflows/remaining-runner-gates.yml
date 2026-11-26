@@ -1,11 +1,10 @@
-name: Elegant Mermaid baseline evidence
+name: Elegant Mermaid retained Lean diagnostics
 
 on:
   push:
     branches: [ci/remaining-runner-gates-20261126]
     paths:
       - .github/workflows/remaining-runner-gates.yml
-      - ci-tools/remaining-elegant24-*
       - ci-tools/remaining-elegant-lean-reader.py
 
 permissions:
@@ -13,69 +12,6 @@ permissions:
   actions: read
 
 jobs:
-  elegant24-head-quality-baseline:
-    runs-on: depot-ubuntu-24.04-8
-    timeout-minutes: 45
-    env:
-      GOENV: 'off'
-      GOCACHEPROG: ''
-      GOMAXPROCS: '4'
-      GOFLAGS: '-p=4'
-      CARGO_BUILD_JOBS: '2'
-      LEAN_NUM_THREADS: '2'
-      PYTHONIOENCODING: utf-8
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-          path: probe
-          ref: ${{ github.sha }}
-          sparse-checkout: ci-tools
-      - run: git config --global core.autocrlf false
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          repository: gosuda/elegant-mermaid
-          ref: 801d75e266e0f827817238286171c517fe84b5b2
-          persist-credentials: false
-          path: source
-      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
-        with:
-          enable-cache: false
-      - name: Verify candidate identity
-        run: uv run --no-project --python 3.13 probe/ci-tools/remaining-elegant24-gates.py baseline-prepare
-      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
-        with:
-          go-version-file: source/go.mod
-          cache: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
-        with:
-          node-version: '26.13.1'
-      - run: npm install --global pnpm@12.23.0
-      - name: Install the pinned Rust toolchain
-        working-directory: source
-        run: rustup toolchain install
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
-        with:
-          workspaces: source
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39
-        with:
-          tool: "just@1.59.0,cargo-nextest@0.9.151"
-      - name: Run quality gates with recorded exit codes
-        run: |
-          export GOENV=off GOCACHEPROG=''
-          effective_gocacheprog="$(go env GOCACHEPROG)"
-          test -z "$effective_gocacheprog"
-          uv run --no-project --python 3.13 probe/ci-tools/remaining-elegant24-gates.py baseline-quality
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-        if: always()
-        with:
-          name: remaining-elegant24-head-quality-${{ github.sha }}
-          path: |
-            evidence/
-          if-no-files-found: error
-          retention-days: 14
-
-
   read-pr27-lean-evidence:
     runs-on: depot-ubuntu-24.04-4
     timeout-minutes: 5
