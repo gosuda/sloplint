@@ -68,6 +68,8 @@ mod powershell_format_dash_words;
 mod powershell_literal_runs;
 #[path = "grammar_gaps/powershell_plain_escapes.rs"]
 mod powershell_plain_escapes;
+#[path = "grammar_gaps/powershell_separator_queries.rs"]
+mod powershell_separator_queries;
 #[path = "grammar_gaps/powershell_separators.rs"]
 mod powershell_separators;
 #[path = "grammar_gaps/powershell_syntax.rs"]

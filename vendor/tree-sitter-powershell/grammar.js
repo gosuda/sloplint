@@ -997,7 +997,7 @@ export default grammar({
     // CR and LF, matching word boundaries and the external bare-dash scanner.
     // Format marks U+200B, U+FEFF and U+2060 remain word text.
     command_argument_sep: ($) =>
-      prec.right(choice(repeat1(/[ \t\v\f\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/), ':')),
+      prec.right(choice(repeat1(choice(' ', '\t', '\u00A0', /[\v\f\u0085\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/)), ':')),
 
     // Adapt the grammar to have same behavior
 

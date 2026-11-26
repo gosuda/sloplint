@@ -49,6 +49,10 @@ PowerShell 7.7.0 native argv captures cover each separator after a command name,
 between arguments, and before and after single and double dashes. Rust adapter
 regressions assert those argument counts and the protected-space controls.
 
+Space, tab and NBSP retain their original anonymous token names for custom
+queries. Query regressions freeze the original byte spans for single, repeated
+and mixed separator runs while the remaining native whitespace stays accepted.
+
 ## Backticks after ordinary newlines
 
 Leading-pipe lookahead stops at a backtick after an ordinary newline.
