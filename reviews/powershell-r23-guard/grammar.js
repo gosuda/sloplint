@@ -985,7 +985,7 @@ export default grammar({
             choice(
               $.command_parameter,
               seq(
-                $.generic_token,
+                choice($.generic_token, $._command_argument_list),
                 optional(seq($.argument_list, repeat($._argument_member_tail))),
               ),
             ),

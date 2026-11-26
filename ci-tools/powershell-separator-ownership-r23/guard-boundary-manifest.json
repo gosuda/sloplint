@@ -1,0 +1,35 @@
+{
+  "base": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
+  "base_tree": "f518b3943c6b86af53c334175309303c3d79f38b",
+  "previous_base": "83f73f04e7f20bf405dbf4c2de3bd5467c8010bb",
+  "previous_tree": "703b3a5a445883598bfb7ef05c263a76d6629235",
+  "mode": "Freeze native and unchanged old/current line-boundary, comma-array, protected-comma and dash-count observations before applying a comment-context guard. No product implementation is edited.",
+  "native_cases": 63,
+  "primary_ids": [
+    "comment-guard-zwsp-1-array",
+    "comment-guard-zwsp-1-quoted",
+    "comment-guard-zwsp-1-escaped",
+    "comment-guard-zwsp-2-array",
+    "comment-guard-zwsp-2-quoted",
+    "comment-guard-zwsp-2-escaped",
+    "comment-guard-bom-1-array",
+    "comment-guard-bom-1-quoted",
+    "comment-guard-bom-1-escaped",
+    "comment-guard-bom-2-array",
+    "comment-guard-bom-2-quoted",
+    "comment-guard-bom-2-escaped",
+    "comment-guard-wj-1-array",
+    "comment-guard-wj-1-quoted",
+    "comment-guard-wj-1-escaped",
+    "comment-guard-wj-2-array",
+    "comment-guard-wj-2-quoted",
+    "comment-guard-wj-2-escaped"
+  ],
+  "proof_sha256": {
+    "guard-boundary.py": "1f0578cbeebc272c0060dadda4a9388aeb7891797ce48aafe6c62f187d30adfe",
+    "guard-boundary-cases.json": "0a9d160138fa78e7466c8612cd7f91669432493380664cd149b1138d88a9bcc5",
+    "guard-boundary-cases.tsv": "a301a4c819fac945087c0ff7af5fb26ce74bf8cae0e558a0842466ee86f5edc8",
+    "guard-boundary-modules.json": "16cc104c1f2b22f902af362831b5ea6ed3667a1145f0cb4ec2b575bdadd2398f",
+    "native-oracle.ps1": "521d82f956d0192f33e5b2ba51996ef20b16590957c16172d51298e6fe3dffcd"
+  }
+}

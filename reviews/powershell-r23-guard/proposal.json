@@ -17,8 +17,9 @@
   "design": "Append a zero-width context token. Only callback entry at '<#' may select it; shared existing trivia lookahead must encounter a named-parameter or dash-format prefix before any ordinary newline. Keep the original entry mark and return consuming prefix-probe failure directly. The hidden command-element path reuses current parameter/generic parsing and suffix handling, while keeping comments outside the completed separator. Ordinary words, bare dashes, negative expressions and genuine line breaks stay on existing paths.",
   "native_controls": "Observe all 40 exact line-boundary sources on native PowerShell and unchanged source before applying the proposal. No acceptance outcome is guessed in the case file. Preserve unrelated controls exactly and reject any new joining across a real native statement boundary.",
   "files_sha256": {
-    "grammar.js": "dfbbf14450fa90db0c5f372a186f17ad101afe221f4f3b3c80080184ac1c49d2",
+    "grammar.js": "f00e21ce4a63d2d835ea040b8add79689ce3a1153bc5a8eae2712ab56c1c061a",
     "scanner.c": "996c04b2564fb1f1a4410a4906a6b7a2be840b69ecb78945c65dcb556c2f5b96",
     "line-boundary-cases.json": "d414bae4c7177eea1aefc074ef0771303a9d327590fca742fff2b4bae487003f"
-  }
+  },
+  "update": "Guarded words retain the existing _command_argument_list alternative as well as generic-token and invocation/member suffix handling. The 63-case native baseline includes array and protected-comma captures plus dash-count falsifiers."
 }
