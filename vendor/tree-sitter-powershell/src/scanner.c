@@ -130,33 +130,23 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool 
 // so the lexer cannot tell them apart by length or precedence: the token is
 // recognised only when the dashes are followed by whitespace, `(` or `{`,
 // a command separator, or the end of the command.
-// sloplint: PowerShell treats non-breaking and zero-width spaces as
-// horizontal whitespace (see grammar extras). The external scanner skips
-// exactly those plus ASCII space and tab, never line breaks, so a `--`
-// after ` \u00A0` is still an option terminator.
-static bool is_horizontal_space(int32_t c)
-{
-    return c == ' ' || c == '\t' || c == 0x00A0 || c == 0xFEFF || c == 0x200B || c == 0x2060;
-}
-
+// Use the native whitespace set on both sides; format marks remain word text.
 static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_symbols)
 {
     if (!valid_symbols[BARE_DASHES]) return false;
 
-    while (is_horizontal_space(lexer->lookahead)) skip(lexer);
+    while (is_powershell_space(lexer->lookahead)) skip(lexer);
     if (lexer->lookahead != '-') return false;
     lexer->advance(lexer, false);
     if (lexer->lookahead == '-') lexer->advance(lexer, false);
     lexer->mark_end(lexer);
 
+    if (is_powershell_space(lexer->lookahead)) {
+        lexer->result_symbol = BARE_DASHES;
+        return true;
+    }
     switch (lexer->lookahead) {
         case 0:
-        case ' ':
-        case '\t':
-        case 0x00A0:
-        case 0xFEFF:
-        case 0x200B:
-        case 0x2060:
         case '\r':
         case '\n':
         case ';':

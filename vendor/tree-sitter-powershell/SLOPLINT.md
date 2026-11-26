@@ -34,6 +34,17 @@ and loses every other finding for that file.
   to include the sloplint corpus.
 - The regenerated parser uses ABI 15 and has 2,017 states.
 
+## Native Unicode argument separators
+
+Command argument separators and the external bare-dash scanner use PowerShell's
+whitespace set without CR and LF. The same 23 characters delimit command names
+and bare arguments; quoted and backtick-escaped spaces remain inside one word.
+U+200B, U+FEFF and U+2060 remain literal text after a dash prefix.
+
+PowerShell 7.7.0 native argv captures cover each separator after a command name,
+between arguments, and before and after single and double dashes. Rust adapter
+regressions assert those argument counts and the protected-space controls.
+
 ## Native argument follow-up
 
 The command word rules explicitly exclude unquoted U+00A0 from plain

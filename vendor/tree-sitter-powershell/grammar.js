@@ -979,13 +979,11 @@ export default grammar({
     // Stop parsing is a token that end the parsing of command line
     stop_parsing: ($) => /--%[^\r\n]*/,
 
-    // Generic token is hard to manage
-    // So a definition is that a generic token must have to begin by one or more space char
-    // sloplint: tabs and NBSP separate arguments like spaces, so an attached
-    // option lexes as generic_token after any of them (see calls.rs:
-    // parameter is opaque). Format characters (U+200B, U+FEFF, U+2060) stay
-    // out: they are extras, not separators.
-    command_argument_sep: ($) => prec.right(choice(repeat1(choice(' ', '\t', '\u00A0')), ':')),
+    // sloplint: command separators use PowerShell's whitespace set without
+    // CR and LF, matching word boundaries and the external bare-dash scanner.
+    // Format marks U+200B, U+FEFF and U+2060 remain word text.
+    command_argument_sep: ($) =>
+      prec.right(choice(repeat1(/[ \t\v\f\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/), ':')),
 
     // Adapt the grammar to have same behavior
 
