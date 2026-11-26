@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "scope": "Retire completed temporary Flats development verification",
+  "branch": "ci/flats-sheet-oracles-20261126-r13",
+  "source_head": "ca8e0590c54757af8b91bcd5d5bef167cb1bff10",
+  "producer": "ca8e0590c54757af8b91bcd5d5bef167cb1bff10",
+  "run": 45845270299,
+  "url": "https://github.com/gosuda/sloplint/actions/runs/45845270299",
+  "status": "completed",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "id": 139997172612,
+      "name": "oracles",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "removed": [
+    ".github/workflows/flats-sheet-oracles.yml",
+    "ci-tools/flats-sheet-oracles/candidate-race.go",
+    "ci-tools/flats-sheet-oracles/lifecycle-controls.py",
+    "ci-tools/flats-sheet-oracles/manifest.json",
+    "ci-tools/flats-sheet-oracles/old-race.go",
+    "ci-tools/flats-sheet-oracles/original-gate.py",
+    "ci-tools/flats-sheet-oracles/verify.py"
+  ],
+  "source_publication": "No maintained Flats branch was updated by this retirement.",
+  "limits": "This preserves the completed oracle proof without claiming later candidate acceptance.",
+  "retired_at": "2026-11-26T17:25:24.473Z"
+}
