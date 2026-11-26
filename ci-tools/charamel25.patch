@@ -1,49 +1,445 @@
+--- a/bin/crush/lib/agent.ml
++++ b/bin/crush/lib/agent.ml
+@@ -5,7 +5,11 @@
+ 
+ exception Interrupted of interrupt
+ 
+-type turn = { switch : Lwt_switch.t; mutable interrupt : interrupt }
++type turn = {
++  switch : Lwt_switch.t;
++  mutable interrupt : interrupt;
++  mutable shutdown : unit Lwt.t option;
++}
+ 
+ type event =
+   | Text_delta of string
+@@ -112,6 +116,7 @@
+   invalid : bool;
+   mutable promise : execution Lwt.t option;
+   mutable body : execution option;
++  mutable hook : unit Lwt.t option;
+ }
+ 
+ type turn_state = {
+@@ -164,10 +169,21 @@
+       Lwt.fail (Interrupted (External_cancel error))
+   | Some { interrupt = Idle; _ } | None -> Lwt.return_unit
+ 
++let shutdown_turn turn =
++  match turn.shutdown with
++  | Some promise -> Lwt.protected promise
++  | None ->
++      let promise, resolve = Lwt.wait () in
++      turn.shutdown <- Some promise;
++      Lwt.on_any (Lwt_switch.turn_off turn.switch)
++        (fun () -> Lwt.wakeup_later resolve ())
++        (fun exn -> Lwt.wakeup_later_exn resolve exn);
++      Lwt.protected promise
++
+ let interrupt_turn turn reason =
+   turn.interrupt <- reason;
+   Lwt.async (fun () ->
+-      Lwt.catch (fun () -> Lwt_switch.turn_off turn.switch) (fun _ -> Lwt.return_unit))
++      Lwt.catch (fun () -> shutdown_turn turn) (fun _ -> Lwt.return_unit))
+ 
+ let link_child_cancel parent child =
+   match !(parent.turn) with
+@@ -517,11 +533,23 @@
+ 
+ let result_output error = Tool.fail (Fmt.str "%a" Tool.pp_error error)
+ 
+-let run_tool ?(note_body : execution -> unit = fun _ -> ()) t (call : call) input
++let run_tool ?(note_body : execution -> unit = fun _ -> ()) ~hooks_open ~note_hook t (call : call) input
+     (tool : Tool.t) : execution Lwt.t =
+   let started = Charamel_os.Time.now t.deps.clock in
+   let ctx = tool_context t ~call_id:call.id in
+-  ( Hooks.pre_tool t.deps.hooks ~session:(Session.id t.session) ~tool:tool.Tool.name ~input
++  let hook run =
++    if not !hooks_open then Lwt.fail Lwt.Canceled
++    else
++      let promise = run () in
++      note_hook (Some (promise >|= fun _ -> ()));
++      Lwt.finalize
++        (fun () -> promise)
++        (fun () ->
++          note_hook None;
++          Lwt.return_unit)
++  in
++  ( hook (fun () ->
++        Hooks.pre_tool t.deps.hooks ~session:(Session.id t.session) ~tool:tool.Tool.name ~input)
+   >>= function
+     | Hooks.Deny reason -> Lwt.return (result_output (`Denied reason), true, input)
+     | Hooks.Allow input' -> (
+@@ -540,23 +568,25 @@
+     { id = call.id; name = call.name; input = hook_input; output; elapsed_ms; stop_turn }
+   in
+   note_body result;
+-  Hooks.post_tool t.deps.hooks ~session:(Session.id t.session) ~tool:tool.Tool.name
+-    ~input:hook_input ~output:output.Tool.content ~is_error:output.Tool.is_error
++  hook (fun () ->
++      Hooks.post_tool t.deps.hooks ~session:(Session.id t.session) ~tool:tool.Tool.name
++        ~input:hook_input ~output:output.Tool.content ~is_error:output.Tool.is_error)
+   >|= fun () -> result
+ 
+ let schedule_call ?(invalid = false) t (call : call) input =
+   let tool = Toolset.find t.tools call.name in
+-  { call; input; tool; invalid; promise = None; body = None }
++  { call; input; tool; invalid; promise = None; body = None; hook = None }
+ 
+ let read_only job = match job.tool with Some tool -> tool.Tool.read_only | None -> false
+ 
+-let start_job t pool job tool =
++let start_job t pool hooks_open job tool =
+   job.promise <-
+     Some
+       (Lwt.catch
+          (fun () ->
+            Lwt_pool.use pool (fun () ->
+                run_tool
++                 ~hooks_open ~note_hook:(fun hook -> job.hook <- hook)
+                  ~note_body:(fun execution -> job.body <- Some execution)
+                  t job.call job.input tool))
+          Lwt.fail)
+@@ -573,22 +603,23 @@
+       calls
+   in
+   let pool = Lwt_pool.create 8 (fun () -> Lwt.return_unit) in
++  let hooks_open = ref true in
+   checkpoint t >>= fun () ->
+   if Lwt_switch.is_on turn_sw then
+     Lwt_switch.add_hook (Some turn_sw) (fun () ->
++        hooks_open := false;
++        let hooks = List.filter_map (fun job -> job.hook) jobs in
+         List.iter
+           (fun job ->
+             match job.promise with Some promise -> Lwt.cancel promise | None -> ())
+           jobs;
++        List.iter Lwt.cancel hooks;
+         Lwt_list.iter_p
+-          (fun job ->
+-            match job.promise with
+-            | None -> Lwt.return_unit
+-            | Some promise ->
+-                Lwt.catch
+-                  (fun () -> promise >|= fun _ -> ())
+-                  (function Lwt.Canceled -> Lwt.return_unit | exn -> Lwt.fail exn))
+-          jobs);
++          (fun promise ->
++            Lwt.catch
++              (fun () -> Lwt.protected promise)
++              (function Lwt.Canceled -> Lwt.return_unit | exn -> Lwt.fail exn))
++          hooks);
+   Lwt_list.iter_s
+     (fun job ->
+       emit t (Tool_started { id = job.call.id; name = job.call.name; input = job.input }))
+@@ -597,7 +628,7 @@
+   List.iter
+     (fun job ->
+       if (not job.invalid) && read_only job then
+-        match job.tool with Some tool -> start_job t pool job tool | None -> ()
++        match job.tool with Some tool -> start_job t pool hooks_open job tool | None -> ()
+       else ())
+     jobs;
+   let window_add name input output =
+@@ -691,7 +722,9 @@
+            | Some promise -> promise
+            | None -> (
+                match job.tool with
+-               | Some tool -> run_tool t job.call job.input tool
++               | Some tool ->
++                   run_tool ~hooks_open ~note_hook:(fun hook -> job.hook <- hook)
++                     t job.call job.input tool
+                | None -> Lwt.return (unknown_execution job)))
+         >>= fun (execution : execution) ->
+         emit_finished execution >>= fun () ->
+@@ -702,14 +735,15 @@
+           loop_detected || window_add execution.name execution.input output_text
+         in
+         let stop_turn = stop_turn || execution.stop_turn in
+-        if loop_detected || stop_turn then
++        if loop_detected || stop_turn then (
++          hooks_open := false;
+           Lwt_list.map_s
+             (fun pending_job ->
+               let tail_execution = complete_pending pending_job in
+               emit_finished tail_execution >|= fun () -> tail_execution)
+             rest
+           >>= fun tail ->
+-          Lwt.return (List.rev (execution :: results) @ tail, stop_turn, loop_detected)
++          Lwt.return (List.rev (execution :: results) @ tail, stop_turn, loop_detected))
+         else fold rest (execution :: results) stop_turn false
+   in
+   fold jobs [] false false
+@@ -983,7 +1017,7 @@
+     t.busy_state := true;
+     let state = { assistant_appended = false; parts = []; last_turn = [] } in
+     let switch = Lwt_switch.create () in
+-    let turn = { switch; interrupt = Idle } in
++    let turn = { switch; interrupt = Idle; shutdown = None } in
+     let external_cancel = ref None in
+     t.turn := Some turn;
+     let run () =
+@@ -997,13 +1031,15 @@
+                   external_cancel := Some error;
+                   Lwt.return (Ok `Interrupted)
+               | Lwt.Canceled ->
+-                  external_cancel := Some Lwt.Canceled;
++                  (match turn.interrupt with
++                  | User_cancel -> ()
++                  | Idle | External_cancel _ -> external_cancel := Some Lwt.Canceled);
+                   Lwt.return (Ok `Interrupted)
+               | Lwt_switch.Off -> Lwt.return (Ok `Interrupted)
+               | exception_ -> Lwt.fail exception_))
+         (fun () ->
+           t.turn := None;
+-          Lwt.catch (fun () -> Lwt_switch.turn_off switch) (fun _ -> Lwt.return_unit))
++          Lwt.catch (fun () -> shutdown_turn turn) (fun _ -> Lwt.return_unit))
+       >>= fun result ->
+       Lwt.protected (finalize t state result) >>= fun result ->
+       match !external_cancel with
+--- a/bin/crush/lib/agent.mli
++++ b/bin/crush/lib/agent.mli
+@@ -104,7 +104,8 @@
+     turns off that turn's switch, which cancels the in-flight provider stream and any tool
+     job that has not started running yet. A tool already running runs to completion, and
+     the turn stops at the next checkpoint; a subagent launched by that tool is interrupted
+-    with it. It does not cancel [deps.sw]. *)
++    with it. Prompt completion waits for active hook process cleanup, including when
++    cancellation has already started switch shutdown. It does not cancel [deps.sw]. *)
+ 
+ val prompt :
+   t ->
+@@ -114,7 +115,8 @@
+ (** [prompt t ?attachments text] sends [text] to the provider and executes its tool calls.
+     Attachment data is already wire-encoded and is passed directly to the provider.
+     Attachments are MIME, data, and optional-name triples. A prompt submitted while
+-    another prompt is active returns [`Busy]. *)
++    another prompt is active returns [`Busy]. A stopped parallel batch does not wait for
++    unfinished sibling tool bodies. Those bodies cannot start new hooks after shutdown. *)
+ 
+ val compact : t -> (unit, error) result Lwt.t
+ (** [compact t] compacts the current session through the small model. *)
 --- a/bin/crush/lib/hooks.ml
 +++ b/bin/crush/lib/hooks.ml
-@@ -63,11 +63,12 @@
+@@ -63,9 +63,6 @@
  
  let run_command t ~timeout ~command ~payload =
    let child = ref None in
-+  let completed = ref false in
+-  (* A hook that exits on its own keeps what it detached: only a hook that
+-     never reported back is killed, on timeout, cancellation, or an
+-     exception before normal completion. Reaping always runs. *)
+   let completed = ref false in
    let cleanup () =
      match !child with
-     | None -> Lwt.return_unit
-     | Some process ->
--        if Charamel_os.Process.group_alive process then
-+        if (not !completed) && Charamel_os.Process.group_alive process then
-           Charamel_os.Process.kill_tree process;
-         Lwt.protected (Charamel_os.Process.await process) >|= fun _ -> ()
-   in
-@@ -88,6 +89,7 @@
-     Lwt.both stdout stderr >>= fun (stdout, stderr) ->
-     input >>= fun () ->
-     Lwt.protected (Charamel_os.Process.await process) >|= fun code ->
-+    completed := true;
-     Done (code, stdout, stderr)
-   in
-   Lwt.finalize
 --- a/bin/crush/lib/hooks.mli
 +++ b/bin/crush/lib/hooks.mli
-@@ -3,7 +3,8 @@
+@@ -3,9 +3,9 @@
      Hooks receive one bounded JSON request on standard input. Pre-tool hooks authorize a
      call, may replace its decoded input, and fail closed; lifecycle hooks are
      observational. Each invocation owns its process until it is reaped. Cancellation and
--    timeout stop the process group before the invocation settles. On Windows,
-+    timeout stop the process group before the invocation settles. After normal exit
-+    and drained streams, detached descendants may continue. On Windows,
-     process-group termination has the child-only scope of
-     {!Charamel_os.Process.kill_tree}. *)
+-    timeout stop the process group before the invocation settles; a hook that exits on its
+-    own leaves behind the processes it detached. On Windows, process-group termination has
+-    the child-only scope of {!Charamel_os.Process.kill_tree}. *)
++    timeout stop the process group before the invocation settles. After successful exit and
++    drained streams, detached descendants may continue. On Windows, process-group
++    termination has the child-only scope of {!Charamel_os.Process.kill_tree}. *)
  
+ type t
+ (** The configured hook runner. *)
+--- a/test/crush/test_agent.ml
++++ b/test/crush/test_agent.ml
+@@ -90,7 +90,7 @@
+     models = { large = Some selected; small = Some selected };
+   }
+ 
+-let with_agent ?(hooks_config : Config.hook list = []) ?(clock = Charamel_os.Time.lwt)
++let with_agent ?asker ?(hooks_config : Config.hook list = []) ?(clock = Charamel_os.Time.lwt)
+     ~queue ~fallback f =
+   Test_tools_test_support.with_scratch (fun root ->
+       let old_data = Sys.getenv_opt "XDG_DATA_HOME" in
+@@ -139,7 +139,8 @@
+                     Alcotest.failf "session setup failed: %a" Session.pp_error error
+               in
+               let permission =
+-                Permission.create ~config:config.Config.permissions ~yolo:true ~cwd:root
++                Permission.create ~config:config.Config.permissions
++                  ~yolo:(Option.is_none asker) ?asker ~cwd:root
+                   ~plans_dir:(Filename.concat root ".crush/plans")
+                   ()
+               in
+@@ -330,22 +331,11 @@
+           Test_tools_test_support.load_file (Filename.concat root ".post-pid")
+           |> String.trim |> int_of_string
+         in
+-        (* The switch callback only requests cancellation; the hook finalizer
+-           still has to kill and reap the shell, and an unreaped zombie still
+-           answers signal 0. Poll until the pid is gone instead of asserting
+-           on the first check. *)
+-        let rec wait_gone attempts =
+-          match Unix.kill post_pid 0 with
+-          | () ->
+-              if attempts <= 0 then (
+-                (try Unix.kill (0 - post_pid) Sys.sigkill with _ -> ());
+-                Alcotest.fail "cancelling the post hook left its process alive")
+-              else (
+-                await (Lwt_unix.sleep 0.05);
+-                wait_gone (attempts - 1))
+-          | exception Unix.Unix_error (Unix.ESRCH, _, _) -> ()
+-        in
+-        wait_gone 100;
++        (match Unix.kill post_pid 0 with
++        | () ->
++            Unix.kill (0 - post_pid) Sys.sigkill;
++            Alcotest.fail "cancelling the post hook left its process alive"
++        | exception Unix.Unix_error (Unix.ESRCH, _, _) -> ());
+         let finished =
+           List.filter_map
+             (function
+@@ -428,6 +418,115 @@
+             in
+             Alcotest.(check (list int)) "post-hook time excluded" [ 0 ] timings))
+ 
++let stopped_turn_leaves_pending_approval () =
++  if Sys.win32 then Alcotest.skip ()
++  else
++    let approval, answer = Lwt.wait () in
++    let asked, announce = Lwt.wait () in
++    let asker _ =
++      if Lwt.is_sleeping asked then Lwt.wakeup_later announce ();
++      await approval
++    in
++    let hooks_config : Config.hook list =
++      [
++        {
++          event = Config.Pre_tool;
++          matcher = None;
++          command =
++            "if grep -q denied.txt; then read ready < .approval-open; echo denied >&2; \
++             exit 2; fi";
++          timeout_s = 30;
++        };
++      ]
++    in
++    with_agent ~asker ~hooks_config
++      ~queue:
++        [
++          two_tool_response "fixture-model" "read" "{\"path\":\"denied.txt\"}" "read"
++            "{\"path\":\"../pending-approval.txt\"}";
++        ]
++      ~fallback:(text_response "fixture-model" "done")
++      (fun agent _session _events root ->
++        let ready_path = Filename.concat root ".approval-open" in
++        Unix.mkfifo ready_path 0o600;
++        let fd =
++          Unix.openfile ready_path [ Unix.O_RDWR; Unix.O_NONBLOCK ] 0
++          |> Lwt_unix.of_unix_file_descr
++        in
++        let ready = Lwt_io.of_fd ~mode:Lwt_io.output fd in
++        let pending = Agent.prompt agent "read both files" in
++        Fun.protect
++          ~finally:(fun () ->
++            if Lwt.is_sleeping approval then Lwt.wakeup_later answer Permission.Deny;
++            ignore (await (Lwt_unix.with_timeout 5. (fun () -> Lwt.protected pending)));
++            await (Lwt_io.close ready))
++          (fun () ->
++            await (Lwt_unix.with_timeout 5. (fun () -> Lwt.protected asked));
++            await (Lwt_io.write_line ready "deny");
++            await (Lwt_io.flush ready);
++            (match
++               await (Lwt_unix.with_timeout 5. (fun () -> Lwt.protected pending))
++             with
++            | Ok `Stop -> ()
++            | Ok _ -> Alcotest.fail "denied call did not stop the turn"
++            | Error error -> Alcotest.failf "agent prompt failed: %a" Agent.pp_error error);
++            Alcotest.(check bool) "approval remains unanswered" true
++              (Lwt.is_sleeping approval);
++            Alcotest.(check bool) "stopped agent is idle" false (Agent.busy agent)))
++
++let explicit_cancel_joins_hook_cleanup () =
++  if Sys.win32 then Alcotest.skip ()
++  else
++    let hooks_config : Config.hook list =
++      [
++        {
++          event = Config.Post_tool;
++          matcher = None;
++          command =
++            "cat >/dev/null; printf '%s\\n' \"$$\" > .cancel-pid; printf 'ready\\n' > \
++             .cancel-ready; read release < .cancel-release";
++          timeout_s = 30;
++        };
++      ]
++    in
++    with_agent ~hooks_config
++      ~queue:[ tool_response "fixture-model" "read" "{\"path\":\"allowed.txt\"}" ]
++      ~fallback:(text_response "fixture-model" "done")
++      (fun agent _session _events root ->
++        let ready_path = Filename.concat root ".cancel-ready" in
++        Unix.mkfifo ready_path 0o600;
++        Unix.mkfifo (Filename.concat root ".cancel-release") 0o600;
++        let fd =
++          Unix.openfile ready_path [ Unix.O_RDWR; Unix.O_NONBLOCK ] 0
++          |> Lwt_unix.of_unix_file_descr
++        in
++        let ready = Lwt_io.of_fd ~mode:Lwt_io.input fd in
++        Test_tools_test_support.write_file (Filename.concat root "allowed.txt") "ready";
++        let pending = Agent.prompt agent "read the file" in
++        Fun.protect
++          ~finally:(fun () ->
++            Agent.cancel agent;
++            await (Lwt_io.close ready))
++          (fun () ->
++            ignore (await (Lwt_unix.with_timeout 5. (fun () -> Lwt_io.read_line ready)));
++            let pid =
++              Test_tools_test_support.load_file (Filename.concat root ".cancel-pid")
++              |> String.trim |> int_of_string
++            in
++            Agent.cancel agent;
++            (match
++               await (Lwt_unix.with_timeout 5. (fun () -> Lwt.protected pending))
++             with
++            | Ok `Interrupted -> ()
++            | Ok _ -> Alcotest.fail "cancel did not interrupt the turn"
++            | Error error -> Alcotest.failf "agent prompt failed: %a" Agent.pp_error error);
++            (match Unix.kill pid 0 with
++            | () ->
++                Unix.kill (0 - pid) Sys.sigkill;
++                Alcotest.fail "cancel completed before hook process cleanup"
++            | exception Unix.Unix_error (Unix.ESRCH, _, _) -> ());
++            Alcotest.(check bool) "cancelled agent is idle" false (Agent.busy agent)))
++
+ let cases =
+   [
+     Test_tools_test_support.case "tool call and stop use HTTP fixture" `Quick
+@@ -437,4 +536,8 @@
+       body_outcome_survives_stop_turn;
+     Test_tools_test_support.case "post-hook time is not tool time" `Quick
+       post_hook_time_is_not_tool_time;
++    Test_tools_test_support.case "stopped turn does not await sibling approval" `Quick
++      stopped_turn_leaves_pending_approval;
++    Test_tools_test_support.case "explicit cancel joins hook cleanup" `Quick
++      explicit_cancel_joins_hook_cleanup;
+   ]
 --- a/test/crush/test_hooks.ml
 +++ b/test/crush/test_hooks.ml
-@@ -303,6 +303,50 @@
+@@ -303,39 +303,48 @@
            | () -> Alcotest.fail "timed-out hook left a child process"
            | exception Unix.Unix_error (Unix.ESRCH, _, _) -> ())
  
+-let successful_hook_spares_detached_child () =
+-  if Sys.win32 then
+-    (* cmd cannot publish a child's pid for [kill]; the tree-kill coverage lives
+-       in the jobs tests instead. *)
+-    Alcotest.skip ()
 +let successful_hook_keeps_detached_worker () =
 +  if Sys.win32 then Alcotest.skip ()
-+  else
-+    with_environment (fun root ->
+   else
+     with_environment (fun root ->
+-        let config =
+-          [
+-            hook ~event:Config.Pre_tool
+-              ~command:"sleep 30 >/dev/null 2>&1 & echo $! > child.pid" ();
+-          ]
 +        let release_path = Filename.concat root "worker-release" in
 +        let finished_path = Filename.concat root "worker-finished" in
 +        Unix.mkfifo release_path 0o600;
@@ -51,17 +447,37 @@
 +        let open_fifo path =
 +          Unix.openfile path [ Unix.O_RDWR; Unix.O_NONBLOCK ] 0
 +          |> Lwt_unix.of_unix_file_descr
-+        in
+         in
+-        let runner = runner root config in
+-        (match
+-           await
+-           @@ Hooks.pre_tool runner ~session:"s" ~tool:"write" ~input:(Jsont.Json.null ())
+-         with
+-        | Hooks.Allow _ -> ()
+-        | Hooks.Deny reason -> Alcotest.failf "successful hook denied: %s" reason);
+-        (* An orphaned zombie still answers signal 0 until it is reaped. Wait
+-           past that window so the check below proves a live child. *)
+-        await (Lwt_unix.sleep 0.5);
+-        let child_path = Filename.concat root "child.pid" in
+-        if not (Sys.file_exists child_path) then
+-          Alcotest.fail "hook exited before recording its child";
+-        let pid =
+-          int_of_string (String.trim (Test_tools_test_support.load_file child_path))
+-        in
+-        match Unix.kill pid 0 with
+-        | () -> Unix.kill pid Sys.sigkill
+-        | exception Unix.Unix_error (Unix.ESRCH, _, _) ->
+-            Alcotest.fail "successful hook killed its detached child")
 +        let release = Lwt_io.of_fd ~mode:Lwt_io.output (open_fifo release_path) in
 +        let finished = Lwt_io.of_fd ~mode:Lwt_io.input (open_fifo finished_path) in
 +        let pid_path = Filename.concat root "worker.pid" in
 +        let completed = ref false in
 +        Fun.protect
 +          ~finally:(fun () ->
-+            if (not !completed) && Sys.file_exists pid_path then (
-+              let pid = int_of_string (String.trim (read_payload root "worker.pid")) in
-+              try Unix.kill pid Sys.sigkill with
-+              | Unix.Unix_error (Unix.ESRCH, _, _) -> ());
++            (if (not !completed) && Sys.file_exists pid_path then
++               let pid = int_of_string (String.trim (read_payload root "worker.pid")) in
++               try Unix.kill pid Sys.sigkill
++               with Unix.Unix_error (Unix.ESRCH, _, _) -> ());
 +            await (Lwt_io.close release);
 +            await (Lwt_io.close finished))
 +          (fun () ->
@@ -77,20 +493,23 @@
 +            await (Lwt_io.write_line release "continue");
 +            await (Lwt_io.flush release);
 +            let message =
-+              await
-+              @@ Lwt_unix.with_timeout 5. (fun () -> Lwt_io.read_line finished)
++              await @@ Lwt_unix.with_timeout 5. (fun () -> Lwt_io.read_line finished)
 +            in
 +            completed := true;
-+            Alcotest.(check string) "detached worker finishes after hook returns" "done"
-+              message))
-+
- let cases =
-   [
-     Test_tools_test_support.case "pre-tool allow can rewrite input" `Quick rewritten_input;
-@@ -331,4 +375,6 @@
++            Alcotest.(check string)
++              "detached worker finishes after hook returns" "done" message))
+ 
+ let failing_hook_kills_detached_child () =
+   if Sys.win32 then
+@@ -398,8 +407,8 @@
        lifecycle_payload;
      Test_tools_test_support.case "timeout cleans descendant process group" `Quick
        descendant_cleanup;
+-    Test_tools_test_support.case "success spares a detached child" `Quick
+-      successful_hook_spares_detached_child;
+-    Test_tools_test_support.case "failure kills a detached child" `Quick
 +    Test_tools_test_support.case "successful hook preserves detached worker" `Quick
 +      successful_hook_keeps_detached_worker;
++    Test_tools_test_support.case "failing hook kills detached child" `Quick
+       failing_hook_kills_detached_child;
    ]

@@ -18,9 +18,9 @@ class Candidate:
 
 
 CANDIDATES = (
-    Candidate(20, "0e6dc5a27a7d269bc987e520ab70a6c1f03fd9db", "ff6995809e4bf80073035e8a424a8706aacef2d1bf9e89052560fb67488472f2"),
-    Candidate(25, "7ff215abf9c7bddb3a75ba172428cc8bbed824f5", "f77cf0363c1938a1cce2126803b28dd8943dff0ff0d4ae2fd0408970ede81a77"),
-    Candidate(26, "3f09ab25b4d102778ab02a7d1bb86a7a2c1e6601", "d8b5c6454261166f212d61d510534002b59b8908a46f0faacaef0afa88c1445b"),
+    Candidate(25, "8a03c878c30036add4e5b20e87f24c35c907bfd3", "ebeb89dba794c576630d5a3511b799fda930cad8834bf8cfa468ba55ca715cb6"),
+    Candidate(26, "b0537590c0600539a5d603b07912cbac56b6e934"),
+    Candidate(28, "38bbbb8dc176fe5013b9b7f7d281533d39bafa2d", "20caf59ed7fd2597e4ef923c763c2e264705b0f6d6b2a9b6756ea92662f29650"),
 )
 BASE = "84e5ff153f781c7e2d02804a5c24997858f618ab"
 WORKSPACE = Path(os.environ["GITHUB_WORKSPACE"])
@@ -64,32 +64,31 @@ def save_candidate(candidate: Candidate, folder: Path) -> str:
     return tree
 
 
-def count_screen_visits(candidate: Candidate, folder: Path) -> bool:
-    module = SOURCE / "bin/crush/lib/shell_screen.ml"
-    repaired = module.read_text()
-    old = subprocess.check_output(["git", "show", f"{candidate.head}:bin/crush/lib/shell_screen.ml"], cwd=SOURCE, text=True)
-    outputs: dict[str, int] = {}
-    for phase, source in (("red", old), ("green", repaired)):
-        work = folder / f"screen-{phase}"
-        work.mkdir()
-        prefix = 'and analyze_program sink ~depth program args =\n'
-        assert source.count(prefix) == 1
-        instrumented = 'let analysis_visits = ref 0\n' + source.replace(prefix, prefix + '  incr analysis_visits;\n')
-        (work / "shell_screen.ml").write_text(instrumented)
-        (work / "shell_screen.mli").write_text((SOURCE / "bin/crush/lib/shell_screen.mli").read_text() + '\nval analysis_visits : int ref\n')
-        (work / "driver.ml").write_text('''let () =
-  let depth = 12 in
-  let command = String.concat "" (List.init depth (fun _ -> "fd --color never -X ")) ^ "printf ready" in
-  (match Shell_screen.screen Shell_screen.Posix command with
-  | Shell_screen.Review _ -> ()
-  | _ -> failwith "nested unknown-option actions require review");
-  let visits = !(Shell_screen.analysis_visits) in
-  Printf.printf "depth=%d visits=%d expected=%d\\n" depth visits (depth + 1);
-  if visits <> depth + 1 then exit 1
-''')
-        subprocess.run(["ocamlc", "-strict-sequence", "-strict-formats", "-short-paths", "-principal", "-o", "check", "shell_screen.mli", "shell_screen.ml", "driver.ml"], cwd=work, check=True)
-        outputs[phase] = run([str(work / "check")], folder / f"screen-visits-{phase}.log")
-    return outputs == {"red": 1, "green": 0}
+def case_command(group: str, name: str) -> list[str]:
+    source = (SOURCE / f"test/crush/test_{group}.ml").read_text().split("let cases =", 1)[1]
+    names = re.findall(r'Test_tools_test_support.case\s+"([^"]+)"', source)
+    index = names.index(name)
+    return ["dune", "exec", "--profile", "release", "test/crush/test_crush.exe", "--", "test", group, str(index), "--verbose"]
+
+
+def check_regression(candidate: Candidate, folder: Path, module: str, group: str, name: str, label: str, failure: str, *, rebuild_cli: bool = False) -> bool:
+    path = SOURCE / module
+    repaired = path.read_bytes()
+    args = case_command(group, name)
+    rebuild = ["dune", "build", "--profile", "release", "bin/crush/main.exe"]
+    try:
+        path.write_bytes(subprocess.check_output(["git", "show", f"{candidate.head}:{module}"], cwd=SOURCE))
+        if rebuild_cli and run(rebuild, folder / f"{label}-red-cli-build.log") != 0:
+            return False
+        red = run(args, folder / f"{label}-red.log")
+        log = (folder / f"{label}-red.log").read_text(errors="replace")
+        reproduced = red != 0 and failure in log
+    finally:
+        path.write_bytes(repaired)
+    if rebuild_cli and run(rebuild, folder / f"{label}-green-cli-build.log") != 0:
+        return False
+    green = run(args, folder / f"{label}-green.log")
+    return reproduced and green == 0
 
 
 def check(candidate: Candidate) -> dict[str, object]:
@@ -111,23 +110,11 @@ def check(candidate: Candidate) -> dict[str, object]:
     result["fmt"] = run(["dune", "build", "@fmt"], folder / "fmt.log")
     result["build"] = run(["dune", "build", "--profile", "release"], folder / "build.log")
     result["tests"] = run(["dune", "runtest", "--profile", "release"], folder / "tests.log")
-    if candidate.number == 20 and result["build"] == 0:
-        result["screen_visits"] = count_screen_visits(candidate, folder)
     if candidate.number == 25 and result["build"] == 0:
-        module = SOURCE / "bin/crush/lib/hooks.ml"
-        repaired = module.read_bytes()
-        test_source = (SOURCE / "test/crush/test_hooks.ml").read_text().split("let cases =", 1)[1]
-        names = re.findall(r'Test_tools_test_support.case\s+"([^"]+)"', test_source)
-        case_index = names.index("successful hook preserves detached worker")
-        args = ["dune", "exec", "--profile", "release", "test/crush/test_crush.exe", "--", "test", "hooks", str(case_index), "--verbose"]
-        try:
-            module.write_bytes(subprocess.check_output(["git", "show", f"{candidate.head}:bin/crush/lib/hooks.ml"], cwd=SOURCE))
-            code = run(args, folder / "detached-worker-red.log")
-            red_log = (folder / "detached-worker-red.log").read_text(errors="replace")
-            result["detached_worker_red"] = code != 0 and "Lwt_unix.Timeout" in red_log
-        finally:
-            module.write_bytes(repaired)
-        result["detached_worker_green"] = run(args, folder / "detached-worker-green.log")
+        result["pending_approval"] = check_regression(candidate, folder, "bin/crush/lib/agent.ml", "agent", "stopped turn does not await sibling approval", "pending-approval", "Lwt_unix.Timeout")
+        result["explicit_cancel"] = check_regression(candidate, folder, "bin/crush/lib/agent.ml", "agent", "explicit cancel joins hook cleanup", "explicit-cancel", "Canceled")
+    if candidate.number == 28 and result["build"] == 0:
+        result["cache_destination"] = check_regression(candidate, folder, "bin/crush/lib/models.ml", "cli", "update-providers needs a cache directory", "cache-destination", "refresh reports a cache I/O error", rebuild_cli=True)
     git("diff", "--exit-code")
     assert git("write-tree") == result["tree"]
     (folder / "results.json").write_text(json.dumps(result, indent=2) + "\n")
@@ -143,9 +130,9 @@ def main() -> int:
         results[str(candidate.number)] = check(candidate)
         (EVIDENCE / "results.json").write_text(json.dumps(results, indent=2) + "\n")
     passed = all(all(result[name] == 0 for name in ("format_sources", "fmt", "build", "tests")) for result in results.values())
-    passed = passed and results["20"].get("screen_visits") is True
-    final = results["25"]
-    passed = passed and final.get("detached_worker_red") is True and final.get("detached_worker_green") == 0
+    passed = passed and results["25"].get("pending_approval") is True
+    passed = passed and results["25"].get("explicit_cancel") is True
+    passed = passed and results["28"].get("cache_destination") is True
     return 0 if passed else 1
 
 
