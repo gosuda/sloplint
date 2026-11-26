@@ -45,7 +45,7 @@ def main() -> int:
     EVIDENCE.mkdir(parents=True, exist_ok=True)
     mode = sys.argv[1]
     candidate = json.loads((PROBE / "ci-tools/remaining-elegant-candidate.json").read_text())
-    assert git("rev-parse", "HEAD") == candidate["head"]
+    assert git("rev-parse", "HEAD") == os.environ.get("BASELINE_HEAD", candidate["head"])
     if mode in ("prepare", "baseline-prepare"):
         if mode == "prepare":
             patch = PROBE / "ci-tools" / candidate["patch"]
@@ -54,7 +54,7 @@ def main() -> int:
             assert git("write-tree") == candidate["tree"]
             git("diff", "--cached", "--check")
         files = {path: hashlib.sha256((SOURCE / path).read_bytes()).hexdigest() for path in git("diff", "--cached", "--name-only").splitlines()}
-        identity = {"candidate": candidate, "mode": mode, "tree": git("write-tree"), "files": files}
+        identity = {"candidate": candidate, "mode": mode, "tree": git("write-tree"), "source_head": git("rev-parse", "HEAD"), "files": files}
         (EVIDENCE / "identity.json").write_text(json.dumps(identity, indent=2) + "\n")
         print("IDENTITY " + json.dumps(identity), flush=True)
         return 0
@@ -63,7 +63,7 @@ def main() -> int:
     os.environ["GOENV"] = "off"
     os.environ["GOCACHEPROG"] = ""
     os.environ["BASE_PATH"] = "/elegant-mermaid"
-    if mode not in ("windows", "baseline"):
+    if mode not in ("windows", "baseline", "markdown"):
         assert subprocess.check_output(["go", "env", "GOCACHEPROG"], cwd=SOURCE, text=True).strip() == ""
     config = EVIDENCE / "actionlint.yaml"
     config.write_text("self-hosted-runner:\n  labels: [depot-ubuntu-24.04, depot-ubuntu-24.04-8, depot-windows-2025]\n")
@@ -75,7 +75,7 @@ def main() -> int:
             ("slop", ["just", "slop"]),
             ("verify", ["just", "verify"]),
         )
-    elif mode == "quality":
+    elif mode in ("quality", "baseline-quality"):
         commands = (
             ("build", ["just", "build"]),
             ("oracle-install", ["pnpm", "--dir", "tools/upstream-oracle", "install", "--frozen-lockfile"]),
@@ -96,6 +96,8 @@ def main() -> int:
             ("playground-browser", ["pnpm", "--dir", "playground", "exec", "playwright", "test"]),
             ("playground-worker", ["env", "PLAYGROUND_SERVER_MODE=dev", "pnpm", "--dir", "playground", "exec", "playwright", "test", "--grep", "both engines render the default source"]),
         )
+    elif mode == "markdown":
+        commands = (("rustfmt", ["rustfmt", "--check", "--edition", "2024", "crates/elegant-mermaid-cli/src/render/markdown/links.rs"]), ("markdown-paths", ["just", "markdown-paths"]))
     elif mode == "windows":
         commands = (("windows-paths", ["just", "markdown-paths"]),)
     elif mode == "baseline":
@@ -103,6 +105,13 @@ def main() -> int:
     else:
         raise ValueError(f"unknown mode {mode}")
     results = {name: run(command, name) for name, command in commands}
+    quality_log = EVIDENCE / "quality.log"
+    if quality_log.exists():
+        rows = quality_log.read_text().splitlines()
+        metrics = sorted(row for row in rows if row.startswith("corpus/") and " ours=" in row)
+        summary = {"head": git("rev-parse", "HEAD"), "tree": git("write-tree"), "fixtures": len(metrics), "exceptions": sum("exception=true" in row for row in metrics), "metrics_sha256": hashlib.sha256(("\n".join(metrics) + "\n").encode()).hexdigest(), "gates": [row for row in rows if row.startswith("gate ")], "diagnostics": [row for row in rows if "differs from computed" in row]}
+        (EVIDENCE / "quality-summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+        print("QUALITY_SUMMARY " + json.dumps(summary), flush=True)
     results["worktree-clean"] = run(["git", "diff", "--exit-code"], "worktree-clean", 30)
     results["candidate-tree"] = 0 if git("write-tree") == identity["tree"] else 1
     (EVIDENCE / "results.json").write_text(json.dumps(results, indent=2) + "\n")

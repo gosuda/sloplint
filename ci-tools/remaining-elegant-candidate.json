@@ -6,9 +6,9 @@
   "branch": "deps/upgrade-2026-11-26",
   "base_ref": "main",
   "base_sha": "277e83b2e3d80c14f75334869b86a607c7ab3ffd",
-  "tree": "364a75320772b14d6fd34c1ba1b3449c02656629",
-  "patch": "remaining-elegant26.patch",
-  "patch_sha256": "afc3271e288ad689d02f1d263a01e0f4f7ffaf94c0c4dcd0b0c7c3bb9192edf7",
+  "tree": "eb867320528f953f4d6f845854fa9afd4604f7d4",
+  "patch": "remaining-elegant26-v3.patch",
+  "patch_sha256": "40886d66c6820154fcdfeb845596ede049fde5b49cdf3ec93547b29dd9414c6b",
   "files": [
     {
       "path": ".github/workflows/ci.yml",
@@ -29,6 +29,10 @@
     {
       "path": "tools/upstream-oracle/pnpm-lock.yaml",
       "sha256": "f68a71acf5642257fc93b93fbd2de766ba51a2d136dbb49d4bf5a30b7e076252"
+    },
+    {
+      "path": "crates/elegant-mermaid-cli/src/render/markdown/links.rs",
+      "sha256": "836afa9171a24d684565af1f3253736eb41592af2dae13f85cea06f8c92aa6ef"
     }
   ]
 }

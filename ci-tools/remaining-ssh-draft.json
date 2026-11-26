@@ -1,0 +1,103 @@
+{
+  "label": "ssh-chat-1",
+  "repository": "gosuda/ssh-chat",
+  "source_repository": "fatheradvisor/ssh-chat",
+  "number": 1,
+  "head": "1dd8ea93aad5a9a1543db75d05c3609ac0dcdc3e",
+  "branch": "main",
+  "base_ref": "main",
+  "base_sha": "179d41e6e32c79fe2619b1f718d560edb2a8c33a",
+  "tree": "be7a3fc2bc2f1d27e9e178eb3a4ea0b25cfe6e62",
+  "patch": "remaining-ssh-draft.patch",
+  "patch_sha256": "dc91178532f55a6bf47fda29f51c2166fbde64fcae1b7874207d3fd4adb1bc63",
+  "files": [
+    {
+      "path": "Dockerfile",
+      "sha256": "57ea2b444fc53330062565f317e2a8f0739722d53199a10ea39ca3cfed412b19"
+    },
+    {
+      "path": "chat/ban.go",
+      "sha256": "e84bd2b7f09f88183d5a28472cf9b041f1c61a3cf611791e983ab301c182e25c"
+    },
+    {
+      "path": "chat/client.go",
+      "sha256": "581fc059df2bf32f2cdd3c859a4a735f24b5d3efe5311473c42c2570788139ed"
+    },
+    {
+      "path": "chat/db.go",
+      "sha256": "f1814a87559770496a01b56055a58d908ece442c7c1ecabae7129a762a695657"
+    },
+    {
+      "path": "chat/memory.go",
+      "sha256": "25e8e2235c471a7e71cc76b143851f2112bbb27ef427f1f1bb759566af9e7a36"
+    },
+    {
+      "path": "chat/null.go",
+      "sha256": "fe671c2866b920f28ebe3ea551b1fb1f8972c0b3ae71d73e87a01ca5e515e2f1"
+    },
+    {
+      "path": "chat/server.go",
+      "sha256": "037f9a0af13feef74e97577ec845d789f8e845c92174e8993adbe190a5526ec7"
+    },
+    {
+      "path": "chat/types.go",
+      "sha256": "37b20bf3a2bbbbb974835ab1004fa0d34ff7d8da87bd536d28606feaa14e0c16"
+    },
+    {
+      "path": "client.go",
+      "sha256": "540cd4c7bec667e26627ce31d70b92458731100cbe95753d862836f7b2ecfb22"
+    },
+    {
+      "path": "go.mod",
+      "sha256": "726252f84e65960d6e34c91dc19dab2100213d7f1de6ee7c0fa0e916321304aa"
+    },
+    {
+      "path": "go.sum",
+      "sha256": "4d23aebcb5a7e6eb57caf456933837be14e16246f02edbcc5e7ed4c13038bccb"
+    },
+    {
+      "path": "on-premise/systemd-units/ssh-chat.service",
+      "sha256": "e482747cf15cb9452517ef9daccde27287d12babe2e85122754663cabec39166"
+    },
+    {
+      "path": "types/ban.go",
+      "sha256": "c9f9cea262bdc9ee481e6c1c8a74ca8c718f1737987a3f8fc0b498ee7cb518a7"
+    },
+    {
+      "path": "types/connlimit.go",
+      "sha256": "6ec7a256c449c99557c95b9687af81152a4f0e28fd49731b00da5ef39e13f94d"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "72f58af94a8538c764001b42c3d3b41f32651281df57338ec691baa71069d0a5"
+    },
+    {
+      "path": "proto/middleware.pb.go",
+      "sha256": "4dde718cb19f19920a48b1adbbef1d7bc13f992a5e94500a6ef4e33fc14117bd"
+    },
+    {
+      "path": "proto/middleware_grpc.pb.go",
+      "sha256": "80f0af9864227c7c71d07608f5a55ac844bc64ec4c4fa5db9a1aa881e00839d0"
+    },
+    {
+      "path": "scripts/update_proto.bat",
+      "sha256": "7afc762a563dc15101668e1ec1f572d7b78f75f57ae6716b9ccb54fee8871326"
+    },
+    {
+      "path": "scripts/update_proto.sh",
+      "sha256": "5b45bdd6c6df18c1efbc1157546a2ef30e9be0d8d4f688a2a05242f350a56f57"
+    },
+    {
+      "path": "middleware.go",
+      "sha256": "1b9ce1955d3fbbf1688ad29a47a91bcf6e1db6da370f70cbad14d88f25253be0"
+    },
+    {
+      "path": "chat/message_stream_test.go",
+      "sha256": "013f51447c1170841573db3f61fc9657c3bf39f3eb396c5688045b70debeef8d"
+    },
+    {
+      "path": "middleware_test.go",
+      "sha256": "f34e8e26e53c07df2bf1f0543557fb13d41659e23326065c55603b705d94b0cd"
+    }
+  ]
+}
