@@ -7,9 +7,9 @@
   "branch": "main",
   "base_ref": "main",
   "base_sha": "179d41e6e32c79fe2619b1f718d560edb2a8c33a",
-  "tree": "d63f594dbf051a052b6dc9be269da8640d1751c7",
-  "patch": "remaining-ssh-final.patch",
-  "patch_sha256": "d1dce1dcb1162beeeba0250fdb979d166171c1b56bec4771c6e1e9b334ead6dd",
+  "tree": "ffe92c599035042bd3b6b237839187d1dbaeaf1f",
+  "patch": "remaining-ssh-v2.patch",
+  "patch_sha256": "b1a3f70d32da580c307f97b38362f711efafa18dbc71da3e881ee29085f778d4",
   "files": [
     {
       "path": "Dockerfile",
@@ -33,7 +33,7 @@
     },
     {
       "path": "chat/message_stream_test.go",
-      "sha256": "44dabb523cd381e368e2be1860ca000b25ccb6145b94095a8a5375da4171a883"
+      "sha256": "41d9df0f0dc4bccf06c0d1e8a3db12b3f917213e7415ef25a1a3b2cf5d56b20f"
     },
     {
       "path": "chat/null.go",
@@ -65,11 +65,11 @@
     },
     {
       "path": "middleware.go",
-      "sha256": "937c6537904e57f93908e98a7aa74ea6ae9018079504bec2e7c1472e2f5b92a6"
+      "sha256": "fa502da59e913a1e38e42080a80cb4ce857bb399324a263ec4b8edf4118825f3"
     },
     {
       "path": "middleware_test.go",
-      "sha256": "364c29ce1c1999a841041afae847f0e8acedad373863ac48c17399301a6f462a"
+      "sha256": "e063dd5baef22f46cbb624a4633c12b3a74a4e389b02245bfcea7c2fbac535a7"
     },
     {
       "path": "on-premise/systemd-units/ssh-chat.service",
