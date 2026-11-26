@@ -41,6 +41,7 @@ pub(crate) static TABLE: crate::lang::Table = &[
     ("call_expression", Role::Call),
     ("new_expression", Role::NewCall),
     ("declaration", Role::Decl),
+    ("field_declaration", Role::Decl),
     ("assignment_expression", Role::Write),
     ("update_expression", Role::Write),
     ("preproc_include", Role::Import),
@@ -211,29 +212,15 @@ impl LangHooks for CppHooks {
         })
     }
     fn decl_names<'s>(&self, n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
-        // A guarded `MACRO() { int fd = open(); };` parses on the loose
-        // member read, which tags block locals as `field_declaration`.
-        // Inside a macro-braced body they are locals, so bind them there
-        // — real struct fields keep a `struct_specifier` grandparent.
-        let decl_like = n.kind() == "declaration"
-            || (n.kind() == "field_declaration"
-                && n.parent().is_some_and(|p| {
-                    p.kind() == "field_declaration_list"
-                        && p.parent()
-                            .is_some_and(|g| g.kind() == "macro_braced_declaration")
-                }));
-        if !decl_like {
-            return;
+        if n.kind() == "identifier" || n.kind() == "field_identifier" {
+            push_cpp_piece_name(n, cx, out);
         }
-        if word(
-            cx,
-            n,
-            &["type_qualifier", "storage_class_specifier"],
-            &["const", "constexpr", "extern"],
-        ) {
-            return;
-        }
-        out.extend(c_family::decl_info(cx, n, CPP_DECLARATORS.wrap).0);
+    }
+    fn decl_visible_in_initializer(&self) -> bool {
+        false
+    }
+    fn decl_piece(&self, kind: &str) -> bool {
+        matches!(kind, "identifier" | "field_identifier")
     }
     fn block_scoped_decls(&self) -> bool {
         true
@@ -466,6 +453,110 @@ impl LangHooks for CppHooks {
             "REQUIRE" | "CHECK" | "REQUIRE_FALSE" | "CHECK_FALSE"
         )
         .then(|| calls::catch2_assert(cx, n))
+    }
+}
+
+fn find_decl_from_cx<'t>(cx: &Cx<'t, '_>) -> Option<Node<'t>> {
+    for anc in cx.ancestors() {
+        if anc.kind() == "declaration" || anc.kind() == "field_declaration" {
+            return Some(anc);
+        }
+        if !matches!(
+            anc.kind(),
+            "init_declarator"
+                | "pointer_declarator"
+                | "reference_declarator"
+                | "array_declarator"
+                | "parenthesized_declarator"
+                | "attributed_declarator"
+                | "structured_binding_declarator"
+        ) {
+            return None;
+        }
+    }
+    None
+}
+
+fn is_macro_local_from_cx(decl: Node<'_>, cx: &Cx<'_, '_>) -> bool {
+    let mut seen = false;
+    let mut step = 0;
+    let mut body = None;
+    let mut pending_list = false;
+    for anc in cx.ancestors() {
+        if !seen {
+            if anc.id() == decl.id() {
+                seen = true;
+            }
+            continue;
+        }
+        if pending_list {
+            if anc.kind() != "macro_braced_declaration" {
+                return false;
+            }
+            pending_list = false;
+            step += 1;
+            continue;
+        }
+        if step == 0 {
+            if anc.kind() != "field_declaration_list" {
+                return false;
+            }
+            body = Some(anc);
+        } else if step == 1 {
+            if anc.kind() != "macro_braced_declaration" {
+                return false;
+            }
+        } else {
+            if anc.kind() == "compound_statement" {
+                break;
+            }
+            if anc.kind() == "field_declaration_list" {
+                pending_list = true;
+                continue;
+            }
+        }
+        step += 1;
+    }
+    if !seen || body.is_none() {
+        return false;
+    }
+    if pending_list {
+        return false;
+    }
+    !named_children(body.unwrap()).into_iter().any(|child| {
+        matches!(
+            child.kind(),
+            "access_specifier" | "qt_section_label" | "macro_access_label"
+        )
+    })
+}
+
+fn push_cpp_piece_name<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Vec<(&'s str, Pos)>) {
+    let Some(decl) = find_decl_from_cx(cx) else {
+        return;
+    };
+    if decl.kind() == "field_declaration" {
+        if !is_macro_local_from_cx(decl, cx) {
+            return;
+        }
+    } else if decl.kind() != "declaration" {
+        return;
+    }
+    if word(
+        cx,
+        decl,
+        &["type_qualifier", "storage_class_specifier"],
+        &["const", "constexpr", "extern"],
+    ) {
+        return;
+    }
+    let (all, _) = c_family::decl_info(cx, decl, CPP_DECLARATORS.wrap);
+    let want = pos_of(n);
+    for (name, pos) in all {
+        if pos == want {
+            out.push((name, pos));
+            return;
+        }
     }
 }
 

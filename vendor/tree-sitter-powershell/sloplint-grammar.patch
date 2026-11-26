@@ -746,3 +746,126 @@ diff --git a/src/scanner.c b/src/scanner.c
      // The statement terminator consumes nothing, so it must be tried last: when
      // both are valid, a `--` has to win over the empty terminator.
      if (scan_bare_dashes(payload, lexer, valid_symbols)) return true;
+diff --git a/grammar.js b/grammar.js
+index 2e6b4454..97bbe149 100644
+--- a/grammar.js
++++ b/grammar.js
+@@ -365,20 +365,28 @@ export default grammar({
+           // sloplint: option with an attached value, as in -I=dir,
+           // --go_out=$dir or -buildmode=c-shared. A bare -Name or -Name:
+           // stays a command_parameter. Commas belong to the value, as in
+           // --format=csv,noheader: native commands receive one string
+           // (about_Parsing, argument mode).
+           new RegExp(
+             /-+[a-zA-Z_?\-`][a-zA-Z0-9_?\-`]*/.source +
+               /[^a-zA-Z0-9_?\-`\s:<>&(){}|;,"'$@\[]/.source +
+               wordTail(/[^&\s()}|;"'`]/.source),
+           ),
++          // sloplint: dash-colon word, as in --:warning: the colon does not
++          // delimit a standalone `--` token, so the whole word is one
++          // generic token (see scanner.c: `:` is not a bare-dash delimiter).
++          new RegExp(
++            /-+:/.source +
++              /[^&\s()}|;,"'`]/.source +
++              wordTail(/[^&\s()}|;"'`]/.source),
++          ),
+           // sloplint: word that starts with a variable and continues as a
+           // path, as in $env:TEMP\x.ps1 or ${root}/bin.
+           /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)[\\\/][^\&\s\(\)\}\|;,]*/,
+           // sloplint: bare escape sequence used as a word, as in
+           // Write-Host `r`n — expandable-string content without quotes.
+           new RegExp(WORD_ESC + wordTail(/[^&\s()}|;,"'`]/.source)),
+           // sloplint: word that interleaves a variable head with quoted or
+           // plain segments, as in $x"cat"$y — a single expandable word.
+           new RegExp(
+             /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)/.source +
+@@ -945,21 +953,23 @@ export default grammar({
+     _argument_member_tail: ($) =>
+       prec.right(
+         seq(token.immediate('.'), $.member_name, optional($.argument_list)),
+       ),
+ 
+     // Stop parsing is a token that end the parsing of command line
+     stop_parsing: ($) => /--%[^\r\n]*/,
+ 
+     // Generic token is hard to manage
+     // So a definition is that a generic token must have to begin by one or more space char
+-    command_argument_sep: ($) => prec.right(choice(repeat1(' '), ':')),
++    // sloplint: tabs separate arguments like spaces, so an attached option
++    // lexes as generic_token after either (see calls.rs: parameter is opaque).
++    command_argument_sep: ($) => prec.right(choice(repeat1(choice(' ', '\t')), ':')),
+ 
+     // Adapt the grammar to have same behavior
+ 
+     _command_argument: ($) =>
+       prec.right(
+         PREC.PARAM,
+         choice(
+           seq($.command_argument_sep, optional($.generic_token)),
+           seq($.command_argument_sep, $._command_argument_list),
+           $.parenthesized_expression,
+diff --git a/src/scanner.c b/src/scanner.c
+index 49c1faf6..a94753f0 100644
+--- a/src/scanner.c
++++ b/src/scanner.c
+@@ -76,42 +76,57 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool
+         }
+     }
+ 
+     return false;
+ }
+ 
+ // A bare `-` or `--` argument: `--` ends option parsing for a native command
+ // (`git log -- path`, `cargo test -- --nocapture`) and `-` names stdin
+ // (`tar -xf -`). `--` is also the decrement operator and `-` the unary minus,
+ // so the lexer cannot tell them apart by length or precedence: the token is
+-// recognised only when the dashes are followed by whitespace or the end of the
+-// command.
++// recognised only when the dashes are followed by whitespace, `(` or `{`,
++// a command separator, or the end of the command.
++// sloplint: PowerShell treats non-breaking and zero-width spaces as
++// horizontal whitespace (see grammar extras). The external scanner skips
++// exactly those plus ASCII space and tab, never line breaks, so a `--`
++// after ` \u00A0` is still an option terminator.
++static bool is_horizontal_space(int32_t c)
++{
++    return c == ' ' || c == '\t' || c == 0x00A0 || c == 0xFEFF || c == 0x200B || c == 0x2060;
++}
++
+ static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_symbols)
+ {
+     if (!valid_symbols[BARE_DASHES]) return false;
+ 
+-    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') skip(lexer);
++    while (is_horizontal_space(lexer->lookahead)) skip(lexer);
+     if (lexer->lookahead != '-') return false;
+     lexer->advance(lexer, false);
+     if (lexer->lookahead == '-') lexer->advance(lexer, false);
+     lexer->mark_end(lexer);
+ 
+     switch (lexer->lookahead) {
+         case 0:
+         case ' ':
+         case '\t':
++        case 0x00A0:
++        case 0xFEFF:
++        case 0x200B:
++        case 0x2060:
+         case '\r':
+         case '\n':
+         case ';':
+         case '|':
+         case '&':
++        case '(':
+         case ')':
++        case '{':
+         case '}':
+             lexer->result_symbol = BARE_DASHES;
+             return true;
+         default:
+             return false;
+     }
+ }
+ 
+ /* --- API Implementation --- */
+ 

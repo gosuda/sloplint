@@ -91,14 +91,113 @@ fn nested_tactic_siblings_preserve_function_and_call_facts() {
     let source = "theorem nested (h : True) : True := by\n  have inner : True := by\n    have copy := h\n    exact copy\n  have outer := inner\n  exact outer\ndef after : Nat := 0\n";
     let analysis = run_clean("src/nested.lean", source);
     assert_eq!(function_names(&analysis), ["nested", "after"]);
+    let exacts: Vec<_> = analysis
+        .facts
+        .calls
+        .iter()
+        .filter(|call| call.callee == "exact")
+        .collect();
+    assert_eq!(
+        exacts.len(),
+        2,
+        "both sibling tactics keep their exact application, got {:?}",
+        analysis
+            .facts
+            .calls
+            .iter()
+            .map(|call| (call.callee, call.pos))
+            .collect::<Vec<_>>()
+    );
+    let mut exact_lines: Vec<u32> = exacts.iter().map(|call| call.pos.line).collect();
+    exact_lines.sort_unstable();
+    assert_eq!(
+        exact_lines,
+        [4, 6],
+        "the inner and outer exact calls keep their own lines"
+    );
+    let (nested_line, after_line) = (
+        analysis.facts.functions[0].pos.line,
+        analysis.facts.functions[1].pos.line,
+    );
+    assert!(
+        exacts
+            .iter()
+            .all(|call| nested_line < call.pos.line && call.pos.line < after_line),
+        "both exact calls belong to the outer proof between the declarations, got {:?}",
+        exacts.iter().map(|call| call.pos).collect::<Vec<_>>()
+    );
+}
+#[test]
+fn inline_block_comment_after_by_keeps_full_token_span() {
+    let source = "theorem t : True := by /- explanation -/ exact trivial\n";
+    let analysis = run_clean("src/inline_block_comment.lean", source);
+    let tree = parse_raw(source);
+    assert_eq!(
+        tree.root_node().end_byte(),
+        source.len(),
+        "the tree must cover the trailing tactic"
+    );
+    assert_eq!(
+        node_texts(&tree, source, "block_comment"),
+        ["/- explanation -/"],
+        "the comment token must span its full text, not a zero-width extra"
+    );
     assert!(
         analysis
             .facts
             .calls
             .iter()
             .any(|call| call.callee == "exact"),
-        "nested tactic applications remain visible to the adapter"
+        "the tactic after the inline comment stays visible to the adapter"
     );
+}
+
+#[test]
+fn inline_raw_string_after_by_keeps_full_token_span() {
+    // Tactics are generic terms, so a raw string can occupy the first tactic
+    // slot: the layout probe runs there, which is exactly the stale-mark
+    // position. Without the fix the scanner emits a zero-width phantom plus
+    // the real token, so the tree holds two raw strings instead of one.
+    let source = "theorem t : True := by r\"hi\"\n";
+    let analysis = run_clean("src/inline_raw_string.lean", source);
+    let tree = parse_raw(source);
+    assert_eq!(
+        tree.root_node().end_byte(),
+        source.len(),
+        "the tree must cover the raw string tactic"
+    );
+    assert_eq!(
+        node_texts(&tree, source, "raw_string"),
+        ["r\"hi\""],
+        "the raw string must be one full-span token, not a zero-width phantom plus the text"
+    );
+    assert!(
+        analysis.parse_error.is_none(),
+        "the first-slot raw string parses without recovery"
+    );
+}
+
+fn node_texts(tree: &tree_sitter::Tree, source: &str, kind: &str) -> Vec<String> {
+    let mut texts = Vec::new();
+    let mut cursor = tree.walk();
+    loop {
+        let node = cursor.node();
+        if node.kind() == kind {
+            texts.push(
+                node.utf8_text(source.as_bytes())
+                    .expect("node text stays in bounds")
+                    .to_string(),
+            );
+        }
+        if cursor.goto_first_child() {
+            continue;
+        }
+        while !cursor.goto_next_sibling() {
+            if !cursor.goto_parent() {
+                return texts;
+            }
+        }
+    }
 }
 
 /// True when the tree holds a visible ERROR node or a MISSING node anywhere.
