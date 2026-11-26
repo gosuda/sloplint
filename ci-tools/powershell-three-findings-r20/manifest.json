@@ -2,9 +2,9 @@
   "base": "61c88ec4d492dd1ab72f76b15b84fa9434cccfaa",
   "base_tree": "589aff2ec97f6e6f8179453ff6882fe19b3b65b2",
   "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
-  "mode": "Native-only refinement of two initial CRLF-control expectations before any production edits.",
+  "mode": "Three staged repairs. Native oracles, 461 parser comparisons, independent x64, ARM64 and lint gates; all original tracked blobs verified before and after.",
   "proof_sha256": {
-    "verify.py": "5e86779ee4ec151d62019ba9ffd15990c833a045c7af6190733e3c12ca809cdc",
+    "verify.py": "719e59c5e954c8a4719553c51d1b25b192cf9cc08dfb235b8a3ab6399223141a",
     "frozen-elements.json": "54f459fcddda24d6a04ec621f31784a145e30437cddb94c59065f24ff2842d42",
     "cases.json": "70fc8831ceb47b66d4421a500b3a632a69adbb0ac4bd521b38cffd8255a04e98",
     "native-oracle.ps1": "cb1d34d29ed3fd73fa535a3b38689f8be8576600e2b329aeca559b61c69f6292",
@@ -13,7 +13,10 @@
     "preserved-literal-cases.json": "9eb65f67588aa21b61f8a0073794a496b7263b7b959f88f5099cd4c01a7f7d32",
     "preserved-literal-oracle.ps1": "8bceaa20931d06609b35aaab9c107ea514d294fe36152a3c7b857ae9280f1eb6",
     "token-cases.json": "c51cb52596632b43443bf2f79dcdc21bdb0a85dab3d5468fd802c4de35bad79b",
-    "token-oracle.ps1": "438a05a95ba585dec15ed00a73f6c5187c44d7bc1df32990a341b9a472996bca"
+    "token-oracle.ps1": "438a05a95ba585dec15ed00a73f6c5187c44d7bc1df32990a341b9a472996bca",
+    "authored-stages.json": "2f4a86c8ae672e784f8c887c3d309c213e702264230daa275a84858b428ad763",
+    "token-expected.json": "91d3db55c886ea1bbf37c44377e73dd0a34c6d03ffc17a925689278ed2b7a7aa",
+    "token-parser-cases.json": "6ed75b48d91d1d1a2c8221c43896caacde3de402cb0181a9347eb424aecda024"
   },
   "threads": [
     "PRRT_kwDOVOMFM868fgdS",
@@ -30,5 +33,14 @@
     "artifact": 15142637184,
     "digest": "051066f0543bd7d40df8194108648453be8974bc4e288ded589e995f97be43d7",
     "outcome": "All three primary Rust regressions and CLI fixture failed with exit 101. Native argv and literal outputs matched all 203 expectations. Two extra CRLF pipe controls contradicted their initial accepted=true expectation; corrected to native rejection without changing source bytes. Original full baseline job failed its final assertion, retained above."
+  },
+  "native_token_cases": 40,
+  "baseline_refinement": {
+    "producer": "5e27599d70bb306ccfe665c4470c4a41facb7ddf",
+    "run": 45871471507,
+    "job": 140087687840,
+    "artifact": 15141829534,
+    "digest": "cd60a2a1a9fe16c3c9e4551b0293a7c6c24e1355168cbd7d378a792a143c5bb5",
+    "outcome": "All 243 corrected expectations and 40 native token records verified; source unchanged."
   }
 }
