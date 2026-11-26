@@ -2,7 +2,7 @@
   "schema": 1,
   "repository": "gosuda/sloplint",
   "pr": 137,
-  "status": "published_ordinary_ci_running",
+  "status": "r22_published_and_ordinary_ci_passed_later_r23_findings_open",
   "maintained_before": {
     "branch": "fix/powershell-review-boundaries-20261126",
     "head": "83f73f04e7f20bf405dbf4c2de3bd5467c8010bb",
@@ -735,8 +735,37 @@
   "ordinary_ci": {
     "run": 45895428017,
     "head": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
-    "status": "in_progress",
-    "conclusion": null
+    "status": "completed",
+    "conclusion": "success",
+    "merge_commit": "a0e7b72712ed50c8a83280b34ca82ec759c8858a",
+    "merge_tree": "f518b3943c6b86af53c334175309303c3d79f38b",
+    "updated_at": "2026-11-26T21:17:34Z",
+    "jobs": [
+      {
+        "id": 140168012346,
+        "name": "test (depot-ubuntu-24.04-arm, aarch64-unknown-linux-gnu, 1)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 140168012573,
+        "name": "lint",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 140168012645,
+        "name": "test (depot-ubuntu-24.04, x86_64-unknown-linux-gnu, 1)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 140168014437,
+        "name": "test-native",
+        "status": "completed",
+        "conclusion": "skipped"
+      }
+    ]
   },
   "owned_workflow_retired": true,
   "provenance": {
@@ -931,12 +960,32 @@
       "grammar_sha256": "7e8ec90e3376399728865f32415b9437bf1178cbfdcde727d2cf2186dafe5172",
       "grammar_git_blob": "c34d0336625760081204c7566c76bf53a04835fd",
       "tree": "f518b3943c6b86af53c334175309303c3d79f38b",
-      "notes": "Independent source hash and Git blob match; original literal token names, single repetition and colon preserved; exact Query comparator checks compile/row/hit positions and captured hex for 62 legacy-spacing input IDs times five queries. Twelve EM-space rows are excluded from historical equality and tested separately. No edits or jobs by reviewer."
+      "notes": "Independent source hash and Git blob match; original literal token names, single repetition and colon preserved; exact Query comparator checks compile/row/hit positions and captured hex for 62 legacy-spacing input IDs times five queries. Twelve EM-space rows are excluded from historical equality and tested separately. No edits or jobs by reviewer.",
+      "final_receipt": "No concrete blocker. Exact source/Git blob match; node-types byte-identical to pre-r20. Full query comparator includes compile status, errors/partial flags, hit count, position and text. Frozen 96-case regression retained byte-identically through formatting, mixed-space controls and six exact near-control trees pass. No extra reviewer jobs."
     }
   },
   "retirement": {
     "workflow": ".github/workflows/powershell-context-boundaries-r22.yml",
     "parent": "2f1d0a3809ceae32a5eee7eeaa5efa72a9a47ed8",
-    "method": "Additive commit removing only the owned temporary workflow after all candidate jobs completed successfully."
+    "method": "Additive commit removing only the owned temporary workflow after all candidate jobs completed successfully.",
+    "commit": "a10db6900c5ed16b4be9530ca240d2624b1c98b5",
+    "tree": "b684c0875a64a3500a5c37099dab3a460639470b"
+  },
+  "subsequent_review": {
+    "total_threads": 25,
+    "unresolved": [
+      "PRRT_kwDOVOMFM868j3zg",
+      "PRRT_kwDOVOMFM868j30i"
+    ],
+    "metadata_thread": {
+      "id": "PRRT_kwDOVOMFM868j31d",
+      "is_resolved": true,
+      "reply_comment": 4713410234,
+      "owner": "/root/bitcoin_round7"
+    },
+    "followup_producer": "0f58011fc01ed4fb380ebab8eda08fc6779b05d3",
+    "followup_run": 45897555856,
+    "followup_branch": "ci/powershell-separator-ownership-20261126-r23",
+    "notes": "These later source findings were not part of the completed r22 claim. Both remain open pending authentic native/query baselines and a separately verified repair."
   }
 }
