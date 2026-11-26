@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "scope": "Retire completed temporary Flats development verification",
+  "branch": "ci/flats-sheet-baseline-20261126-r14",
+  "source_head": "f6e7e41fdfc9684cba9d27753de0481bf7122547",
+  "producer": "f6e7e41fdfc9684cba9d27753de0481bf7122547",
+  "run": 45857407554,
+  "url": "https://github.com/gosuda/sloplint/actions/runs/45857407554",
+  "status": "completed",
+  "conclusion": "failure",
+  "jobs": [
+    {
+      "id": 140039291523,
+      "name": "windows",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 140039291849,
+      "name": "linux",
+      "status": "completed",
+      "conclusion": "failure"
+    }
+  ],
+  "removed": [
+    ".github/workflows/flats-sheet-baseline.yml",
+    "ci-tools/flats-sheet-baseline/manifest.json",
+    "ci-tools/flats-sheet-baseline/verify.py"
+  ],
+  "source_publication": "No maintained Flats branch was updated by this retirement.",
+  "limits": "The old spreadsheet candidate did not pass all mandatory gates and was not published. Its design correction budget remains exhausted. The maintained PR was subsequently integrated with main by an external actor; these historical probes do not prove that new head.",
+  "retired_at": "2026-11-26T17:25:20.203Z"
+}
