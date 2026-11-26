@@ -39,7 +39,17 @@ for record in records:
     destination = evidence / f"pr-{record['number']}-plan.json"
     with destination.open("w") as handle:
         process = subprocess.run(["dist", "plan", "--output-format=json"], cwd=source, stdout=handle, text=True, check=False)
-    assert process.returncode == 0, f"dist plan PR{record['number']}: {process.returncode}"
+    if process.returncode != 0:
+        drift = run(["git", "diff"])
+        (evidence / f"pr-{record['number']}-planning-drift.patch").write_text(drift + "\n")
+        changed = run(["git", "diff", "--name-only"]).splitlines()
+        assert set(changed) <= {"Cargo.lock"}, changed
+        subprocess.run(["git", "restore", "--", "Cargo.lock"], cwd=source, check=True)
+        result = {**record, "tree": run(["git", "rev-parse", "HEAD^{tree}"]), "exit": process.returncode, "runner_config_verified": True, "plan_completed": False}
+        results.append(result)
+        (evidence / "results.json").write_text(json.dumps(results, sort_keys=True, indent=2) + "\n")
+        print("BIBEAM_PLAN_FAILURE " + json.dumps(result, sort_keys=True), flush=True)
+        continue
     plan = json.loads(destination.read_text())
     jobs = plan["ci"]["github"]["artifacts_matrix"]["include"]
     seen: set[str] = set()
@@ -65,4 +75,6 @@ for record in records:
     results.append(result)
     print("BIBEAM_PLAN " + json.dumps(result, sort_keys=True), flush=True)
 (evidence / "results.json").write_text(json.dumps(results, sort_keys=True, indent=2) + "\n")
-print(f"BIBEAM_PLANS_COMPLETE heads={len(results)} targets_per_head={len(expected)}", flush=True)
+failed = [record["number"] for record in results if record["exit"] != 0]
+print(f"BIBEAM_PLANS_COMPLETE heads={len(results)} targets_per_head={len(expected)} failed={failed}", flush=True)
+raise SystemExit(bool(failed))
