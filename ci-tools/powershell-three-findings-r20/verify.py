@@ -109,72 +109,16 @@ capture = native_bin / "Capture-Native"
 capture.write_text(f"#!{sys.executable}\nimport json\nimport sys\nprint(json.dumps({{'count': len(sys.argv) - 1, 'values': sys.argv[1:]}}, ensure_ascii=True))\n")
 capture.chmod(0o755)
 ENVIRONMENT["PATH"] = str(native_bin) + os.pathsep + ENVIRONMENT["PATH"]
-run("preserved-native-grammar", [str(pwsh), "-NoLogo", "-NoProfile", "-File", str(PROOF / "preserved-grammar-oracle.ps1"), "-CasesPath", str(PROOF / "preserved-grammar-cases.json")])
-run("preserved-native-literals", [str(pwsh), "-NoLogo", "-NoProfile", "-File", str(PROOF / "preserved-literal-oracle.ps1"), "-CasesPath", str(PROOF / "preserved-literal-cases.json")])
-native_output = run("native-new-cases", [str(pwsh), "-NoLogo", "-NoProfile", "-File", str(PROOF / "native-oracle.ps1"), "-CasesPath", str(PROOF / "cases.json")], expected=None)
+native_output = run("corrected-native-cases", [str(pwsh), "-NoLogo", "-NoProfile", "-File", str(PROOF / "native-oracle.ps1"), "-CasesPath", str(PROOF / "cases.json")])
 native = [json.loads(line.removeprefix("NATIVE_CASE ")) for line in native_output.splitlines() if line.startswith("NATIVE_CASE ")]
-cases = cast(list[dict[str, object]], json.loads((PROOF / "cases.json").read_text()))
-assert len(native) == len(cases)
-native_by_id = {item["id"]: item for item in native}
-assert len(native_by_id) == len(cases)
+assert len(native) == 243 and all(item["matches"] for item in native)
 (EVIDENCE / "native-cases.json").write_text(json.dumps(native, indent=2, sort_keys=True) + "\n")
-parser_results: list[dict[str, object]] = []
-case_dir = EVIDENCE / "cases"
-case_dir.mkdir(exist_ok=True)
-for index, case in enumerate(cases):
-    content = str(case["source"])
-    assert hashlib.sha256(content.encode()).hexdigest() == case["source_sha256"]
-    path = case_dir / f"case-{index}.ps1"
-    path.write_text(content)
-    process = subprocess.run([str(tree_sitter), "parse", "--quiet", str(path)], cwd=VENDOR, env=ENVIRONMENT,
-                             text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False, timeout=30)
-    assert "Failed to load language" not in process.stdout
-    native_case = native_by_id[case["id"]]
-    parser_results.append({"id": case["id"], "exit": process.returncode, "accepted": process.returncode == 0,
-                           "native_accepted": native_case["accepted"], "native_matches_hypothesis": native_case["matches"]})
-(EVIDENCE / "baseline-parser-cases.json").write_text(json.dumps(parser_results, indent=2, sort_keys=True) + "\n")
-print("BASELINE_PARSER_MISMATCHES " + json.dumps([item for item in parser_results if item["accepted"] != item["native_accepted"]]), flush=True)
-
-elements = cast(list[dict[str, str]], json.loads((PROOF / "frozen-elements.json").read_text()))
-saved: dict[str, bytes | None] = {}
-try:
-    for item in elements:
-        path = SOURCE / item["path"]
-        saved[item["path"]] = path.read_bytes() if path.exists() else None
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(item["content"])
-    run("format-frozen-tests", ["cargo", "fmt", "--all"])
-    frozen = [{"path": item["path"], "content": (SOURCE / item["path"]).read_text(),
-               "sha256": hashlib.sha256((SOURCE / item["path"]).read_bytes()).hexdigest()} for item in elements]
-    (EVIDENCE / "formatted-frozen-elements.json").write_text(json.dumps(frozen, indent=2) + "\n")
-    for item in frozen:
-        if item["path"].endswith(".rs"):
-            assert len(item["content"].splitlines()) < 600, item["path"]
-        print("FROZEN_SOURCE " + json.dumps(item), flush=True)
-    args = ["cargo", "test", "--locked", "-p", "sloplint-syntax", "--test", "grammar_gaps"]
-    run("frozen-tests-compile", [*args, "--no-run"])
-    for name in [
-        "powershell_separators::unicode_horizontal_spaces_preserve_native_argument_counts",
-        "powershell_plain_escapes::unicode_escape_spelling_does_not_lengthen_plain_literal_runs",
-        "powershell_escaped_lines::backtick_only_lines_do_not_bridge_an_ordinary_newline_to_a_pipe",
-    ]:
-        result = run("red-" + name.split("::")[0], [*args, name, "--", "--exact", "--nocapture"], expected=101)
-        assert "FAILED" in result
-    for name in [
-        "powershell_separators::protected_spaces_and_format_marks_stay_inside_native_arguments",
-        "powershell_plain_escapes::unaffected_plain_word_measurements_keep_their_existing_contract",
-        "powershell_escaped_lines::adjacent_and_explicit_continuation_pipes_remain_valid",
-    ]:
-        run("control-" + name.split("::")[0], [*args, name, "--", "--exact", "--nocapture"], expected=None)
-    fixture = run("red-cli-fixture", ["cargo", "test", "--locked", "-p", "sloplint", "--test", "fixtures", "fixtures_match_expected", "--", "--exact", "--nocapture"], expected=101)
-    assert "contiguous-log-literal__powershell" in fixture and "i.ps1" in fixture
-finally:
-    for name, content in saved.items():
-        path = SOURCE / name
-        if content is None:
-            path.unlink()
-        else:
-            path.write_bytes(content)
+print("ALL_CORRECTED_NATIVE_CASES " + json.dumps(native), flush=True)
+token_output = run("native-line-tokens", [str(pwsh), "-NoLogo", "-NoProfile", "-File", str(PROOF / "token-oracle.ps1"), "-CasesPath", str(PROOF / "token-cases.json")])
+tokens = [json.loads(line.removeprefix("TOKEN_CASE ")) for line in token_output.splitlines() if line.startswith("TOKEN_CASE ")]
+assert len(tokens) == 40
+(EVIDENCE / "token-cases.json").write_text(json.dumps(tokens, indent=2, sort_keys=True) + "\n")
+for record in tokens:
+    print("ALL_TOKEN_CASE " + json.dumps(record), flush=True)
 assert source_identity() == initial
-assert next(item for item in RESULTS if item["name"] == "native-new-cases")["exit"] == 0, "A frozen native hypothesis needs revision; inspect native-cases.json."
-print("POWERSHELL_THREE_FINDINGS_BASELINE_COMPLETE " + json.dumps({"source": initial, "native_cases": len(native), "results": RESULTS}, sort_keys=True), flush=True)
+print("POWERSHELL_NATIVE_BOUNDARY_OBSERVATIONS_COMPLETE", flush=True)

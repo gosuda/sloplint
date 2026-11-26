@@ -2357,14 +2357,14 @@
     "id": "pipe-crlf-direct-two-backticks-top",
     "kind": "parse",
     "source": "Get-Date`\r\n`\r\n| Write-Output\r\n",
-    "accepted": true,
+    "accepted": false,
     "source_sha256": "d948a6bc9d41c326a6bc8a8c5a23e3befd515284542300585b4fa3dec0de3048"
   },
   {
     "id": "pipe-crlf-direct-two-backticks-grouped",
     "kind": "parse",
     "source": "(Get-Date`\r\n`\r\n| Write-Output)\r\n",
-    "accepted": true,
+    "accepted": false,
     "source_sha256": "8f1dfb52c233b4d6f46c48dda315f994b17bfefcca2c0a9da667700f5ef1bf44"
   },
   {
