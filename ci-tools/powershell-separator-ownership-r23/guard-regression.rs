@@ -125,3 +125,38 @@ fn complete_dash_prefix_keeps_the_comment_boundary_before_an_escape() {
         );
     }
 }
+
+#[test]
+fn comments_before_attached_redirect_words_stay_outside_separators() {
+    for comments in ["<# note #>", "<# one #><# two #>", "<# one\n two #>"] {
+        let source = format!("Write-Output hi > {comments} -output.log\n");
+        run_clean(&source);
+        assert!(
+            captures(&source, "(command_argument_sep (comment) @match)").is_empty(),
+            "{source:?}"
+        );
+    }
+}
+
+#[test]
+fn separated_comment_groups_keep_their_original_public_parents() {
+    for ending in ["\n", "\r\n"] {
+        let source = format!("Write-Output hi <# one #> \t<# two #> -NoEnumerate{ending}");
+        run_clean(&source);
+        assert_eq!(
+            captures(&source, "(command_elements (comment) @match)"),
+            vec![(27, "<# two #>".to_owned())],
+            "{source:?}"
+        );
+        assert_eq!(
+            captures(&source, "(command_argument_sep (comment) @match)"),
+            vec![(16, "<# one #>".to_owned())],
+            "{source:?}"
+        );
+        assert_eq!(
+            captures(&source, "(command_elements (command_argument_sep) @match)"),
+            vec![(12, " ".to_owned()), (15, " <# one #> \t".to_owned())],
+            "{source:?}"
+        );
+    }
+}

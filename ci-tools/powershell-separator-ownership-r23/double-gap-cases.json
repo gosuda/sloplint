@@ -1,0 +1,16 @@
+[
+  {
+    "id": "redirect-double-gap-0",
+    "source": "Write-Output hi >  <# note #> -output.log\n",
+    "source_sha256": "9af48e422a4737fae79ed242623654df0b94af75824be2ed613aacc7930fe448",
+    "kind": "observation",
+    "accepted": null
+  },
+  {
+    "id": "redirect-double-gap-1",
+    "source": "Write-Output hi >  <# note #> -​first\n",
+    "source_sha256": "3a2b928aa183af74c881c062acf1f39c76fe5a81f251ee1abbfabbff0cfb17b4",
+    "kind": "observation",
+    "accepted": null
+  }
+]

@@ -1,0 +1,442 @@
+{
+  "receipt": {
+    "producer": "7f83c425202d090e82b44c7713a937d5cd64dcf7",
+    "run": 45911049430,
+    "job": 140219232030,
+    "artifact": 15159819732,
+    "zip_sha256": "144a81988e49a55be94261d2d0eeb853cdf88b04b8d7984c339f17539728b824",
+    "payload_sha256": "c516e662b2fe41b73241c82214626e56ffe31e7e55570ce2a2b6aed946604f02",
+    "gzip_sha256": "37a85d54e4a7ff694b57d4f803fd5eb8387103589d511859e86c54a6e8248f9d",
+    "payload_bytes": 5967760,
+    "gzip_bytes": 313862,
+    "base64_bytes": 418484
+  },
+  "source": {
+    "base": "e7ee97e84246863766ec7465777a035134533feb",
+    "tree": "7bba07f815c90529d25e9b7b3a0ee3dc0294c318",
+    "tracked_blobs": 4906,
+    "index_sha256": "c76d102d0a76cb05e3ff9e97edf27b86e6905922f8be3cff0a2a179eff609bfb",
+    "files": {
+      "vendor/tree-sitter-powershell/grammar.js": "3432baacb8c4fbb7d29ac02bd3b8580988f85b1cbe795795154f90cbe3095d4d",
+      "vendor/tree-sitter-powershell/src/grammar.json": "8819019e9c00d144c1ea00cb146df00577e25e1d44efe96a2f54ef97fc524870",
+      "vendor/tree-sitter-powershell/src/parser.c": "8ce0c8ec5b7e103cccb6f9042c2f851bec7b460166af74b8e7bc5c900ee3c749",
+      "vendor/tree-sitter-powershell/src/node-types.json": "cc0ca0ff480d8278d54719e0dc7a5213018e4a39333e7f1986481972bec64404",
+      "vendor/tree-sitter-powershell/src/scanner.c": "6dac1b1103c9364eb540b5a07eb8c89ccfe53f7c5623409321413b451ac10213"
+    }
+  },
+  "actual_results": [
+    {
+      "name": "rust-toolchain",
+      "args": [
+        "rustup",
+        "toolchain",
+        "install",
+        "1.100.0",
+        "--profile",
+        "minimal",
+        "--component",
+        "rustfmt,clippy"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source",
+      "exit": 0,
+      "expected": 0,
+      "seconds": 6.270457597999993,
+      "timed_out": false,
+      "log_sha256": "5c4a350545b58a7cd7623d96848abeb542cb3374b1e2fd7fa37219ad787a6f5c"
+    },
+    {
+      "name": "separated-comment-guard-generate",
+      "args": [
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/tree-sitter",
+        "generate"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "seconds": 0.2846279739999886,
+      "timed_out": false,
+      "log_sha256": "28abfc9d180779f1ccb3a72ca0e1cc9502b76bafcda8d207cedd9f498d036cdc"
+    },
+    {
+      "name": "separated-comment-guard-format-probes",
+      "args": [
+        "cargo",
+        "fmt",
+        "--all"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source",
+      "exit": 0,
+      "expected": 0,
+      "seconds": 0.9356085060000225,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "separated-comment-guard-clean-grammar",
+      "args": [
+        "cargo",
+        "clean",
+        "-p",
+        "tree-sitter-powershell"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source",
+      "exit": 0,
+      "expected": 0,
+      "seconds": 0.5385725499999978,
+      "timed_out": false,
+      "log_sha256": "83ab073cee6131c866d0131ce849ceb8ced44d79b74770c8f0d8f52d32e2d192"
+    },
+    {
+      "name": "separated-comment-guard-compile-probes",
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "--no-run"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source",
+      "exit": 0,
+      "expected": 0,
+      "seconds": 20.031345773999988,
+      "timed_out": false,
+      "log_sha256": "ffbd0823642f9482f9959cc0be77a81d5341b4d77f537e3fe8bf1cfe6ac6d1d7"
+    },
+    {
+      "name": "separated-comment-guard-queries",
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "powershell_separator_observations::observe_separator_ownership_queries",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source",
+      "exit": 0,
+      "expected": 0,
+      "seconds": 16.777286855,
+      "timed_out": false,
+      "log_sha256": "c0cf09afc1c7557e29a0f95617378882c27a5e8e65cd0da643914c6196e5b937"
+    },
+    {
+      "name": "separated-comment-guard-focused-powershell",
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "powershell",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source",
+      "exit": 0,
+      "expected": null,
+      "seconds": 16.26500856199999,
+      "timed_out": false,
+      "log_sha256": "479187226c577771659c99041b1126ef139da3c591ddb17772b29e443da752ce"
+    },
+    {
+      "name": "separated-comment-guard-prefix-guard-complete-prefix-lf",
+      "args": [
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/prefix-controls/prefix-0.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": 0,
+      "seconds": 0.0027699419999862585,
+      "timed_out": false,
+      "log_sha256": "502c48e52adbd0ea2fccd62c6e06217c906d1ff8981db6075a5d8c649d6428a4"
+    },
+    {
+      "name": "separated-comment-guard-prefix-guard-complete-prefix-crlf",
+      "args": [
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/prefix-controls/prefix-1.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": 0,
+      "seconds": 0.0022299160000045504,
+      "timed_out": false,
+      "log_sha256": "502c48e52adbd0ea2fccd62c6e06217c906d1ff8981db6075a5d8c649d6428a4"
+    },
+    {
+      "name": "separated-comment-guard-trace-comment-single-parameter-space",
+      "args": [
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/tree-sitter",
+        "parse",
+        "--debug=normal",
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/cases/case-366.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": 0,
+      "seconds": 0.001957871999991312,
+      "timed_out": false,
+      "log_sha256": "2bb12124f558d505dda970d91ef7c0a270b808056b4e9b6716e527b5a2877913"
+    },
+    {
+      "name": "separated-comment-guard-trace-comment-single-plain-space",
+      "args": [
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/tree-sitter",
+        "parse",
+        "--debug=normal",
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/cases/case-371.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": 0,
+      "seconds": 0.0017228289999877688,
+      "timed_out": false,
+      "log_sha256": "8c178f0e2e2090dc87a3806263e074d5a442e1f4e7e632de434a54d6ffbe1afc"
+    },
+    {
+      "name": "separated-comment-guard-trace-comment-guard-lf-multiline-inside",
+      "args": [
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/tree-sitter",
+        "parse",
+        "--debug=normal",
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/cases/case-679.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": 0,
+      "seconds": 0.0015802879999853303,
+      "timed_out": false,
+      "log_sha256": "eacddc5303f64d19e8cc8b65a2a45fc41a6839ae6a9bec55dd8da8bc088ced56"
+    },
+    {
+      "name": "separated-comment-guard-trace-comment-guard-zwsp-1-array",
+      "args": [
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/tree-sitter",
+        "parse",
+        "--debug=normal",
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/cases/case-713.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": 0,
+      "seconds": 0.0016430189999994127,
+      "timed_out": false,
+      "log_sha256": "5d26f3934fa8a84380ac088e3806c20c0f5e59cc6d858ad1eb5ebcef4b486aa9"
+    },
+    {
+      "name": "separated-comment-guard-trace-comment-guard-prefix-ddd",
+      "args": [
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/tree-sitter",
+        "parse",
+        "--debug=normal",
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/cases/case-733.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": 0,
+      "seconds": 0.001709789999978284,
+      "timed_out": false,
+      "log_sha256": "59f00a93e4f82d61d7981b99d51a038a9913b8a447841047f78365542d8f2d66"
+    },
+    {
+      "name": "separated-comment-guard-trace-comment-guard-lf-line-named",
+      "args": [
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/tree-sitter",
+        "parse",
+        "--debug=normal",
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/cases/case-673.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 1,
+      "expected": 1,
+      "seconds": 0.0017311599999914051,
+      "timed_out": false,
+      "log_sha256": "0c2cece55bba79cbc4b7b746e56fa631d533fb93db6182e14cb8a87fa23c4af9"
+    },
+    {
+      "name": "separated-comment-guard-trace-external-comment-redirect-number",
+      "args": [
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/tree-sitter",
+        "parse",
+        "--debug=normal",
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/cases/case-737.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": 0,
+      "seconds": 0.0015821679999987737,
+      "timed_out": false,
+      "log_sha256": "47a2c94295588a60171684c404110746a0668bea14ef75b0a6c81b5f6454db8a"
+    },
+    {
+      "name": "separated-comment-guard-trace-external-comment-redirect-space-marked",
+      "args": [
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/tree-sitter",
+        "parse",
+        "--debug=normal",
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/cases/case-789.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": 0,
+      "seconds": 0.0015341480000188312,
+      "timed_out": false,
+      "log_sha256": "ff3430dc57cc9aa4ada446e371d05216bd804c7cf503945e6ea8a46785158afd"
+    },
+    {
+      "name": "separated-comment-guard-trace-external-comment-adjacent-word",
+      "args": [
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/tree-sitter",
+        "parse",
+        "--debug=normal",
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/cases/case-736.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": 0,
+      "seconds": 0.0016095280000172352,
+      "timed_out": false,
+      "log_sha256": "b11f6391c4e1973efd568b5a5d44ebc64d15f9d9f6faf9969a7ee44d39da839f"
+    },
+    {
+      "name": "separated-comment-guard-corpus",
+      "args": [
+        "/home/runner/work/_temp/powershell-separator-ownership-r23/tree-sitter",
+        "test"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "seconds": 0.01081401400000459,
+      "timed_out": false,
+      "log_sha256": "ed56aa1b3a2af7d46a9c319405d8d153c1268d088987165eff4f049532dd103e"
+    }
+  ],
+  "failures": [
+    {
+      "kind": "old-comment-query:separator-comment",
+      "id": "comment-redirect-single-dash",
+      "expected": [
+        "OWNERSHIP_QUERY_ROW comment-redirect-single-dash separator-comment error=false partial=false timeout=false hits=0"
+      ],
+      "actual": [
+        "OWNERSHIP_QUERY_HIT comment-redirect-single-dash separator-comment 18 3c23206e6f746520233e",
+        "OWNERSHIP_QUERY_ROW comment-redirect-single-dash separator-comment error=false partial=false timeout=false hits=1"
+      ]
+    },
+    {
+      "kind": "old-comment-query:separator-comment",
+      "id": "comment-redirect-repeated-dash",
+      "expected": [
+        "OWNERSHIP_QUERY_ROW comment-redirect-repeated-dash separator-comment error=false partial=false timeout=false hits=0"
+      ],
+      "actual": [
+        "OWNERSHIP_QUERY_HIT comment-redirect-repeated-dash separator-comment 18 3c23206f6e6520233e",
+        "OWNERSHIP_QUERY_HIT comment-redirect-repeated-dash separator-comment 27 3c232074776f20233e",
+        "OWNERSHIP_QUERY_ROW comment-redirect-repeated-dash separator-comment error=false partial=false timeout=false hits=2"
+      ]
+    },
+    {
+      "kind": "old-comment-query:separator-comment",
+      "id": "comment-redirect-multiline-dash",
+      "expected": [
+        "OWNERSHIP_QUERY_ROW comment-redirect-multiline-dash separator-comment error=false partial=false timeout=false hits=0"
+      ],
+      "actual": [
+        "OWNERSHIP_QUERY_HIT comment-redirect-multiline-dash separator-comment 18 3c23206f6e650a2074776f20233e",
+        "OWNERSHIP_QUERY_ROW comment-redirect-multiline-dash separator-comment error=false partial=false timeout=false hits=1"
+      ]
+    },
+    {
+      "kind": "guard-old-comment:direct-comment",
+      "id": "comment-guard-lf-spaced-blocks",
+      "expected": [
+        "OWNERSHIP_QUERY_HIT comment-guard-lf-spaced-blocks direct-comment 27 3c232074776f20233e",
+        "OWNERSHIP_QUERY_ROW comment-guard-lf-spaced-blocks direct-comment error=false partial=false timeout=false hits=1"
+      ],
+      "actual": [
+        "OWNERSHIP_QUERY_HIT comment-guard-lf-spaced-blocks direct-comment 16 3c23206f6e6520233e",
+        "OWNERSHIP_QUERY_HIT comment-guard-lf-spaced-blocks direct-comment 27 3c232074776f20233e",
+        "OWNERSHIP_QUERY_ROW comment-guard-lf-spaced-blocks direct-comment error=false partial=false timeout=false hits=2"
+      ]
+    },
+    {
+      "kind": "guard-old-comment:separator-comment",
+      "id": "comment-guard-lf-spaced-blocks",
+      "expected": [
+        "OWNERSHIP_QUERY_HIT comment-guard-lf-spaced-blocks separator-comment 16 3c23206f6e6520233e",
+        "OWNERSHIP_QUERY_ROW comment-guard-lf-spaced-blocks separator-comment error=false partial=false timeout=false hits=1"
+      ],
+      "actual": [
+        "OWNERSHIP_QUERY_ROW comment-guard-lf-spaced-blocks separator-comment error=false partial=false timeout=false hits=0"
+      ]
+    },
+    {
+      "kind": "guard-old-comment:element-separator",
+      "id": "comment-guard-lf-spaced-blocks",
+      "expected": [
+        "OWNERSHIP_QUERY_HIT comment-guard-lf-spaced-blocks element-separator 12 20",
+        "OWNERSHIP_QUERY_HIT comment-guard-lf-spaced-blocks element-separator 15 203c23206f6e6520233e2009",
+        "OWNERSHIP_QUERY_ROW comment-guard-lf-spaced-blocks element-separator error=false partial=false timeout=false hits=2"
+      ],
+      "actual": [
+        "OWNERSHIP_QUERY_HIT comment-guard-lf-spaced-blocks element-separator 12 20",
+        "OWNERSHIP_QUERY_HIT comment-guard-lf-spaced-blocks element-separator 15 20",
+        "OWNERSHIP_QUERY_ROW comment-guard-lf-spaced-blocks element-separator error=false partial=false timeout=false hits=2"
+      ]
+    },
+    {
+      "kind": "guard-old-comment:direct-comment",
+      "id": "comment-guard-crlf-spaced-blocks",
+      "expected": [
+        "OWNERSHIP_QUERY_HIT comment-guard-crlf-spaced-blocks direct-comment 27 3c232074776f20233e",
+        "OWNERSHIP_QUERY_ROW comment-guard-crlf-spaced-blocks direct-comment error=false partial=false timeout=false hits=1"
+      ],
+      "actual": [
+        "OWNERSHIP_QUERY_HIT comment-guard-crlf-spaced-blocks direct-comment 16 3c23206f6e6520233e",
+        "OWNERSHIP_QUERY_HIT comment-guard-crlf-spaced-blocks direct-comment 27 3c232074776f20233e",
+        "OWNERSHIP_QUERY_ROW comment-guard-crlf-spaced-blocks direct-comment error=false partial=false timeout=false hits=2"
+      ]
+    },
+    {
+      "kind": "guard-old-comment:separator-comment",
+      "id": "comment-guard-crlf-spaced-blocks",
+      "expected": [
+        "OWNERSHIP_QUERY_HIT comment-guard-crlf-spaced-blocks separator-comment 16 3c23206f6e6520233e",
+        "OWNERSHIP_QUERY_ROW comment-guard-crlf-spaced-blocks separator-comment error=false partial=false timeout=false hits=1"
+      ],
+      "actual": [
+        "OWNERSHIP_QUERY_ROW comment-guard-crlf-spaced-blocks separator-comment error=false partial=false timeout=false hits=0"
+      ]
+    },
+    {
+      "kind": "guard-old-comment:element-separator",
+      "id": "comment-guard-crlf-spaced-blocks",
+      "expected": [
+        "OWNERSHIP_QUERY_HIT comment-guard-crlf-spaced-blocks element-separator 12 20",
+        "OWNERSHIP_QUERY_HIT comment-guard-crlf-spaced-blocks element-separator 15 203c23206f6e6520233e2009",
+        "OWNERSHIP_QUERY_ROW comment-guard-crlf-spaced-blocks element-separator error=false partial=false timeout=false hits=2"
+      ],
+      "actual": [
+        "OWNERSHIP_QUERY_HIT comment-guard-crlf-spaced-blocks element-separator 12 20",
+        "OWNERSHIP_QUERY_HIT comment-guard-crlf-spaced-blocks element-separator 15 20",
+        "OWNERSHIP_QUERY_ROW comment-guard-crlf-spaced-blocks element-separator error=false partial=false timeout=false hits=2"
+      ]
+    }
+  ],
+  "eligible": false,
+  "reason": "Nine frozen historical capture mismatches; never published to the maintained source branch."
+}

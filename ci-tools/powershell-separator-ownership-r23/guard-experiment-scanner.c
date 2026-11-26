@@ -12,7 +12,8 @@ enum TOKEN_TYPE {
     HERE_STRING_NEWLINE,
     ELSE_BRANCH,
     ELSEIF_BRANCH,
-    COMMENTED_ARGUMENT
+    COMMENTED_ARGUMENT,
+    COMMENTED_REDIRECT
 };
 
 /* --- API --- */
@@ -97,17 +98,89 @@ static bool scan_commented_argument(TSLexer *lexer)
     return true;
 }
 
+// PARAMETER_WORD uses ASCII name atoms and complete backtick escapes.
+static bool is_parameter_name_character(int32_t c)
+{
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+        (c >= '0' && c <= '9') || c == '_' || c == '?' || c == '-';
+}
+
+static bool skip_parameter_escape(TSLexer *lexer)
+{
+    skip(lexer);
+    int32_t escaped = lexer->lookahead;
+    if (escaped == 0 || escaped == '\r' || escaped == '\n') return false;
+    skip(lexer);
+    if (escaped != 'u' || lexer->lookahead != '{') return true;
+    skip(lexer);
+    unsigned value = 0;
+    unsigned digits = 0;
+    for (;;) {
+        int32_t c = lexer->lookahead;
+        unsigned digit;
+        if (c >= '0' && c <= '9') digit = (unsigned)(c - '0');
+        else if (c >= 'a' && c <= 'f') digit = (unsigned)(c - 'a') + 10;
+        else if (c >= 'A' && c <= 'F') digit = (unsigned)(c - 'A') + 10;
+        else break;
+        if (digits == 6) return false;
+        value = value * 16 + digit;
+        ++digits;
+        skip(lexer);
+    }
+    if (digits == 0 || value > 0x10FFFF || lexer->lookahead != '}') return false;
+    skip(lexer);
+    return true;
+}
+
+// Only the existing attached-value word alternative needs this redirect guard.
+// Plain parameters and the dedicated format-mark words keep their own paths.
+static bool scan_commented_redirect(TSLexer *lexer)
+{
+    unsigned dashes = 0;
+    while (lexer->lookahead == '-') {
+        ++dashes;
+        skip(lexer);
+    }
+    int32_t c = lexer->lookahead;
+    if (c == 0x200B || c == 0xFEFF || c == 0x2060) return false;
+    if (dashes < 2) {
+        if (c == '`') {
+            if (!skip_parameter_escape(lexer)) return false;
+        } else {
+            if (!is_parameter_name_character(c) || (c >= '0' && c <= '9')) return false;
+            skip(lexer);
+        }
+    }
+    while (is_parameter_name_character(lexer->lookahead) || lexer->lookahead == '`') {
+        if (lexer->lookahead == '`') {
+            if (!skip_parameter_escape(lexer)) return false;
+        } else {
+            skip(lexer);
+        }
+    }
+    c = lexer->lookahead;
+    if (c == 0 || is_powershell_space(c) || c == '\r' || c == '\n' ||
+        c == ':' || c == '<' || c == '>' || c == '&' || c == '(' ||
+        c == ')' || c == '{' || c == '}' || c == '|' || c == ';' ||
+        c == ',' || c == '"' || c == '\'' || c == '$' || c == '@' || c == '[') return false;
+    lexer->result_symbol = COMMENTED_REDIRECT;
+    return true;
+}
+
 static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool *valid_symbols, bool comment_at_entry)
 {
     bool terminator_valid = valid_symbols[STATEMENT_TERMINATOR];
     bool branch_valid = valid_symbols[ELSE_BRANCH] || valid_symbols[ELSEIF_BRANCH];
     bool commented_argument_valid = comment_at_entry && valid_symbols[COMMENTED_ARGUMENT];
-    if (!terminator_valid && !branch_valid && !commented_argument_valid) return false;
+    bool commented_redirect_valid = comment_at_entry && valid_symbols[COMMENTED_REDIRECT];
+    if (!terminator_valid && !branch_valid && !commented_argument_valid && !commented_redirect_valid) return false;
     lexer->result_symbol = STATEMENT_TERMINATOR;
     // Comments and whitespace are lookahead; the callback marked the empty token.
     bool saw_newline = false;
     bool pipe_continuation_blocked = false;
     bool line_has_comment = false;
+    bool block_comment_seen = false;
+    bool separator_after_comment = false;
     for (;;) {
         int32_t c = lexer->lookahead;
         if (c == 0 || c == '}' || c == ';' || c == ')') return terminator_valid;
@@ -120,6 +193,7 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool 
             continue;
         }
         if (is_powershell_space(c)) {
+            if (block_comment_seen) separator_after_comment = true;
             skip(lexer);
             continue;
         }
@@ -133,6 +207,14 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool 
             skip(lexer);
             if (lexer->lookahead != '#') return terminator_valid && saw_newline;
             line_has_comment = true;
+            // A later explicit separator keeps the earlier comments in its gap.
+            // Defer the guard until the last adjacent block-comment group.
+            if (separator_after_comment) {
+                commented_argument_valid = false;
+                commented_redirect_valid = false;
+            }
+            block_comment_seen = true;
+            separator_after_comment = false;
             skip(lexer);
             // PowerShell block comments end at the first #>, without nesting.
             while (lexer->lookahead != 0) {
@@ -162,8 +244,9 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool 
             }
             continue;
         }
-        if (commented_argument_valid && !saw_newline && c == '-') {
-            return scan_commented_argument(lexer);
+        if (!saw_newline && c == '-') {
+            if (commented_redirect_valid) return scan_commented_redirect(lexer);
+            if (commented_argument_valid) return scan_commented_argument(lexer);
         }
         if (branch_valid && scan_conditional_branch(lexer, valid_symbols)) return true;
         if (!terminator_valid || !saw_newline) return false;

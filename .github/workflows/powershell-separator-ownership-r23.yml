@@ -59,7 +59,7 @@ jobs:
           run-id: 45910252434
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/powershell-separator-ownership-r23/prefix-baseline
-      - name: Evaluate the separated comment guard against frozen native and public contracts
+      - name: Verify last-comment and redirect guards against frozen contracts
         run: uv run --no-project --python 3.15 proof/ci-tools/powershell-separator-ownership-r23/guard-experiment.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()

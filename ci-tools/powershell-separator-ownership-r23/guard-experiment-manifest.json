@@ -2,14 +2,14 @@
   "base": "e7ee97e84246863766ec7465777a035134533feb",
   "base_tree": "5d2a547a693d073ad9739311e7b653baa96a08d6",
   "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
-  "kind": "One bounded separated-argument guard experiment against exact current source. This diagnostic snapshot is not eligible for publication without the complete x64, ARM64, lint and authoritative source-generation gates.",
+  "kind": "Bounded second guard experiment. All 801 frozen cases, 21 public queries, nine rejected-candidate assertions and two completed-prefix controls are retained. Two new double-space redirects receive native and old/current observations before candidate application. Diagnostic source is ineligible for publication without full source gates.",
   "stages": [
     {
-      "id": "separated-comment-guard",
+      "id": "last-comment-and-redirect-guards",
       "file": "guard-experiment-grammar.js",
-      "sha256": "3432baacb8c4fbb7d29ac02bd3b8580988f85b1cbe795795154f90cbe3095d4d",
+      "sha256": "213dfd728746463bdc1831e8458e959e0b843d9c216105d6216a90ec074c9fc8",
       "scanner_file": "guard-experiment-scanner.c",
-      "scanner_sha256": "6dac1b1103c9364eb540b5a07eb8c89ccfe53f7c5623409321413b451ac10213"
+      "scanner_sha256": "9585a11787bed671288d8a6a650a7efe1744c01b7b0f73d2454c8faf087276ef"
     }
   ],
   "formatted_observer_sha256": "2151f94ae80983f087bbde46e4c6b1749a522487d541289e018b3b70fd63458b",
@@ -56,10 +56,10 @@
     "base64_bytes": 2984
   },
   "proof_sha256": {
-    "guard-experiment.py": "09b8ebc3507e8d7f1b6c83ba85c5661bfa500decc7080d5b78f0fc2fd2177bc9",
-    "guard-experiment-grammar.js": "3432baacb8c4fbb7d29ac02bd3b8580988f85b1cbe795795154f90cbe3095d4d",
-    "guard-experiment-scanner.c": "6dac1b1103c9364eb540b5a07eb8c89ccfe53f7c5623409321413b451ac10213",
-    "guard-regression.rs": "3268a6893f374aa5eb2a279003d4b950b9b7adc41bef4119e1a3b2aeeae6e2c8",
+    "guard-experiment.py": "b864691c0ff7d2762bfe43f4e1eeacb5b37aa9bf4b24d9e93d23f373689a04e9",
+    "guard-experiment-grammar.js": "213dfd728746463bdc1831e8458e959e0b843d9c216105d6216a90ec074c9fc8",
+    "guard-experiment-scanner.c": "9585a11787bed671288d8a6a650a7efe1744c01b7b0f73d2454c8faf087276ef",
+    "guard-regression.rs": "e0353b383bca935e7f14c640c9b28102cbd7fed68f4e93f4526b6a4461ae46fd",
     "external-observer.rs": "43fa7b9378ca2b89a8e789ebd4d70d5a116d720509143ab619f4c8bc2120714b",
     "external-boundary-cases.json": "c1f8af63b0bcec4ea5f7919caa5789b2da647e319adb0f310718032250d1dc06",
     "external-boundary-cases.tsv": "3a1e3f286d87e40e9179563f767662e48ef768e8053b31a3126c7303d4d18a94",
@@ -72,6 +72,23 @@
     "prefix-baseline-packed.b64": "25a2bf12ccb1413f4877e54d5226e10c3bfe3fc22c3b8b1d39a6518cbf7e2188",
     "prefix-boundary-cases.json": "f04aecafc69d71c0726ce0d48d8ce49bd08e1e634bb44dfac67d28d3ed8f2e17",
     "baseline-packed.b64": "cfc776d2c4651a3daaddaf7d23cc076ac72b6ea6b0959187e55f54b3a35abac3",
-    "experiment-controls.json": "39502e3f9e9f874dd70f7b38a24b86bdaa2c6f5fc3d87958d275e94e53a94efc"
+    "experiment-controls.json": "39502e3f9e9f874dd70f7b38a24b86bdaa2c6f5fc3d87958d275e94e53a94efc",
+    "double-gap-cases.json": "917047b37a5435f74150422d583415fc8fc0c428a65e9238929aba9aeb1b3160",
+    "double-gap-cases.tsv": "02851e3eae58ef4333ae98a8ca96bbe732eda840ee11973bf862281370279872",
+    "double-gap-oracle.ps1": "521d82f956d0192f33e5b2ba51996ef20b16590957c16172d51298e6fe3dffcd",
+    "rejected-first-guard.json": "cb65bee17a91282ac0de09035b741ff86a437beb79dc14e6df3c29fb9184c330"
+  },
+  "additional_double_gap_controls": 2,
+  "previous_candidate": {
+    "producer": "7f83c425202d090e82b44c7713a937d5cd64dcf7",
+    "run": 45911049430,
+    "job": 140219232030,
+    "artifact": 15159819732,
+    "zip_sha256": "144a81988e49a55be94261d2d0eeb853cdf88b04b8d7984c339f17539728b824",
+    "payload_sha256": "c516e662b2fe41b73241c82214626e56ffe31e7e55570ce2a2b6aed946604f02",
+    "gzip_sha256": "37a85d54e4a7ff694b57d4f803fd5eb8387103589d511859e86c54a6e8248f9d",
+    "payload_bytes": 5967760,
+    "gzip_bytes": 313862,
+    "base64_bytes": 418484
   }
 }

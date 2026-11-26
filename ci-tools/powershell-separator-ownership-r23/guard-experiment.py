@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import gzip
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -11,6 +12,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import tarfile
 import time
 import urllib.request
 import zipfile
@@ -243,6 +245,16 @@ def query_observations(label: str, focused: bool) -> tuple[list[str], int | None
         lines = [line for line in text.splitlines() if line.startswith("OWNERSHIP_QUERY_")]
         assert sum(line.startswith("OWNERSHIP_QUERY_COMPILE ") and line.endswith(" OK") for line in lines) == 21
         assert sum(line.startswith("OWNERSHIP_QUERY_ROW ") for line in lines) == len(CASES) * 21
+        ENVIRONMENT["SLOPLINT_BOUNDARY_CASES"] = str(PROOF / "double-gap-cases.tsv")
+        try:
+            extra_text = run(label + "-double-gap-public-queries", [*args, "powershell_separator_observations::observe_separator_ownership_queries", "--", "--exact", "--nocapture"])
+            assert "running 1 test" in extra_text and "1 passed; 0 failed" in extra_text
+            extra_lines = [line for line in extra_text.splitlines() if line.startswith("OWNERSHIP_QUERY_")]
+            assert sum(line.startswith("OWNERSHIP_QUERY_COMPILE ") and line.endswith(" OK") for line in extra_lines) == 21
+            assert sum(line.startswith("OWNERSHIP_QUERY_ROW ") for line in extra_lines) == 42
+            lines.extend(line for line in extra_lines if not line.startswith("OWNERSHIP_QUERY_COMPILE "))
+        finally:
+            ENVIRONMENT["SLOPLINT_BOUNDARY_CASES"] = str(PROOF / "external-boundary-cases.tsv")
         focused_exit: int | None = None
         if focused:
             text = run(label + "-focused-powershell", [*args, "powershell", "--", "--nocapture"], expected=None)
@@ -360,6 +372,85 @@ print("VERIFIED_CURRENT_AND_HISTORICAL_BASELINES " + json.dumps({
     "external_receipt": external_receipt, "boundary_receipt": boundary_receipt,
     "cases": len(CASES), "public_queries": 21, "original_cases": len(reference_current),
 }), flush=True)
+double_gap_cases = json.loads((PROOF / "double-gap-cases.json").read_text())
+assert len(double_gap_cases) == 2
+gap_root = EVIDENCE / "double-gap-controls"
+gap_root.mkdir()
+for index, case in enumerate(double_gap_cases):
+    assert hashlib.sha256(case["source"].encode()).hexdigest() == case["source_sha256"]
+    (gap_root / f"case-{index}.ps1").write_text(case["source"])
+
+archive = download("https://github.com/PowerShell/PowerShell/releases/download/v7.7.0/powershell-7.7.0-linux-x64.tar.gz",
+                   "c89d9c682d2c403dfe726f3df948e359675235a5bd6fab535776de69729ca0cb", "double-gap-powershell.tar.gz")
+powershell = EVIDENCE / "double-gap-powershell"
+powershell.mkdir()
+run("double-gap-extract-powershell", ["tar", "-xzf", str(archive), "-C", str(powershell)])
+pwsh = powershell / "pwsh"
+pwsh.chmod(0o755)
+native_text = run("double-gap-native", [str(pwsh), "-NoLogo", "-NoProfile", "-File",
+                  str(PROOF / "double-gap-oracle.ps1"), "-CasesPath", str(PROOF / "double-gap-cases.json")])
+double_gap_native = [json.loads(line.removeprefix("NATIVE_CONTEXT ")) for line in native_text.splitlines() if line.startswith("NATIVE_CONTEXT ")]
+assert len(double_gap_native) == 2 and all(item["accepted"] and item["matches"] for item in double_gap_native)
+
+historical_head = "57adc9fff126a9826e0fb0be921c28e6cdb08391"
+run("double-gap-fetch-historical-source", ["git", "fetch", "--depth=1", "origin", historical_head])
+assert output(["git", "rev-parse", historical_head + "^{tree}"]) == "f518b3943c6b86af53c334175309303c3d79f38b"
+historical_root = EVIDENCE / "double-gap-historical"
+historical_root.mkdir()
+archived = subprocess.check_output(["git", "archive", historical_head, "vendor/tree-sitter-powershell"], cwd=SOURCE)
+with tarfile.open(fileobj=io.BytesIO(archived)) as handle:
+    handle.extractall(historical_root, filter="data")
+historical_vendor = historical_root / "vendor/tree-sitter-powershell"
+entries = subprocess.check_output(["git", "ls-tree", "-r", "-z", historical_head, "--", "vendor/tree-sitter-powershell"], cwd=SOURCE)
+vendor_count = 0
+for entry in entries.split(b"\0"):
+    if not entry:
+        continue
+    metadata, relative = entry.split(b"\t", 1)
+    mode, kind, expected = metadata.split()
+    assert kind == b"blob"
+    path = historical_root / os.fsdecode(relative)
+    if mode == b"120000":
+        content = os.fsencode(os.readlink(path))
+    else:
+        assert mode in (b"100644", b"100755")
+        content = path.read_bytes()
+        assert bool(path.stat().st_mode & 0o111) == (mode == b"100755")
+    assert hashlib.sha1(f"blob {len(content)}\0".encode() + content).hexdigest() == expected.decode(), str(path)
+    vendor_count += 1
+print("VERIFIED_HISTORICAL_VENDOR " + json.dumps({"head": historical_head, "tree": "f518b3943c6b86af53c334175309303c3d79f38b",
+      "tracked_vendor_blobs": vendor_count, "vendor_entries_sha256": hashlib.sha256(entries).hexdigest()}), flush=True)
+
+def located_spans(kind: str, source: str, text: str) -> list[tuple[int, str]]:
+    encoded = source.encode()
+    lines = encoded.splitlines(keepends=True)
+    result: list[tuple[int, str]] = []
+    for match in re.finditer(rf"\({kind} \[(\d+), (\d+)\] - \[(\d+), (\d+)\]", text):
+        start_row, start_column, end_row, end_column = map(int, match.groups())
+        begin = sum(map(len, lines[:start_row])) + start_column
+        finish = sum(map(len, lines[:end_row])) + end_column
+        result.append((begin, encoded[begin:finish].decode()))
+    return result
+
+double_gap_baseline = {}
+for label, vendor in (("previous", historical_vendor), ("current", VENDOR)):
+    library = EVIDENCE / ("double-gap-libraries-" + label)
+    library.mkdir()
+    ENVIRONMENT["TREE_SITTER_LIBDIR"] = str(library)
+    records = []
+    for index, case in enumerate(double_gap_cases):
+        text = run("double-gap-" + label + "-" + case["id"], [str(binary), "parse", str(gap_root / f"case-{index}.ps1")], expected=None, cwd=vendor)
+        actual_exit = int(RESULTS[-1]["exit"])
+        assert actual_exit in (0, 1), (label, case["id"], actual_exit)
+        record = {"id": case["id"], "source_sha256": case["source_sha256"], "exit": actual_exit,
+                  "redirection": located_spans("redirection", case["source"], text),
+                  "redirect-target": located_spans("redirected_file_name", case["source"], text),
+                  "commands": spans("command", case["source"], text)}
+        records.append(record)
+        print("FROZEN_DOUBLE_GAP " + label + " " + json.dumps(record), flush=True)
+    double_gap_baseline[label] = records
+assert unchanged_identity(SOURCE, str(MANIFEST["base"]), str(MANIFEST["base_tree"])) == initial
+
 for stage in MANIFEST["stages"]:
     label = stage["id"]
     try:
@@ -504,6 +595,16 @@ for stage in MANIFEST["stages"]:
             record["limitation"] = "Attached CRLF splits native commands but all three historical parsers join them; only historical comment ownership is asserted here." if case["id"].endswith("-crlf") else None
             prefix_records.append(record)
         print("COMPLETE_PREFIX_CONTROLS " + json.dumps(prefix_records), flush=True)
+        for previous in double_gap_baseline["previous"]:
+            identity = str(previous["id"])
+            if previous["exit"] != 0:
+                fail("double-gap-historical-coverage", identity, 0, previous["exit"])
+            for query in ("redirection", "redirect-target"):
+                actual = query_hits(queries, identity, query)
+                expected = previous[query]
+                if actual != expected or not healthy_query(queries, identity, query):
+                    fail("double-gap-target:" + query, identity, expected, actual)
+        print("DOUBLE_GAP_QUERY_RECORDS " + json.dumps([line for line in queries if line.split()[1].startswith("redirect-double-gap-")]), flush=True)
         argument_log = (EVIDENCE / (label + "-focused-powershell.log")).read_text()
         argument_rows = [line.split() for line in argument_log.splitlines() if line.startswith("GUARD_NATIVE_ARG_CASE ")]
         expected_arguments = {identity: native for identity, native in native_by_id.items()
@@ -521,20 +622,53 @@ for stage in MANIFEST["stages"]:
             "comment-guard-lf-multiline-inside", "comment-guard-zwsp-1-array",
             "comment-guard-prefix-ddd", "comment-guard-lf-line-named",
             "external-comment-redirect-number", "external-comment-redirect-space-marked",
-            "external-comment-adjacent-word",
+            "external-comment-adjacent-word", "comment-redirect-single-dash",
+            "comment-redirect-repeated-dash", "comment-redirect-multiline-dash",
+            "external-comment-redirect-space-named",
         )
         trace_receipts = []
-        for identity in trace_ids:
-            case_index = next(index for index, case in enumerate(CASES) if case["id"] == identity)
-            text = run(label + "-trace-" + identity, [str(binary), "parse", "--debug=normal", str(case_root / f"case-{case_index}.ps1")],
-                       expected=int(by_id[identity]["exit"]), cwd=VENDOR)
-            canonical_tree = "\n".join(line for line in text.splitlines() if re.match(r"^\s*(?:[A-Za-z_]+: )?\(", line)) + "\n"
-            assert hashlib.sha256(canonical_tree.encode()).hexdigest() == by_id[identity]["canonical_tree_sha256"], identity
-            guard_sizes = [int(size) for size in re.findall(r"lexed_lookahead sym:_commented_argument, size:(\d+)", text)]
-            assert all(size == 0 for size in guard_sizes), (identity, guard_sizes)
-            trace_receipts.append({"id": identity, "guard_token_sizes": guard_sizes,
-                                   "canonical_tree_sha256": by_id[identity]["canonical_tree_sha256"]})
-        print("GUARD_ZERO_WIDTH_TRACE " + json.dumps(trace_receipts), flush=True)
+        scanner_path = VENDOR / "src/scanner.c"
+        scanner_original = scanner_path.read_bytes()
+        scanner_text = scanner_original.decode()
+        trace_source = scanner_text.replace('#include <wctype.h>', '#include <wctype.h>\n#include <stdio.h>')
+        trace_source = trace_source.replace('    bool commented_redirect_valid = comment_at_entry && valid_symbols[COMMENTED_REDIRECT];',
+            '    unsigned callback_column = lexer->get_column(lexer);\n    bool commented_redirect_valid = comment_at_entry && valid_symbols[COMMENTED_REDIRECT];')
+        trace_source = trace_source.replace('            if (commented_redirect_valid) return scan_commented_redirect(lexer);',
+            '            if (commented_redirect_valid) {\n'
+            '                unsigned target_column = lexer->get_column(lexer);\n'
+            '                bool accepted = scan_commented_redirect(lexer);\n'
+            '                fprintf(stderr, "COMMENTED_REDIRECT_PROBE accepted=%d callback_col=%u target_col=%u\\n", accepted, callback_column, target_column);\n'
+            '                return accepted;\n'
+            '            }')
+        assert trace_source.count("COMMENTED_REDIRECT_PROBE") == 1
+        library_before = ENVIRONMENT["TREE_SITTER_LIBDIR"]
+        trace_library = EVIDENCE / (label + "-trace-libraries")
+        trace_library.mkdir()
+        try:
+            scanner_path.write_text(trace_source)
+            ENVIRONMENT["TREE_SITTER_LIBDIR"] = str(trace_library)
+            for identity in trace_ids:
+                case_index = next(index for index, case in enumerate(CASES) if case["id"] == identity)
+                text = run(label + "-trace-" + identity, [str(binary), "parse", "--debug=normal", str(case_root / f"case-{case_index}.ps1")],
+                           expected=int(by_id[identity]["exit"]), cwd=VENDOR)
+                canonical_tree = "\n".join(line for line in text.splitlines() if re.match(r"^\s*(?:[A-Za-z_]+: )?\(", line)) + "\n"
+                assert hashlib.sha256(canonical_tree.encode()).hexdigest() == by_id[identity]["canonical_tree_sha256"], identity
+                guards = [(kind, int(size)) for kind, size in re.findall(r"lexed_lookahead sym:(_commented_(?:argument|redirect)), size:(\d+)", text)]
+                assert all(size == 0 for _, size in guards), (identity, guards)
+                probes = [{"accepted": bool(int(value)), "callback_column": int(start), "target_column": int(target)}
+                          for value, start, target in re.findall(r"COMMENTED_REDIRECT_PROBE accepted=(\d) callback_col=(\d+) target_col=(\d+)", text)]
+                if identity == "external-comment-redirect-space-named":
+                    assert any(not probe["accepted"] for probe in probes), (identity, probes)
+                if identity == "comment-redirect-single-dash":
+                    assert ("_commented_redirect", 0) in guards and any(probe["accepted"] for probe in probes), (identity, guards, probes)
+                trace_receipts.append({"id": identity, "guard_tokens": guards, "redirect_probes": probes,
+                                       "canonical_tree_sha256": by_id[identity]["canonical_tree_sha256"]})
+        finally:
+            scanner_path.write_bytes(scanner_original)
+            ENVIRONMENT["TREE_SITTER_LIBDIR"] = library_before
+            assert source_snapshot() == snapshot
+        print("GUARD_ZERO_WIDTH_TRACE " + json.dumps({"instrumented_scanner_sha256": hashlib.sha256(trace_source.encode()).hexdigest(),
+              "restored_scanner_sha256": hashlib.sha256(scanner_original).hexdigest(), "traces": trace_receipts}), flush=True)
         corpus = run(label + "-corpus", [str(binary), "test"], expected=None, cwd=VENDOR)
         corpus_exit = int(RESULTS[-1]["exit"])
         assert source_snapshot() == snapshot
@@ -552,7 +686,8 @@ for stage in MANIFEST["stages"]:
 
 payload = json.dumps({"manifest": MANIFEST, "baseline_source": initial, "baseline_parsers": baseline_parsers,
                       "baseline_queries": baseline_queries, "external_receipt": external_receipt,
-                      "boundary_receipt": boundary_receipt, "outcomes": outcomes, "results": RESULTS},
+                      "boundary_receipt": boundary_receipt, "double_gap_native": double_gap_native,
+                      "double_gap_baseline": double_gap_baseline, "outcomes": outcomes, "results": RESULTS},
                      separators=(",", ":"), ensure_ascii=True).encode()
 packed = gzip.compress(payload, mtime=0)
 encoded = base64.b64encode(packed).decode()

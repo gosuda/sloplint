@@ -42,6 +42,7 @@ export default grammar({
     $._else_branch,
     $._elseif_branch,
     $._commented_argument,
+    $._commented_redirect,
   ],
 
   extras: ($) => [
@@ -1107,7 +1108,13 @@ export default grammar({
     // sloplint: a redirect may follow its operator with no separator, as
     // in '/r'>null — a bare word target then lexes as generic_token.
     redirected_file_name: ($) =>
-      choice($._command_argument, $._primary_expression, $.generic_token),
+      choice(
+        // Attached-option words keep the preceding comment outside the gap.
+        seq($.command_argument_sep, $._commented_redirect, $.generic_token),
+        $._command_argument,
+        $._primary_expression,
+        $.generic_token,
+      ),
 
     // Class
     class_attribute: ($) =>
