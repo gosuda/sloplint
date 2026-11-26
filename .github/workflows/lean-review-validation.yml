@@ -1,0 +1,97 @@
+name: Lean review validation
+
+on:
+  push:
+    branches: [ci/lean-review-validation-20261126]
+    paths:
+      - .github/workflows/lean-review-validation.yml
+      - vendor/tree-sitter-lean/grammar.js
+      - vendor/tree-sitter-lean/src/scanner.c
+      - vendor/tree-sitter-lean/sloplint-grammar.patch
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lean-review-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  generate-and-test:
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: "2"
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+      TREE_SITTER_SHA256: d01042f94ba3d6827ddc9788e235f75d8366431be42bdf90ade534d960c98b7d
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned parser generator
+        run: |
+          mkdir -p "$RUNNER_TEMP/lean-validation/bin" "$RUNNER_TEMP/lean-validation/logs"
+          curl --fail --silent --show-error --location --retry 3 \
+            --output "$RUNNER_TEMP/tree-sitter.gz" \
+            https://github.com/tree-sitter/tree-sitter/releases/download/v0.27.1/tree-sitter-linux-x64.gz
+          printf '%s\n' "$TREE_SITTER_SHA256  $RUNNER_TEMP/tree-sitter.gz" | sha256sum --check --strict
+          gzip -dc "$RUNNER_TEMP/tree-sitter.gz" > "$RUNNER_TEMP/lean-validation/bin/tree-sitter"
+          chmod +x "$RUNNER_TEMP/lean-validation/bin/tree-sitter"
+          "$RUNNER_TEMP/lean-validation/bin/tree-sitter" --version
+          printf '%s\n' "$RUNNER_TEMP/lean-validation/bin" >> "$GITHUB_PATH"
+      - name: Reproduce patched source and generate parser
+        run: |
+          validation="$RUNNER_TEMP/lean-validation"
+          upstream="$validation/upstream"
+          vendor="$GITHUB_WORKSPACE/vendor/tree-sitter-lean"
+          git init -q "$upstream"
+          git -C "$upstream" remote add origin https://github.com/Julian/tree-sitter-lean.git
+          git -C "$upstream" fetch --depth 1 origin fefc2eff9a83eeb72cda44646709e40e33e09175
+          git -C "$upstream" checkout -q FETCH_HEAD
+          git -C "$upstream" apply "$vendor/sloplint-grammar.patch"
+          while IFS=$'\t' read -r added removed path; do
+            cmp "$upstream/$path" "$vendor/$path"
+          done < <(git apply --numstat "$vendor/sloplint-grammar.patch")
+          cd "$upstream"
+          /usr/bin/time -v tree-sitter generate --abi 15 2>&1 | tee "$validation/logs/generate.log"
+          cp src/grammar.json src/node-types.json "$vendor/src/"
+          cp src/tree_sitter/*.h "$vendor/src/tree_sitter/"
+          gzip -n -9 -c src/parser.c > "$vendor/src/parser.c.gz"
+          sha256sum src/parser.c > "$validation/logs/parser.sha256"
+          tree-sitter test --debug-build 2>&1 | tee "$validation/logs/corpus.log"
+      - name: Check Rust formatting and Lean adapter regressions
+        run: |
+          cargo fmt --all --check
+          cargo test -p sloplint-syntax --test grammar_gaps lean:: --locked 2>&1 | tee "$RUNNER_TEMP/lean-validation/logs/rust-tests.log"
+      - name: Record artifact identity
+        if: ${{ always() }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/lean-validation/logs"
+          git rev-parse HEAD > "$RUNNER_TEMP/lean-validation/logs/SOURCE_COMMIT"
+          sha256sum \
+            vendor/tree-sitter-lean/grammar.js \
+            vendor/tree-sitter-lean/src/scanner.c \
+            vendor/tree-sitter-lean/sloplint-grammar.patch \
+            vendor/tree-sitter-lean/src/grammar.json \
+            vendor/tree-sitter-lean/src/node-types.json \
+            vendor/tree-sitter-lean/src/parser.c.gz \
+            > "$RUNNER_TEMP/lean-validation/logs/SHA256SUMS"
+          artifact="$RUNNER_TEMP/lean-validation/artifact"
+          mkdir -p "$artifact/vendor/tree-sitter-lean/src/tree_sitter"
+          cp vendor/tree-sitter-lean/src/grammar.json vendor/tree-sitter-lean/src/node-types.json \
+            vendor/tree-sitter-lean/src/parser.c.gz "$artifact/vendor/tree-sitter-lean/src/"
+          cp vendor/tree-sitter-lean/src/tree_sitter/*.h "$artifact/vendor/tree-sitter-lean/src/tree_sitter/"
+          cp -R "$RUNNER_TEMP/lean-validation/logs" "$artifact/logs"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ always() }}
+        with:
+          name: lean-generated-${{ github.sha }}
+          path: ${{ runner.temp }}/lean-validation/artifact/
+          if-no-files-found: error
+          retention-days: 1

@@ -21,7 +21,7 @@ Date: 2026-11-24.
   (`Cargo.toml`). The crate is unpublished on crates.io and npm; the
   `Cargo.toml` `repository` already names the upstream repository.
 - `sloplint-grammar.patch` carries the grammar delta vs the pinned
-  upstream: 54 hunks, none of them from an upstream PR. Moving the pin to
+  upstream: 59 hunks, none of them from an upstream PR. Moving the pin to
   `fefc2ef` changed the `grammar.js` patch indexes and hunk offsets.
   The extra hunk records a prior vendored change: `queries/highlights.scm`
   drops `(public_section) @keyword.import`, because the patch folds
@@ -180,8 +180,17 @@ applications, which the grammar leaves as generic terms per its README)
 is the call; `import` and `open` are imports; `inductive` and `structure`
 are type definitions; `let` and `have` are declarations; `block_assign`
 (`:=`) is the write; the four comment nodes are comments.
-The string-gap fix extends the existing `escape_sequence` token. The
-generated node types do not change, so the adapter does not change.
+String gaps use a dedicated external token, aliased to `escape_sequence`
+inside ordinary and interpolated strings. Character literals retain only
+ordinary escapes. The scanner requires exactly one LF or CRLF and rejects
+another newline before content, while ordinary multiline text stays valid.
+The `escape_sequence` node shape is retained, so the adapter does not change.
+
+The lexical contract follows Lean 4.19.0's
+[`quotedCharCoreFn` and `stringGapFn`](https://github.com/leanprover/lean4/blob/v4.19.0/src/Lean/Parser/Basic.lean).
+[`mkInputContext`](https://github.com/leanprover/lean4/blob/v4.19.0/src/Lean/Parser/Extension.lean)
+normalizes CRLF to LF before Lean parses it; the scanner accepts either
+physical line ending while preserving source offsets.
 
 Unmapped, with reasons:
 

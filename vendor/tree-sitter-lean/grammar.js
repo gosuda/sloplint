@@ -54,6 +54,7 @@ export default grammar({
     $._norm_open,
     $._norm_close,
     $.error_sentinel,
+    $._string_gap,
   ],
 
   extras: $ => [
@@ -1982,6 +1983,7 @@ export default grammar({
       '"',
       repeat(choice(
         $.escape_sequence,
+        alias($._string_gap, $.escape_sequence),
         token.immediate(prec(1, /[^"\\]+/)),
       )),
       '"',
@@ -1992,15 +1994,13 @@ export default grammar({
       /x[0-9a-fA-F]{2}/,
       /u[0-9a-fA-F]{4}/,
       /u\{[0-9a-fA-F]+\}/,
-      /* string gap: backslash + line break (Lean 4.5+); the newline and
-         the next line's leading whitespace are consumed. */
-      /\r?\n[ \t]*/,
     ))),
 
     interpolated_str: $ => seq(
       $._interp_open,
       repeat(choice(
         $.escape_sequence,
+        alias($._string_gap, $.escape_sequence),
         $.interpolation,
         token.immediate(prec(1, /[^"\\\{]+/)),
       )),
