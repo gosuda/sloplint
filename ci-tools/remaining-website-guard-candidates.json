@@ -1,0 +1,95 @@
+{
+  "repository": "gosuda/website",
+  "patch": "remaining-website-guard.patch",
+  "patch_sha256": "01377dcf0c140d70a014e0e85edc9403d1f9f84e9ae133510f2d6b5f8abe6905",
+  "old_files": {
+    ".github/workflows/pr-gate.yml": "7e72eacbbfe8293fe408d99a0356c61cb6ed5053eeeaaca1645078cc8adffe0b",
+    ".github/workflows/update.yml": "529589767b85c762b615bde31e531a5d384953d4cf1ef977121f513ca8dc9282"
+  },
+  "files": {
+    ".github/workflows/pr-gate.yml": "f2c1915d84ca3ad3cbed169c360e9f24337f2508a33e52dccd8238332d0f789f",
+    ".github/workflows/update.yml": "b944643f387c7b87b65196292773aa2b611a3c7b2e12d9e0c4d9d13c38035506"
+  },
+  "candidates": [
+    {
+      "number": 317,
+      "head": "fe872e6560fdbbe149a470205f423bf86fddb781",
+      "branch": "dependabot/go_modules/github.com/tdewolff/minify/v2-2.25.0",
+      "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+      "old_tree": "6cf1d8a414262b53299cf624224c009ea1e783e8",
+      "tree": "385040a7411cfb7b933064bc276f8f87d3f0fc87",
+      "previous_gate_run": 45813811928,
+      "previous_gate_job": 139888225918
+    },
+    {
+      "number": 316,
+      "head": "bb5447e7461b33649be6178395c11a181e015bb7",
+      "branch": "dependabot/npm_and_yarn/npm_and_yarn-af3e3560b6",
+      "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+      "old_tree": "f06eec888e0ed9e04d759aeba7d31d94efdf239b",
+      "tree": "125085f7c95ddd6f565a899cff6e76a316ec406d",
+      "previous_gate_run": 45813811928,
+      "previous_gate_job": 139888225786
+    },
+    {
+      "number": 315,
+      "head": "e7cd6450e51add32687d42f5ae64df8f74210410",
+      "branch": "dependabot/npm_and_yarn/markdownlint-cli2-0.24.1",
+      "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+      "old_tree": "e355930ab2474713b42905e3488843d1bd1ae981",
+      "tree": "3f72b5baad45c6ac268fa43e8065bef84e61c8fd",
+      "previous_gate_run": 45813811928,
+      "previous_gate_job": 139888225797
+    },
+    {
+      "number": 314,
+      "head": "1da99cf9949c6ee3112d0492c0b0bf118255def2",
+      "branch": "dependabot/npm_and_yarn/caniuse-lite-1.0.30001826",
+      "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+      "old_tree": "4834c93d6356ea905a31b7244bb17434c21b883a",
+      "tree": "1f87b682854b7c7281c73c120ffc1ed21ac854fc",
+      "previous_gate_run": 45813811928,
+      "previous_gate_job": 139888225802
+    },
+    {
+      "number": 313,
+      "head": "4cd143876ecc79b2bbcb5d945e1bbef088053570",
+      "branch": "dependabot/npm_and_yarn/prettier-3.10.1",
+      "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+      "old_tree": "4de66457501a7225b9e1c504597659e11c9b11b7",
+      "tree": "d3fdc59c8b0c80b9f02e135522859bc1aec0cddc",
+      "previous_gate_run": 45813811928,
+      "previous_gate_job": 139888225836
+    },
+    {
+      "number": 312,
+      "head": "d8afe501e920c53c26629f8955fb3cab8c695b56",
+      "branch": "dependabot/go_modules/github.com/a-h/templ-0.3.1118",
+      "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+      "old_tree": "a71b149836168da937646b3924ece1ecbf634eba",
+      "tree": "368288b06ecfe15c380ca132caffdbc68ffc24c2",
+      "previous_gate_run": 45813811928,
+      "previous_gate_job": 139888225512
+    },
+    {
+      "number": 309,
+      "head": "ba266e2f5a7822a0c05218672d74eaf40544978e",
+      "branch": "dependabot/go_modules/golang.org/x/image-0.48.0",
+      "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+      "old_tree": "a2ae74d2da75dc80fb825b80783d62a21c7ef583",
+      "tree": "d99d47f9f6f134799f0c003603d24c17f9a61dbc",
+      "previous_gate_run": 45813811928,
+      "previous_gate_job": 139888225925
+    },
+    {
+      "number": 307,
+      "head": "a31493893848e1d819d28959c238033b7e727a8f",
+      "branch": "dependabot/npm_and_yarn/tailwindcss/cli-4.3.5",
+      "base": "f2082ac85d2c0e12e92a9b8a1989cc4aee36c910",
+      "old_tree": "7a8af4a873c9b5b4bd58851cd88f442df9c935cb",
+      "tree": "6cf4b17c397ffc5f565b75d4d78b979bd78a5ba9",
+      "previous_gate_run": 45813811928,
+      "previous_gate_job": 139888225849
+    }
+  ]
+}
