@@ -21,10 +21,10 @@ index 4f41c87..571c29b 100644
  - `TestH3ServeUsesCallerSocketsAndKeepsThemOnFailure` proves that `Serve` answers on both caller sockets and leaves them usable after a missing router, missing TLS, or a busy server.
  - `TestH3StartSucceedsAfterTransientUDPConflict` proves that `Start` releases both sockets and retries a bounded number of times until a transient UDP conflict clears.
 diff --git a/http3/http3_test.lgo b/http3/http3_test.lgo
-index d39c5e3..991cf03 100644
+index d39c5e3..efeadf4 100644
 --- a/http3/http3_test.lgo
 +++ b/http3/http3_test.lgo
-@@ -1348,32 +1348,65 @@ func TestH3RejectsNonH3ALPNOnUDP(t *testing.T) {
+@@ -1348,32 +1348,71 @@ func TestH3RejectsNonH3ALPNOnUDP(t *testing.T) {
  	}
  }
  
@@ -37,8 +37,6 @@ index d39c5e3..991cf03 100644
 -		if serr != nil {
 -			t.Fatalf("open stream %d: %v", i, serr)
 -			return
--		}
--		opened = append(opened, stream)
 +	stream, err := conn.OpenUniStreamSync(ctx)
 +	if err != nil {
 +		t.Fatalf("open peer-visible stream: %v", err)
@@ -58,7 +56,10 @@ index d39c5e3..991cf03 100644
 +	defer cancel()
 +	stream, err := conn.OpenUniStreamSync(probe)
 +	if err == nil {
-+		defer stream.Close()
++		if err := stream.Close(); err != nil {
++			t.Errorf("close unexpectedly accepted stream: %v", err)
+ 		}
+-		opened = append(opened, stream)
 +		stream.CancelWrite(0x100)
 +		t.Fatal("the 101st active stream opened past the 100-stream cap")
 +		return
@@ -72,8 +73,12 @@ index d39c5e3..991cf03 100644
 +func assertH3StreamCap(t *testing.T, ctx context.Context, conn *quic.Conn) {
 +	t.Helper()
 +	control := openH3PartialUni(t, ctx, conn, []byte{0x00, 0x04, 0x00})
-+	defer control.Close()
-+	defer control.CancelWrite(0x100)
++	defer func() {
++		if err := control.Close(); err != nil {
++			t.Errorf("close control stream: %v", err)
++		}
++		control.CancelWrite(0x100)
++	}()
 +	opened := make([]*quic.SendStream, 0, 99)
  	defer func() {
  		for _, stream := range opened {
