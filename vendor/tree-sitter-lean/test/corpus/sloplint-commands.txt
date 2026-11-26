@@ -102,11 +102,10 @@ def t2 : IO Unit := do
             arg: (identifier))
           name: (identifier)
           body: (app
-            fn: (app
-              fn: (app
-                fn: (identifier)
-                arg: (identifier))
-              arg: (identifier))
+            fn: (identifier)
+            arg: (identifier))
+          stmt: (app
+            fn: (identifier)
             arg: (str_lit))))))
   (declaration
     (def
@@ -125,6 +124,36 @@ def t2 : IO Unit := do
           body: (app
             fn: (identifier)
             arg: (paren)))))))
+
+==============
+Sloplint: catch with block comment after keyword
+==============
+
+def t1 : IO Unit := do
+  try
+    IO.println "a"
+  catch /- comment -/ e =>
+    IO.println e
+
+---
+
+(module
+  (declaration
+    (def
+      name: (identifier)
+      type: (app
+        fn: (identifier)
+        arg: (identifier))
+      body: (do_block
+        stmt: (do_try
+          stmt: (app
+            fn: (identifier)
+            arg: (str_lit))
+          (block_comment)
+          name: (identifier)
+          body: (app
+            fn: (identifier)
+            arg: (identifier)))))))
 
 ==============
 Sloplint: nested block then sibling statement

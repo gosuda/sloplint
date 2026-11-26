@@ -323,12 +323,18 @@ static bool scan_raw_string_after_r(TSLexer *lexer) {
  * participate — they're skipped, and we use the indent of the next
  * real content line.
  */
-static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
-                        const bool *valid_symbols) {
+/* scan_layout returns 1 when it emits a layout token, -1 when it
+ * suppresses a NEWLINE for an aligned catch/finally line (the peek has
+ * already consumed the keyword characters, so the caller must return false
+ * at once so tree-sitter rewinds and lexes the keyword first instead of
+ * falling through to a block comment), and 0 when no layout token
+ * applies. */
+static int scan_layout(struct Scanner *scanner, TSLexer *lexer,
+                       const bool *valid_symbols) {
   if (!(valid_symbols[INDENT]
      || valid_symbols[DEDENT]
      || valid_symbols[NEWLINE])) {
-    return false;
+    return 0;
   }
 
   /* A dedent changes the stack but leaves its triggering newline unread.
@@ -344,7 +350,7 @@ static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
   }
 
   /* If we're not at a newline (or EOF), no layout token applies. */
-  if (lexer->lookahead != '\n' && !lexer->eof(lexer)) return false;
+  if (lexer->lookahead != '\n' && !lexer->eof(lexer)) return 0;
 
   uint32_t indent = 0;
   bool saw_newline = false;
@@ -366,14 +372,14 @@ static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
       if (valid_symbols[DEDENT] && scanner->indents.size > 1) {
         array_pop(&scanner->indents);
         lexer->result_symbol = DEDENT;
-        return true;
+        return 1;
       }
-      return false;
+      return 0;
     } else {
       break;
     }
   }
-  if (!saw_newline) return false;
+  if (!saw_newline) return 0;
 
   uint16_t top = scanner->indents.size > 0
     ? *array_back(&scanner->indents)
@@ -383,25 +389,25 @@ static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
      pipe-operator) — never terminates a layout block. Suppress
      NEWLINE/DEDENT at the start of a `|`-line so the parser stays
      inside the match/inductive/etc. */
-  if (lexer->lookahead == '|') return false;
+  if (lexer->lookahead == '|') return 0;
 
   if (indent > top) {
     if (valid_symbols[INDENT]) {
       array_push(&scanner->indents, (uint16_t)indent);
       lexer->mark_end(lexer);
       lexer->result_symbol = INDENT;
-      return true;
+      return 1;
     }
     /* Continuation of a multi-line expression: the new line is more
        indented than the surrounding block, so neither INDENT, DEDENT,
        nor NEWLINE applies. Returning nothing lets the parser keep
        consuming tokens as part of the same enclosing rule. */
-    return false;
+    return 0;
   }
   if (indent < top && valid_symbols[DEDENT]) {
     array_pop(&scanner->indents);
     lexer->result_symbol = DEDENT;
-    return true;
+    return 1;
   }
   if (indent == top && valid_symbols[NEWLINE]) {
     lexer->mark_end(lexer);
@@ -423,13 +429,13 @@ static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
       if (((n == 5 && memcmp(word, "catch", 5) == 0)
            || (n == 7 && memcmp(word, "finally", 7) == 0))
           && !is_id_rest(lexer->lookahead)) {
-        return false;
+        return -1;
       }
     }
     lexer->result_symbol = NEWLINE;
-    return true;
+    return 1;
   }
-  return false;
+  return 0;
 }
 
 /* ---------- dispatch ----------------------------------------------------- */
@@ -441,7 +447,9 @@ static bool scan(struct Scanner *scanner, TSLexer *lexer,
   /* Layout tokens have to be considered before the whitespace skip —
      they're triggered by newlines and leading-line indentation. */
   if (valid_symbols[INDENT] || valid_symbols[DEDENT] || valid_symbols[NEWLINE]) {
-    if (scan_layout(scanner, lexer, valid_symbols)) return true;
+    int layout = scan_layout(scanner, lexer, valid_symbols);
+    if (layout > 0) return true;
+    if (layout < 0) return false;
   }
 
   /* Skip plain whitespace so the rest of the scanner's view matches

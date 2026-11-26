@@ -1,3 +1,55 @@
+diff --git a/bindings/rust/build.rs b/bindings/rust/build.rs
+index cbc9120..0e671e1 100644
+--- a/bindings/rust/build.rs
++++ b/bindings/rust/build.rs
+@@ -1,5 +1,6 @@
+ fn main() {
+     let src_dir = std::path::Path::new("src");
++    let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
+ 
+     let mut c_config = cc::Build::new();
+     c_config.std("c11").include(src_dir);
+@@ -7,9 +8,39 @@ fn main() {
+     #[cfg(target_env = "msvc")]
+     c_config.flag("-utf-8");
+ 
++    // The generated parser exceeds GitHub's 100MB blob limit, so the
++    // committed artifact is parser.c.gz. A fresh regen produces src/parser.c
++    // (gitignored); builds decompress the packed copy into OUT_DIR when the
++    // plain file is absent.
+     let parser_path = src_dir.join("parser.c");
++    let parser_gz = src_dir.join("parser.c.gz");
++    let parser_path = if parser_path.exists() {
++        parser_path
++    } else {
++        // Re-inflate on every run: parser.c.gz is a watched input, so
++        // reaching this branch means it changed (or the OUT_DIR copy is
++        // missing). Caching the inflated copy across a .gz change would
++        // keep compiling the old parser.
++        let out = out_dir.join("parser.c");
++        let packed = std::fs::File::open(&parser_gz)
++            .expect("src/parser.c.gz missing: regenerate the vendored grammar");
++        let mut dec = flate2::read::GzDecoder::new(packed);
++        let tmp = out_dir.join("parser.c.tmp");
++        {
++            let mut f = std::fs::File::create(&tmp).unwrap();
++            std::io::copy(&mut dec, &mut f).unwrap();
++        }
++        std::fs::rename(&tmp, &out).unwrap();
++        out
++    };
+     c_config.file(&parser_path);
+-    println!("cargo:rerun-if-changed={}", parser_path.to_str().unwrap());
++    // Watch the src directory, not src/parser.c: the file is absent in
++    // normal checkouts, and a watched missing path reruns this script on
++    // every build — each rerun recompiles the ~80MB parser. The existing
++    // directory still notices a `tree-sitter generate` creating it.
++    println!("cargo:rerun-if-changed=src");
++    println!("cargo:rerun-if-changed={}", parser_gz.to_str().unwrap());
++    println!("cargo:rerun-if-changed=grammar.js");
+ 
+     let scanner_path = src_dir.join("scanner.c");
+     c_config.file(&scanner_path);
 diff --git a/grammar.js b/grammar.js
 index 31f12ce..ae99f83 100644
 --- a/grammar.js
@@ -568,10 +620,23 @@ index 31f12ce..ae99f83 100644
      _plain_ident: _ => /[a-zA-Z_][a-zA-Z_0-9'!?]*/,
    },
  });
+diff --git a/queries/highlights.scm b/queries/highlights.scm
+index 09aa103..852c8bd 100644
+--- a/queries/highlights.scm
++++ b/queries/highlights.scm
+@@ -106,7 +106,6 @@
+ (meta)      @keyword.import
+ (all)       @keyword.import
+ "import"    @keyword.import
+-(public_section) @keyword.import
+ 
+ [
+   "namespace"
 diff --git a/src/scanner.c b/src/scanner.c
+index 1eb7f4a..b4f7a3b 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
-@@ -68,6 +68,17 @@
+@@ -68,6 +68,17 @@ static bool is_subscript_alnum(int32_t c) {
        || c == 0x2c7c;
  }
  
@@ -589,7 +654,7 @@ diff --git a/src/scanner.c b/src/scanner.c
  static bool is_id_first(int32_t c) {
    return is_alpha_ascii(c) || c == '_' || is_letter_like(c);
  }
-@@ -76,7 +87,14 @@
+@@ -76,7 +87,14 @@ static bool is_id_rest(int32_t c) {
    return is_alpha_ascii(c)
        || is_digit_ascii(c)
        || c == '_' || c == '\'' || c == '!' || c == '?'
@@ -605,18 +670,41 @@ diff --git a/src/scanner.c b/src/scanner.c
  }
  
  /*
-@@ -251,3 +251,4 @@
+@@ -249,6 +267,7 @@ static bool scan_block_or_doc_comment(TSLexer *lexer,
+   }
+ 
    if (!scan_block_comment_body(lexer)) return false;
 +  lexer->mark_end(lexer);
    lexer->result_symbol = kind;
    return true;
-@@ -280,3 +280,4 @@
+ }
+@@ -278,6 +297,7 @@ static bool scan_raw_string_after_r(TSLexer *lexer) {
+         seen++;
+       }
        if (seen == hashes) {
 +        lexer->mark_end(lexer);
          lexer->result_symbol = RAW_STRING_LITERAL;
          return true;
-@@ -311,6 +329,11 @@
-     return false;
+       }
+@@ -303,14 +323,25 @@ static bool scan_raw_string_after_r(TSLexer *lexer) {
+  * participate — they're skipped, and we use the indent of the next
+  * real content line.
+  */
+-static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
+-                        const bool *valid_symbols) {
++/* scan_layout returns 1 when it emits a layout token, -1 when it
++ * suppresses a NEWLINE for an aligned catch/finally line (the peek has
++ * already consumed the keyword characters, so the caller must return false
++ * at once so tree-sitter rewinds and lexes the keyword first instead of
++ * falling through to a block comment), and 0 when no layout token
++ * applies. */
++static int scan_layout(struct Scanner *scanner, TSLexer *lexer,
++                       const bool *valid_symbols) {
+   if (!(valid_symbols[INDENT]
+      || valid_symbols[DEDENT]
+      || valid_symbols[NEWLINE])) {
+-    return false;
++    return 0;
    }
  
 +  /* A dedent changes the stack but leaves its triggering newline unread.
@@ -627,16 +715,60 @@ diff --git a/src/scanner.c b/src/scanner.c
    /* Skip trailing spaces/tabs on the current line; we only care about
       layout once we reach a newline. */
    while (lexer->lookahead == ' ' || lexer->lookahead == '\t'
-@@ -363,6 +386,7 @@
+@@ -319,7 +350,7 @@ static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
+   }
+ 
+   /* If we're not at a newline (or EOF), no layout token applies. */
+-  if (lexer->lookahead != '\n' && !lexer->eof(lexer)) return false;
++  if (lexer->lookahead != '\n' && !lexer->eof(lexer)) return 0;
+ 
+   uint32_t indent = 0;
+   bool saw_newline = false;
+@@ -341,14 +372,14 @@ static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
+       if (valid_symbols[DEDENT] && scanner->indents.size > 1) {
+         array_pop(&scanner->indents);
+         lexer->result_symbol = DEDENT;
+-        return true;
++        return 1;
+       }
+-      return false;
++      return 0;
+     } else {
+       break;
+     }
+   }
+-  if (!saw_newline) return false;
++  if (!saw_newline) return 0;
+ 
+   uint16_t top = scanner->indents.size > 0
+     ? *array_back(&scanner->indents)
+@@ -358,30 +389,53 @@ static bool scan_layout(struct Scanner *scanner, TSLexer *lexer,
+      pipe-operator) — never terminates a layout block. Suppress
+      NEWLINE/DEDENT at the start of a `|`-line so the parser stays
+      inside the match/inductive/etc. */
+-  if (lexer->lookahead == '|') return false;
++  if (lexer->lookahead == '|') return 0;
+ 
    if (indent > top) {
      if (valid_symbols[INDENT]) {
        array_push(&scanner->indents, (uint16_t)indent);
 +      lexer->mark_end(lexer);
        lexer->result_symbol = INDENT;
-       return true;
+-      return true;
++      return 1;
      }
-@@ -378,6 +402,28 @@
-     return true;
+     /* Continuation of a multi-line expression: the new line is more
+        indented than the surrounding block, so neither INDENT, DEDENT,
+        nor NEWLINE applies. Returning nothing lets the parser keep
+        consuming tokens as part of the same enclosing rule. */
+-    return false;
++    return 0;
+   }
+   if (indent < top && valid_symbols[DEDENT]) {
+     array_pop(&scanner->indents);
+     lexer->result_symbol = DEDENT;
+-    return true;
++    return 1;
    }
    if (indent == top && valid_symbols[NEWLINE]) {
 +    lexer->mark_end(lexer);
@@ -658,76 +790,29 @@ diff --git a/src/scanner.c b/src/scanner.c
 +      if (((n == 5 && memcmp(word, "catch", 5) == 0)
 +           || (n == 7 && memcmp(word, "finally", 7) == 0))
 +          && !is_id_rest(lexer->lookahead)) {
-+        return false;
++        return -1;
 +      }
 +    }
      lexer->result_symbol = NEWLINE;
-     return true;
+-    return true;
++    return 1;
    }
-diff --git a/bindings/rust/build.rs b/bindings/rust/build.rs
-index cbc9120..0e671e1 100644
---- a/bindings/rust/build.rs
-+++ b/bindings/rust/build.rs
-@@ -1,5 +1,6 @@
- fn main() {
-     let src_dir = std::path::Path::new("src");
-+    let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
+-  return false;
++  return 0;
+ }
  
-     let mut c_config = cc::Build::new();
-     c_config.std("c11").include(src_dir);
-@@ -7,9 +8,39 @@ fn main() {
-     #[cfg(target_env = "msvc")]
-     c_config.flag("-utf-8");
+ /* ---------- dispatch ----------------------------------------------------- */
+@@ -393,7 +447,9 @@ static bool scan(struct Scanner *scanner, TSLexer *lexer,
+   /* Layout tokens have to be considered before the whitespace skip —
+      they're triggered by newlines and leading-line indentation. */
+   if (valid_symbols[INDENT] || valid_symbols[DEDENT] || valid_symbols[NEWLINE]) {
+-    if (scan_layout(scanner, lexer, valid_symbols)) return true;
++    int layout = scan_layout(scanner, lexer, valid_symbols);
++    if (layout > 0) return true;
++    if (layout < 0) return false;
+   }
  
-+    // The generated parser exceeds GitHub's 100MB blob limit, so the
-+    // committed artifact is parser.c.gz. A fresh regen produces src/parser.c
-+    // (gitignored); builds decompress the packed copy into OUT_DIR when the
-+    // plain file is absent.
-     let parser_path = src_dir.join("parser.c");
-+    let parser_gz = src_dir.join("parser.c.gz");
-+    let parser_path = if parser_path.exists() {
-+        parser_path
-+    } else {
-+        // Re-inflate on every run: parser.c.gz is a watched input, so
-+        // reaching this branch means it changed (or the OUT_DIR copy is
-+        // missing). Caching the inflated copy across a .gz change would
-+        // keep compiling the old parser.
-+        let out = out_dir.join("parser.c");
-+        let packed = std::fs::File::open(&parser_gz)
-+            .expect("src/parser.c.gz missing: regenerate the vendored grammar");
-+        let mut dec = flate2::read::GzDecoder::new(packed);
-+        let tmp = out_dir.join("parser.c.tmp");
-+        {
-+            let mut f = std::fs::File::create(&tmp).unwrap();
-+            std::io::copy(&mut dec, &mut f).unwrap();
-+        }
-+        std::fs::rename(&tmp, &out).unwrap();
-+        out
-+    };
-     c_config.file(&parser_path);
--    println!("cargo:rerun-if-changed={}", parser_path.to_str().unwrap());
-+    // Watch the src directory, not src/parser.c: the file is absent in
-+    // normal checkouts, and a watched missing path reruns this script on
-+    // every build — each rerun recompiles the ~80MB parser. The existing
-+    // directory still notices a `tree-sitter generate` creating it.
-+    println!("cargo:rerun-if-changed=src");
-+    println!("cargo:rerun-if-changed={}", parser_gz.to_str().unwrap());
-+    println!("cargo:rerun-if-changed=grammar.js");
- 
-     let scanner_path = src_dir.join("scanner.c");
-     c_config.file(&scanner_path);
-diff --git a/queries/highlights.scm b/queries/highlights.scm
-index 09aa103..852c8bd 100644
---- a/queries/highlights.scm
-+++ b/queries/highlights.scm
-@@ -106,7 +106,6 @@
- (meta)      @keyword.import
- (all)       @keyword.import
- "import"    @keyword.import
--(public_section) @keyword.import
- 
- [
-   "namespace"
+   /* Skip plain whitespace so the rest of the scanner's view matches
 diff --git a/test/corpus/comments.txt b/test/corpus/comments.txt
 index a99d365..82bc2ab 100644
 --- a/test/corpus/comments.txt
@@ -854,10 +939,10 @@ index d49ea36..1435fed 100644
 +      (identifier))))
 diff --git a/test/corpus/sloplint-commands.txt b/test/corpus/sloplint-commands.txt
 new file mode 100644
-index 0000000..13b415d
+index 0000000..a8534d9
 --- /dev/null
 +++ b/test/corpus/sloplint-commands.txt
-@@ -0,0 +1,326 @@
+@@ -0,0 +1,355 @@
 +==============
 +Sloplint: hash command
 +==============
@@ -962,11 +1047,10 @@ index 0000000..13b415d
 +            arg: (identifier))
 +          name: (identifier)
 +          body: (app
-+            fn: (app
-+              fn: (app
-+                fn: (identifier)
-+                arg: (identifier))
-+              arg: (identifier))
++            fn: (identifier)
++            arg: (identifier))
++          stmt: (app
++            fn: (identifier)
 +            arg: (str_lit))))))
 +  (declaration
 +    (def
@@ -985,6 +1069,36 @@ index 0000000..13b415d
 +          body: (app
 +            fn: (identifier)
 +            arg: (paren)))))))
++
++==============
++Sloplint: catch with block comment after keyword
++==============
++
++def t1 : IO Unit := do
++  try
++    IO.println "a"
++  catch /- comment -/ e =>
++    IO.println e
++
++---
++
++(module
++  (declaration
++    (def
++      name: (identifier)
++      type: (app
++        fn: (identifier)
++        arg: (identifier))
++      body: (do_block
++        stmt: (do_try
++          stmt: (app
++            fn: (identifier)
++            arg: (str_lit))
++          (block_comment)
++          name: (identifier)
++          body: (app
++            fn: (identifier)
++            arg: (identifier)))))))
 +
 +==============
 +Sloplint: nested block then sibling statement
