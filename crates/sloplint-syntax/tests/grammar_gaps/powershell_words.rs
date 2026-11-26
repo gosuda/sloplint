@@ -219,3 +219,13 @@ fn variable_path_literals_use_powershell_escape_rules() {
         );
     }
 }
+
+#[test]
+fn grouped_pipelines_continue_across_comment_and_nbsp_lines() {
+    // A comment-only line between the command and its leading pipe still
+    // continues the pipeline, as does nonbreaking-space indentation. An
+    // actual blank line ends it.
+    run_clean("if (Get-Date\n# Filter below\n| Select-Object -First 1) {}\n");
+    run_clean("(Get-Date\n\u{a0}| Write-Output)\n");
+    assert!(run("(Get-Date\n\n| Write-Output)\n").parse_error.is_some());
+}

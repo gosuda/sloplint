@@ -1,5 +1,4 @@
 diff --git a/grammar.js b/grammar.js
-index 1f8b448..29c135a 100644
 --- a/grammar.js
 +++ b/grammar.js
 @@ -7,10 +7,38 @@ const PREC = {
@@ -831,7 +830,6 @@ index 1f8b448..29c135a 100644
 
      attribute_name: ($) => $.type_spec,
 diff --git a/src/scanner.c b/src/scanner.c
-index b46de2b..37a6f2b 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
 @@ -6,7 +6,10 @@
@@ -846,7 +844,7 @@ index b46de2b..37a6f2b 100644
  };
 
  /* --- API --- */
-@@ -25,6 +28,25 @@ bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer,
+@@ -25,6 +28,27 @@ bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer,
 
  static void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
 
@@ -868,11 +866,13 @@ index b46de2b..37a6f2b 100644
 +    wint_t c = lexer->lookahead;
 +    return !(iswalnum(c) || c == '_' || c == '-');
 +}
-+
++// PowerShell horizontal whitespace that the C locale's iswspace does not
++// cover (non-breaking space and friends ride along as command extras).
++static bool is_horizontal_space(int32_t c);
  static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool *valid_symbols)
  {
      if (valid_symbols[STATEMENT_TERMINATOR]) {
-@@ -32,13 +54,35 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool
+@@ -32,13 +56,94 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool
          // This token has no characters -- everything is lookahead to determine its existence
          lexer->mark_end(lexer);
 
@@ -896,11 +896,70 @@ index b46de2b..37a6f2b 100644
 +                if (lexer->lookahead == '\r') skip(lexer);
 +                if (lexer->lookahead != '\n') return false;
 +            }
++            else if (is_horizontal_space(lexer->lookahead) || iswspace(lexer->lookahead)) {
++                // Indentation, including non-breaking spaces, carries no
++                // statement weight on its own.
++            }
++            else if (lexer->lookahead == '#') {
++                // A comment-only line carries no statement weight either:
++                // clear a pending newline (but never a recorded blank
++                // line) so a leading pipe past comments still continues
++                // the pipeline. The newline ending the comment feeds
++                // blank-line tracking as usual.
++                saw_newline = false;
++                do {
++                    skip(lexer);
++                } while (lexer->lookahead != 0 && lexer->lookahead != '\n');
++                // Route the ending newline (or EOF) through the top of
++                // the loop so blank-line tracking sees it.
++                continue;
++            }
++            else if (lexer->lookahead == '<') {
++                skip(lexer);
++                if (lexer->lookahead != '#') {
++                    // Not a block comment: `<` behaves exactly like any
++                    // other ordinary character here (`at_else_keyword`
++                    // fails on `<` without consuming).
++                    if (saw_newline) return true;
++                    return false;
++                }
++                // Nested `<#...#>` block comments are comment content;
++                // newlines inside still feed blank-line tracking.
++                int depth = 1;
++                skip(lexer);
++                for (;;) {
++                    if (lexer->lookahead == 0) return true;
++                    if (lexer->lookahead == '\n') {
++                        saw_blank_line = saw_blank_line || saw_newline;
++                        saw_newline = true;
++                    } else if (lexer->lookahead == '#') {
++                        skip(lexer);
++                        if (lexer->lookahead == '>') {
++                            skip(lexer);
++                            if (--depth == 0) break;
++                        }
++                        continue;
++                    } else if (lexer->lookahead == '<') {
++                        skip(lexer);
++                        if (lexer->lookahead == '#') {
++                            skip(lexer);
++                            depth++;
++                        }
++                        continue;
++                    }
++                    skip(lexer);
++                }
++                saw_newline = false;
++                // Route whatever follows the comment through the top of
++                // the loop so a newline there feeds blank-line tracking.
++                continue;
++            }
 +            else if (!iswspace(lexer->lookahead)) {
 +                // A line break ends the statement, except when the next
 +                // line continues an if statement: `}` newline `else {`.
-+                // A leading pipe on the next line continues the pipeline.
-+                // An intervening blank line ends the statement.
++                // A leading pipe on the next line continues the pipeline,
++                // even past comment-only lines or non-breaking-space
++                // indentation. An intervening blank line ends the statement.
 +                if (saw_newline) {
 +                    if (lexer->lookahead == '|' && !saw_blank_line) return false;
 +                    return !at_else_keyword(lexer);
@@ -910,7 +969,7 @@ index b46de2b..37a6f2b 100644
              skip(lexer);
          }
      }
-@@ -50,13 +94,22 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool
+@@ -50,13 +155,22 @@ static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool
  // (`git log -- path`, `cargo test -- --nocapture`) and `-` names stdin
  // (`tar -xf -`). `--` is also the decrement operator and `-` the unary minus,
  // so the lexer cannot tell them apart by length or precedence: the token is
@@ -936,7 +995,7 @@ index b46de2b..37a6f2b 100644
      if (lexer->lookahead != '-') return false;
      lexer->advance(lexer, false);
      if (lexer->lookahead == '-') lexer->advance(lexer, false);
-@@ -66,12 +119,18 @@ static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_sy
+@@ -66,12 +180,18 @@ static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_sy
          case 0:
          case ' ':
          case '\t':
@@ -955,7 +1014,7 @@ index b46de2b..37a6f2b 100644
          case '}':
              lexer->result_symbol = BARE_DASHES;
              return true;
-@@ -82,8 +141,80 @@ static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_sy
+@@ -82,8 +202,80 @@ static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_sy
 
  /* --- API Implementation --- */
 
@@ -1037,7 +1096,6 @@ index b46de2b..37a6f2b 100644
      // both are valid, a `--` has to win over the empty terminator.
      if (scan_bare_dashes(payload, lexer, valid_symbols)) return true;
 diff --git a/test/corpus/native_arguments.txt b/test/corpus/native_arguments.txt
-index e91d0a4..6043257 100644
 --- a/test/corpus/native_arguments.txt
 +++ b/test/corpus/native_arguments.txt
 @@ -44,7 +44,7 @@ cargo test -p core -- --nocapture --test-threads=1
@@ -1550,9 +1608,8 @@ index e91d0a4..6043257 100644
 +      (pipeline_chain
 +        (command
 +          (command_name))))))
-diff --git a/test/corpus/sloplint_multiline_boundaries.txt b/test/corpus/sloplint_multiline_boundaries.txt
+diff --git a/b/test/corpus/sloplint_multiline_boundaries.txt b/test/corpus/sloplint_multiline_boundaries.txt
 new file mode 100644
-index 0000000..2466b75
 --- /dev/null
 +++ b/test/corpus/sloplint_multiline_boundaries.txt
 @@ -0,0 +1,680 @@
@@ -2236,9 +2293,8 @@ index 0000000..2466b75
 +| Write-Output;;) { break }
 +
 +---
-diff --git a/test/corpus/sloplint_word_boundaries.txt b/test/corpus/sloplint_word_boundaries.txt
+diff --git a/b/test/corpus/sloplint_word_boundaries.txt b/test/corpus/sloplint_word_boundaries.txt
 new file mode 100644
-index 0000000..8ba60b5
 --- /dev/null
 +++ b/test/corpus/sloplint_word_boundaries.txt
 @@ -0,0 +1,111 @@

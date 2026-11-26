@@ -77,9 +77,10 @@ forms; this comparison does not execute the commands.
 
 The external scanner accepts a literal dollar before whitespace, a backslash,
 or a backtick. It leaves the following newline untouched so an expandable
-here-string can still close on that line. A leading pipe continues the previous
-statement only when no blank line intervenes. Blank lines before `else` retain
-their existing behavior.
+statement only when no blank line intervenes. Comment-only lines and
+non-breaking-space indentation do not count as blank: the lookahead skips
+them while still rejecting an actual blank line. Blank lines before `else`
+retain their existing behavior.
 
 These scanner-only changes leave grammar.js and the generated parser unchanged.
 The Rust regressions cover LF and CRLF, whitespace-only blank lines, valid
