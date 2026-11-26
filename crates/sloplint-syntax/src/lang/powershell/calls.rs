@@ -189,7 +189,11 @@ fn ps_generic_static(cx: &Cx<'_, '_>, node: Node<'_>) -> u32 {
     let mut gaps = Vec::new();
     let mut cursor = node.start_byte();
     for dynamic in &dynamics {
-        gaps.push(slice(cx.src, cursor.min(dynamic.start_byte()), dynamic.start_byte()));
+        gaps.push(slice(
+            cx.src,
+            cursor.min(dynamic.start_byte()),
+            dynamic.start_byte(),
+        ));
         cursor = cursor.max(dynamic.end_byte());
     }
     gaps.push(slice(cx.src, cursor.min(end), end));
@@ -210,7 +214,7 @@ fn ps_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
                     longest_static: narrow(text(cx, node).chars().count()),
                 }
             }
-        },
+        }
         "variable" => ArgShape::Ident(ps_var_name(text(cx, node))),
         "command_parameter" => ArgShape::Other,
         "additive_expression" | "additive_argument_expression" => {
