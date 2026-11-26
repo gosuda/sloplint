@@ -1,0 +1,107 @@
+{
+  "status": "published after successful native source gates; temporary workflow retired in this commit",
+  "observed_at": "2026-11-26 16:31:28 UTC",
+  "repository": "gosuda/bamTiScript",
+  "pull_request": 253,
+  "branch": "followup/constructor-graph-251",
+  "published_commit": "8daf27bdec1fa9cf6520c13b7b35d7fd58879d82",
+  "parent": "11e99ee0788613ff6a9fd7d5b0afddf819953850",
+  "actual_base": "a471de394b3f27408839ad8e0ec1642054c0aeee",
+  "verified_source": {
+    "head": "11e99ee0788613ff6a9fd7d5b0afddf819953850",
+    "relations_sha256": "fa78741c28e97444096a6403129c59c76c34ad02919447e4af75b4cc8c0c9512",
+    "tree": "2c790eef17c957cbe40753437917e82fb6896b22"
+  },
+  "native_producer": "b7e3409b6b4901b4d90ba30aadbf18dc5dca30e8",
+  "native_run": 45856868201,
+  "native_job": 140037435328,
+  "runner": "depot-ubuntu-24.04-8",
+  "exits": {
+    "authority": 0,
+    "baseline-alias-views": 101,
+    "baseline-compile": 0,
+    "candidate-corpus": 0,
+    "candidate-recursive-union": 0,
+    "candidate-relations": 0,
+    "candidate-valita-jit": 0,
+    "check": 0,
+    "clippy": 0,
+    "fetch": 0,
+    "fmt": 0,
+    "missing-absence-clean-barrier": 101,
+    "missing-generic-frame-context": 101,
+    "missing-incomplete-refutation-cache": 101,
+    "node-contracts": 0,
+    "npm": 0,
+    "typescript-alias-direct": 1,
+    "typescript-alias-forward": 1,
+    "typescript-alias-nested": 1,
+    "typescript-alias-reverse": 1,
+    "typescript-compatible-transformed": 0,
+    "typescript-inference-number": 1,
+    "typescript-inference-string": 0,
+    "workspace": 0
+  },
+  "relation_tests_passed": 79,
+  "formatting_patch_bytes": 0,
+  "artifact": {
+    "id": 15137536323,
+    "node_id": "MDg6QXJ0aWZhY3QxNTEzNzUzNjMyMw==",
+    "name": "bamti-alias-views-evidence-b7e3409b6b4901b4d90ba30aadbf18dc5dca30e8",
+    "size_in_bytes": 137375,
+    "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15137536323",
+    "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15137536323/zip",
+    "expired": false,
+    "digest": "sha256:da7d99710cb9bd6db1377e3947bd703b6e4ef6cb9c6c37a7fecebe9f317ac456",
+    "created_at": "2026-11-26T16:27:52Z",
+    "updated_at": "2026-11-26T16:27:52Z",
+    "expires_at": "2026-12-03T16:27:51Z",
+    "workflow_run": {
+      "id": 45856868201,
+      "repository_id": 1424164147,
+      "head_repository_id": 1424164147,
+      "head_branch": "ci/bamti-alias-views-20261126-r17",
+      "head_sha": "b7e3409b6b4901b4d90ba30aadbf18dc5dca30e8"
+    }
+  },
+  "artifact_digest_verification": "GitHub artifact REST digest and job upload digest agree; no independent local ZIP byte hash was available.",
+  "source_verification": "The native identity matches the JavaScript-computed file SHA-256 and the GitHub-created complete repository tree before additive publication.",
+  "review": {
+    "alias_thread": "PRRT_kwDOTlcNv868cUV8",
+    "alias_reply_id": 4711131603,
+    "history_thread": "PRRT_kwDOTlcNv868cUZf",
+    "history_reply_id": 4711131912,
+    "unresolved_threads": [],
+    "automatic_prior_resolution": "Both alias and history threads were resolved by the review bot before this repair. Exact prior head11e99 still fails the frozen alias regression; the new evidence reply documents that fact."
+  },
+  "pr_checks_at_observation": [
+    {
+      "name": "Quality",
+      "status": "in_progress",
+      "conclusion": null,
+      "url": "https://github.com/gosuda/bamTiScript/actions/runs/45859197747/job/140045468215"
+    },
+    {
+      "name": "Formal",
+      "status": "in_progress",
+      "conclusion": null,
+      "url": "https://github.com/gosuda/bamTiScript/actions/runs/45859197747/job/140045468157"
+    },
+    {
+      "name": "Preflight",
+      "status": "in_progress",
+      "conclusion": null,
+      "url": "https://github.com/gosuda/bamTiScript/actions/runs/45859197747/job/140045467712"
+    }
+  ],
+  "scope": "Source-gate repair only. The npm gate retains its staged-CLI and clean-consumer exclusions. New PR event checks are reported separately from the successful native exact-tree evidence.",
+  "discarded_candidate": "ci-tools/bamti-alias-views/rejected-checkpoint.json",
+  "class_scope_causal_proof": "ci-tools/bamti-alias-views/class-scope-checkpoint.json",
+  "retired_workflow": ".github/workflows/bamti-alias-views.yml",
+  "other_owned_retired_probe_heads": {
+    "ci/bamti-cycle-proof-20261126-r9": "f35a5b6a4b01207511583306320672022fcc4315",
+    "ci/bamti-corpus-progress-20261126-r12": "4367e20bf8e4a7bbfebe632168ee6e9f5a190e09",
+    "ci/bamti-alias-order-20261126-r15": "06c00ca7315522bd803d6f46ebbe0a9b5a8d2589",
+    "ci/bamti-inference-miss-20261126-r16": "f204cd11d2b26d7ef214843f3f4448f2fac79b61"
+  }
+}
