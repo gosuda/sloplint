@@ -87,7 +87,7 @@ fn lean_arg_shape<'s>(cx: &Cx<'_, 's>, arg: Node<'_>) -> ArgShape<'s> {
                 longest_static: longest_static_chunk(&[inner]),
             }
         }
-        "interpolated_str" => ArgShape::Str {
+        "interpolated_str" => ArgShape::Concat {
             longest_static: lean_interpolated_static(cx, arg),
         },
         "identifier" => ArgShape::Ident(text(cx, arg)),

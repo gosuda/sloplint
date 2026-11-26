@@ -1,0 +1,76 @@
+==================
+String gap followed by ordinary content
+==================
+
+#check "first\
+  second"
+
+---
+
+(module (check term: (str_lit (escape_sequence))))
+
+==================
+Interpolated string gap followed by an expression
+==================
+
+#check s!"first\
+  {name}"
+
+---
+
+(module (check term: (interpolated_str (escape_sequence) (interpolation (identifier)))))
+
+==================
+Ordinary multiline string can contain a blank line
+==================
+
+#check "first
+
+second"
+
+---
+
+(module (check term: (str_lit)))
+
+==================
+Character literal cannot contain a string gap
+:error
+==================
+
+#check '\
+'
+
+---
+
+==================
+String gap cannot contain a blank line
+:error
+==================
+
+#check "first\
+
+second"
+
+---
+
+==================
+Interpolated string gap cannot contain a blank line
+:error
+==================
+
+#check s!"first\
+
+{name}"
+
+---
+
+==================
+Message string gap cannot contain a blank line
+:error
+==================
+
+#check m!"first\
+
+{name}"
+
+---

@@ -37,7 +37,7 @@ fn arg_run(source: &str, name: &str) -> u32 {
         call.args.len()
     );
     match &call.args[0].shape {
-        ArgShape::Str { longest_static } => *longest_static,
+        ArgShape::Str { longest_static } | ArgShape::Concat { longest_static } => *longest_static,
         shape => panic!("{name} argument is a string, found {shape:?}"),
     }
 }
