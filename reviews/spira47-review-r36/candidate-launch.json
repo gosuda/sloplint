@@ -1,0 +1,865 @@
+{
+  "schema": 1,
+  "status": "candidate-gates-in-progress",
+  "repository": "gosuda/Spira",
+  "pull_request": 47,
+  "maintained": {
+    "head": "e422d148ee77e78abad83b993cd4b255c34504bf",
+    "tree": "9ca31a701e9d51fb857c969328c0c7f43f656cb1",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "source_publication": false
+  },
+  "candidate": {
+    "tree": "eb9547a9b5a884bfaf5b29cc968859906399ec8d",
+    "blobs": 611,
+    "authored_sha256": "d9f7440fbbc042ab860f350c6d40e4e9ac62fd6148ca02994e226d0417e99ca2",
+    "index_sha256": "988145852070d88c2ad01ee37c64c1674d675e985352c76541709763845b5c49",
+    "paths": [
+      "cmd/sqlc-gen-spira/model.lgo",
+      "db/db.lgo",
+      "migrate/serial_test.lgo",
+      "docs/specs/migrate.md",
+      "docs/specs/sqlc-gen-spira.md",
+      "cmd/sqlc-gen-spira/continued_escape_test.lgo",
+      "cmd/sqlc-gen-spira/testdata/continued-strings.json"
+    ]
+  },
+  "proof": {
+    "repository": "gosuda/sloplint",
+    "producer": "0a801443782c9c56c8a35bbf2b117256cf1f3805",
+    "tree": "f3fd8d7ef786ae719561d4dc3df01ac5a33326ce",
+    "run": 45985649688,
+    "job": 140460458731,
+    "url": "https://github.com/gosuda/sloplint/actions/runs/45985649688",
+    "result": "in_progress",
+    "runner": "depot-ubuntu-24.04-8",
+    "source_gates_passed": false,
+    "publication_eligible": false,
+    "manifest_sha256": "02fb2445d9ec25f72514684429ece75276447b95462edd48b66e817029c91ff5"
+  },
+  "baseline": {
+    "schema": 1,
+    "status": "unchanged-source baseline complete; source repair and required full gates pending",
+    "repository": "gosuda/Spira",
+    "pr": 47,
+    "head": "e422d148ee77e78abad83b993cd4b255c34504bf",
+    "tree": "9ca31a701e9d51fb857c969328c0c7f43f656cb1",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "producer": "f6c6b396f0ca8143a6dead92fc41470fce4d2c57",
+    "run": 45980151731,
+    "job": 140441701012,
+    "workflow_conclusion": "success",
+    "artifact": {
+      "id": 15189556101,
+      "name": "spira47-review-r36",
+      "digest": "sha256:502862af3201a32661e16b71ef56d0643100b01ff461c9ce88ba3e24018a9204",
+      "bytes": 11775
+    },
+    "job_log_sha256": "409c84345b8053f55cd9fdb3ec2d494a5c0a335f42d572f03d7e23f736b56109",
+    "compiled_before_expected_red": true,
+    "raw_generator_exit": 1,
+    "reported_source_failures": [
+      "escape-comment-crlf",
+      "escape-comment-lf",
+      "escape-cr",
+      "escape-lf",
+      "escape-lower-crlf",
+      "escape-mixed-whitespace",
+      "string-only-version"
+    ],
+    "passed_adjacent_cases": [
+      "comment-only-version",
+      "escape-single",
+      "escape-three",
+      "independent-escape",
+      "independent-standard",
+      "standard-continuation",
+      "standard-final-backslash"
+    ],
+    "native_cases": [
+      {
+        "id": "escape-lf",
+        "sql_sha256": "07224c02a2ce8ceb6742eb9489b6a17716b1bc8277e9842d36daee5510a9ff55",
+        "server_version_num": "180007",
+        "observed": {
+          "name": "first it's",
+          "version": 1
+        },
+        "expected": {
+          "name": "first it's",
+          "version": 1
+        },
+        "matches": true
+      },
+      {
+        "id": "escape-lower-crlf",
+        "sql_sha256": "ceeb0d45a7dc8d5f5c8a0c6f77888bb1dfcedb50fc0e108bef9e7c40a480aac3",
+        "server_version_num": "180007",
+        "observed": {
+          "name": "first it's",
+          "version": 1
+        },
+        "expected": {
+          "name": "first it's",
+          "version": 1
+        },
+        "matches": true
+      },
+      {
+        "id": "escape-cr",
+        "sql_sha256": "a88b7dc18622b76c166b2ab03badb9157750c06e3273f47121da85c0ea2d405b",
+        "server_version_num": "180007",
+        "observed": {
+          "name": "first it's",
+          "version": 1
+        },
+        "expected": {
+          "name": "first it's",
+          "version": 1
+        },
+        "matches": true
+      },
+      {
+        "id": "escape-three",
+        "sql_sha256": "68a2e5c98f13bd677652ee4a6cd3b19146222487a5e7d4908cf9a55653849576",
+        "server_version_num": "180007",
+        "observed": {
+          "name": "first it's ready's",
+          "version": 1
+        },
+        "expected": {
+          "name": "first it's ready's",
+          "version": 1
+        },
+        "matches": true
+      },
+      {
+        "id": "escape-comment-lf",
+        "sql_sha256": "7ed89ba990672ec42e00df706bb039245409a59cf0c5be1fef54a5d3a764e44c",
+        "server_version_num": "180007",
+        "observed": {
+          "name": "first it's",
+          "version": 1
+        },
+        "expected": {
+          "name": "first it's",
+          "version": 1
+        },
+        "matches": true
+      },
+      {
+        "id": "escape-comment-crlf",
+        "sql_sha256": "2a4090ae3667f622febffab658cd89b2a76088b6d29315ad52fb61e73b6e268e",
+        "server_version_num": "180007",
+        "observed": {
+          "name": "first it's",
+          "version": 1
+        },
+        "expected": {
+          "name": "first it's",
+          "version": 1
+        },
+        "matches": true
+      },
+      {
+        "id": "escape-mixed-whitespace",
+        "sql_sha256": "58ba1455c12c06af5bfbd1b8af6d2bcd25cad4bd8b117ba382d96db71f7a064c",
+        "server_version_num": "180007",
+        "observed": {
+          "name": "first it's",
+          "version": 1
+        },
+        "expected": {
+          "name": "first it's",
+          "version": 1
+        },
+        "matches": true
+      },
+      {
+        "id": "escape-single",
+        "sql_sha256": "5c7c347d7291f8a7107c996c5c898d699b1c214d1ff151e498eede1661d352fa",
+        "server_version_num": "180007",
+        "observed": {
+          "name": "first it's",
+          "version": 1
+        },
+        "expected": {
+          "name": "first it's",
+          "version": 1
+        },
+        "matches": true
+      },
+      {
+        "id": "standard-continuation",
+        "sql_sha256": "47e18b75ca0aee3d1ab634fb103ace200a78c6b181fe9e275b2cfdd441415b45",
+        "server_version_num": "180007",
+        "observed": {
+          "name": "first last\\",
+          "version": 1
+        },
+        "expected": {
+          "name": "first last\\",
+          "version": 1
+        },
+        "matches": true
+      },
+      {
+        "id": "independent-standard",
+        "sql_sha256": "35f3c9b233224d780e1ef9c7e678e15836f8c44b5e3cbec947f29c815393ca81",
+        "server_version_num": "180007",
+        "observed": {
+          "name": "first \\",
+          "version": 1
+        },
+        "expected": {
+          "name": "first \\",
+          "version": 1
+        },
+        "matches": true
+      },
+      {
+        "id": "independent-escape",
+        "sql_sha256": "f9ce8c4a59f735b9f8c6a1057010419645046fe9e106568c94a5264452e97e88",
+        "server_version_num": "180007",
+        "observed": {
+          "name": "first it's",
+          "version": 1
+        },
+        "expected": {
+          "name": "first it's",
+          "version": 1
+        },
+        "matches": true
+      },
+      {
+        "id": "string-only-version",
+        "sql_sha256": "44e7d096234728dc91ce900a6e5db6696d11f680444d2875619ac799dd9c5195",
+        "server_version_num": "180007",
+        "observed": {
+          "name": "first it's version",
+          "version": 0
+        },
+        "expected": {
+          "name": "first it's version",
+          "version": 0
+        },
+        "matches": true
+      },
+      {
+        "id": "comment-only-version",
+        "sql_sha256": "f20fdbc8982594fb256f1c0cd4dcb3f154f08e2fc7b8358d9a56f82ef4349cd0",
+        "server_version_num": "180007",
+        "observed": {
+          "name": "first it's",
+          "version": 0
+        },
+        "expected": {
+          "name": "first it's",
+          "version": 0
+        },
+        "matches": true
+      },
+      {
+        "id": "standard-final-backslash",
+        "sql_sha256": "8a8e347e26011a2eb65b640328e67553bafdac0f02109b48a8f3ea8c1079ef98",
+        "server_version_num": "180007",
+        "observed": {
+          "name": "first\\",
+          "version": 1
+        },
+        "expected": {
+          "name": "first\\",
+          "version": 1
+        },
+        "matches": true
+      }
+    ],
+    "commands": [
+      {
+        "name": "source-head",
+        "command": [
+          "git",
+          "rev-parse",
+          "HEAD"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "47550141840589a5cc08916acba07e11f8156d57f5cca2af4fb7b77f2b799f98"
+      },
+      {
+        "name": "source-tree",
+        "command": [
+          "git",
+          "rev-parse",
+          "HEAD^{tree}"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "3330c3b3ece97093635b6d0fa242a2d04e87d6ad59f2fbca042f0d8c8fc449a2"
+      },
+      {
+        "name": "logos-version",
+        "command": [
+          "logos",
+          "version"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "3a7b14cf792a79c78a9e42aab8906e0774b54ecddbbbc520ce94651a34aec2f9"
+      },
+      {
+        "name": "go-cache-disabled",
+        "command": [
+          "go",
+          "env",
+          "GOCACHEPROG"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+      },
+      {
+        "name": "postgres-image",
+        "command": [
+          "docker",
+          "pull",
+          "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "a2b2622221a161fd6e4f115d766eae972bd17f27b8e7877ba02bc21735804a6b"
+      },
+      {
+        "name": "postgres-image-identity",
+        "command": [
+          "docker",
+          "image",
+          "inspect",
+          "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "2effb6d13bfd2bf2f0350d7617fd03d85ca5222e74d4c534b14856e72917141e"
+      },
+      {
+        "name": "postgres-start",
+        "command": [
+          "docker",
+          "run",
+          "--detach",
+          "--network",
+          "none",
+          "--name",
+          "spira47-continued-45980151731-1",
+          "--env",
+          "POSTGRES_HOST_AUTH_METHOD=trust",
+          "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "602d20b9be94a00d96c4b55b7acdd4fcb3751952cfcb571ae0f16b559c4f0128"
+      },
+      {
+        "name": "postgres-version",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-continued-45980151731-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "SHOW server_version_num;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "23115ea6bcfc1e8cf9bf3b7e201ecf38f5a9c76d337eea137c01265e768d7c31"
+      },
+      {
+        "name": "native-escape-lf",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-continued-45980151731-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "SET standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text, version integer);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1;\nSELECT json_build_object('name', name, 'version', version) FROM items;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "0e5edba7aae29a44b356f897ecedadcaf842c1c95e611fd897f6b9629c3050cc"
+      },
+      {
+        "name": "native-escape-lower-crlf",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-continued-45980151731-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "SET standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text, version integer);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = e'first '\r\n\t'it\\'s', version = version + 1 WHERE id = 1;\nSELECT json_build_object('name', name, 'version', version) FROM items;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "0e5edba7aae29a44b356f897ecedadcaf842c1c95e611fd897f6b9629c3050cc"
+      },
+      {
+        "name": "native-escape-cr",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-continued-45980151731-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "SET standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text, version integer);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first '\r'it\\'s', version = version + 1 WHERE id = 1;\nSELECT json_build_object('name', name, 'version', version) FROM items;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "0e5edba7aae29a44b356f897ecedadcaf842c1c95e611fd897f6b9629c3050cc"
+      },
+      {
+        "name": "native-escape-three",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-continued-45980151731-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "SET standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text, version integer);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first '\n'it\\'s '\n'ready\\'s', version = version + 1 WHERE id = 1;\nSELECT json_build_object('name', name, 'version', version) FROM items;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "fb11573e9790707a6142b8795b278777e36616d246825d8f771e1f2ddb6ac814"
+      },
+      {
+        "name": "native-escape-comment-lf",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-continued-45980151731-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "SET standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text, version integer);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first ' -- note with ' version\n'it\\'s', version = version + 1 WHERE id = 1;\nSELECT json_build_object('name', name, 'version', version) FROM items;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "0e5edba7aae29a44b356f897ecedadcaf842c1c95e611fd897f6b9629c3050cc"
+      },
+      {
+        "name": "native-escape-comment-crlf",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-continued-45980151731-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "SET standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text, version integer);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first ' -- note with ' version\r\n'it\\'s', version = version + 1 WHERE id = 1;\nSELECT json_build_object('name', name, 'version', version) FROM items;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "0e5edba7aae29a44b356f897ecedadcaf842c1c95e611fd897f6b9629c3050cc"
+      },
+      {
+        "name": "native-escape-mixed-whitespace",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-continued-45980151731-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "SET standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text, version integer);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first '\u000b\f \n\t'it\\'s', version = version + 1 WHERE id = 1;\nSELECT json_build_object('name', name, 'version', version) FROM items;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "0e5edba7aae29a44b356f897ecedadcaf842c1c95e611fd897f6b9629c3050cc"
+      },
+      {
+        "name": "native-escape-single",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-continued-45980151731-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "SET standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text, version integer);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first it\\'s', version = version + 1 WHERE id = 1;\nSELECT json_build_object('name', name, 'version', version) FROM items;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "0e5edba7aae29a44b356f897ecedadcaf842c1c95e611fd897f6b9629c3050cc"
+      },
+      {
+        "name": "native-standard-continuation",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-continued-45980151731-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "SET standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text, version integer);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'first '\n'last\\', version = version + 1 WHERE id = 1;\nSELECT json_build_object('name', name, 'version', version) FROM items;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "d050252f4facd82196e979625f54092d997457fefdbd395cc576ba50c810d3a2"
+      },
+      {
+        "name": "native-independent-standard",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-continued-45980151731-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "SET standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text, version integer);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first ' || '\\', version = version + 1 WHERE id = 1;\nSELECT json_build_object('name', name, 'version', version) FROM items;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "a9a7a1162d1cff6d80079cecb3227ace655ef01bb6fcc8328f17e79b6bf27910"
+      },
+      {
+        "name": "native-independent-escape",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-continued-45980151731-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "SET standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text, version integer);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'first ' || E'it\\'s', version = version + 1 WHERE id = 1;\nSELECT json_build_object('name', name, 'version', version) FROM items;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "0e5edba7aae29a44b356f897ecedadcaf842c1c95e611fd897f6b9629c3050cc"
+      },
+      {
+        "name": "native-string-only-version",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-continued-45980151731-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "SET standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text, version integer);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first '\n'it\\'s version' WHERE id = 1;\nSELECT json_build_object('name', name, 'version', version) FROM items;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "307f930d2b779124a5534df498e76071b8903fd113e1d27d57ff79694978233d"
+      },
+      {
+        "name": "native-comment-only-version",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-continued-45980151731-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "SET standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text, version integer);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first ' -- version comment\n'it\\'s' WHERE id = 1;\nSELECT json_build_object('name', name, 'version', version) FROM items;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "3d269de4f5add3570d3c1258f883ac214814c2ae36a93e7b14bfe6921ebbce23"
+      },
+      {
+        "name": "native-standard-final-backslash",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-continued-45980151731-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "SET standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text, version integer);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'first\\', version = version + 1 WHERE id = 1;\nSELECT json_build_object('name', name, 'version', version) FROM items;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "47c9dd7889e62bf6e7cf89a182c0b38b4bab5d8782f1517d4bcbb5c2995812df"
+      },
+      {
+        "name": "postgres-cleanup",
+        "command": [
+          "docker",
+          "rm",
+          "-f",
+          "-v",
+          "spira47-continued-45980151731-1"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "c22aba1338a3ddd68fefd4be01019166210b0a1da16650ba5ff09f2135d85cf5"
+      },
+      {
+        "name": "generator-compile",
+        "command": [
+          "logos",
+          "test",
+          "-run",
+          "^$",
+          "-count=1",
+          "./cmd/sqlc-gen-spira"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "5ac43f7614f8f13f24dcd73895ec510b77b9d6da4c4103af24a6e6f0bd062c55"
+      },
+      {
+        "name": "generator-unchanged-red",
+        "command": [
+          "logos",
+          "test",
+          "-count=1",
+          "-v",
+          "-run",
+          "^TestPostgresContinuedEscapeStrings$",
+          "./cmd/sqlc-gen-spira"
+        ],
+        "raw_exit": 1,
+        "expected": 1,
+        "timed_out": false,
+        "log_sha256": "2da6d5e95a83d68c95a7d99b5d10160c2e72eec4ff479f4533314bb09ed0aad6"
+      },
+      {
+        "name": "existing-generator-controls",
+        "command": [
+          "logos",
+          "test",
+          "-race",
+          "-count=1",
+          "-run",
+          "^TestVersionedWrite",
+          "./cmd/sqlc-gen-spira"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "8f3109dadaa598ee703a985da9754df7c3e662d02e5f72f66b55815393907308"
+      },
+      {
+        "name": "existing-migration-controls",
+        "command": [
+          "logos",
+          "test",
+          "-race",
+          "-count=1",
+          "-run",
+          "^(TestQueuedApplyHonorsContext|TestReleaseFreesTheTurnOnlyOnce|TestMigrationTurnRejectsEndedContextOnFreePool|TestApplyPartialPrefixLeavesSchema)$",
+          "./migrate"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "bc7005076e3d2e11a8b0216be4e672b1b4d0db53eddc04fac31373266ea05bc6"
+      },
+      {
+        "name": "restore-tracked-source",
+        "command": [
+          "git",
+          "restore",
+          "--source",
+          "e422d148ee77e78abad83b993cd4b255c34504bf",
+          "--staged",
+          "--worktree",
+          "--",
+          "."
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "source-restoration",
+        "command": [
+          "git",
+          "diff",
+          "--exit-code",
+          "HEAD"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "source_index_sha256": "de0d1874c4feff1f38a9ee6d7ef6155480bfd49a7cbf44cd4b9fb155547f34e5",
+    "source_restored": true,
+    "publication_eligible": false,
+    "full_source_gates_run": false,
+    "notes": [
+      "Six valid versioned queries are rejected; the string-only-version query is wrongly accepted. The remaining seven frozen generator cases pass.",
+      "All fourteen native PostgreSQL180007 results match their independent expected values.",
+      "Existing generator and migration controls pass with the race detector.",
+      "The proof modifies only two temporary external-test/data paths and restores the exact 609 tracked source blobs and modes."
+    ]
+  },
+  "review": {
+    "reviewer": "/root/bitcoin_round7",
+    "reviewed_proposal": "d6dcc841176b606f33279a7147eca05959f0ab4d",
+    "verdict": "No blocking introduced defect found in the seven-path source proposal; native candidate gates remain mandatory.",
+    "final_delta": "Only import order in migrate/serial_test.lgo changed after review; logos/sync now precedes slices. Behavior and assertions are unchanged.",
+    "review_limit": "The reviewer inspected source and the frozen baseline checkpoint; artifact ZIP authentication and execution occur in the candidate job."
+  },
+  "open_threads": [
+    {
+      "id": "PRRT_kwDOVpFduc68syVH",
+      "path": "cmd/sqlc-gen-spira/model.lgo",
+      "comments": [
+        4717181864
+      ]
+    },
+    {
+      "id": "PRRT_kwDOVpFduc68syWh",
+      "path": "docs/specs/migrate.md",
+      "comments": [
+        4717181989
+      ]
+    },
+    {
+      "id": "PRRT_kwDOVpFduc68syX_",
+      "path": "db/db.lgo",
+      "comments": [
+        4717182156
+      ]
+    },
+    {
+      "id": "PRRT_kwDOVpFduc68syZi",
+      "path": "migrate/serial_test.lgo",
+      "comments": [
+        4717182316
+      ]
+    }
+  ],
+  "required": [
+    "frozen generator race controls",
+    "existing migration race controls",
+    "compiled watchdog context mutation",
+    "just gate",
+    "just slop",
+    "just eject",
+    "exact original source restoration"
+  ],
+  "no_engine_suite_claim": true
+}
