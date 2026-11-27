@@ -1,0 +1,23 @@
+## Behavior
+
+This follow-up keeps literal shell arguments separate from syntax and preserves the screen's approval boundary. It retains the existing #30/#12/#3 follow-up, the imported #20 work, and the five external follow-up commits through `38d586ae3b2bce634e854990844f1db0b7642618`.
+
+- **Cmd loops:** recognize a loop only in command position, delimit its input set before finding `do`, and require a body. Ordinary text such as `cmd /c echo ready for review` and directory names such as `do` stay literal. FOR /F file and literal inputs are distinguished from command sources. Supported `usebackq` forms preserve their quote semantics; attached keyword spellings observed to execute a command conservatively require review. Computed inputs, malformed loops, nested execution, and refused programs retain their existing review or blocking paths.
+- **POSIX expansions:** determine whether a quoted parameter expands to multiple fields from the actual parameter expression. Literal `{@` or `{!prefix@` inside a scalar fallback no longer causes a false review. Real `${@}`, positional slices, and indirect prefix expansion keep their multi-field controls.
+- **Wrapper arguments:** parse grouped `command` lookup switches and stop `env` option parsing at the correct boundary. A lone `-` before assignments is an option; after an assignment it is the executable name. The latter no longer causes an argument such as `./brew.exe` to be mistaken for the program being run.
+- **fd classification:** retain attached filter values as data, including `-tf` and `--type=f`, while later execution actions remain mutable. The read-only helper accepts these literal data forms only after the screen returns Clear; assignment prefixes, redirection, and execution controls remain covered.
+
+The current-head reconciliation preserves all 25 added external test statements, except the one expectation contradicted by authentic `env` execution: `env GROUP=value - ./brew.exe install fixture` now expects Clear because the executed program is the literal `-`. New adjacent tests preserve both sides of that boundary.
+
+## Verification
+
+Verified source: `f879b0156aa32a317cb0e29609df53786a09ec78`, tree `e0047690e8b0f0013c4e5f3a646ee9663fecb77d`, additive child of `38d586ae`. Actual base checked before publication: `84e5ff153f781c7e2d02804a5c24997858f618ab`.
+
+- [Current-head preparation](https://github.com/gosuda/sloplint/actions/runs/45963141716): the maintained head fails 30 of 124 frozen classifier cases, including both new findings; the reconciled candidate passes all 124. Original source is restored after controls.
+- [Full current-source Linux gate](https://github.com/gosuda/sloplint/actions/runs/45964436559): `dune build @fmt`, `dune build --profile release`, and `dune runtest --profile release`, using the required `rd` switch, OCaml 5.5.1 and ocamlformat 0.29.0. All commands exited 0; the full test run reported 1,775 tests across 30 suites.
+- [Actual Windows proof](https://github.com/gosuda/sloplint/actions/runs/45957479981): formatting, the full release build, 40 selected shell/permission tests, and 55 native Cmd observations passed on tree `457cd4529dbca9dfb84a258f6a4854b3ce5c6ac2`. The current Linux proof authenticates that artifact and verifies every non-test blob/mode plus the Windows permission fixture is identical. Only the merged test file differs; that new test-only tree was not rerun on Windows. This is not a full Windows-suite claim.
+- Native observations include [37 Cmd cases](https://github.com/gosuda/sloplint/actions/runs/45947106831), [50 POSIX cases](https://github.com/gosuda/sloplint/actions/runs/45948949283), [18 exact FOR-option cases](https://github.com/gosuda/sloplint/actions/runs/45955429909), and [14 current-head POSIX boundary cases](https://github.com/gosuda/sloplint/actions/runs/45962135575). The first Cmd observation run failed three initial output hypotheses; its complete observations are retained and later replayed successfully. Setup, transport, and earlier fd integration failures remain separate historical records.
+
+Exact source hashes, artifact digests, source restoration, test preservation, and terminal source-gate status are retained in the [proof checkpoint](https://github.com/gosuda/sloplint/blob/e320afb5b45dccc044e172ee8793d5de0fb1ef5f/ci-records/charamel32-current.json). These results establish the tested parser and approval boundaries, without claiming complete Cmd or POSIX shell parity.
+
+The ten earlier review threads were resolved externally. This update addresses the two later scalar-fallback and `env` argument-boundary findings. Ordinary PR CI: pending after the verified additive update.

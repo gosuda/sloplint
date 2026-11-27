@@ -1,0 +1,33 @@
+{
+  "head": "f879b0156aa32a317cb0e29609df53786a09ec78",
+  "original_tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
+  "candidate_tree": "99508a172cd995a72dc9845016324e13a5b88527",
+  "prepared_tree": "99508a172cd995a72dc9845016324e13a5b88527",
+  "source_sha256": {
+    "bin/crush/lib/shell_screen.ml": "792c5754d9829cdc4af9c644e9c51f44f52ba38f10b300076df73aa9b745a82f",
+    "test/crush/test_tools_shell.ml": "1853053b04e708dc02983b8c1ad18a5c9858f87743d6c6c5916cc818caad4480"
+  },
+  "patch_sha256": "f08f7554e4039522c855c4705b2fd2190c53690d672e0c29b647b127edb2c9d0",
+  "native_observed_sha256": "1db8a4202cc9f0d7e3da4b037bd035f2618c24a445ee1ce88390fb2c433f535d",
+  "native_options_sha256": "4828864f66e1c3b3b861d1fe2be1b9fd9571c6e92dccbfb4b751114e3c65d638",
+  "echo_native_sha256": {
+    "6": "e461e1ead713c8b4425eae968ab84a257f1bec90b795b4d95fb00afccb054c58",
+    "40": "ad4b16c059929119f0a55649696c3eb7308fbe0304d3fb6bf7ecb4dfddfd27d7"
+  },
+  "preparation": {
+    "id": 15185338316,
+    "sha256": "11e0585f8aca46f84ceeb193c146afc140b7871bff0cb6584fe488d7d37d07e0",
+    "producer": "94baa315258dc0849d6e48e5af828decbcb06edb",
+    "run": 45972109545,
+    "job": 140414788503,
+    "report": "prepare-result.json"
+  },
+  "source_changes": "Only shell_screen.ml and test_tools_shell.ml; exact native formatter output, unchanged POSIX prefix, tools_shell.ml and public interface.",
+  "required_linux": [
+    "dune build @fmt",
+    "dune build --profile release",
+    "dune runtest --profile release"
+  ],
+  "windows_scope": "Fresh formatting and full release build, all shell/permission cases including Cmd Echo approval, and all101 frozen native Cmd observations; no full Windows suite claim.",
+  "driver_sha256": "45533da5c95e851ac7b51777cf0b408a392c163d11969dbd0bb3671b489da250"
+}
