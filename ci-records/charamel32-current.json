@@ -1,20 +1,42 @@
 {
-  "time": "2026-11-27T09:18:42Z",
-  "source": "f879b0156aa32a317cb0e29609df53786a09ec78",
-  "tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
-  "main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-  "proposal": "25430314299f97561d193c2170271b47c76fc401",
-  "producer": "94baa315258dc0849d6e48e5af828decbcb06edb",
-  "run": 45972109545,
-  "job": 140414788503,
-  "status": "preparation_success_full_gates_pending",
-  "active_threads": [
-    "PRRT_kwDOUbWGks68sxKM",
-    "PRRT_kwDOUbWGks68sxLw"
-  ],
-  "ordinary_ci": "No exact-head Actions run observed for f879; no ordinary CI success claim.",
-  "next": "Authenticate terminal preparation; preserve actual failures or create exact formatted source and launch fresh Linux/Windows gates.",
-  "checked_at": "2026-11-27T09:23:00Z",
+  "checked_at": "2026-11-27T09:41:04Z",
+  "repository": "gosuda/Charamel",
+  "pr": 32,
+  "maintained_head": "f879b0156aa32a317cb0e29609df53786a09ec78",
+  "actual_main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
+  "candidate": {
+    "head": "f879b0156aa32a317cb0e29609df53786a09ec78",
+    "original_tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
+    "candidate_tree": "99508a172cd995a72dc9845016324e13a5b88527",
+    "prepared_tree": "99508a172cd995a72dc9845016324e13a5b88527",
+    "source_sha256": {
+      "bin/crush/lib/shell_screen.ml": "792c5754d9829cdc4af9c644e9c51f44f52ba38f10b300076df73aa9b745a82f",
+      "test/crush/test_tools_shell.ml": "1853053b04e708dc02983b8c1ad18a5c9858f87743d6c6c5916cc818caad4480"
+    },
+    "patch_sha256": "f08f7554e4039522c855c4705b2fd2190c53690d672e0c29b647b127edb2c9d0",
+    "native_observed_sha256": "1db8a4202cc9f0d7e3da4b037bd035f2618c24a445ee1ce88390fb2c433f535d",
+    "native_options_sha256": "4828864f66e1c3b3b861d1fe2be1b9fd9571c6e92dccbfb4b751114e3c65d638",
+    "echo_native_sha256": {
+      "6": "e461e1ead713c8b4425eae968ab84a257f1bec90b795b4d95fb00afccb054c58",
+      "40": "ad4b16c059929119f0a55649696c3eb7308fbe0304d3fb6bf7ecb4dfddfd27d7"
+    },
+    "preparation": {
+      "id": 15185338316,
+      "sha256": "11e0585f8aca46f84ceeb193c146afc140b7871bff0cb6584fe488d7d37d07e0",
+      "producer": "94baa315258dc0849d6e48e5af828decbcb06edb",
+      "run": 45972109545,
+      "job": 140414788503,
+      "report": "prepare-result.json"
+    },
+    "source_changes": "Only shell_screen.ml and test_tools_shell.ml; exact native formatter output, unchanged POSIX prefix, tools_shell.ml and public interface.",
+    "required_linux": [
+      "dune build @fmt",
+      "dune build --profile release",
+      "dune runtest --profile release"
+    ],
+    "windows_scope": "Fresh formatting and full release build, all shell/permission cases including Cmd Echo approval, and all101 frozen native Cmd observations; no full Windows suite claim.",
+    "driver_sha256": "45533da5c95e851ac7b51777cf0b408a392c163d11969dbd0bb3671b489da250"
+  },
   "preparation": {
     "result": {
       "producer": "94baa315258dc0849d6e48e5af828decbcb06edb",
@@ -485,50 +507,265 @@
     "log_sha256": "331763f8fe1380b6f47ed312acee6858f324a579cb6081707ab587b4f1ff3782",
     "source_tree_recreated": "99508a172cd995a72dc9845016324e13a5b88527"
   },
-  "full_gate_manifest": {
-    "head": "f879b0156aa32a317cb0e29609df53786a09ec78",
+  "full_producer": "d718be40e2d96f061f52998b5ef11e9eb4e7b101",
+  "full_run": 45973461701,
+  "linux": {
+    "job": 140419293258,
+    "run": 45973461701,
+    "result": {
+      "producer": "d718be40e2d96f061f52998b5ef11e9eb4e7b101",
+      "run": "45973461701",
+      "lane": "linux",
+      "identity": {
+        "head": "f879b0156aa32a317cb0e29609df53786a09ec78",
+        "original_tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
+        "candidate_tree": "99508a172cd995a72dc9845016324e13a5b88527",
+        "source_sha256": {
+          "bin/crush/lib/shell_screen.ml": "792c5754d9829cdc4af9c644e9c51f44f52ba38f10b300076df73aa9b745a82f",
+          "test/crush/test_tools_shell.ml": "1853053b04e708dc02983b8c1ad18a5c9858f87743d6c6c5916cc818caad4480"
+        },
+        "changed_paths": [
+          "bin/crush/lib/shell_screen.ml",
+          "test/crush/test_tools_shell.ml"
+        ],
+        "unstaged_clean": true,
+        "unexpected_untracked": [],
+        "index_sha256": "b176302374f3c15ec910552e2e86b8bde292d0ee78413d9e84d4e5b0a2e05543"
+      },
+      "commands": [
+        {
+          "label": "compiler-and-formatter",
+          "script": "test \"$(ocamlc -version)\" = 5.5.1\ntest \"$(ocamlformat --version)\" = 0.29.0\nopam list --installed",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.1696664820000251,
+          "log_sha256": "380d384b5cb72e8aa68600edaeb03228ac298c5f6330d5fed6631aec9305dcb3"
+        },
+        {
+          "label": "format",
+          "script": "dune build @fmt",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 10.293397378000009,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "release-build",
+          "script": "dune build --profile release",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 28.02235852000001,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "release-tests",
+          "script": "dune runtest --profile release",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 13.853975777000073,
+          "log_sha256": "2b0e7b79166d9faca9e99b47c9d6d32a2c72610b7f1a33ccad15733b871229bd",
+          "test_summary": [
+            "Test Successful in 0.001s. 15 tests run.",
+            "Test Successful in 0.015s. 89 tests run.",
+            "Test Successful in 0.024s. 38 tests run.",
+            "Test Successful in 0.024s. 15 tests run.",
+            "Test Successful in 0.001s. 5 tests run.",
+            "Test Successful in 0.028s. 34 tests run.",
+            "Test Successful in 0.011s. 7 tests run.",
+            "Test Successful in 0.032s. 13 tests run.",
+            "Test Successful in 0.027s. 62 tests run.",
+            "Test Successful in 0.015s. 16 tests run.",
+            "Test Successful in 0.226s. 78 tests run.",
+            "Test Successful in 0.001s. 18 tests run.",
+            "Test Successful in 0.007s. 15 tests run.",
+            "Test Successful in 0.047s. 26 tests run.",
+            "Test Successful in 0.037s. 13 tests run.",
+            "Test Successful in 0.013s. 7 tests run.",
+            "Test Successful in 0.014s. 8 tests run.",
+            "Test Successful in 0.079s. 25 tests run.",
+            "Test Successful in 0.042s. 395 tests run.",
+            "Test Successful in 0.067s. 143 tests run.",
+            "Test Successful in 0.397s. 103 tests run.",
+            "Test Successful in 0.235s. 28 tests run.",
+            "Test Successful in 0.049s. 16 tests run.",
+            "Test Successful in 0.106s. 22 tests run.",
+            "Test Successful in 0.036s. 89 tests run.",
+            "Test Successful in 0.626s. 77 tests run.",
+            "Test Successful in 2.806s. 66 tests run.",
+            "Test Successful in 0.188s. 87 tests run.",
+            "Test Successful in 8.089s. 42 tests run.",
+            "  [OK]          session                 5   file permissions are enforced.",
+            "  [OK]          permission              0   plan ceiling.",
+            "  [OK]          permission              1   unknown mutation targets.",
+            "  [OK]          permission              2   yolo and plan order.",
+            "  [OK]          permission              3   deny before allow.",
+            "  [OK]          permission              4   deny before session approval.",
+            "  [OK]          permission              5   exact config entries.",
+            "  [OK]          permission              6   exact session grants.",
+            "  [OK]          permission              7   asker session grant.",
+            "  [OK]          permission              8   hook order.",
+            "  [OK]          permission              9   local read-only approval.",
+            "  [OK]          permission             10   read-only plan behavior.",
+            "  [OK]          permission             11   component-aware containment.",
+            "  [OK]          permission             12   decision observability.",
+            "  [OK]          permission             13   policy lock while asking.",
+            "  [OK]          permission             14   entry matching.",
+            "  [OK]          permission             15   review needs explicit approval.",
+            "  [OK]          artifact                6   directory permissions are enforced.",
+            "  [OK]          tools-shell             0   conservative shell classifier.",
+            "  [OK]          tools-shell             1   screen reads shell quoting.",
+            "  [OK]          tools-shell             2   literal here-document boundaries.",
+            "  [OK]          tools-shell             3   ANSI-C NUL screening.",
+            "  [OK]          tools-shell             4   parameter quote context.",
+            "  [OK]          tools-shell             5   command lookup mode.",
+            "  [OK]          tools-shell             6   find data positions.",
+            "  [OK]          tools-shell             7   nested fd actions are screened once.",
+            "  [OK]          tools-shell             8   ANSI-C NUL matches bash.",
+            "  [OK]          tools-shell             9   screen requires review.",
+            "  [OK]          tools-shell            10   screen clears ordinary commands.",
+            "  [OK]          tools-shell            11   screen verdict table.",
+            "  [OK]          tools-shell            12   review argument boundaries.",
+            "  [OK]          tools-shell            13   Cmd loop approval boundary.",
+            "  [OK]          tools-shell            14   Cmd echo approval boundary.",
+            "  [OK]          tools-shell            15   wrapper option and argument bound...",
+            "  [OK]          tools-shell            16   xargs replacement positions.",
+            "  [OK]          tools-shell            17   executable suffix positions.",
+            "  [OK]          tools-shell            18   shell information switches.",
+            "  [OK]          tools-shell            19   watch execution mode.",
+            "  [OK]          tools-shell            20   foreground capture.",
+            "  [OK]          tools-shell            21   foreground deadline.",
+            "  [OK]          tools-shell            22   background lifecycle.",
+            "  [OK]          tools-shell            23   permission receives read-only cla...",
+            "  [OK]          tools-shell            24   windows fixtures pin zero exit.",
+            "  [OK]          ui                      2   permission dialog bridge round trip.",
+            "Test Successful in 10.174s. 224 tests run."
+          ]
+        },
+        {
+          "label": "whitespace",
+          "script": "git diff --cached --check",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.018163223999977163,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "accepted": true,
+      "native_windows_full_suite_claim": false
+    },
+    "artifact": {
+      "id": 15186656936,
+      "node_id": "MDg6QXJ0aWZhY3QxNTE4NjY1NjkzNg==",
+      "name": "charamel32-echo-gates-linux",
+      "size_in_bytes": 64953,
+      "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15186656936",
+      "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15186656936/zip",
+      "expired": false,
+      "digest": "sha256:4970f88e7683ac5c4d013a2c3eedb55ae0bface0f8b7ef83f5c96f9e54a05b97",
+      "created_at": "2026-11-27T09:35:02Z",
+      "updated_at": "2026-11-27T09:35:02Z",
+      "expires_at": "2026-12-27T09:35:01Z",
+      "workflow_run": {
+        "id": 45973461701,
+        "repository_id": 1424164147,
+        "head_repository_id": 1424164147,
+        "head_branch": "ci/charamel32-cmd-gates-20261127",
+        "head_sha": "d718be40e2d96f061f52998b5ef11e9eb4e7b101"
+      }
+    },
+    "log_sha256": "7b854744b56975ef81cc1b016fe4ab17110d941ec5117395b846877f7c82cd00",
+    "log_chars": 118338,
+    "suites": 30,
+    "reported_tests": 1776,
+    "upload_digest_in_log": true
+  },
+  "windows": {
+    "job": 140419293567,
+    "status": "in_progress",
+    "preflight": "success",
+    "native_replay": "success",
+    "native_cases": 101,
+    "source_gates": "pending"
+  },
+  "tree_comparison": {
     "original_tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
     "candidate_tree": "99508a172cd995a72dc9845016324e13a5b88527",
-    "prepared_tree": "99508a172cd995a72dc9845016324e13a5b88527",
-    "source_sha256": {
-      "bin/crush/lib/shell_screen.ml": "792c5754d9829cdc4af9c644e9c51f44f52ba38f10b300076df73aa9b745a82f",
-      "test/crush/test_tools_shell.ml": "1853053b04e708dc02983b8c1ad18a5c9858f87743d6c6c5916cc818caad4480"
-    },
-    "patch_sha256": "f08f7554e4039522c855c4705b2fd2190c53690d672e0c29b647b127edb2c9d0",
-    "native_observed_sha256": "1db8a4202cc9f0d7e3da4b037bd035f2618c24a445ee1ce88390fb2c433f535d",
-    "native_options_sha256": "4828864f66e1c3b3b861d1fe2be1b9fd9571c6e92dccbfb4b751114e3c65d638",
-    "echo_native_sha256": {
-      "6": "e461e1ead713c8b4425eae968ab84a257f1bec90b795b4d95fb00afccb054c58",
-      "40": "ad4b16c059929119f0a55649696c3eb7308fbe0304d3fb6bf7ecb4dfddfd27d7"
-    },
-    "preparation": {
-      "id": 15185338316,
-      "sha256": "11e0585f8aca46f84ceeb193c146afc140b7871bff0cb6584fe488d7d37d07e0",
-      "producer": "94baa315258dc0849d6e48e5af828decbcb06edb",
-      "run": 45972109545,
-      "job": 140414788503,
-      "report": "prepare-result.json"
-    },
-    "source_changes": "Only shell_screen.ml and test_tools_shell.ml; exact native formatter output, unchanged POSIX prefix, tools_shell.ml and public interface.",
-    "required_linux": [
-      "dune build @fmt",
-      "dune build --profile release",
-      "dune runtest --profile release"
+    "original_entries": 1094,
+    "candidate_entries": 1094,
+    "changed": [
+      {
+        "path": "bin/crush/lib/shell_screen.ml",
+        "before": {
+          "path": "bin/crush/lib/shell_screen.ml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "5e1b2f54ce176c474250ea81e194f6266c75daf9",
+          "size": 64224,
+          "url": "https://api.github.com/repos/gosuda/Charamel/git/blobs/5e1b2f54ce176c474250ea81e194f6266c75daf9"
+        },
+        "after": {
+          "path": "bin/crush/lib/shell_screen.ml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "428bdb18cea1f06de52824ed8c07f8ef1da8a47a",
+          "size": 67331,
+          "url": "https://api.github.com/repos/gosuda/Charamel/git/blobs/428bdb18cea1f06de52824ed8c07f8ef1da8a47a"
+        }
+      },
+      {
+        "path": "test/crush/test_tools_shell.ml",
+        "before": {
+          "path": "test/crush/test_tools_shell.ml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "11911cfd0f233fcc3d60de792d31991e0ebdbd7d",
+          "size": 34746,
+          "url": "https://api.github.com/repos/gosuda/Charamel/git/blobs/11911cfd0f233fcc3d60de792d31991e0ebdbd7d"
+        },
+        "after": {
+          "path": "test/crush/test_tools_shell.ml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b2502db9e4134bfe20839620ee134de169156b9d",
+          "size": 38038,
+          "url": "https://api.github.com/repos/gosuda/Charamel/git/blobs/b2502db9e4134bfe20839620ee134de169156b9d"
+        }
+      }
     ],
-    "windows_scope": "Fresh formatting and full release build, all shell/permission cases including Cmd Echo approval, and all101 frozen native Cmd observations; no full Windows suite claim.",
-    "driver_sha256": "45533da5c95e851ac7b51777cf0b408a392c163d11969dbd0bb3671b489da250"
+    "unchanged": 1092
   },
-  "source_hashes": {
-    "bin/crush/lib/shell_screen.ml": "792c5754d9829cdc4af9c644e9c51f44f52ba38f10b300076df73aa9b745a82f",
-    "test/crush/test_tools_shell.ml": "1853053b04e708dc02983b8c1ad18a5c9858f87743d6c6c5916cc818caad4480"
+  "posix_prefix": {
+    "bytes": 50402,
+    "equal": true
   },
-  "maintained_source_unchanged": true,
-  "public_only": true,
+  "review_threads": {
+    "total": 14,
+    "resolved": 12,
+    "unresolved": [
+      "PRRT_kwDOUbWGks68sxKM",
+      "PRRT_kwDOUbWGks68sxLw"
+    ]
+  },
+  "ordinary_ci": "No exact f879 Actions run was observed; no ordinary CI success claim.",
+  "limitations": [
+    "No full shell-parity claim.",
+    "Three native-invalid fixtures remain Review; two valid nested FOR forms retain their existing conservative Review.",
+    "Trace instrumentation is applied only to temporary compilation copies and logs actual recursive parse inputs; maintained source and public interface have no trace hook."
+  ],
   "pending": [
-    "Fresh Linux prescribed gates",
-    "Fresh Windows release build and selected shell/permission suites plus101 native observations",
-    "Fresh head/base lease; additive publication only after required gates",
-    "Evidence replies and current thread accounting",
-    "Owned temporary workflow retirement"
-  ]
+    "Windows terminal build, formatting and actual shell/permission tests",
+    "Fresh maintained/main reads before additive publication",
+    "Readable PR body and evidence replies, addressed-thread resolution",
+    "Observe ordinary CI and fresh review state",
+    "Retire only the owned echo workflow"
+  ],
+  "historical_checkpoint": "https://github.com/gosuda/sloplint/blob/e320afb5b45dccc044e172ee8793d5de0fb1ef5f/ci-records/charamel32-current.json",
+  "no_maintained_followup_source_published": true,
+  "public_only": true,
+  "identity_note": "Source refs were last verified before this full gate launch; a fresh maintained-head and actual-main lease is still required before publication."
 }

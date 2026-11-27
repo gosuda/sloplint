@@ -1,0 +1,12 @@
+[
+  {
+    "thread_id": "PRRT_kwDOUbWGks68sxKM",
+    "comment_id": 4717173833,
+    "body": "Addressed in __HEAD__. The Cmd lexer now recognizes literal command-position Echo, so `echo(` and the observed nested/grouped/FOR forms retain their native meaning. Real command groups still close on an unescaped closing parenthesis, and malformed/bodyless groups keep Review. The permanent Windows test executes the harmless forms and proves a computed command after Echo still needs exact approval.\n\nThe 40-case and six-case native observations, original/candidate/reverted/restored parser checks, and fresh Linux/Windows gates are recorded in __CHECKPOINT__. Preparation preserves all 124 previous cases, demonstrates 21 original classifier failures, and passes all 177 cases plus 24 actual recursive-input traces on the candidate and restored source. Full source run 45973461701: __RESULT__."
+  },
+  {
+    "thread_id": "PRRT_kwDOUbWGks68sxLw",
+    "comment_id": 4717173991,
+    "body": "Addressed in __HEAD__. Cmd words now retain their end offsets in the original source. At `/c` or `/k`, recursive screening slices that source through the current command segment rather than joining token spellings. Leading invocation whitespace is handled separately; equals signs, commas, semicolons, tabs, redirection and terminal spaces are preserved.\n\nThe native witnesses distinguish `echo key=value` from `echo key value` and confirm the trailing-space/quote cases. The proof instruments only temporary compiler copies to observe actual recursive parser inputs: 17 of 24 byte traces fail on the old source; all 24 pass at the payload-only stage, full candidate and restored candidate. Composition controls cover a FOR body and a nested command group. The maintained public interface has no trace hook. Exact source, native records and fresh full-gate results: __CHECKPOINT__."
+  }
+]
