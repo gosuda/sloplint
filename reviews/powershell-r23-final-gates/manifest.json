@@ -1,0 +1,283 @@
+{
+  "base": "e7ee97e84246863766ec7465777a035134533feb",
+  "base_tree": "5d2a547a693d073ad9739311e7b653baa96a08d6",
+  "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+  "mode": "Run complete native/parser/source gates on one exact application tree, preserving all frozen ownership contracts and recording historical limitations separately. The earlier diagnostic remains failed; its sole output-reader discrepancy is authenticated against the complete archived log and checked again in an isolated test invocation.",
+  "threads": [
+    "PRRT_kwDOVOMFM868lKep"
+  ],
+  "external_changes_preserved": {
+    "comment_element_parent": "7fe4b0f54a245f929361bb5d5836a0fc3063fd8e",
+    "mark_leading_words": "e7ee97e84246863766ec7465777a035134533feb",
+    "notes": "Retain the externally authored leading-format-mark lexical alternative. Replace the unconditional comment element with context-specific hidden guards."
+  },
+  "context_native_cases": 448,
+  "context_required_parser_cases": 432,
+  "older_no_indent_observations": 16,
+  "trace_cases": [
+    "continued-lf-space-spaces-2",
+    "continued-lf-space-spaces-1",
+    "continued-crlf-space-spaces-2",
+    "redirect-out-space-dash",
+    "redirect-out-space-plain",
+    "redirect-out-mixed-dash",
+    "branch-lf-block-ordinary-else-exe",
+    "branch-lf-block-ordinary-else-block",
+    "branch-lf-block-assigned-else-block",
+    "branch-lf-block-assigned-else-exe",
+    "conditional-mixed-case"
+  ],
+  "native": {
+    "preserved_parser_comparisons": 485,
+    "new_conditional_cases": 96,
+    "new_argument_cases": 54,
+    "new_comma_cases": 18,
+    "required_parser_comparisons": 653,
+    "near_controls": 6,
+    "known_prior_observations": 8,
+    "preserved_literal_outputs": 52,
+    "new_actual_argv": 72
+  },
+  "ownership": {
+    "native_cases": 805,
+    "parser_cases": 801,
+    "public_query_inputs": 803,
+    "queries_per_input": 21,
+    "completed_prefix_controls": 2,
+    "exact_filename_cases": 230,
+    "unchanged_compatibility_cases": 190,
+    "scope": "All diagnostic requirements remain unchanged, including old public captures, native extents, known rejected syntax and explicit older limitations."
+  },
+  "formatted_regression_sha256": "fa7076bef1b95e4ae8713972020db8287f1add633d712a4cd4e6ea0908a53dc9",
+  "baseline": {
+    "producer": "8e21f8343fb84954514d274a65d46932b80f7b90",
+    "run": 45908737910,
+    "job": 140211698514,
+    "artifact": 15158893506,
+    "zip_sha256": "47566cdd96fd146d7209a8ee2897ec6962e2d859e76b795e2fa6a60bf90c9730",
+    "payload_sha256": "5317d091919632510e93ce933e98ea6a0fe5514b3a213d1d7fcb25b1309dbeeb",
+    "gzip_sha256": "6c4f227856e93d3f01e47b72e8a10dc896677693f4434f82096d690d681eed2f",
+    "payload_bytes": 6859705,
+    "gzip_bytes": 355067,
+    "base64_bytes": 473424,
+    "formatted_observer_sha256": "2151f94ae80983f087bbde46e4c6b1749a522487d541289e018b3b70fd63458b"
+  },
+  "historical_boundary": {
+    "producer": "0f029807a43153c6d8e97fc2a23f1cb47077e98a",
+    "run": 45907682159,
+    "job": 140208249794,
+    "artifact": 15158408204,
+    "zip_sha256": "cb2c8c723cfe341fe4b02a53129e8646dd890e07cc612279788648f955744f24",
+    "payload_sha256": "83c698351168269fead93a42f5cdc69088e7dc80ad16ffb04128843509a9b5f2",
+    "gzip_sha256": "2c479f8cbd8dc46c8159341ad156d9e05bccf00f7abe63a6ff123e754177a4f4",
+    "payload_bytes": 494578,
+    "gzip_bytes": 29622,
+    "base64_bytes": 39496,
+    "formatted_observer_sha256": "85e21f1ece01d8d06778deec011b217ae7458c3893c2336929449cefe522b3ee"
+  },
+  "prefix_boundary": {
+    "producer": "d143bde157a369c2aaaffc6fe5f38938d04e814f",
+    "run": 45910252434,
+    "job": 140216620412,
+    "artifact": 15159249262,
+    "zip_sha256": "597ef3c89aeedc4cd9963bb68ac12ff9cc94cb2d004a03ac62aef1be707b773d",
+    "payload_sha256": "f614b5ad2c7701e64bd58fd5d5d3f596eb809a87a2acb95cc264bf979ae08262",
+    "gzip_sha256": "2edcb37454b968016c6310a254afbf172710d08422decbfbe4e094603eea70b5",
+    "payload_bytes": 8494,
+    "gzip_bytes": 2237,
+    "base64_bytes": 2984
+  },
+  "historical_redirection_query_baseline": {
+    "producer": "a263043efec225686eb474da637742e1129eabdc",
+    "run": 45888591536,
+    "job": 140145364637,
+    "artifact": 15151180936,
+    "zip_sha256": "0a76bd3c9df88fd1d3cb3243a58736082a53538421d8d78983cc84567b0e5569",
+    "outcome": "442 native cases and 1326 historical parser observations recorded, with all snapshots restored. Broad initial continuation test fails all sources at its first no-indent observation; indented parser witnesses prove the introduced reachability regression. Current keyword/redirection tests exit101. Old legacy redirection query exits0; previous query no longer compiles. Native single-dash target splitting is a separate older limitation."
+  },
+  "preserved_r22": {
+    "producer": "2f1d0a3809ceae32a5eee7eeaa5efa72a9a47ed8",
+    "source_run": 45893490495,
+    "published_head": "57adc9fff126a9826e0fb0be921c28e6cdb08391",
+    "tree": "f518b3943c6b86af53c334175309303c3d79f38b",
+    "ordinary_run": 45895428017,
+    "ordinary_conclusion": "success",
+    "retirement_checkpoint": "03a275c9b8b72820d5bcb0925e43da127d0e25b9"
+  },
+  "rejected_candidates": [
+    {
+      "producer": "7f83c425202d090e82b44c7713a937d5cd64dcf7",
+      "run": 45911049430,
+      "job": 140219232030,
+      "artifact": 15159819732,
+      "zip_sha256": "144a81988e49a55be94261d2d0eeb853cdf88b04b8d7984c339f17539728b824",
+      "payload_sha256": "c516e662b2fe41b73241c82214626e56ffe31e7e55570ce2a2b6aed946604f02",
+      "gzip_sha256": "37a85d54e4a7ff694b57d4f803fd5eb8387103589d511859e86c54a6e8248f9d",
+      "payload_bytes": 5967760,
+      "gzip_bytes": 313862,
+      "base64_bytes": 418484,
+      "reason": "Nine frozen historical query mismatches."
+    },
+    {
+      "producer": "519e18f939cb8a9796f81ac399096083dbb7995c",
+      "run": 45913796869,
+      "job": 140228090775,
+      "artifact": 15160844099,
+      "zip_sha256": "e9321f407ec0417aba597885bbdfa6e5eb2508d37fdc7157f7aa1052958861bd",
+      "payload_sha256": "db94e0276d22a8ec1cb27f5c73acece3366b6d8d607c368c4794f27edfa6442c",
+      "gzip_sha256": "4f9b7c390dd938ce2391163284911a8d961a47c218813d56887c355cd71ce4f1",
+      "payload_bytes": 5980125,
+      "gzip_bytes": 316495,
+      "base64_bytes": 421996,
+      "reason": "Source checks passed, but line-prefix extraction counted 17 rather than 18 native records. The overall diagnostic remains a failed run."
+    }
+  ],
+  "preserved_source_gates": [
+    "native PowerShell7.7.0 actual AST/tokens/argv and literal values",
+    "all three stages: existing and new focused PowerShell adapter regressions",
+    "full native x64 and ARM64 Clippy all targets/workspace no-fail-fast/release",
+    "x64 release self-lint",
+    "fmt/grammar manifest/release-script selftests/cargo-deny0.20.2",
+    "authoritative upstream grammar patch reapply/full corpus/fresh generation/whitespace",
+    "exact source identity before and after"
+  ],
+  "proof_sha256": {
+    "preserved-grammar-cases.json": "039f762b5971236a96d92f9875852072932a6779ed3fe1deace8288943942088",
+    "preserved-grammar-oracle.ps1": "4b7c31e31bfcbcef4ff8a8d5abf3d7850e211add893f2e9a0da34902fc8d3f02",
+    "preserved-literal-cases.json": "9eb65f67588aa21b61f8a0073794a496b7263b7b959f88f5099cd4c01a7f7d32",
+    "preserved-literal-oracle.ps1": "8bceaa20931d06609b35aaab9c107ea514d294fe36152a3c7b857ae9280f1eb6",
+    "cases.json": "70fc8831ceb47b66d4421a500b3a632a69adbb0ac4bd521b38cffd8255a04e98",
+    "native-oracle.ps1": "cb1d34d29ed3fd73fa535a3b38689f8be8576600e2b329aeca559b61c69f6292",
+    "token-cases.json": "c51cb52596632b43443bf2f79dcdc21bdb0a85dab3d5468fd802c4de35bad79b",
+    "token-oracle.ps1": "438a05a95ba585dec15ed00a73f6c5187c44d7bc1df32990a341b9a472996bca",
+    "token-expected.json": "91d3db55c886ea1bbf37c44377e73dd0a34c6d03ffc17a925689278ed2b7a7aa",
+    "token-parser-cases.json": "6ed75b48d91d1d1a2c8221c43896caacde3de402cb0181a9347eb424aecda024",
+    "terminator-parser-cases.json": "c096a8ff4c56af01fa66883d4948ebe2e38cbac0a919b6a2f12fe9db4b0e2da8",
+    "terminator-native-expected.json": "35b2e3bb17ded486a61dd72f67ce56d4537ef86f89725cab9f768985412d862f",
+    "followup-cases.json": "13d35c2437eafe38a219e8548a820718cb58d1744bf4c827d6bf45a8c5ea297c",
+    "followup-oracle.ps1": "2166f6d4bab520ac415791d21f1d775075734068cd6eb9866aed511da7e44b15",
+    "followup-native-expected.json": "259320f0032660df9dc29d20c705e30c3f32990113d2b00203b6775a96b6fa22",
+    "query-baseline-lines.json": "1aad0a5262e8466bd908d6cf6fd35eddc0bd03fe40341bdba7364e211091cdd7",
+    "near-controls.json": "b8c69e9ff4079d030be8bc1015f20291d1606764290a26773669cdb213652d7b",
+    "context-cases.json": "f40ab6623c14accb9bb7ae11cb99fd44f889cabf63d0b48140c1d3e4f084fd13",
+    "context-oracle.ps1": "f12ffdc84bb8baff23054e3d321527f367b5f1116692be2563f14654630ca2e2",
+    "context-native-expected.json": "15f555bcfea45c0209a82c30e895c86e362b304023b34843b4912edf6a29ceca",
+    "context-baseline-receipt.json": "fdf219cf90b84f3c060896ca6e64e90e374f4d96f837468a955bf2c609bd738e",
+    "context-observer.rs": "5d05d0407041286ff67e72994ca15e540cdd430eb4df0e79ea4cde990af29cb3",
+    "context-original-observations.json": "2c74cf462dc682cf831247dc0c079902c0d87868aeff7dc5b226c20b59bf9114",
+    "verify.py": "443ca1aa767f19b2155f34910abb85f19260d228b6744e386802dcaae36c1f06",
+    "ownership-cases.json": "c1f8af63b0bcec4ea5f7919caa5789b2da647e319adb0f310718032250d1dc06",
+    "ownership-cases.tsv": "3a1e3f286d87e40e9179563f767662e48ef768e8053b31a3126c7303d4d18a94",
+    "ownership-observer.rs": "43fa7b9378ca2b89a8e789ebd4d70d5a116d720509143ab619f4c8bc2120714b",
+    "ownership-double-gap-cases.json": "917047b37a5435f74150422d583415fc8fc0c428a65e9238929aba9aeb1b3160",
+    "ownership-double-gap-cases.tsv": "02851e3eae58ef4333ae98a8ca96bbe732eda840ee11973bf862281370279872",
+    "ownership-native-oracle.ps1": "521d82f956d0192f33e5b2ba51996ef20b16590957c16172d51298e6fe3dffcd",
+    "ownership-prefix-cases.json": "f04aecafc69d71c0726ce0d48d8ce49bd08e1e634bb44dfac67d28d3ed8f2e17",
+    "ownership-native-baseline-packed.b64": "cad0394955173d1c3c5642ad457ae5b209d5bd40a639911010b90650e8fbddc6",
+    "ownership-prefix-oracle.ps1": "20d2814f0c6cc257b540dbe8d2f55befe6fe75163f1549696de09e4b6d3ee1b4",
+    "ownership-diagnostic-receipt.json": "b5a8508e71ec1c418c0bc42f38f3323cfaa62f77ca0031321d6da8cba2248e7b",
+    "ownership-output-correction.json": "a973c109767c3bb7a6867212b563c96c69a5600aa3ddff364e2553f33ec3c1a3",
+    "authored-stages.json": "1c19848bc3c5a3c27ec28fe80318790c8cca59bddbfdf6edcad2302177c28750"
+  },
+  "output_reader_correction": {
+    "producer": "ffd2f79a815f57891ab179706b80e93bee114c97",
+    "run": 45915194176,
+    "job": 140232592996,
+    "artifact": 15161473684,
+    "zip_sha256": "c24d32fea2dd704c5988b04355d142b7ae9a9be77f2c7adde7b9a4950bf31798",
+    "focused_log_sha256": "f663fc0df173ca9b24ac96e43bfa493ef3e568699b55971b159a02d375928cc3",
+    "exact_count_records": [
+      [
+        "comment-guard-zwsp-1-array",
+        2
+      ],
+      [
+        "comment-guard-zwsp-1-quoted",
+        2
+      ],
+      [
+        "comment-guard-zwsp-1-escaped",
+        2
+      ],
+      [
+        "comment-guard-zwsp-2-array",
+        2
+      ],
+      [
+        "comment-guard-zwsp-2-quoted",
+        2
+      ],
+      [
+        "comment-guard-zwsp-2-escaped",
+        2
+      ],
+      [
+        "comment-guard-bom-1-array",
+        2
+      ],
+      [
+        "comment-guard-bom-1-quoted",
+        2
+      ],
+      [
+        "comment-guard-bom-1-escaped",
+        2
+      ],
+      [
+        "comment-guard-bom-2-array",
+        2
+      ],
+      [
+        "comment-guard-bom-2-quoted",
+        2
+      ],
+      [
+        "comment-guard-bom-2-escaped",
+        2
+      ],
+      [
+        "comment-guard-wj-1-array",
+        2
+      ],
+      [
+        "comment-guard-wj-1-quoted",
+        2
+      ],
+      [
+        "comment-guard-wj-1-escaped",
+        2
+      ],
+      [
+        "comment-guard-wj-2-array",
+        2
+      ],
+      [
+        "comment-guard-wj-2-quoted",
+        2
+      ],
+      [
+        "comment-guard-wj-2-escaped",
+        2
+      ]
+    ],
+    "old_line_prefix_count": 17,
+    "failed_word_boundary_count": 17,
+    "missing_line": "test powershell_syntax::an_else_on_the_line_after_an_if_in_an_assignment_is_part_of_the_if ... okGUARD_NATIVE_ARG_CASE comment-guard-zwsp-1-escaped 2",
+    "reason": "libtest success text is directly adjacent to the complete marker: okGUARD. Both line-prefix and word-boundary predicates drop that intact record."
+  },
+  "observer_repeat_failure": {
+    "producer": "18ff03c78bde4db25a56b6dec7d597b2153ebe38",
+    "run": 45914586866,
+    "job": 140230653740,
+    "artifact": 15161602837,
+    "zip_sha256": "4230a44cea0aade80ac89714cd90ec98d67d4a4b877b685593d31bb868d3d57e",
+    "phase": "archived-log assertion before candidate application",
+    "reason": "The word-boundary predicate also rejects the intact okGUARD marker."
+  },
+  "source_review": {
+    "proposal": "b30e2057830b56a378adc79a38b4925fccbf4863",
+    "grammar_sha256": "213dfd728746463bdc1831e8458e959e0b843d9c216105d6216a90ec074c9fc8",
+    "scanner_sha256": "9585a11787bed671288d8a6a650a7efe1744c01b7b0f73d2454c8faf087276ef",
+    "receipt": "Coordinator independently verified both exact authored hashes and the two bounded guards. Native diagnostic source assertions passed; the log-reader correction is separately preserved."
+  }
+}

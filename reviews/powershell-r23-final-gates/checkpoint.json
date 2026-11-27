@@ -1,0 +1,156 @@
+{
+  "status": "Unpublished final application candidate; complete source gates pending.",
+  "maintained_head": "e7ee97e84246863766ec7465777a035134533feb",
+  "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+  "diagnostic": {
+    "producer": "519e18f939cb8a9796f81ac399096083dbb7995c",
+    "run": 45913796869,
+    "job": 140228090775,
+    "artifact": 15160844099,
+    "zip_sha256": "e9321f407ec0417aba597885bbdfa6e5eb2508d37fdc7157f7aa1052958861bd",
+    "payload_sha256": "db94e0276d22a8ec1cb27f5c73acece3366b6d8d607c368c4794f27edfa6442c",
+    "gzip_sha256": "4f9b7c390dd938ce2391163284911a8d961a47c218813d56887c355cd71ce4f1",
+    "payload_bytes": 5980125,
+    "gzip_bytes": 316495,
+    "base64_bytes": 421996
+  },
+  "diagnostic_source": {
+    "base": "e7ee97e84246863766ec7465777a035134533feb",
+    "tree": "77d52dbb006b484a4a0386a9e70b0e7fa146093b",
+    "tracked_blobs": 4906,
+    "index_sha256": "71a1b59931d12c1d7b67c0a78e77f1771e60907e8a5da398744771f6dca09265",
+    "files": {
+      "vendor/tree-sitter-powershell/grammar.js": "213dfd728746463bdc1831e8458e959e0b843d9c216105d6216a90ec074c9fc8",
+      "vendor/tree-sitter-powershell/src/grammar.json": "ce40db9b60c8d032d3ccede4436fdf7dc3a3f73a9be0a4541bda741925b59222",
+      "vendor/tree-sitter-powershell/src/parser.c": "95c83bd0c91ace73e0210e82e8e92f96d9446eab4cae64dc7114b69b9c955bd0",
+      "vendor/tree-sitter-powershell/src/node-types.json": "cc0ca0ff480d8278d54719e0dc7a5213018e4a39333e7f1986481972bec64404",
+      "vendor/tree-sitter-powershell/src/scanner.c": "9585a11787bed671288d8a6a650a7efe1744c01b7b0f73d2454c8faf087276ef"
+    }
+  },
+  "diagnostic_failures": [
+    {
+      "kind": "native-argument-case-count",
+      "id": "last-comment-and-redirect-guards",
+      "expected": 18,
+      "actual": 17
+    }
+  ],
+  "output_inspection": {
+    "producer": "ffd2f79a815f57891ab179706b80e93bee114c97",
+    "run": 45915194176,
+    "job": 140232592996,
+    "artifact": 15161473684,
+    "zip_sha256": "c24d32fea2dd704c5988b04355d142b7ae9a9be77f2c7adde7b9a4950bf31798",
+    "focused_log_sha256": "f663fc0df173ca9b24ac96e43bfa493ef3e568699b55971b159a02d375928cc3",
+    "exact_count_records": [
+      [
+        "comment-guard-zwsp-1-array",
+        2
+      ],
+      [
+        "comment-guard-zwsp-1-quoted",
+        2
+      ],
+      [
+        "comment-guard-zwsp-1-escaped",
+        2
+      ],
+      [
+        "comment-guard-zwsp-2-array",
+        2
+      ],
+      [
+        "comment-guard-zwsp-2-quoted",
+        2
+      ],
+      [
+        "comment-guard-zwsp-2-escaped",
+        2
+      ],
+      [
+        "comment-guard-bom-1-array",
+        2
+      ],
+      [
+        "comment-guard-bom-1-quoted",
+        2
+      ],
+      [
+        "comment-guard-bom-1-escaped",
+        2
+      ],
+      [
+        "comment-guard-bom-2-array",
+        2
+      ],
+      [
+        "comment-guard-bom-2-quoted",
+        2
+      ],
+      [
+        "comment-guard-bom-2-escaped",
+        2
+      ],
+      [
+        "comment-guard-wj-1-array",
+        2
+      ],
+      [
+        "comment-guard-wj-1-quoted",
+        2
+      ],
+      [
+        "comment-guard-wj-1-escaped",
+        2
+      ],
+      [
+        "comment-guard-wj-2-array",
+        2
+      ],
+      [
+        "comment-guard-wj-2-quoted",
+        2
+      ],
+      [
+        "comment-guard-wj-2-escaped",
+        2
+      ]
+    ],
+    "old_line_prefix_count": 17,
+    "failed_word_boundary_count": 17,
+    "missing_line": "test powershell_syntax::an_else_on_the_line_after_an_if_in_an_assignment_is_part_of_the_if ... okGUARD_NATIVE_ARG_CASE comment-guard-zwsp-1-escaped 2",
+    "reason": "libtest success text is directly adjacent to the complete marker: okGUARD. Both line-prefix and word-boundary predicates drop that intact record."
+  },
+  "observer_repeat_failure": {
+    "producer": "18ff03c78bde4db25a56b6dec7d597b2153ebe38",
+    "run": 45914586866,
+    "job": 140230653740,
+    "artifact": 15161602837,
+    "zip_sha256": "4230a44cea0aade80ac89714cd90ec98d67d4a4b877b685593d31bb868d3d57e",
+    "phase": "archived-log assertion before candidate application",
+    "reason": "The word-boundary predicate also rejects the intact okGUARD marker."
+  },
+  "final_authored_elements": [
+    {
+      "path": "vendor/tree-sitter-powershell/grammar.js",
+      "sha256": "213dfd728746463bdc1831e8458e959e0b843d9c216105d6216a90ec074c9fc8"
+    },
+    {
+      "path": "vendor/tree-sitter-powershell/src/scanner.c",
+      "sha256": "9585a11787bed671288d8a6a650a7efe1744c01b7b0f73d2454c8faf087276ef"
+    },
+    {
+      "path": "crates/sloplint-syntax/tests/grammar_gaps.rs",
+      "sha256": "71d89de5b26ec7642db3606218f7274358645870941797d5922a5759fb35fd9b"
+    },
+    {
+      "path": "crates/sloplint-syntax/tests/grammar_gaps/powershell_separator_ownership.rs",
+      "sha256": "fa7076bef1b95e4ae8713972020db8287f1add633d712a4cd4e6ea0908a53dc9"
+    },
+    {
+      "path": "vendor/tree-sitter-powershell/SLOPLINT.md",
+      "sha256": "4e79ef376d62f8c68102b3d26594f7e1fed8ddfb110682c10cbf1a1919a3b7e0"
+    }
+  ],
+  "retired_r22_checkpoint": "03a275c9b8b72820d5bcb0925e43da127d0e25b9"
+}
