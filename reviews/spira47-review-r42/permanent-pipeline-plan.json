@@ -26,12 +26,17 @@
     "producer": "e5c98bfa622da358c1fd84b25b44b00a3a940814",
     "run": 46068178205,
     "job": 140738456076,
-    "status": "in_progress",
-    "outcomes_observed": false
+    "status": "failure",
+    "outcomes_observed": true,
+    "failure_record": "https://github.com/gosuda/sloplint/blob/ac4c7a4dc91f7cc0f7eea2b52ea5a9d54b8d7670/reviews/spira47-review-r42/baseline-failure-46068178205.json"
   },
-  "test_sha256": "d9c91322b7d57fda662ee57f0d8b0f8e651ed4bb290815d422752ba56ed8b298",
+  "test_sha256": "dad875f570797c65e0edd8817a0d4ff581e3a22b037c7ac50489bb31cfaefb31",
   "expected_source_tests67": true,
   "source_applied": false,
   "source_gates_passed": false,
-  "publication_eligible": false
+  "publication_eligible": false,
+  "review_corrections": [
+    "Use comma-ok lookup before reading the items table option.",
+    "Distinguish absent capture, present capture, and read failure; preserve error chains with %w."
+  ]
 }
