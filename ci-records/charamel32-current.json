@@ -2,8 +2,8 @@
   "schema_version": 2,
   "task": "Charamel PR32 parser and approval-boundary reconciliation",
   "public_only": true,
-  "snapshot_utc": "2026-11-27 08:28:26 UTC",
-  "state": "verified source published; ordinary CI and review replies pending",
+  "snapshot_utc": "2026-11-27 08:38:14 UTC",
+  "state": "Published revision verified; two newly arrived Cmd findings under native observation",
   "maintained": {
     "repository": "gosuda/Charamel",
     "pr": 32,
@@ -325,23 +325,24 @@
     "native_case": "assignment_then_dash"
   },
   "review_threads": {
-    "total": 12,
-    "externally_resolved": 10,
+    "total": 14,
+    "resolved": 12,
     "unresolved": [
       {
-        "id": "PRRT_kwDOUbWGks68r_ro",
-        "comments": [
-          4716843677
-        ]
+        "id": "PRRT_kwDOUbWGks68sxKM",
+        "comment": 4717173833,
+        "topic": "echo( command and group ownership"
       },
       {
-        "id": "PRRT_kwDOUbWGks68r_sx",
-        "comments": [
-          4716843803
-        ]
+        "id": "PRRT_kwDOUbWGks68sxLw",
+        "comment": 4717173991,
+        "topic": "nested Cmd payload preserves original separators"
       }
     ],
-    "resolved_by_this_followup": []
+    "addressed_by_published_revision": [
+      "PRRT_kwDOUbWGks68r_ro",
+      "PRRT_kwDOUbWGks68r_sx"
+    ]
   },
   "history": {
     "snapshot": "https://github.com/gosuda/sloplint/blob/297cda65e3078aec9729dc5763b048805d9aa1a7/ci-records/charamel32-current.json",
@@ -366,7 +367,11 @@
     "retired": true,
     "retirement_parent": "b479ad5775ad39881f5a621e45f6eaca594202fe",
     "retirement_scope": "Only three owned temporary workflow files are removed; proof payloads and receipts remain.",
-    "retirement_run_check": "pending"
+    "retirement_run_check": "zero observed",
+    "retirement_commit": "e320afb5b45dccc044e172ee8793d5de0fb1ef5f",
+    "retirement_tree": "302d400e745d62b367efaa626e048f29248f7475",
+    "new_followup_workflow": ".github/workflows/charamel32-cmd-echo.yml",
+    "new_followup_active": true
   },
   "limits": [
     "Current tree runs all Linux AGENTS gates. Windows evidence is carried only after complete non-test blob/mode equality and exact native permission-fixture equality.",
@@ -374,10 +379,10 @@
     "Historical failed native setup/oracle/transport/fd-integration proofs remain unchanged."
   ],
   "next": [
-    "Update the PR body and evidence replies",
-    "Resolve only addressed current threads after exact published-tree verification",
-    "Observe ordinary exact-head CI and fresh review state",
-    "Save final terminal checkpoint and verify retired probe does not trigger a run"
+    "Freeze new native Cmd observations",
+    "Inspect exact results before a parser change",
+    "Preserve all earlier production/native controls",
+    "Run required authentic source gates before any further additive publication"
   ],
   "windows_carry_forward": {
     "from_tree": "457cd4529dbca9dfb84a258f6a4854b3ce5c6ac2",
@@ -399,9 +404,23 @@
     "current_tree_executed_on_windows": false
   },
   "ordinary_ci": {
-    "status": "not_observed_yet",
+    "status": "not_observed",
     "conclusion": null,
-    "exact_head": "f879b0156aa32a317cb0e29609df53786a09ec78"
+    "exact_head": "f879b0156aa32a317cb0e29609df53786a09ec78",
+    "raw_exact_head_run_count": 0,
+    "wrapper_run_count": 0,
+    "check_run_count": 0,
+    "latest_repo_run_created_at": "2026-11-24T05:59:03Z",
+    "review_status": "success",
+    "workflow_state": "not_readable_through_exposed_connector",
+    "ordinary_ci_success_claim": false
   },
-  "all_current_threads_resolved": false
+  "all_current_threads_resolved": false,
+  "new_followup": {
+    "source_head": "f879b0156aa32a317cb0e29609df53786a09ec78",
+    "source_tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
+    "production_edits": false,
+    "native_case_count": 40,
+    "purpose": "Freeze harmless actual Cmd echo/group and nested-separator observations before source edits. Empty required objects are observations, not assumed-valid contracts."
+  }
 }
