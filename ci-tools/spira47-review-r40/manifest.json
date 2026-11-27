@@ -1,0 +1,83 @@
+{
+  "schema": 1,
+  "purpose": "Freeze actual PostgreSQL and unchanged public-generator reference roles, plus both actual nested generated-test argument vectors. No production repair is applied.",
+  "source": {
+    "repository": "gosuda/spira",
+    "head": "4bde2ec5e8bf23ffbeca0b4b54e8c9c7c005e33f",
+    "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "blobs": 621,
+    "index_file": "source-index.json"
+  },
+  "tests": {
+    "tree": "0d6a92efd9b8d24e58cdcadad0253c2565759994",
+    "blobs": 623,
+    "index_file": "test-index.json",
+    "changed_paths": [
+      "cmd/sqlc-gen-spira/version_reference_test.lgo",
+      "cmd/sqlc-gen-spira/testdata/version-references.json",
+      "cmd/sqlc-gen-spira/continued_escape_test.lgo"
+    ],
+    "production_unchanged": true
+  },
+  "toolchain": {
+    "repository": "gosuda/LoGOs",
+    "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+    "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+    "bootstrap_go": "1.27.4",
+    "fresh_build": true
+  },
+  "postgres_image": "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782",
+  "postgres_version_num": "180007",
+  "sqlc_version": "v1.31.2-0.20261023030206-3ad8b20fb02b",
+  "proof_sha256": {
+    "baseline_support.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
+    "proof_support.py": "6cc72c815508ccb1c501420c049d7c188ca4577d2ae6b8853eb5228d0c655569",
+    "native_support.py": "eb17dd6d33bcb3256a037de831ce95825c149c7287cad234e6dd438fe7af2953",
+    "capture_logos.py": "e00e719e8eb63b0c3c21889398799c0c0751a54a679a247c8b74d26e1bd77f32",
+    "verify_baseline.py": "49e248ad129bc59e907f2416ebd5b939c5bc719a2652594fa8c23ddec183a1e6",
+    "version-references.json": "dd4ce8e234ddd6f4fd668608944dc5bd3b15ce23f3ff9de463d48b9706d8332a",
+    "authored-tests.json": "2910ca457f0cf0e50e7c30530f6944a015390f309b80ef20c8ab4da23e6f495e",
+    "source-index.json": "628d91c699ed64ab99c4dd00f936fc2187aa5d7daa53377e306daae80177b9fc",
+    "test-index.json": "985d70dae339c92251a5a1b4f76f5fc93416b180dff9be9c63f580a4ff92ab75",
+    "schema.sql": "8d16f5318bc6ce7490f44cbb53a02fb65fe335c2747e237cba3fa60ba27b862b"
+  },
+  "workflow_sha256": "94d5ddf1377a5569d0af487436fee0e1f2f02995f51e2bd4ff104143131d7eda",
+  "contracts": {
+    "cases": 20,
+    "expected_red": [
+      "reported-alias",
+      "alias-exact",
+      "alias-quoted",
+      "alias-bare",
+      "alias-bare-quoted",
+      "qualifier-only",
+      "function-name",
+      "cast-type",
+      "postfix-type",
+      "typed-literal",
+      "collation-name",
+      "longer-identifier"
+    ],
+    "expected_controls": [
+      "quoted-assignment",
+      "unquoted-assignment",
+      "predicate-only",
+      "qualified-predicate",
+      "returned-reference",
+      "function-argument",
+      "delete-reference",
+      "qualified-returned"
+    ],
+    "native": "Each original and exact captured request executes against PostgreSQL 18.7 and must retain the frozen final row values. RETURNING output is preserved; only the final JSON state is parsed.",
+    "pipeline": "Each current-source call is predicted to generate; actual exits, full request metadata and both generated files are recorded. Any unexpected outcome fails the baseline rather than being relabeled.",
+    "nested_race": "Unmodified shared helper must launch two distinct generated-module test processes with exactly ['test','-count=1','-v','.']; this records the missing -race flag without substituting a fake compiler.",
+    "source_identity": "Complete 621/623 tracked path/blob/mode/tree identities before/after; all original bytes restored. Permanent tests compile before expected RED.",
+    "preserved": "Published14 dollar,12 typed,14 continued,8 direct runtime and40 pipeline cases remain unchanged. Existing version controls run too."
+  },
+  "review": {
+    "parent": "Pending bounded review of this frozen draft",
+    "prior_read_only": "Complete identifier tokens plus role exclusions; metadata alone is incomplete. No production algorithm has been selected."
+  },
+  "publication_eligible": false
+}
