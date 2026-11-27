@@ -1,0 +1,300 @@
+{
+  "schema": 1,
+  "repository": "gosuda/Charamel",
+  "head": "53cdbc3dd32e34cf0ac6769b1fead9c14dad10a5",
+  "tree": "30ea4cf6480ce06f7b86d237b1b2f2c443426a44",
+  "actual_main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
+  "source_sha256": {
+    "bin/crush/lib/shell_screen.ml": "30624796271cc532137df57bc9a0fc4bdf23cd2dfc70acbe0bd6b4cf40e8a0b8"
+  },
+  "cases": [
+    {
+      "id": "literal_for",
+      "command": "echo ready for review",
+      "screen": "Clear",
+      "stdout_lines": [
+        "ready for review"
+      ]
+    },
+    {
+      "id": "cmd_literal_for",
+      "command": "cmd /c echo ready for review",
+      "screen": "Clear",
+      "stdout_lines": [
+        "ready for review"
+      ]
+    },
+    {
+      "id": "cmd_quoted_literal_for",
+      "command": "cmd /c \"echo ready for review\"",
+      "screen": "Clear",
+      "stdout_lines": [
+        "ready for review"
+      ]
+    },
+    {
+      "id": "cmd_literal_keywords",
+      "command": "cmd /d /c echo do for else",
+      "screen": "Clear",
+      "stdout_lines": [
+        "do for else"
+      ]
+    },
+    {
+      "id": "plain_loop",
+      "command": "for %i in (alpha beta) do @echo %i",
+      "screen": "Clear",
+      "stdout_lines": [
+        "alpha",
+        "beta"
+      ]
+    },
+    {
+      "id": "numeric_loop",
+      "command": "for /l %i in (1,1,3) do @echo %i",
+      "screen": "Clear",
+      "stdout_lines": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    {
+      "id": "recursive_do",
+      "command": "for /r do %i in (*.txt) do @echo FOUND",
+      "screen": "Clear",
+      "stdout_lines": [
+        "FOUND"
+      ]
+    },
+    {
+      "id": "recursive_quoted_do",
+      "command": "for /r \"do\" %i in (*.txt) do @echo FOUND",
+      "screen": "Clear",
+      "stdout_lines": [
+        "FOUND"
+      ]
+    },
+    {
+      "id": "set_literal_do",
+      "command": "for %i in (do) do @echo %i",
+      "screen": "Clear",
+      "stdout_lines": [
+        "do"
+      ]
+    },
+    {
+      "id": "body_literal_for",
+      "command": "for %i in (alpha) do @echo ready for review",
+      "screen": "Clear",
+      "stdout_lines": [
+        "ready for review"
+      ]
+    },
+    {
+      "id": "cmd_loop",
+      "command": "cmd /c for %i in (alpha beta) do @echo %i",
+      "screen": "Clear",
+      "stdout_lines": [
+        "alpha",
+        "beta"
+      ]
+    },
+    {
+      "id": "cmd_quoted_loop",
+      "command": "cmd /c \"for %i in (alpha beta) do @echo %i\"",
+      "screen": "Clear",
+      "stdout_lines": [
+        "alpha",
+        "beta"
+      ]
+    },
+    {
+      "id": "file_loop",
+      "command": "for /f %i in (notes.txt) do @echo %i",
+      "screen": "Clear",
+      "stdout_lines": [
+        "alpha",
+        "beta"
+      ]
+    },
+    {
+      "id": "file_tokens",
+      "command": "for /f \"tokens=2\" %i in (notes.txt) do @echo %i",
+      "screen": "Clear",
+      "stdout_lines": [
+        "one",
+        "two"
+      ]
+    },
+    {
+      "id": "literal_loop",
+      "command": "for /f %i in (\"alpha one\") do @echo %i",
+      "screen": "Clear",
+      "stdout_lines": [
+        "alpha"
+      ]
+    },
+    {
+      "id": "literal_symbols",
+      "command": "for /f \"delims=\" %i in (\"alpha & beta\") do @echo %i",
+      "screen": null,
+      "stdout_lines": null
+    },
+    {
+      "id": "backq_file",
+      "command": "for /f \"usebackq\" %i in (\"notes space.txt\") do @echo %i",
+      "screen": "Clear",
+      "stdout_lines": [
+        "gamma"
+      ]
+    },
+    {
+      "id": "backq_literal",
+      "command": "for /f \"usebackq\" %i in ('literal words') do @echo %i",
+      "screen": "Clear",
+      "stdout_lines": [
+        "literal"
+      ]
+    },
+    {
+      "id": "command_source",
+      "command": "for /f %i in ('echo alpha') do @echo %i",
+      "screen": "Review",
+      "stdout_lines": [
+        "alpha"
+      ]
+    },
+    {
+      "id": "command_source_options",
+      "command": "for /f \"tokens=*\" %i in ('echo alpha') do @echo %i",
+      "screen": "Review",
+      "stdout_lines": [
+        "alpha"
+      ]
+    },
+    {
+      "id": "backq_command",
+      "command": "for /f \"usebackq\" %i in (`echo alpha`) do @echo %i",
+      "screen": "Review",
+      "stdout_lines": [
+        "alpha"
+      ]
+    },
+    {
+      "id": "backq_options_command",
+      "command": "for /f \"tokens=* usebackq\" %i in (`echo alpha`) do @echo %i",
+      "screen": "Review",
+      "stdout_lines": [
+        "alpha"
+      ]
+    },
+    {
+      "id": "dynamic_set",
+      "command": "for %i in (%FILES%) do @echo %i",
+      "screen": "Review",
+      "stdout_lines": [
+        "alpha"
+      ]
+    },
+    {
+      "id": "dynamic_body",
+      "command": "for %i in (alpha) do %PROGRAM% %i",
+      "screen": "Review",
+      "stdout_lines": [
+        "alpha"
+      ]
+    },
+    {
+      "id": "nested_loop",
+      "command": "for %i in (alpha) do for %j in (beta) do @echo %i %j",
+      "screen": "Clear",
+      "stdout_lines": [
+        "alpha beta"
+      ]
+    },
+    {
+      "id": "grouped_body",
+      "command": "for %i in (alpha) do (@echo %i)",
+      "screen": "Clear",
+      "stdout_lines": [
+        "alpha"
+      ]
+    },
+    {
+      "id": "missing_do",
+      "command": "for %i in (alpha)",
+      "screen": "Review",
+      "stdout_lines": null
+    },
+    {
+      "id": "bodyless",
+      "command": "for %i in (alpha) do",
+      "screen": "Review",
+      "stdout_lines": null
+    },
+    {
+      "id": "bodyless_spaces",
+      "command": "for %i in (alpha) do   ",
+      "screen": "Review",
+      "stdout_lines": null
+    },
+    {
+      "id": "set_do_missing_body",
+      "command": "for %i in (do) do",
+      "screen": "Review",
+      "stdout_lines": null
+    },
+    {
+      "id": "recursive_do_missing_body",
+      "command": "for /r do %i in (*.txt) do",
+      "screen": "Review",
+      "stdout_lines": null
+    },
+    {
+      "id": "cmd_missing_do",
+      "command": "cmd /c for %i in (alpha)",
+      "screen": "Review",
+      "stdout_lines": null
+    },
+    {
+      "id": "cmd_bodyless",
+      "command": "cmd /c \"for %i in (alpha) do\"",
+      "screen": "Review",
+      "stdout_lines": null
+    },
+    {
+      "id": "empty_group",
+      "command": "for %i in (alpha) do ()",
+      "screen": "Review",
+      "stdout_lines": null
+    },
+    {
+      "id": "unclosed_set",
+      "command": "for %i in (alpha do echo ready",
+      "screen": "Review",
+      "stdout_lines": null
+    },
+    {
+      "id": "missing_loop_variable",
+      "command": "for in (alpha) do echo ready",
+      "screen": "Review",
+      "stdout_lines": null
+    },
+    {
+      "id": "missing_in",
+      "command": "for %i (alpha) do echo ready",
+      "screen": "Review",
+      "stdout_lines": null
+    }
+  ],
+  "docs": [
+    "https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/for",
+    "https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/cmd"
+  ],
+  "notes": [
+    "Native commands are benign fixtures inside an owned temporary directory.",
+    "Non-null stdout_lines are frozen native expectations; malformed and adjacent syntax with null stdout_lines are observations, not blanket native-valid assertions.",
+    "No Charamel candidate has been applied in this baseline."
+  ]
+}
