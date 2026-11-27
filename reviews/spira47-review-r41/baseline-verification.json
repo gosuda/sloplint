@@ -1,0 +1,153 @@
+{
+  "schema": 1,
+  "producer": "f9fdf59475b3d948dd9706428343572e0240cc23",
+  "run": 46055423838,
+  "job": 140696615860,
+  "conclusion": "success",
+  "artifact": {
+    "id": 15225739880,
+    "name": "spira47-catalog-cte-baseline-r41",
+    "bytes": 911723,
+    "zip_sha256": "d7e5c731ccf6373818f1d3f8f7d4432d9d7844fc85208b7b93a20f68f4a7811a",
+    "api_and_upload_digest_match": true,
+    "owner_downloaded_zip": false,
+    "next_candidate_authenticates_downloaded_bytes": true
+  },
+  "raw_job_log_sha256": "428ebe9554749143e95025bf118021c9957fee7da68b64e06b94ada9f194a050",
+  "report_sha256": "f3260715e44cf18ffdc38fb500fdff0c1dc2e421e5d15d5e9ff96cdbd7899fd5",
+  "report_bytes": 252970,
+  "command_receipts": 136,
+  "command_stdout_hashes_independently_reconstructed": 136,
+  "no_timeout": true,
+  "native_original_matches": 37,
+  "native_processed_matches": 36,
+  "catalog_red": 5,
+  "catalog_controls": 6,
+  "cte_red": 11,
+  "cte_controls": 15,
+  "pipeline_partition": {
+    "generated": 7,
+    "plugin-refusal": 29,
+    "upstream": 1
+  },
+  "current_permanent_passes": 60,
+  "counterfactual_red": 12,
+  "counterfactual_controls": 48,
+  "current_source": {
+    "label": "source",
+    "tree": "e4214ecf0b2b5a214d26921664313b98d14efb13",
+    "blobs": 625,
+    "index_sha256": "5f9db7b6da063c1b66ee549ca72338ada4c5fe54b77f02bea571c231d3b59e29"
+  },
+  "test_source": {
+    "label": "tests",
+    "tree": "0684127fb3a8f22d91b3f2df14cb141ff16f16b1",
+    "blobs": 628,
+    "index_sha256": "f85e2fd0922656d1d4bd513fb901df5fcbfaf7a81d130f79134aede20786c212"
+  },
+  "counterfactual_source": {
+    "label": "counterfactual",
+    "tree": "ef959570862c5c45f62f2e51bba4ff2e2d06297e",
+    "blobs": 628,
+    "index_sha256": "162d0f6442293d0e6d73ebf6ba82dbd3dc3399a0f13267d8dc1a19a4ceefea25"
+  },
+  "restored_source": {
+    "label": "source",
+    "tree": "e4214ecf0b2b5a214d26921664313b98d14efb13",
+    "blobs": 625,
+    "index_sha256": "5f9db7b6da063c1b66ee549ca72338ada4c5fe54b77f02bea571c231d3b59e29"
+  },
+  "nested_upstream": {
+    "name": "nested-materialized-cte-reference",
+    "lane": "unchanged",
+    "sql": "WITH a AS MATERIALIZED (WITH b AS MATERIALIZED (SELECT version FROM items) SELECT 1 FROM b) UPDATE items SET name = 'changed' WHERE EXISTS (SELECT 1 FROM a);",
+    "sql_sha256": "3086946304fda105f17a1d5d90dd7130e7d66bff7aa6c3547137a4087d455f76",
+    "option": "version",
+    "columns": [
+      "version"
+    ],
+    "expected_diagnostic": "queries.sql:1:1: relation \"b\" does not exist",
+    "raw_exit": 1,
+    "pipeline_contract": "upstream",
+    "raw_output": "# package spira\nqueries.sql:1:1: relation \"b\" does not exist\n",
+    "log_sha256": "7d976e896a2d0217987e1c4784b65fddc8f4fcb88101b7642ac026f877addc08",
+    "request_present": false,
+    "files": [],
+    "processed_native": null
+  },
+  "baseline_verified": true,
+  "source_gates_passed": false,
+  "publication_eligible": false,
+  "preserved_failures": [
+    {
+      "producer": "c039ed58a5b39004cb52c062ff62901eb10b8c2a",
+      "run": 46047431437,
+      "job": 140670082779,
+      "conclusion": "failure",
+      "artifact": 15223182778,
+      "zip_sha256": "703384184775309a749e96966ff13b7174061a396ead6cb41128788ebcc84102",
+      "raw_log_sha256": "3d70e6423265e6eddbfd75b0e66719adf40a0beefdcaeb59a5aedda2948972fb",
+      "receipt_commit": "c9c85476c325f328d4cc4a5e6d0449df028f36da",
+      "receipt_sha256": "1a3d92f73347917a90f22226811bda34095edb4943a156ea51125875e344a669",
+      "original_native_matches": 37,
+      "failed_phase": "unchanged-test-compile",
+      "actual_exit": 1,
+      "expected_exit": 0,
+      "source_regressions_reached": false,
+      "real_sqlc_pipeline_reached": false,
+      "source_restored": true,
+      "gate_reuse": false
+    },
+    {
+      "producer": "1d223b822e87a36ad6c26356b3468915fdfe3ef4",
+      "run": 46049995476,
+      "job": 140678648999,
+      "conclusion": "failure",
+      "artifact": 15224042249,
+      "zip_sha256": "5a9c02b3efa58f28ffc569ae97047b70dcadec31e02dfb3bc6b7084e7e2155cf",
+      "raw_log_sha256": "49ce5eae62bb3cae0dba1cfb33466d4bc171fb892e1047c71b18d5c615602ae4",
+      "receipt_commit": "6dee66b15d8e3d9700e0dd2bd8da58c0f414b866",
+      "receipt_sha256": "c87c75722ad70446151fde5e49a99eb8e57171d83645706e8b7be09a6e68e64b",
+      "original_native_matches": 37,
+      "failed_phase": "unchanged-test-compile",
+      "actual_exit": 1,
+      "expected_exit": 0,
+      "diagnostic": "complexity::cognitive_overflow: function versionCatalogRequest is too complex: nesting depth 4 exceeds 3, cognitive score 18 exceeds 15",
+      "source_regressions_reached": false,
+      "real_sqlc_pipeline_reached": false,
+      "source_restored": true,
+      "gate_reuse": false
+    },
+    {
+      "producer": "105fa98dfd8c58107a9a36bb41f05ccc7671251d",
+      "run": 46051338072,
+      "job": 140683124786,
+      "conclusion": "failure",
+      "artifact": 15224512377,
+      "zip_sha256": "2d643bcf9dd38d606df75fd3ef4ac5ef523a40ec74111d1f61a5331331ae796c",
+      "full_report_bytes": 70404886,
+      "full_report_sha256": "023ca00696a1b46bb4abcc58f40137eed47c8617ce4f60dbb0dbd602faac1172",
+      "recovered_projection_sha256": "0a1e672965ac831e127401f10f28486d116438bbafe5119d10985eeddbe06d4c",
+      "recovery_producer": "d43fc1abbbdb3c8c5248ba5f29f3e33c513d11ab",
+      "recovery_run": 46052998288,
+      "recovery_job": 140688657885,
+      "recovery_artifact": 15225431799,
+      "recovery_zip_sha256": "fc023636edf9a2efb1fd1ca8c957caba9aedcbbe2014ae63cb0e5aee46a8280f",
+      "failed_phase": "unexpected SQLc upstream diagnostic",
+      "native_original": 37,
+      "catalog_red": 5,
+      "catalog_controls": 6,
+      "cte_red": 11,
+      "cte_controls": 15,
+      "completed_pipeline": 28,
+      "permanent_pipeline_reached": false,
+      "counterfactual_reached": false,
+      "source_restored": true,
+      "gate_reuse": false
+    }
+  ],
+  "prior_static_reviews": [
+    "dd055976b005b0b79320ee3cd180c0b3073feecd",
+    "5863a89fca0390474647332c5dab82bee591371f"
+  ]
+}
