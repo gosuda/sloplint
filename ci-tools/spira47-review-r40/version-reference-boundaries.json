@@ -1,0 +1,58 @@
+[
+  {
+    "name": "parenthesized-bare-alias",
+    "sql": "UPDATE items SET name = 'changed' RETURNING (name) version;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "qualified-cast-type",
+    "sql": "UPDATE items SET name = 'changed'::public.version;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "function-from-operand",
+    "sql": "UPDATE items SET name = substring(name FROM version + 1);",
+    "allow": true,
+    "native_name": "before",
+    "native_version": 0
+  },
+  {
+    "name": "quoted-call-punctuation",
+    "sql": "UPDATE items SET name = 'changed' RETURNING version \"(\";",
+    "allow": true,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "quoted-depth-punctuation",
+    "sql": "UPDATE items SET name = 'changed' RETURNING name AS \"(\", name version, name;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "qualified-operator-operand",
+    "sql": "UPDATE items SET name = 'changed' RETURNING 0 OPERATOR(pg_catalog.+) version;",
+    "allow": true,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "qualified-function-alias",
+    "sql": "UPDATE items SET name = 'changed' RETURNING public.operator(name) version;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "unqualified-function-alias",
+    "sql": "UPDATE items SET name = 'changed' RETURNING operator(name) version;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  }
+]

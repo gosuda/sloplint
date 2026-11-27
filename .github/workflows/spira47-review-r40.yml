@@ -1,4 +1,4 @@
-name: "Spira 47 version reference and nested race baseline r40"
+name: "Spira 47 reference roles and required source gates r40"
 on:
   push:
     branches: ["ci/spira47-version-refs-20261127-r40"]
@@ -17,7 +17,7 @@ defaults:
 jobs:
   verify:
     runs-on: depot-ubuntu-24.04-8
-    timeout-minutes: 75
+    timeout-minutes: 120
     steps:
       - name: Checkout this isolated proof
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -38,6 +38,25 @@ jobs:
           ref: 2cfe17218b4d3311c5746b94a1858bf3fe9a3e45
           path: compiler
           persist-credentials: false
+      - name: Install pinned ripgrep required by sql-check
+        run: |
+          tool_dir="$RUNNER_TEMP/spira-r40-tools"
+          evidence="$RUNNER_TEMP/spira47-reference-candidate-evidence"
+          archive="$RUNNER_TEMP/ripgrep-15.1.0-x86_64-unknown-linux-musl.tar.gz"
+          mkdir -p "$tool_dir" "$evidence"
+          printf '%s\n' 'ripgrep 15.1.0; expected archive SHA-256 1c9297be4a084eea7ecaedf93eb03d058d6faae29bbc57ecdaf5063921491599' > "$evidence/ripgrep-setup.txt"
+          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 \
+            https://github.com/BurntSushi/ripgrep/releases/download/15.1.0/ripgrep-15.1.0-x86_64-unknown-linux-musl.tar.gz \
+            --output "$archive"
+          printf '%s  %s\n' '1c9297be4a084eea7ecaedf93eb03d058d6faae29bbc57ecdaf5063921491599' "$archive" | sha256sum --check --strict | tee "$evidence/ripgrep-archive-check.log"
+          tar -xzf "$archive" --directory "$tool_dir" --strip-components=1 \
+            ripgrep-15.1.0-x86_64-unknown-linux-musl/rg
+          rg_version="$("$tool_dir/rg" --version)"
+          printf '%s\n' "$rg_version" | tee "$evidence/ripgrep-version.txt"
+          rg_first_line="${rg_version%%$'\n'*}"
+          rg_pattern='^ripgrep 15[.]1[.]0( [(]rev [0-9a-f]{10,40}[)])?$'
+          [[ "$rg_first_line" =~ $rg_pattern ]]
+          printf '%s\n' "$tool_dir" >> "$GITHUB_PATH"
       - name: Install official bootstrap Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
         with:
@@ -58,25 +77,37 @@ jobs:
           echo "LOGOS_ROOT=$GITHUB_WORKSPACE/compiler" >> "$GITHUB_ENV"
           echo "GOROOT=$GITHUB_WORKSPACE/compiler" >> "$GITHUB_ENV"
           echo "$GITHUB_WORKSPACE/compiler/bin" >> "$GITHUB_PATH"
+      - name: Install required recipe runner
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39
+        with:
+          tool: "just@1.59.0"
+      - name: Install the source-pinned package manager
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115
+        with:
+          version: "12.21.0"
+      - name: Install pinned Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: "26.13.1"
+          package-manager-cache: false
       - name: Install uv and Python
         uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
         with:
           version: "0.13.9"
           python-version: "3.15"
           enable-cache: false
-      - name: Freeze native reference and nested race observations
+      - name: Observe frozen controls, verify the candidate and complete required gates
         env:
-          GH_TOKEN: ${{ github.token }}
+          SPIRA_ARTIFACT_TOKEN: ${{ github.token }}
         run: |
           export GOENV=off GOCACHEPROG=''
-          test -z "$(go env GOCACHEPROG)"
-          uv run --no-project --python 3.15 proof/ci-tools/spira47-review-r40/verify_baseline.py \
-            source proof/ci-tools/spira47-review-r40 "$RUNNER_TEMP/spira47-version-reference-baseline-evidence"
-      - name: Preserve unchanged-source baseline evidence
+          uv run --no-project --python 3.15 proof/ci-tools/spira47-review-r40/verify_candidate.py \
+            source proof/ci-tools/spira47-review-r40 "$RUNNER_TEMP/spira47-reference-candidate-evidence"
+      - name: Preserve source, baseline and complete gate evidence
         if: always()
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
-          name: spira47-version-reference-baseline-r40
-          path: ${{ runner.temp }}/spira47-version-reference-baseline-evidence
+          name: spira47-reference-candidate-r40
+          path: ${{ runner.temp }}/spira47-reference-candidate-evidence
           if-no-files-found: error
           retention-days: 14

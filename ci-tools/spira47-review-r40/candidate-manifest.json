@@ -1,0 +1,201 @@
+{
+  "schema": 1,
+  "purpose": "Observe the final unchanged-production reference-role controls, preserve actual nested missing-race evidence, then prove the reviewed source and full required gates.",
+  "source": {
+    "repository": "gosuda/spira",
+    "head": "4bde2ec5e8bf23ffbeca0b4b54e8c9c7c005e33f",
+    "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "blobs": 621,
+    "index_file": "source-index.json"
+  },
+  "tests": {
+    "tree": "c547ed75d64ff1cc0da98abd7070c3425af014b9",
+    "blobs": 624,
+    "index_file": "final-test-index.json",
+    "runtime_helper_unchanged": true,
+    "scope": "Four final test/data paths only; model, scanner and nested runtime helper remain unchanged until candidate application."
+  },
+  "candidate": {
+    "tree": "9b0592ca5b21e341c543512562f42565c5e198dc",
+    "blobs": 625,
+    "index_file": "candidate-index.json",
+    "changed_paths": [
+      "cmd/sqlc-gen-spira/model.lgo",
+      "cmd/sqlc-gen-spira/version_reference.lgo",
+      "cmd/sqlc-gen-spira/query_constants_test.lgo",
+      "cmd/sqlc-gen-spira/continued_escape_test.lgo",
+      "cmd/sqlc-gen-spira/version_reference_test.lgo",
+      "cmd/sqlc-gen-spira/testdata/version-references.json",
+      "cmd/sqlc-gen-spira/testdata/version-reference-boundaries.json",
+      "docs/specs/sqlc-gen-spira.md"
+    ]
+  },
+  "toolchain": {
+    "repository": "gosuda/LoGOs",
+    "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+    "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+    "bootstrap_go": "1.27.4",
+    "fresh_build": true
+  },
+  "postgres_image": "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782",
+  "postgres_version_num": "180007",
+  "sqlc_version": "v1.31.2-0.20261023030206-3ad8b20fb02b",
+  "tools": {
+    "node": "26.13.1",
+    "pnpm": "12.21.0",
+    "just": "1.59.0",
+    "uv": "0.13.9",
+    "python": "3.15",
+    "ripgrep": "15.1.0"
+  },
+  "baseline_artifact": {
+    "producer": "3b189a37b7af1c4890af414c61aa1e628b01c058",
+    "run": 46031066075,
+    "job": 140614685425,
+    "artifact": 15214457444,
+    "name": "spira47-version-reference-baseline-r40",
+    "zip_bytes": 970106,
+    "zip_sha256": "8c6fffc23eb4f998ff1ab52cc1e83caf6bbfac44b4a6ea22509742f28d8f8271",
+    "conclusion": "success"
+  },
+  "linter_artifact": {
+    "producer": "bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+    "run": 45765398446,
+    "job": 139724970737,
+    "artifact": 15091303567,
+    "name": "lean-rust-and-cli-bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+    "zip_bytes": 17472007,
+    "zip_sha256": "e362f672d39498374a637a68ded7f57205b415e68006a4dc4a4a882405f5af33",
+    "binary_sha256": "a04c9c3e53c8aae18e2d5f89faaf3ad68b89980218ca9d1fc4af5ce487401024",
+    "conclusion": "success"
+  },
+  "contracts": {
+    "original_reference_cases": 20,
+    "original_unchanged_red": 12,
+    "original_unchanged_controls": 8,
+    "boundary_cases": 8,
+    "boundary_unchanged_red": 5,
+    "boundary_unchanged_controls": 3,
+    "candidate_direct_passes": 28,
+    "native_original": 28,
+    "native_unchanged_captured": 8,
+    "native_candidate_captured": 28,
+    "candidate_pipeline": {
+      "generated": 10,
+      "version_refusals": 17,
+      "unnamed_column_refusals": 1
+    },
+    "qualified_operator": "The exact unaliased qualified-operator SQL is a positive native/direct-Generate reference control. Source-pinned SQLc is predicted to emit one empty-named A_Expr output column; both unchanged and repaired real pipelines must reproduce the existing exact column-0-needs-an-alias refusal before the version check. No SQL spelling or direct expectation is altered.",
+    "unchanged_pipeline": "All eight newly added exact queries run through unchanged real SQLc first. Seven must generate; the unaliased symbolic operator must reach the existing exact output-column refusal. Unexpected actual results fail the proof before production application.",
+    "request_identity": "All28 candidate captured query metadata/text objects must equal authenticated original20 or same-job unchanged8 records, including output columns.",
+    "nested_race": "Actual two distinct generated modules must execute ['test','-race','-count=1','-v','.'] through the immutable real compiler. Authenticated baseline requires exactly the corresponding missing-race vectors.",
+    "retained": {
+      "dollar": 14,
+      "typed": 12,
+      "continued": 14,
+      "direct_runtime": 8,
+      "pipeline": 40
+    },
+    "gates": [
+      "actual just gate",
+      "actual just slop",
+      "actual just eject",
+      "tracked/untracked/whitespace and full625 identity",
+      "original621 restoration"
+    ],
+    "full_source_gates_reused": false,
+    "operator_function": "Both qualified public.operator(name) and unqualified operator(name) with a bare version alias are negative reference cases. The proof schema appends only CREATE FUNCTION public.operator(text) RETURNS text LANGUAGE sql IMMUTABLE AS 'SELECT $1'; the original schema prefix and all original26 SQL bytes remain exact."
+  },
+  "source_review": {
+    "proposal_base": "752734d48a483f306604fdb6939dd7c6a1f8fc08",
+    "authored_sha256": "cb774362130c0ba4b64194c7b6924ab7406b7e54547dff570620258fb5962c8c",
+    "operator_correction": "The OPERATOR construct must start at an unqualified keyword and contain an optional qualified-name prefix followed only by symbolic operator characters from PostgreSQL REL_18_4 scan.l. Qualified and unqualified functions named operator remain ordinary operands and their following bare aliases are excluded.",
+    "rejected_unexecuted_proposals": [
+      {
+        "commit": "1d0ab35d7b6f8a50bb925239b6ef7234acf6fbc3",
+        "candidate_tree": "44dd3cc555b6d74a2822434df5cd6900f650d31d",
+        "executed": false,
+        "findings": [
+          {
+            "problem": "Quoted identifier text was used as structural punctuation.",
+            "correction": "All delimiter, depth, cast and name-head checks now require referencePunctuation through the private punctuation method.",
+            "witnesses": [
+              "quoted-call-punctuation",
+              "quoted-depth-punctuation"
+            ]
+          },
+          {
+            "problem": "The closing parenthesis of a qualified OPERATOR name was treated as the end of an expression that could take a bare alias.",
+            "correction": "Bare-alias classification now distinguishes OPERATOR's matching parentheses by token kind and depth.",
+            "witnesses": [
+              "qualified-operator-operand"
+            ]
+          }
+        ]
+      },
+      {
+        "commit": "752734d48a483f306604fdb6939dd7c6a1f8fc08",
+        "candidate_tree": "64a505b0a8661017f2aee4e6333e4e2de6a18c64",
+        "executed": false,
+        "findings": [
+          {
+            "problem": "The final name component operator before '(' was treated as the OPERATOR construct even for a normal function.",
+            "correction": "Require unqualified construct spelling plus an actual symbolic operator name inside the matching parentheses.",
+            "witnesses": [
+              "qualified-function-alias",
+              "unqualified-function-alias"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "preserved_failures": {
+    "observer_path": {
+      "producer": "5889c641b120ea325e1ff9a04769739db461f039",
+      "run": 46027118627,
+      "job": 140601265244,
+      "conclusion": "failure",
+      "artifact": 15213535172,
+      "zip_sha256": "586b6123b6a0a7a829aa89ce9bfd2c9ed5de86c4f30a61b8d6366b2ef63a3c0f",
+      "source_restored": true,
+      "reason": "Actual test launcher prepended GOROOT/bin; initial PATH-only observer omitted nested records."
+    },
+    "archive_read_bound": {
+      "producer": "7b166f72cb191b33d710389dccceb4f1cc3577a5",
+      "run": 46029336371,
+      "job": 140608831290,
+      "artifact": 15213971655,
+      "zip_sha256": "93ad4f28096354547558679da6ac5f5ee8c29efd06bd05472604dabbd8d8d916",
+      "raw_job_log_sha256": "bbfa45a5b75374c5442c485a79075da7f6977799b7ac85dd56d4cb4a056b2894",
+      "source_restored": true,
+      "phase": "combined central-directory member-count/aggregate-size check",
+      "source_tests_reached": false,
+      "conclusion": "failure"
+    }
+  },
+  "proof_sha256": {
+    "baseline_support.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
+    "proof_support.py": "6cc72c815508ccb1c501420c049d7c188ca4577d2ae6b8853eb5228d0c655569",
+    "native_support.py": "eb17dd6d33bcb3256a037de831ce95825c149c7287cad234e6dd438fe7af2953",
+    "artifact_support.py": "b3f27ccd5d75efea94530f1294d7e0d23d89b46d7d9e5771cc0b3d32a56d1b28",
+    "capture_logos.py": "e00e719e8eb63b0c3c21889398799c0c0751a54a679a247c8b74d26e1bd77f32",
+    "launch_test.py": "31d90542191330a6be39b61ce5d5dc447dedbbb0b557706ef0a00c9d93a7c733",
+    "linter_support.py": "5594ac624c616c8641723dcc710220346117e826b3e59ed5728c016e38fc1ee1",
+    "source-index.json": "628d91c699ed64ab99c4dd00f936fc2187aa5d7daa53377e306daae80177b9fc",
+    "final-test-index.json": "2bbae50d10f663a3342fd4d25a4ea05b2e3f02e3d6dace53766fd3923fda32e1",
+    "candidate-index.json": "bf439c611c5bce6d388e6409c018feb745f19370ee5478ccac2864564f7ecb2c",
+    "authored-candidate.json": "cb774362130c0ba4b64194c7b6924ab7406b7e54547dff570620258fb5962c8c",
+    "version-references.json": "dd4ce8e234ddd6f4fd668608944dc5bd3b15ce23f3ff9de463d48b9706d8332a",
+    "version-reference-boundaries.json": "2139c1a1432c60553dcfe53dcd926ca60c458b4b1459a62a2536e246acb8c45b",
+    "baseline-report.json": "762d5c18c6700bad44c5dee8186e664e171121562093f87d2b9b1443a911e156",
+    "schema.sql": "9b34ea17e9600b6523e1efc269b49b4061cd719007002b21b5f9195b440af553",
+    "candidate_archive.py": "a1d4c1a4f278a5aaa7f555ea2159dd104cb2ac45d50045fb91a1ecf324a1aeec",
+    "reference_observer.py": "357ea10b7685eff7adc6f96541f99aa67a99efad999ab4eaff09b8acc15114ff",
+    "verify_candidate.py": "1e38034da3db27a30e244be069e54869f32a6ffaf76efc284629806ed22253d6"
+  },
+  "workflow_sha256": "76ba835edd80304c0147fd8e322d49e12e19039061a891eeb707f533c34ebdc6",
+  "publication_eligible": false,
+  "credential_boundary": "SPIRA_ARTIFACT_TOKEN exists only in the verifier step; no compiler command runs in that shell before Python pops it as its first main statement. The actual go-cache-disabled command remains after removal. The token is passed explicitly only to immutable artifact authentication."
+}
