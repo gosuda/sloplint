@@ -132,5 +132,20 @@
       0,
       1
     ]
+  },
+  {
+    "name": "exact-option-rejects-quoted-sibling",
+    "columns": [
+      "VERSION",
+      "Version"
+    ],
+    "option": "Version",
+    "sql": "UPDATE items SET \"VERSION\" = \"VERSION\" + 1;",
+    "error": "writes versioned table items without",
+    "native_name": "before",
+    "native_versions": [
+      1,
+      0
+    ]
   }
 ]
