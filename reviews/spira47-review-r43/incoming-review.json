@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "source": "6d4f84fc8a1a50603fbdf5c024bdc1966436ea31",
+  "threads": [
+    {
+      "id": "PRRT_kwDOVpFduc688xES",
+      "is_resolved": false,
+      "is_outdated": false,
+      "head_sha": "6d4f84fc8a1a50603fbdf5c024bdc1966436ea31",
+      "path": "cmd/sqlc-gen-spira/version_relation_test.lgo",
+      "line": 33,
+      "diff_side": "RIGHT",
+      "start_line": 30,
+      "start_diff_side": "RIGHT",
+      "original_line": 33,
+      "original_start_line": 30,
+      "resolved_by": null,
+      "comments": [
+        {
+          "id": "PRRC_kwDOVpFduc8AAAABGZM6NQ",
+          "database_id": 4724046389,
+          "body": "<!-- devin-review-comment {\"id\": \"ANALYSIS_pr-review-job-531188215c85440aa3717e1f2282c7fc_0001\", \"file_path\": \"cmd/sqlc-gen-spira/version_relation_test.lgo\", \"start_line\": 30, \"end_line\": 33, \"side\": \"RIGHT\", \"kind\": \"analysis\"} -->\n\n🔍 **Direct tests ignore fixture schemas**\n\n`TestPostgresRelationReferenceRoles` hardcodes the columns and version option instead of reading them from each fixture. For the two column-list cases [sqlc rejects upstream](https://github.com/gosuda/spira/blob/6d4f84fc8a1a50603fbdf5c024bdc1966436ea31/cmd/sqlc-gen-spira/testdata/sqlc-version-pipeline.json#L640-L662 \"cmd/sqlc-gen-spira/testdata/sqlc-version-pipeline.json:640-662\"), only the direct test exercises the generator.\n\n<!-- devin-review-badge-begin -->\n<a href=\"https://app.devin.ai/review/gosuda/spira/pull/47\" target=\"_blank\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://static.devin.ai/assets/gh-devin-review-dark.svg?v=4\"><img src=\"https://static.devin.ai/assets/gh-devin-review-light.svg?v=4\" alt=\"Devin Review\"></picture></a>\n<!-- devin-review-badge-end -->\n\n---\n*Was this helpful? React with 👍 or 👎 to provide feedback.*",
+          "created_at": "2026-11-27T22:18:59Z",
+          "updated_at": "2026-11-27T22:19:00Z",
+          "author": {
+            "login": "devin-ai-integration",
+            "name": "devin-ai-integration",
+            "email": null,
+            "avatar_url": "https://avatars.githubusercontent.com/in/811515?v=4",
+            "id": null
+          },
+          "viewer_did_author": false
+        }
+      ]
+    }
+  ],
+  "r42_terminal": "https://github.com/gosuda/sloplint/blob/88af1e7b114f90871f65fe88845459442c175fbd/reviews/spira47-review-r42/terminal.json"
+}
