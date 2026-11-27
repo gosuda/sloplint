@@ -34,8 +34,14 @@
     }
   ],
   "compiled_witness": "One real temporary module imports complete generated packages, reads independent expected JSON at runtime, records actual constants, and tests every name and byte. No source-literal extraction or expectation normalization.",
-  "baseline_manifest_sha256": "e73e9c01bbe48a904d75a9ee4f01d255ecbc271bbb448fad4d63602a9f635f33",
+  "baseline_manifest_sha256": "3ba7b03a93897e49f68e7edb39ddb313a2ceebc3f9011cd78efc278212180ade",
   "workflow_draft_sha256": "0f1171e4080f2e2ff056bf116d793ed6ef882f78b16fbf998b8d811741a1738f",
   "workflow_active": false,
-  "source_changes_published": false
+  "source_changes_published": false,
+  "new_adjacent_control": {
+    "name": "dollar-quoted-identifier-boundary",
+    "reason": "A future dollar recognizer must preserve complete quoted identifiers instead of treating their $tag$ bytes as string delimiters.",
+    "actual_native_result": "pending",
+    "dollar_case_count": 13
+  }
 }

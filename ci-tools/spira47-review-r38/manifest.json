@@ -10,12 +10,12 @@
     "index_file": "source-index.json"
   },
   "current_tests": {
-    "tree": "82b21663fef4347fbe8b9554f1028b7554ea217c",
+    "tree": "4921be4909780bcd3461701281b141db768b68eb",
     "blobs": 621,
     "index_file": "current-tests-index.json"
   },
   "previous_prefix_tests": {
-    "tree": "729764eb25fe3787ee1cfc6bb1cb16118aa79589",
+    "tree": "81bd16d6dd73c48d2790b22dec13aaea7fbf56b7",
     "blobs": 621,
     "index_file": "previous-prefix-index.json",
     "selection": "Same unchanged maintained tree plus frozen tests, with only model.lgo restored to pre-r37 content from82ce. This is a counterfactual selected-file comparison, not a claim that the entire old source head ran."
@@ -25,12 +25,12 @@
     "baseline_support.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
     "native_support.py": "d288f94d76a058d418a289b8c6dc4a77e0a1fbbf00ef52f3b5dbdc53da8d531e",
     "pipeline_observer.py": "c3a797b3fd4a9312c2d009bcc462426bfde91bd724398b306d1292eccbcad039",
-    "verify_baseline.py": "c495f45fb6ffff5573b39ad10d8c7adf5a457e4529eb91369a5bb6043a008bcb",
-    "authored-tests.json": "aad8125fbef00c029e4db9899f27a2e1e549566510d13ace2f11f50fd9470fa9",
+    "verify_baseline.py": "49d5a534981a8bdb69273f62b31d58b210e198be2b74416b5af94eaf3c091e44",
+    "authored-tests.json": "d4fe217963d3f58bbcb678cb6e76a52b38362b4c354e22dde713d7783f05e087",
     "source-index.json": "8db1a56dbe2e97087478a3e25b5a7298cb2c75f42607d2ffb51def942834b2b6",
-    "current-tests-index.json": "33cd6a972c9fe311ff78e0ce7364c06e147fe546d10408b18fd34a92ca842879",
-    "previous-prefix-index.json": "d4da82281fa1d1ec2590668ac6afa9fd535ef0f611833f66a77b7063e00e67f0",
-    "dollar-strings.json": "e61f5b4f84db17b22d381b4915a3d6403bf92256c868d0726d6156ee5cea8455",
+    "current-tests-index.json": "cd6ab0c4429a2f15d63ed73367b5086990debc1e9a3b39bfa604288cddaa86bb",
+    "previous-prefix-index.json": "1b38bb684e33cdbeb2c20873d3ef8ab5e520a22c4ca9689797891339277c673b",
+    "dollar-strings.json": "c250b5c63bf91162bddf9d7150ab47eea3ab4872dc9e915c1d4554cf6d985871",
     "query-constant-values.json": "a15051e112569f683775ec9242b5077d7c9fe167b8d852062b838d8ab68cfbd7",
     "previous-model.lgo": "8d7994845af36bb1fe5d1377e1715c383e5c480f6e031a80bccba2414c4c615d",
     "schema.sql": "bfa56ef159e985b85976918f7fdc7bb79c82095913a8470ce42fd6494b2e99cc",
@@ -49,7 +49,7 @@
   "postgres_version_num": "180007",
   "sqlc_version": "v1.31.2-0.20261023030206-3ad8b20fb02b",
   "contracts": {
-    "dollar_cases": 12,
+    "dollar_cases": 13,
     "direct_compiled_cases": 8,
     "retained_pipeline": 26,
     "retained_generated": 20,
@@ -68,7 +68,8 @@
     ],
     "pipeline_byte_and_native_mismatch": "escape-cr",
     "strictly_read_expected_json_at_runtime": true,
-    "all_generated_files_preserved": true
+    "all_generated_files_preserved": true,
+    "quoted_identifier_control": "dollar-quoted-identifier-boundary"
   },
   "prior_success": {
     "run": 46003935409,
@@ -85,5 +86,6 @@
   "proposed_future_repairs": [
     "Recognize PostgreSQL dollar-quote delimiters and identifier boundaries before scanning inner apostrophes, subject to native baseline.",
     "Use the existing interpreted literal branch when the query contains CR, preserving CR-free output, subject to actual compiled-query baseline."
-  ]
+  ],
+  "unexecuted_prior_draft": "a563f9fe495378d442d380c73b2c3dae8525f4fc"
 }

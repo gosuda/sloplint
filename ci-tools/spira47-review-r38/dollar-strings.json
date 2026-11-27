@@ -82,5 +82,12 @@
     "native_name": "identifier",
     "native_version": 1,
     "allow": true
+  },
+  {
+    "name": "dollar-quoted-identifier-boundary",
+    "sql": "UPDATE items SET name = v.\"$tag$\", version = version + 1 FROM (VALUES ('quoted')) AS v(\"$tag$\") WHERE items.id = 1;",
+    "native_name": "quoted",
+    "native_version": 1,
+    "allow": true
   }
 ]

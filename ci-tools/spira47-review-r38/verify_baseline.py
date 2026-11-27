@@ -120,7 +120,7 @@ def main() -> None:
                                                    "-m", "-json", "github.com/sqlc-dev/sqlc"]))
         if module["Version"] != manifest["sqlc_version"]:
             raise RuntimeError("source-pinned sqlc differs")
-        dollars = read_rows("dollar-strings.json", 12)
+        dollars = read_rows("dollar-strings.json", 13)
         constants = read_rows("query-constant-values.json", 8)
         old_cases = read_rows("retained-native-cases.json", 26)
         old_expected = read_rows("retained-pipeline.json", 26)
@@ -148,7 +148,8 @@ def main() -> None:
                            "-run", "^TestPostgresDollarQuotedBoundaries$", "./cmd/sqlc-gen-spira"], expected=1)
             names = {base.text(row["name"]) for row in dollars}
             current = test_outcomes(log, "TestPostgresDollarQuotedBoundaries", names)
-            if "dollar-untagged" not in current["failed"] or "dollar-identifier-boundary" not in current["passed"]:
+            if "dollar-untagged" not in current["failed"] or not {
+                "dollar-identifier-boundary", "dollar-quoted-identifier-boundary"} <= set(current["passed"]):
                 raise RuntimeError("reported dollar regression or identifier control not observed")
             report["dollar_current"] = current
             log = base.run("compiled-direct-red", ["logos", "test", "-race", "-count=1", "-v",

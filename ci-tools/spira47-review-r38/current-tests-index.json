@@ -1102,7 +1102,7 @@
   {
     "path": "cmd/sqlc-gen-spira/dollar_literal_test.lgo",
     "mode": "100644",
-    "sha": "28fe453ddd496c83e4ca5caf3094d967ceb00352"
+    "sha": "389309bb01bb0f464e89d9f5535a9d1842126e50"
   },
   {
     "path": "cmd/sqlc-gen-spira/export_test.lgo",
@@ -1172,7 +1172,7 @@
   {
     "path": "cmd/sqlc-gen-spira/testdata/dollar-strings.json",
     "mode": "100644",
-    "sha": "651d52b065805d1a9157efbf9525831837a7c768"
+    "sha": "2a047ed460e616f773f6f29fc8a6df177b181a74"
   },
   {
     "path": "cmd/sqlc-gen-spira/testdata/embed/request.json",
