@@ -102,3 +102,6 @@ mod swift;
 mod tlaplus;
 #[path = "grammar_gaps/zig.rs"]
 mod zig;
+
+#[path = "grammar_gaps/powershell_separator_ownership.rs"]
+mod powershell_separator_ownership;

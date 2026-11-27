@@ -669,10 +669,6 @@
           "named": true
         },
         {
-          "type": "comment",
-          "named": true
-        },
-        {
           "type": "generic_token",
           "named": true
         },

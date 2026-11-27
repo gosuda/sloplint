@@ -33,7 +33,7 @@ also end analysis with a timeout.
   `bash scripts/grammars.sh verify tree-sitter-powershell` checks the result
   against the vendored files. Run `tree-sitter test` in the vendor directory
   to include the sloplint corpus.
-- The regenerated parser uses ABI 15 and has 2,039 states.
+- The regenerated parser uses ABI 15 and has 2,065 states.
 
 ## Native Unicode argument separators
 
@@ -42,6 +42,8 @@ whitespace set without CR and LF. The same 23 characters delimit command names
 and bare arguments; quoted and backtick-escaped spaces remain inside one word.
 U+200B, U+FEFF and U+2060 remain literal text after a dash prefix. A dedicated
 word alternative owns single and repeated dashes followed by those marks.
+The corresponding mark-first alternative retains literal format marks before
+single and double dashes in redirected filenames.
 Its lexical precedence preserves an unescaped comma as an array boundary;
 quoted and escaped commas remain inside the word. Named attached options,
 such as `--format=csv,noheader`, retain their existing token rule.
@@ -56,6 +58,27 @@ and mixed separator runs while the remaining native whitespace stays accepted.
 Separator tokens outrank competing word tokens, retaining the gap before
 redirected dash words and the scanner state for indented bare dashes after an
 escaped line.
+
+## Block comments at command boundaries
+
+Block comments remain trivia while the parser selects the following argument.
+They are not standalone command elements, so an adjacent word keeps its
+preceding argument separator and a numeric redirection target stays inside
+the redirection.
+
+A hidden zero-width guard preserves the existing direct comment parent before
+named parameters and words whose dash prefix is followed by a format mark. It applies after an argument separator
+and before the last adjacent block-comment group. Earlier groups separated by
+whitespace retain their original separator parent and captured text. Ordinary
+word-facing separators keep their existing comment spans.
+
+A separate redirection guard selects the existing attached parameter-shaped
+word alternative without consuming comment or filename bytes. Plain parameters,
+negative expressions, quoted words and the dedicated format-mark alternatives
+keep their existing paths. Public query regressions cover comment parents,
+separator ranges and redirection extents alongside native parser observations.
+The older single-dash `-output.log` target split and attached-CRLF command split
+remain recorded limitations; this change does not claim those native semantics.
 
 ## Backticks after ordinary newlines
 
@@ -200,7 +223,7 @@ The remaining local groups do not have an upstream fix in this release:
 | Case-insensitive numbers, cast operands, type names and generic ranks, bitwise and membership operators | No issue or PR identified for these changes |
 | String text and here-string escapes, statement terminators, method-block scanner | No issue or PR identified for these changes |
 
-The current patch has 2,473 lines and 44 diff hunks. It includes the
+The current patch has 2,621 lines and 44 diff hunks. It includes the
 native argument corpus along with the grammar and scanner changes.
 
 ## Round 1 grammar changes

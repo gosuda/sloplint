@@ -1,8 +1,8 @@
 diff --git a/grammar.js b/grammar.js
-index 1f8b448d..fa4c45e6 100644
+index 1f8b448..423e290 100644
 --- a/grammar.js
 +++ b/grammar.js
-@@ -7,29 +7,73 @@ const PREC = {
+@@ -7,29 +7,75 @@ const PREC = {
    PARAM: 6,
  };
 
@@ -41,6 +41,8 @@ index 1f8b448d..fa4c45e6 100644
 +    $._here_string_newline,
 +    $._else_branch,
 +    $._elseif_branch,
++    $._commented_argument,
++    $._commented_redirect,
 +  ],
 
    extras: ($) => [
@@ -79,7 +81,7 @@ index 1f8b448d..fa4c45e6 100644
 
      // Comments
      comment: ($) =>
-@@ -48,22 +92,24 @@ export default grammar({
+@@ -48,22 +94,24 @@ export default grammar({
      integer_literal: ($) =>
        choice($.decimal_integer_literal, $.hexadecimal_integer_literal),
 
@@ -109,7 +111,7 @@ index 1f8b448d..fa4c45e6 100644
          ),
        ),
 
-@@ -73,18 +119,18 @@ export default grammar({
+@@ -73,18 +121,18 @@ export default grammar({
          choice(
            seq(
              /[0-9]+\.[0-9]+/,
@@ -134,7 +136,7 @@ index 1f8b448d..fa4c45e6 100644
            ),
          ),
        ),
-@@ -98,21 +144,24 @@ export default grammar({
+@@ -98,21 +146,24 @@ export default grammar({
          $.verbatim_here_string_characters,
        ),
 
@@ -171,7 +173,7 @@ index 1f8b448d..fa4c45e6 100644
          token.immediate(/(\s*\#*)*\"/),
        ),
 
-@@ -124,9 +173,14 @@ export default grammar({
+@@ -124,9 +175,14 @@ export default grammar({
              token.immediate(/[^\$\r\n`]+/),
              $.variable,
              $.sub_expression,
@@ -188,7 +190,7 @@ index 1f8b448d..fa4c45e6 100644
              token.immediate(/`.{1}|`\r?\n/),
            ),
          ),
-@@ -149,7 +203,10 @@ export default grammar({
+@@ -149,7 +205,10 @@ export default grammar({
      simple_name: ($) => /[a-zA-Z_][a-zA-Z0-9_]*/,
 
      // Type names
@@ -200,7 +202,7 @@ index 1f8b448d..fa4c45e6 100644
 
      type_name: ($) =>
        choice($.type_identifier, seq($.type_name, '.', $.type_identifier)),
-@@ -225,6 +282,11 @@ export default grammar({
+@@ -225,6 +284,11 @@ export default grammar({
          reservedWord('-ilike'),
          reservedWord('-ilt'),
          reservedWord('-imatch'),
@@ -212,7 +214,7 @@ index 1f8b448d..fa4c45e6 100644
          reservedWord('-in'),
          reservedWord('-ine'),
          reservedWord('-inotcontains'),
-@@ -306,19 +368,131 @@ export default grammar({
+@@ -306,19 +370,131 @@ export default grammar({
 
      // Commands
      generic_token: ($) =>
@@ -347,7 +349,7 @@ index 1f8b448d..fa4c45e6 100644
            ),
          ),
          // A bare `--` or `-` argument (see scanner.c).
-@@ -399,6 +573,13 @@ export default grammar({
+@@ -399,6 +575,13 @@ export default grammar({
            $.inlinescript_statement,
            $.parallel_statement,
            $.sequence_statement,
@@ -361,7 +363,7 @@ index 1f8b448d..fa4c45e6 100644
            seq($.pipeline, $._statement_terminator),
            // `npm run dev &` (PowerShell 7): runs the pipeline as a background job
            seq($.pipeline, $.background_operator),
-@@ -416,20 +597,23 @@ export default grammar({
+@@ -416,20 +599,23 @@ export default grammar({
            reservedWord('if'),
            '(',
            field('condition', $.pipeline),
@@ -388,7 +390,7 @@ index 1f8b448d..fa4c45e6 100644
          ')',
          $.statement_block,
        ),
-@@ -466,7 +650,7 @@ export default grammar({
+@@ -466,7 +652,7 @@ export default grammar({
 
      switch_condition: ($) =>
        choice(
@@ -397,7 +399,7 @@ index 1f8b448d..fa4c45e6 100644
          seq(reservedWord('-file'), $.switch_filename),
        ),
 
-@@ -476,16 +660,18 @@ export default grammar({
+@@ -476,16 +662,18 @@ export default grammar({
 
      switch_clauses: ($) => repeat1($.switch_clause),
 
@@ -418,7 +420,7 @@ index 1f8b448d..fa4c45e6 100644
 
      foreach_statement: ($) =>
        seq(
-@@ -495,6 +681,7 @@ export default grammar({
+@@ -495,6 +683,7 @@ export default grammar({
          $.variable,
          reservedWord('in'),
          $.pipeline,
@@ -426,7 +428,7 @@ index 1f8b448d..fa4c45e6 100644
          ')',
          $.statement_block,
        ),
-@@ -556,7 +743,7 @@ export default grammar({
+@@ -556,7 +745,7 @@ export default grammar({
          $.statement_block,
        ),
 
@@ -435,7 +437,7 @@ index 1f8b448d..fa4c45e6 100644
 
      do_statement: ($) =>
        seq(
-@@ -568,8 +755,11 @@ export default grammar({
+@@ -568,8 +757,11 @@ export default grammar({
          ')',
        ),
 
@@ -447,7 +449,7 @@ index 1f8b448d..fa4c45e6 100644
          choice(
            reservedWord('function'),
            reservedWord('filter'),
-@@ -578,10 +768,19 @@ export default grammar({
+@@ -578,10 +770,19 @@ export default grammar({
          $.function_name,
          optional($.function_parameter_declaration),
          '{',
@@ -468,7 +470,7 @@ index 1f8b448d..fa4c45e6 100644
      function_name: ($) => $._command_token,
 
      function_parameter_declaration: ($) =>
-@@ -598,7 +797,9 @@ export default grammar({
+@@ -598,7 +799,9 @@ export default grammar({
 
      label: ($) => token(seq(':', /[a-zA-Z_][a-zA-Z0-9_]*/)),
 
@@ -479,7 +481,7 @@ index 1f8b448d..fa4c45e6 100644
 
      trap_statement: ($) =>
        seq(reservedWord('trap'), optional($.type_literal), $.statement_block),
-@@ -710,18 +911,8 @@ export default grammar({
+@@ -710,18 +913,8 @@ export default grammar({
 
      _expandable_string_literal_immediate: ($) =>
        seq(
@@ -500,7 +502,7 @@ index 1f8b448d..fa4c45e6 100644
        ),
 
      _string_literal_immediate: ($) =>
-@@ -733,7 +924,7 @@ export default grammar({
+@@ -733,7 +926,7 @@ export default grammar({
      command_name: ($) =>
        seq(
          choice(
@@ -509,7 +511,7 @@ index 1f8b448d..fa4c45e6 100644
            // tree-sitter does not allow to control lexer
            // each start keyword into _statement rule must be present here
            // https://github.com/airbus-cert/tree-sitter-powershell/issues/24
-@@ -754,10 +945,25 @@ export default grammar({
+@@ -754,10 +947,25 @@ export default grammar({
            new RegExp(caseInsensitive('for-')),
            new RegExp(caseInsensitive('while-')),
            new RegExp(caseInsensitive('parallel-')),
@@ -536,7 +538,7 @@ index 1f8b448d..fa4c45e6 100644
              seq(token.immediate('"'), $._expandable_string_literal_immediate),
              seq(token.immediate('\''), $._string_literal_immediate),
              token.immediate('""'),
-@@ -766,7 +972,8 @@ export default grammar({
+@@ -766,7 +974,8 @@ export default grammar({
          ),
        ),
 
@@ -546,21 +548,30 @@ index 1f8b448d..fa4c45e6 100644
 
      // Use to parse command path
      path_command_name: ($) =>
-@@ -781,41 +988,101 @@ export default grammar({
+@@ -781,41 +990,110 @@ export default grammar({
        prec.right(
          choice(
            $.command_parameter,
 -          seq($._command_argument, optional($.argument_list)),
++          // Keep the separator and its comment guard in one command argument.
++          // Comments remain extras before the existing parameter and word rules.
++          seq(
++            $.command_argument_sep,
++            $._commented_argument,
++            choice(
++              $.command_parameter,
++              seq(
++                choice($.generic_token, $._command_argument_list),
++                optional(seq($.argument_list, repeat($._argument_member_tail))),
++              ),
++            ),
++          ),
 +          seq(
 +            $._command_argument,
 +            optional(seq($.argument_list, repeat($._argument_member_tail))),
 +          ),
            $.redirection,
            $.stop_parsing,
-+          // sloplint: an inline comment is a command element of its own, so
-+          // it stays a direct child of command elements instead of being
-+          // parented under a whitespace separator that spans it.
-+          $.comment,
          ),
        ),
 
@@ -663,7 +674,7 @@ index 1f8b448d..fa4c45e6 100644
      verbatim_command_argument: ($) =>
        seq('--%', $._verbatim_command_argument_chars),
 
-@@ -827,8 +1094,10 @@ export default grammar({
+@@ -827,8 +1105,16 @@ export default grammar({
          seq($.file_redirection_operator, $.redirected_file_name),
        ),
 
@@ -671,11 +682,17 @@ index 1f8b448d..fa4c45e6 100644
 +    // in '/r'>null — a bare word target then lexes as generic_token.
      redirected_file_name: ($) =>
 -      choice($._command_argument, $._primary_expression),
-+      choice($._command_argument, $._primary_expression, $.generic_token),
++      choice(
++        // Attached-option words keep the preceding comment outside the gap.
++        seq($.command_argument_sep, $._commented_redirect, $.generic_token),
++        $._command_argument,
++        $._primary_expression,
++        $.generic_token,
++      ),
 
      // Class
      class_attribute: ($) =>
-@@ -857,13 +1126,26 @@ export default grammar({
+@@ -857,13 +1143,26 @@ export default grammar({
          '(',
          optional($.class_method_parameter_list),
          ')',
@@ -702,7 +719,7 @@ index 1f8b448d..fa4c45e6 100644
          token(reservedWord('class')),
          $.simple_name,
          optional(seq(':', $.simple_name, repeat(seq(',', $.simple_name)))),
-@@ -884,6 +1166,7 @@ export default grammar({
+@@ -884,6 +1183,7 @@ export default grammar({
      // Enums
      enum_statement: ($) =>
        seq(
@@ -710,7 +727,7 @@ index 1f8b448d..fa4c45e6 100644
          token(reservedWord('enum')),
          $.simple_name,
          '{',
-@@ -895,7 +1178,20 @@ export default grammar({
+@@ -895,7 +1195,20 @@ export default grammar({
        seq($.simple_name, optional(seq('=', $.integer_literal))),
 
      // Expressions
@@ -732,7 +749,7 @@ index 1f8b448d..fa4c45e6 100644
 
      logical_expression: ($) =>
        prec.left(
-@@ -1008,7 +1304,35 @@ export default grammar({
+@@ -1008,7 +1321,35 @@ export default grammar({
      pre_decrement_expression: ($) => seq('--', $.unary_expression),
 
      cast_expression: ($) =>
@@ -769,7 +786,7 @@ index 1f8b448d..fa4c45e6 100644
 
      attributed_variable: ($) => seq($.type_literal, $.variable),
 
-@@ -1034,7 +1358,7 @@ export default grammar({
+@@ -1034,7 +1375,7 @@ export default grammar({
          $.variable,
        ),
 
@@ -778,7 +795,7 @@ index 1f8b448d..fa4c45e6 100644
 
      sub_expression: ($) =>
        seq('$(', field('statements', optional($.statement_list)), ')'),
-@@ -1042,8 +1366,12 @@ export default grammar({
+@@ -1042,8 +1383,12 @@ export default grammar({
      array_expression: ($) =>
        seq('@(', field('statements', optional($.statement_list)), ')'),
 
@@ -792,7 +809,7 @@ index 1f8b448d..fa4c45e6 100644
 
      hash_literal_expression: ($) =>
        seq('@{', optional($.hash_literal_body), '}'),
-@@ -1101,11 +1429,17 @@ export default grammar({
+@@ -1101,11 +1446,17 @@ export default grammar({
          $.invokation_foreach_expression,
        ),
 
@@ -812,7 +829,7 @@ index 1f8b448d..fa4c45e6 100644
          $.script_block_expression,
        ),
 
-@@ -1145,10 +1479,13 @@ export default grammar({
+@@ -1145,10 +1496,13 @@ export default grammar({
            $.comparison_argument_expression,
            seq(
              $.bitwise_argument_expression,
@@ -829,7 +846,7 @@ index 1f8b448d..fa4c45e6 100644
              ),
              $.comparison_argument_expression,
            ),
-@@ -1213,32 +1550,49 @@ export default grammar({
+@@ -1213,32 +1567,49 @@ export default grammar({
 
      type_literal: ($) => seq('[', $.type_spec, ']'),
 
@@ -893,10 +910,10 @@ index 1f8b448d..fa4c45e6 100644
 
      attribute_name: ($) => $.type_spec,
 diff --git a/src/scanner.c b/src/scanner.c
-index b46de2b0..d30125a1 100644
+index b46de2b..a92e64f 100644
 --- a/src/scanner.c
 +++ b/src/scanner.c
-@@ -6,7 +6,12 @@
+@@ -6,7 +6,14 @@
 
  enum TOKEN_TYPE {
      STATEMENT_TERMINATOR,
@@ -906,18 +923,25 @@ index b46de2b0..d30125a1 100644
 +    LOOSE_DOLLAR,
 +    HERE_STRING_NEWLINE,
 +    ELSE_BRANCH,
-+    ELSEIF_BRANCH
++    ELSEIF_BRANCH,
++    COMMENTED_ARGUMENT,
++    COMMENTED_REDIRECT
  };
 
  /* --- API --- */
-@@ -25,53 +30,147 @@ bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer,
+@@ -25,53 +32,258 @@ bool tree_sitter_powershell_external_scanner_scan(void *payload, TSLexer *lexer,
 
  static void skip(TSLexer *lexer) { lexer->advance(lexer, true); }
 
+-static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool *valid_symbols)
 +// Match PowerShell CharExtensions.IsWhitespace without depending on the C locale.
 +// CR and LF are statement boundaries and are handled separately.
 +static bool is_powershell_space(int32_t c)
-+{
+ {
+-    if (valid_symbols[STATEMENT_TERMINATOR]) {
+-        lexer->result_symbol = STATEMENT_TERMINATOR;
+-        // This token has no characters -- everything is lookahead to determine its existence
+-        lexer->mark_end(lexer);
 +    return c == ' ' || c == '\t' || c == '\v' || c == '\f' ||
 +        c == 0x0085 || c == 0x00A0 || c == 0x1680 ||
 +        (c >= 0x2000 && c <= 0x200A) || c == 0x2028 ||
@@ -955,13 +979,31 @@ index b46de2b0..d30125a1 100644
 +    return true;
 +}
 +
- static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool *valid_symbols)
- {
--    if (valid_symbols[STATEMENT_TERMINATOR]) {
--        lexer->result_symbol = STATEMENT_TERMINATOR;
--        // This token has no characters -- everything is lookahead to determine its existence
--        lexer->mark_end(lexer);
--
++// This prefix selects only the existing named-parameter and dash-format
++// word paths. Bare dashes and negative expressions keep their normal grammar.
++// Failure returns from the callback; no later probe reuses this cursor.
++static bool scan_commented_argument(TSLexer *lexer)
++{
++    unsigned dashes = 0;
++    while (lexer->lookahead == '-') {
++        ++dashes;
++        skip(lexer);
++    }
++    int32_t c = lexer->lookahead;
++    // PARAMETER_WORD can use an extra dash as its mandatory first atom.
++    // Bare '-' and '--' remain owned by their existing external token.
++    bool named = dashes >= 3 || (dashes >= 2 && c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
++        c == '_' || c == '?' || c == 0x200B || c == 0xFEFF || c == 0x2060;
++    if (!named && c == '`') {
++        skip(lexer);
++        c = lexer->lookahead;
++        named = c != 0 && c != '\r' && c != '\n';
++    }
++    if (!named) return false;
++    lexer->result_symbol = COMMENTED_ARGUMENT;
++    return true;
++}
+
 -        for (;;) {
 -            if (lexer->lookahead == 0) return true;
 -            if (lexer->lookahead == '}') return true;
@@ -969,14 +1011,90 @@ index b46de2b0..d30125a1 100644
 -            if (lexer->lookahead == ')') return true;
 -            if (lexer->lookahead == '\n') return true;
 -            if (!iswspace(lexer->lookahead)) return false;
++// PARAMETER_WORD uses ASCII name atoms and complete backtick escapes.
++static bool is_parameter_name_character(int32_t c)
++{
++    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
++        (c >= '0' && c <= '9') || c == '_' || c == '?' || c == '-';
++}
++
++static bool skip_parameter_escape(TSLexer *lexer)
++{
++    skip(lexer);
++    int32_t escaped = lexer->lookahead;
++    if (escaped == 0 || escaped == '\r' || escaped == '\n') return false;
++    skip(lexer);
++    if (escaped != 'u' || lexer->lookahead != '{') return true;
++    skip(lexer);
++    unsigned value = 0;
++    unsigned digits = 0;
++    for (;;) {
++        int32_t c = lexer->lookahead;
++        unsigned digit;
++        if (c >= '0' && c <= '9') digit = (unsigned)(c - '0');
++        else if (c >= 'a' && c <= 'f') digit = (unsigned)(c - 'a') + 10;
++        else if (c >= 'A' && c <= 'F') digit = (unsigned)(c - 'A') + 10;
++        else break;
++        if (digits == 6) return false;
++        value = value * 16 + digit;
++        ++digits;
++        skip(lexer);
++    }
++    if (digits == 0 || value > 0x10FFFF || lexer->lookahead != '}') return false;
++    skip(lexer);
++    return true;
++}
++
++// Only the existing attached-value word alternative needs this redirect guard.
++// Plain parameters and the dedicated format-mark words keep their own paths.
++static bool scan_commented_redirect(TSLexer *lexer)
++{
++    unsigned dashes = 0;
++    while (lexer->lookahead == '-') {
++        ++dashes;
++        skip(lexer);
++    }
++    int32_t c = lexer->lookahead;
++    if (c == 0x200B || c == 0xFEFF || c == 0x2060) return false;
++    if (dashes < 2) {
++        if (c == '`') {
++            if (!skip_parameter_escape(lexer)) return false;
++        } else {
++            if (!is_parameter_name_character(c) || (c >= '0' && c <= '9')) return false;
+             skip(lexer);
+         }
+     }
++    while (is_parameter_name_character(lexer->lookahead) || lexer->lookahead == '`') {
++        if (lexer->lookahead == '`') {
++            if (!skip_parameter_escape(lexer)) return false;
++        } else {
++            skip(lexer);
++        }
++    }
++    c = lexer->lookahead;
++    if (c == 0 || is_powershell_space(c) || c == '\r' || c == '\n' ||
++        c == ':' || c == '<' || c == '>' || c == '&' || c == '(' ||
++        c == ')' || c == '{' || c == '}' || c == '|' || c == ';' ||
++        c == ',' || c == '"' || c == '\'' || c == '$' || c == '@' || c == '[') return false;
++    lexer->result_symbol = COMMENTED_REDIRECT;
++    return true;
++}
+
+-    return false;
++static bool scan_statement_terminator(void *payload, TSLexer *lexer, const bool *valid_symbols, bool comment_at_entry)
++{
 +    bool terminator_valid = valid_symbols[STATEMENT_TERMINATOR];
 +    bool branch_valid = valid_symbols[ELSE_BRANCH] || valid_symbols[ELSEIF_BRANCH];
-+    if (!terminator_valid && !branch_valid) return false;
++    bool commented_argument_valid = comment_at_entry && valid_symbols[COMMENTED_ARGUMENT];
++    bool commented_redirect_valid = comment_at_entry && valid_symbols[COMMENTED_REDIRECT];
++    if (!terminator_valid && !branch_valid && !commented_argument_valid && !commented_redirect_valid) return false;
 +    lexer->result_symbol = STATEMENT_TERMINATOR;
 +    // Comments and whitespace are lookahead; the callback marked the empty token.
 +    bool saw_newline = false;
 +    bool pipe_continuation_blocked = false;
 +    bool line_has_comment = false;
++    bool block_comment_seen = false;
++    bool separator_after_comment = false;
 +    for (;;) {
 +        int32_t c = lexer->lookahead;
 +        if (c == 0 || c == '}' || c == ';' || c == ')') return terminator_valid;
@@ -984,11 +1102,12 @@ index b46de2b0..d30125a1 100644
 +            pipe_continuation_blocked = pipe_continuation_blocked || (saw_newline && !line_has_comment);
 +            saw_newline = true;
 +            line_has_comment = false;
-             skip(lexer);
++            skip(lexer);
 +            if (c == '\r' && lexer->lookahead == '\n') skip(lexer);
 +            continue;
-         }
++        }
 +        if (is_powershell_space(c)) {
++            if (block_comment_seen) separator_after_comment = true;
 +            skip(lexer);
 +            continue;
 +        }
@@ -1002,6 +1121,14 @@ index b46de2b0..d30125a1 100644
 +            skip(lexer);
 +            if (lexer->lookahead != '#') return terminator_valid && saw_newline;
 +            line_has_comment = true;
++            // A later explicit separator keeps the earlier comments in its gap.
++            // Defer the guard until the last adjacent block-comment group.
++            if (separator_after_comment) {
++                commented_argument_valid = false;
++                commented_redirect_valid = false;
++            }
++            block_comment_seen = true;
++            separator_after_comment = false;
 +            skip(lexer);
 +            // PowerShell block comments end at the first #>, without nesting.
 +            while (lexer->lookahead != 0) {
@@ -1031,12 +1158,14 @@ index b46de2b0..d30125a1 100644
 +            }
 +            continue;
 +        }
++        if (!saw_newline && c == '-') {
++            if (commented_redirect_valid) return scan_commented_redirect(lexer);
++            if (commented_argument_valid) return scan_commented_argument(lexer);
++        }
 +        if (branch_valid && scan_conditional_branch(lexer, valid_symbols)) return true;
 +        if (!terminator_valid || !saw_newline) return false;
 +        return c != '|' || pipe_continuation_blocked;
-     }
--
--    return false;
++    }
  }
 
  // A bare `-` or `--` argument: `--` ends option parsing for a native command
@@ -1077,7 +1206,7 @@ index b46de2b0..d30125a1 100644
          case '}':
              lexer->result_symbol = BARE_DASHES;
              return true;
-@@ -82,11 +181,89 @@ static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_sy
+@@ -82,12 +294,91 @@ static bool scan_bare_dashes(void *payload, TSLexer *lexer, const bool *valid_sy
 
  /* --- API Implementation --- */
 
@@ -1149,6 +1278,7 @@ index b46de2b0..d30125a1 100644
 -    // The statement terminator consumes nothing, so it must be tried last: when
 -    // both are valid, a `--` has to win over the empty terminator.
 -    if (scan_bare_dashes(payload, lexer, valid_symbols)) return true;
+-    return scan_statement_terminator(payload, lexer, valid_symbols);
 +    if (valid_symbols[HERE_STRING_NEWLINE] &&
 +        (lexer->lookahead == '\r' || lexer->lookahead == '\n')) {
 +        return scan_here_string_newline(lexer);
@@ -1161,17 +1291,19 @@ index b46de2b0..d30125a1 100644
 +        return scan_loose_dollar(payload, lexer, valid_symbols);
 +    }
 +    // Keep empty boundary tokens at callback entry, before shared lookahead.
++    bool comment_at_entry = lexer->lookahead == '<';
 +    lexer->mark_end(lexer);
 +    while (is_powershell_space(lexer->lookahead)) skip(lexer);
 +    // A failed consuming probe must return to tree-sitter before another probe.
 +    if (valid_symbols[BARE_DASHES] && lexer->lookahead == '-') {
 +        return scan_bare_dashes(payload, lexer, valid_symbols);
 +    }
-     return scan_statement_terminator(payload, lexer, valid_symbols);
++    return scan_statement_terminator(payload, lexer, valid_symbols, comment_at_entry);
  }
 
+ void *tree_sitter_powershell_external_scanner_create()
 diff --git a/test/corpus/native_arguments.txt b/test/corpus/native_arguments.txt
-index e91d0a4f..60432570 100644
+index e91d0a4..6043257 100644
 --- a/test/corpus/native_arguments.txt
 +++ b/test/corpus/native_arguments.txt
 @@ -44,7 +44,7 @@ cargo test -p core -- --nocapture --test-threads=1
@@ -1684,9 +1816,9 @@ index e91d0a4f..60432570 100644
 +      (pipeline_chain
 +        (command
 +          (command_name))))))
-diff --git a/b/test/corpus/sloplint_multiline_boundaries.txt b/test/corpus/sloplint_multiline_boundaries.txt
+diff --git a/test/corpus/sloplint_multiline_boundaries.txt b/test/corpus/sloplint_multiline_boundaries.txt
 new file mode 100644
-index 00000000..2466b751
+index 0000000..2466b75
 --- /dev/null
 +++ b/test/corpus/sloplint_multiline_boundaries.txt
 @@ -0,0 +1,680 @@
@@ -2370,9 +2502,9 @@ index 00000000..2466b751
 +| Write-Output;;) { break }
 +
 +---
-diff --git a/b/test/corpus/sloplint_word_boundaries.txt b/test/corpus/sloplint_word_boundaries.txt
+diff --git a/test/corpus/sloplint_word_boundaries.txt b/test/corpus/sloplint_word_boundaries.txt
 new file mode 100644
-index 00000000..8ba60b50
+index 0000000..8ba60b5
 --- /dev/null
 +++ b/test/corpus/sloplint_word_boundaries.txt
 @@ -0,0 +1,111 @@

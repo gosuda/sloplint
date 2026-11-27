@@ -41,6 +41,8 @@ export default grammar({
     $._here_string_newline,
     $._else_branch,
     $._elseif_branch,
+    $._commented_argument,
+    $._commented_redirect,
   ],
 
   extras: ($) => [
@@ -988,16 +990,25 @@ export default grammar({
       prec.right(
         choice(
           $.command_parameter,
+          // Keep the separator and its comment guard in one command argument.
+          // Comments remain extras before the existing parameter and word rules.
+          seq(
+            $.command_argument_sep,
+            $._commented_argument,
+            choice(
+              $.command_parameter,
+              seq(
+                choice($.generic_token, $._command_argument_list),
+                optional(seq($.argument_list, repeat($._argument_member_tail))),
+              ),
+            ),
+          ),
           seq(
             $._command_argument,
             optional(seq($.argument_list, repeat($._argument_member_tail))),
           ),
           $.redirection,
           $.stop_parsing,
-          // sloplint: an inline comment is a command element of its own, so
-          // it stays a direct child of command elements instead of being
-          // parented under a whitespace separator that spans it.
-          $.comment,
         ),
       ),
 
@@ -1097,7 +1108,13 @@ export default grammar({
     // sloplint: a redirect may follow its operator with no separator, as
     // in '/r'>null — a bare word target then lexes as generic_token.
     redirected_file_name: ($) =>
-      choice($._command_argument, $._primary_expression, $.generic_token),
+      choice(
+        // Attached-option words keep the preceding comment outside the gap.
+        seq($.command_argument_sep, $._commented_redirect, $.generic_token),
+        $._command_argument,
+        $._primary_expression,
+        $.generic_token,
+      ),
 
     // Class
     class_attribute: ($) =>
