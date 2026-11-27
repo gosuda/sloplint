@@ -1512,7 +1512,7 @@
   {
     "path": "cmd/sqlc-gen-spira/version_catalog_test.lgo",
     "mode": "100644",
-    "sha": "7ee52f699f629d6360c64b332fd7544a5684b46c"
+    "sha": "640939f289b5b13d5cb32cf987c2ef5b118e7813"
   },
   {
     "path": "cmd/sqlc-gen-spira/version_reference.lgo",
