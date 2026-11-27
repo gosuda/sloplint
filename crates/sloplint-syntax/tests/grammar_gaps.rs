@@ -56,6 +56,24 @@ mod odin;
 mod php;
 #[path = "grammar_gaps/powershell.rs"]
 mod powershell;
+#[path = "grammar_gaps/powershell_assignment_escapes.rs"]
+mod powershell_assignment_escapes;
+#[path = "grammar_gaps/powershell_context_boundaries.rs"]
+mod powershell_context_boundaries;
+#[path = "grammar_gaps/powershell_continuations.rs"]
+mod powershell_continuations;
+#[path = "grammar_gaps/powershell_escaped_lines.rs"]
+mod powershell_escaped_lines;
+#[path = "grammar_gaps/powershell_format_dash_words.rs"]
+mod powershell_format_dash_words;
+#[path = "grammar_gaps/powershell_literal_runs.rs"]
+mod powershell_literal_runs;
+#[path = "grammar_gaps/powershell_plain_escapes.rs"]
+mod powershell_plain_escapes;
+#[path = "grammar_gaps/powershell_separator_queries.rs"]
+mod powershell_separator_queries;
+#[path = "grammar_gaps/powershell_separators.rs"]
+mod powershell_separators;
 #[path = "grammar_gaps/powershell_syntax.rs"]
 mod powershell_syntax;
 #[path = "grammar_gaps/powershell_words.rs"]
@@ -84,3 +102,6 @@ mod swift;
 mod tlaplus;
 #[path = "grammar_gaps/zig.rs"]
 mod zig;
+
+#[path = "grammar_gaps/powershell_separator_ownership.rs"]
+mod powershell_separator_ownership;

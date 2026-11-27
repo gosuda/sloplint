@@ -9,6 +9,7 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+regex = { workspace = true }
 sloplint-core = { workspace = true }
 tree-sitter = { workspace = true }
 tree-sitter-alloy = { workspace = true }

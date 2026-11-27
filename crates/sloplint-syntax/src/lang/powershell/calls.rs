@@ -1,5 +1,7 @@
+mod words;
+
 use sloplint_core::facts::{Arg, ArgShape, CallKind};
-use sloplint_core::text::longest_static_chunk;
+use sloplint_core::text::longest_static_chunk_with_escape;
 use tree_sitter::Node;
 
 use crate::hooks::{
@@ -8,6 +10,7 @@ use crate::hooks::{
 };
 
 use super::funcs::{ps_var_name, single_named};
+use words::ps_word_shape;
 
 fn ps_string_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     let fallback = narrow(text(cx, n).chars().count().saturating_sub(2));
@@ -47,7 +50,7 @@ fn ps_string_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
         .and_then(|s| s.strip_suffix('"'))
         .unwrap_or(raw);
     ArgShape::Str {
-        longest_static: longest_static_chunk(&[body]),
+        longest_static: longest_static_chunk_with_escape(&[body], b'`'),
     }
 }
 
@@ -88,7 +91,7 @@ fn ps_static_run(cx: &Cx<'_, '_>, inner: Node<'_>) -> u32 {
         cursor = cursor.max(dynamic.end_byte());
     }
     gaps.push(slice(cx.src, cursor.min(end), end));
-    longest_static_chunk(&gaps)
+    longest_static_chunk_with_escape(&gaps, b'`')
 }
 
 fn ps_concat_static(cx: &Cx<'_, '_>, n: Node<'_>) -> u32 {
@@ -174,47 +177,31 @@ pub(crate) fn ps_arg_value(n: Node<'_>) -> Node<'_> {
     node
 }
 
-fn ps_generic_static(cx: &Cx<'_, '_>, node: Node<'_>) -> u32 {
+fn ps_generic_shape(cx: &Cx<'_, '_>, node: Node<'_>) -> ArgShape<'static> {
+    if node.named_child_count() == 0 {
+        return ps_word_shape(text(cx, node), &[]);
+    }
     let mut dynamics = Vec::new();
     let mut stack = vec![node];
     while let Some(current) = stack.pop() {
         if current.kind() == "variable" || current.kind() == "sub_expression" {
-            dynamics.push(current);
+            dynamics.push((
+                current.start_byte() - node.start_byte(),
+                current.end_byte() - node.start_byte(),
+            ));
         } else {
             stack.extend(named_children(current));
         }
     }
-    dynamics.sort_by_key(|d| d.start_byte());
-    let end = node.end_byte();
-    let mut gaps = Vec::new();
-    let mut cursor = node.start_byte();
-    for dynamic in &dynamics {
-        gaps.push(slice(
-            cx.src,
-            cursor.min(dynamic.start_byte()),
-            dynamic.start_byte(),
-        ));
-        cursor = cursor.max(dynamic.end_byte());
-    }
-    gaps.push(slice(cx.src, cursor.min(end), end));
-    longest_static_chunk(&gaps)
+    dynamics.sort_unstable_by_key(|&(start, _)| start);
+    ps_word_shape(text(cx, node), &dynamics)
 }
 
 fn ps_shape<'s>(cx: &Cx<'_, 's>, n: Node<'_>) -> ArgShape<'s> {
     let node = ps_arg_value(n);
     match node.kind() {
         "string_literal" => ps_string_shape(cx, node),
-        "generic_token" => {
-            if subtree_has_kind(node, "variable") || subtree_has_kind(node, "sub_expression") {
-                ArgShape::Concat {
-                    longest_static: ps_generic_static(cx, node),
-                }
-            } else {
-                ArgShape::Str {
-                    longest_static: narrow(text(cx, node).chars().count()),
-                }
-            }
-        }
+        "generic_token" => ps_generic_shape(cx, node),
         "variable" => ArgShape::Ident(ps_var_name(text(cx, node))),
         "command_parameter" => ArgShape::Other,
         "additive_expression" | "additive_argument_expression" => {

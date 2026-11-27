@@ -212,11 +212,10 @@ fn a_script_of_only_a_param_block_or_only_a_comment_is_valid() {
 fn an_argument_may_start_with_a_variable_and_continue_as_a_path() {
     let analysis = run_clean(CILIUM_SETUP);
     let web = call(&analysis, "Invoke-WebRequest");
-    let path = "$env:TEMP\\Setup-DevEnv.ps1";
+    assert_eq!(web.args.len(), 3, "the path remains one word argument");
     assert!(
-        web.args.iter().any(|a| str_len(a) == Some(len(path))),
-        "the variable path is one word argument of {} chars: {:?}",
-        len(path),
+        matches!(web.args[2].shape, ArgShape::Concat { longest_static: 17 }),
+        "the environment variable does not count toward the literal suffix: {:?}",
         web.args
     );
     let restart = call(&analysis, "Restart-Service");
@@ -227,11 +226,10 @@ fn an_argument_may_start_with_a_variable_and_continue_as_a_path() {
     );
     let bun = run_clean(BUN_ARGS);
     let item = call(&bun, "New-ItemProperty");
+    assert_eq!(item.args.len(), 9, "the path remains one word argument");
     assert!(
-        item.args
-            .iter()
-            .any(|a| str_len(a) == Some(len("$BunBin\\bun.exe"))),
-        "a root variable followed by a path is one word: {:?}",
+        matches!(item.args[5].shape, ArgShape::Concat { longest_static: 8 }),
+        "the root variable does not count toward the literal suffix: {:?}",
         item.args
     );
 }
@@ -274,12 +272,13 @@ fn native_options_with_an_attached_value_are_single_words() {
 fn a_variable_command_takes_a_long_option_with_a_variable_value() {
     let analysis = run_clean(ROCKSDB_RUNNER);
     let invoke = call(&analysis, "$exe");
+    let expected = len("--gtest_filter=");
     assert!(
-        invoke
-            .args
-            .iter()
-            .any(|a| str_len(a) == Some(len("--gtest_filter=$test"))),
-        "the long option is one word: {:?}",
+        invoke.args.iter().any(|a| matches!(
+            a.shape,
+            ArgShape::Concat { longest_static: l } if l == expected
+        )),
+        "the long option is one word with its variable discounted: {:?}",
         invoke.args
     );
 }

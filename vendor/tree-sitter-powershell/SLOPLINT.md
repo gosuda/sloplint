@@ -16,9 +16,10 @@ The v0.26.6 update keeps the local fixes that sloplint still needs.
 
 ## Why
 
-sloplint skips a whole file when the parse tree has one ERROR or MISSING node.
-Valid PowerShell that the stock grammar rejects therefore reports `meta/parse-error`
-and loses every other finding for that file.
+Unsupported PowerShell syntax can produce `meta/parse-error`. Recovery may still
+analyze unaffected regions while excluding the affected spans. If recovery fails
+or leaves no code, normal rule coverage is lost; the shared parsing deadline can
+also end analysis with a timeout.
 
 ## Regeneration
 
@@ -32,7 +33,71 @@ and loses every other finding for that file.
   `bash scripts/grammars.sh verify tree-sitter-powershell` checks the result
   against the vendored files. Run `tree-sitter test` in the vendor directory
   to include the sloplint corpus.
-- The regenerated parser uses ABI 15 and has 2,707 states.
+- The regenerated parser uses ABI 15 and has 2,065 states.
+
+## Native Unicode argument separators
+
+Command argument separators and the external bare-dash scanner use PowerShell's
+whitespace set without CR and LF. The same 23 characters delimit command names
+and bare arguments; quoted and backtick-escaped spaces remain inside one word.
+U+200B, U+FEFF and U+2060 remain literal text after a dash prefix. A dedicated
+word alternative owns single and repeated dashes followed by those marks.
+The corresponding mark-first alternative retains literal format marks before
+single and double dashes in redirected filenames.
+Its lexical precedence preserves an unescaped comma as an array boundary;
+quoted and escaped commas remain inside the word. Named attached options,
+such as `--format=csv,noheader`, retain their existing token rule.
+
+PowerShell 7.7.0 native argv captures cover each separator after a command name,
+between arguments, and before and after single and double dashes. Rust adapter
+regressions assert those argument counts and the protected-space controls.
+
+Space, tab and NBSP retain their original anonymous token names for custom
+queries. Query regressions freeze the original byte spans for single, repeated
+and mixed separator runs while the remaining native whitespace stays accepted.
+Separator tokens outrank competing word tokens, retaining the gap before
+redirected dash words and the scanner state for indented bare dashes after an
+escaped line.
+
+## Block comments at command boundaries
+
+Block comments remain trivia while the parser selects the following argument.
+They are not standalone command elements, so an adjacent word keeps its
+preceding argument separator and a numeric redirection target stays inside
+the redirection.
+
+A hidden zero-width guard preserves the existing direct comment parent before
+named parameters and words whose dash prefix is followed by a format mark. It applies after an argument separator
+and before the last adjacent block-comment group. Earlier groups separated by
+whitespace retain their original separator parent and captured text. Ordinary
+word-facing separators keep their existing comment spans.
+
+A separate redirection guard selects the existing attached parameter-shaped
+word alternative without consuming comment or filename bytes. Plain parameters,
+negative expressions, quoted words and the dedicated format-mark alternatives
+keep their existing paths. Public query regressions cover comment parents,
+separator ranges and redirection extents alongside native parser observations.
+The older single-dash `-output.log` target split and attached-CRLF command split
+remain recorded limitations; this change does not claim those native semantics.
+
+## Backticks after ordinary newlines
+
+Leading-pipe lookahead stops at a backtick after an ordinary newline.
+An escape on the following line cannot reconnect the preceding pipeline.
+The scanner records that boundary while continuing lookahead for an `else`
+or `elseif` branch. Hidden external guards are valid only where the grammar
+owns those branches; they leave the public clause nodes, fields and keyword
+ranges intact. The lookahead uses native complete-token boundaries, so
+`else.exe` and an ordinary command named `else` start separate statements.
+Assignment-valued conditionals, including hashtable values, keep their branches
+after escaped lines. An escape of an ordinary character
+starts the next statement when a newline has already occurred.
+Attached command fragments retain an escaped CR, so the remaining LF is
+visible to that lookahead. Whitespace-separated LF and CRLF continuations
+with indented bare-dash arguments remain valid. Bare dashes without indentation
+after the escaped line are an older grammar limitation. Native parser and
+tokenizer controls cover top-level and
+grouped pipelines, mixed newline forms, comments, and indentation.
 
 ## Native argument follow-up
 
@@ -61,17 +126,74 @@ and hashes remain text, while a missing `)` inside `$(...)` is a syntax
 error. Balanced and nested expressions, escaped dollar signs, verbatim
 segments, and protected U+00A0 retain their argument boundaries.
 
-Parameter and command-name escape pairs exclude line breaks, leaving
-their LF and CRLF continuations to the line-continuation extra. Inside an
-already-started bare argument, a backtick can escape CR. The following LF
-then ends the command, matching the PowerShell 7.7.0 parser with either
-indented or column-one text on the next line.
+Parameter escape pairs exclude line breaks, leaving their LF and CRLF
+continuations to the line-continuation extra. Inside an already-started
+bare argument or command name, a backtick can escape CR. The following LF
+remains a statement boundary, matching the PowerShell 7.7.0 tokenizer.
+A separated backtick consumes CRLF as one line continuation.
 
 All 245 corpus cases pass with tree-sitter-cli 0.27.1. The five word-boundary
 corpus cases and Rust adapter regressions cover quoted path literals,
 interpolation, and the context-specific continuation behavior. Native
 PowerShell 7.7.0 parsing separately confirms these accepted and rejected
 forms; this comparison does not execute the commands.
+
+## Literal dollars and blank-line boundaries
+
+The external scanner accepts a literal dollar before whitespace, a backslash,
+or a backtick. It leaves the following newline untouched so an expandable
+here-string can still close on that line. A leading pipe continues the previous
+statement only when no blank line intervenes. Comment-only lines and
+non-breaking-space indentation do not count as blank: the lookahead skips
+them while still rejecting an actual blank line. Blank lines before `else`
+retain their existing behavior.
+
+These scanner-only changes leave grammar.js and the generated parser unchanged.
+The Rust regressions cover LF and CRLF, whitespace-only blank lines, valid
+here-string endings, and malformed interpolation controls. CLI fixtures also
+cover searchable and short interpolated Windows paths; the adapter uses
+PowerShell's backtick escape character when measuring their literal runs.
+
+## Literal accounting in interpolated words
+
+The adapter excludes hidden variable prefixes and quote delimiters when measuring
+literal runs in interpolated command words. Adjacent quoted and bare segments
+share a run. Single-quoted backticks and dollar signs remain literal; expandable
+and bare escapes end a run. Named subexpressions retain their AST boundaries.
+Variable names follow PowerShell's UTF-16 letter and decimal-digit categories,
+including the distinction between decimal digits and other numeric characters.
+
+## Comment continuation and interpolated word escapes
+
+A comment-only line does not end a pipeline before a leading pipe. The
+statement-terminator lookahead skips line and block comments and recognizes
+PowerShell's Unicode whitespace independently of the C locale. An actual
+blank line still ends continuation. Block comments end at the first `#>`;
+format marks such as U+200B are not whitespace in the PowerShell parser.
+
+A valid backtick Unicode escape is one lexical unit, including its one to
+six hexadecimal digits and closing brace. Its spelling cannot form a
+searchable literal run. The adapter also detects variables inside anonymous
+generic words such as `v$VERSION.tar.gz`, while retaining literal dollar
+signs in escaped and verbatim text. A hidden `$()` expression is one dynamic boundary, including its complete
+property chain. Non-interpolated generic words keep their existing fact shape.
+
+The continuation and literal-run Rust tests cover the PowerShell 7.7.0
+accepted and rejected forms. CLI fixtures pair short interpolated messages
+with searchable prefixes and verbatim text. Regenerate the parser and the
+upstream-relative patch with tree-sitter-cli 0.27.1 as described above.
+
+## Multiline interpolation and parenthesized pipelines
+
+An expandable here-string line break immediately before a dollar is a separate
+external token. It leaves the interpolation opener intact. Closing delimiters
+and line-start escapes retain their existing line-break tokens. Parenthesized pipelines use the same statement terminator
+as top-level pipelines, including grouped expressions and control-flow clauses.
+A blank line cannot reconnect either form to a leading pipe.
+
+The focused Rust regressions cover both LF and CRLF. The vendored corpus covers
+valid interpolation and escapes after a literal-dollar line, malformed braced
+variables and subexpressions, and adjacent versus blank-separated pipes.
 
 ## What v0.26.6 replaces
 
@@ -101,7 +223,7 @@ The remaining local groups do not have an upstream fix in this release:
 | Case-insensitive numbers, cast operands, type names and generic ranks, bitwise and membership operators | No issue or PR identified for these changes |
 | String text and here-string escapes, statement terminators, method-block scanner | No issue or PR identified for these changes |
 
-The current patch has 1,557 lines and 42 diff hunks. It includes the
+The current patch has 2,621 lines and 44 diff hunks. It includes the
 native argument corpus along with the grammar and scanner changes.
 
 ## Round 1 grammar changes
@@ -355,9 +477,6 @@ PowerShell unless noted. The v0.26.6 update does not address these limits.
 - `2>$null` and `>$null` with no space after the operator lex as one `generic_token`
   word, not as a redirection. No error is reported, and the stock grammar does the
   same. `2>&1` and `> $null` with a space are redirections.
-- `ps_shape` in the sloplint adapter counts a `generic_token` as a literal of its full
-  length. A word such as `$BunBin\bun.exe` therefore looks like static text. This was
-  already true for words like `v$VERSION.tar.gz`.
 - `param()` blocks inside a function body give the adapter an empty parameter list.
   The adapter only reads the parameter list of `function f($a)`. This is the same
   on the stock grammar.

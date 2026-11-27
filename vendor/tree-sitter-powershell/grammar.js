@@ -14,8 +14,9 @@ const PREC = {
 // parameter -p, a colon, and then the word V="$($m.x)".
 const WORD_SQ = /'[^']*'/.source;
 const WORD_DQ = /"([^"`]|`.)*"/.source;
-const WORD_ESC = /`[^\r\n]/.source;
-const ARGUMENT_ESC = /`[^\n]/.source;
+const UNICODE_ESC = /`u\{([0-9a-fA-F]{1,5}|0[0-9a-fA-F]{5}|10[0-9a-fA-F]{4})\}/.source;
+const WORD_ESC = '(' + UNICODE_ESC + '|' + /`[^\r\n]/.source + ')';
+const ARGUMENT_ESC = '(' + UNICODE_ESC + '|' + /`[^\n]/.source + ')';
 const PARAMETER_WORD = /-+/.source +
   '(' + /[a-zA-Z_?\-]/.source + '|' + WORD_ESC + ')' +
   '(' + /[a-zA-Z0-9_?\-]/.source + '|' + WORD_ESC + ')*';
@@ -37,6 +38,11 @@ export default grammar({
     $._bare_dashes,
     $._method_block_head,
     $._loose_dollar,
+    $._here_string_newline,
+    $._else_branch,
+    $._elseif_branch,
+    $._commented_argument,
+    $._commented_redirect,
   ],
 
   extras: ($) => [
@@ -44,7 +50,8 @@ export default grammar({
     /\s/,
     /`\n/,
     /`\r\n/,
-    /[\uFEFF\u2060\u200B\u00A0]/,
+    /[\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/,
+    /[\uFEFF\u2060\u200B]/,
   ],
 
   conflicts: ($) => [
@@ -171,9 +178,10 @@ export default grammar({
             // sloplint: a line that starts with a backtick must not lose half
             // of an escape pair to the line-break token: ``````PowerShell.
             // The break takes the whole pair.
-            token.immediate(/(\r?\n)+[^\"\r\n`]/),
+            token.immediate(/(\r?\n)+[^\"\$\r\n`]/),
             token.immediate(/(\r?\n)+(`.{1}|`\r?\n)/),
             token.immediate(/(\r?\n)+\"[^@]/),
+            $._here_string_newline,
             $._loose_dollar,
             token.immediate(/`.{1}|`\r?\n/),
           ),
@@ -364,10 +372,34 @@ export default grammar({
     generic_token: ($) =>
       choice(
         $._variable_path_word,
+        // A format mark after a dash-only prefix starts a literal word.
+        // Prefer this token over attached options so an unescaped comma
+        // keeps its native array boundary; protected segments stay inside.
+        token(
+          prec(
+            1,
+            new RegExp(
+              /-+[\u200B\uFEFF\u2060]/.source +
+                wordTail(/[^&\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000()}|;,"'`]/.source),
+            ),
+          ),
+        ),
+        // A literal format mark before dashes starts a word as well, so a
+        // spaced redirect keeps a mark-led dash filename instead of
+        // reporting a syntax error. Same precedence as the dash-first form.
+        token(
+          prec(
+            1,
+            new RegExp(
+              /[\u200B\uFEFF\u2060]+-+/.source +
+                wordTail(/[^&\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000()}|;,"'`]/.source),
+            ),
+          ),
+        ),
         token(
           choice(
             new RegExp(
-              /[^()$"'\-{}@|\[`&\s\u00A0]/.source + wordTail(/[^&\s\u00A0()}|;,"'`]/.source),
+              /[^()$"'\-{}@|\[`&\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/.source + wordTail(/[^&\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000()}|;,"'`]/.source),
             ),
             // sloplint: option with an attached value, as in -I=dir,
             // --go_out=$dir or -buildmode=c-shared. A bare -Name or -Name:
@@ -376,8 +408,8 @@ export default grammar({
             // (about_Parsing, argument mode).
             new RegExp(
               PARAMETER_WORD +
-                /[^a-zA-Z0-9_?\-`\s\u00A0:<>&(){}|;,"'$@\[]/.source +
-                wordTail(/[^&\s\u00A0()}|;"'`]/.source),
+                /[^a-zA-Z0-9_?\-`\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000:<>&(){}|;,"'$@\[]/.source +
+                wordTail(/[^&\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000()}|;"'`]/.source),
             ),
             // sloplint: dash-colon word, as in --:warning: the colon does not
             // delimit a standalone `--` token, so the whole word is one
@@ -387,18 +419,18 @@ export default grammar({
             // segment may follow the colon at once, as in `--:"warning text"`.
             new RegExp(
               /-+:/.source +
-                '(' + /[^&\s\u00A0()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + ARGUMENT_ESC + ')' +
-                wordTail(/[^&,\s\u00A0()}|;"'`]/.source),
+                '(' + /[^&\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + ARGUMENT_ESC + ')' +
+                wordTail(/[^&,\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000()}|;"'`]/.source),
             ),
             // sloplint: bare escape sequence used as a word, as in
             // Write-Host `r`n — expandable-string content without quotes.
-            new RegExp(WORD_ESC + wordTail(/[^&\s\u00A0()}|;,"'`]/.source)),
+            new RegExp(WORD_ESC + wordTail(/[^&\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000()}|;,"'`]/.source)),
             // sloplint: word that interleaves a variable head with quoted or
             // plain segments, as in $x"cat"$y — a single expandable word.
             new RegExp(
               /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)/.source +
                 '(' + WORD_SQ + '|' + WORD_DQ + ')' +
-                wordTail(/[^&\s\u00A0()}|;,]/.source),
+                wordTail(/[^&\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000()}|;,]/.source),
             ),
             // sloplint: a variable head followed by `..` or by a `.` that
             // does not open a member name is argument-mode text, as in
@@ -408,8 +440,8 @@ export default grammar({
             new RegExp(
               /\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)/.source +
                 '(' +
-                  /\.{2,}[^&\s\u00A0()}|;,"'`]*/.source + '|' +
-                  /\.[^&\s\u00A0()}|;,"'`a-zA-Z0-9_$][^&\s\u00A0()}|;,"'`]*/.source +
+                  /\.{2,}[^&\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000()}|;,"'`]*/.source + '|' +
+                  /\.[^&\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000()}|;,"'`a-zA-Z0-9_$][^&\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000()}|;,"'`]*/.source +
                 ')',
             ),
             // sloplint: word that starts with a quoted segment and keeps
@@ -419,7 +451,7 @@ export default grammar({
             new RegExp(
               '(' + WORD_SQ + '|' + WORD_DQ + ')' +
                 '(' +
-                  /[^&\s\u00A0()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + ARGUMENT_ESC +
+                  /[^&\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000()}|;,"'`]/.source + '|' + WORD_SQ + '|' + WORD_DQ + '|' + ARGUMENT_ESC +
                 ')+',
             ),
           ),
@@ -433,7 +465,7 @@ export default grammar({
         token(/\$(\{[^\}]+\}|[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+)?|\?)[\\\/]/),
         repeat(
           choice(
-            token.immediate(/[^&\s\u00A0()}|;,"'`]+/),
+            token.immediate(/[^&\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000()}|;,"'`]+/),
             token.immediate(new RegExp(ARGUMENT_ESC)),
             token.immediate(new RegExp(WORD_SQ)),
             seq(token.immediate('"'), $._expandable_string_literal_immediate),
@@ -462,7 +494,7 @@ export default grammar({
             // `-Name`, `-Name1`, `--long-flag`, `-A5`
             new RegExp(PARAMETER_WORD),
             // `--format=%H`, `--pretty=format:"%B"`: a native option with an attached value
-            /--?[a-zA-Z_][a-zA-Z0-9_\-]*=([^\s\u00A0"'`;|&(){}]|"[^"\r\n]*"|'[^'\r\n]*')*/,
+            /--?[a-zA-Z_][a-zA-Z0-9_\-]*=([^\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000"'`;|&(){}]|"[^"\r\n]*"|'[^'\r\n]*')*/,
           ),
         ),
         // A bare `--` or `-` argument (see scanner.c).
@@ -567,20 +599,23 @@ export default grammar({
           reservedWord('if'),
           '(',
           field('condition', $.pipeline),
+          $._statement_terminator,
           ')',
           $.statement_block,
-          field('elseif_clauses', optional($.elseif_clauses)),
-          field('else_clause', optional($.else_clause)),
+          optional(seq($._elseif_branch, field('elseif_clauses', $.elseif_clauses))),
+          optional(seq($._else_branch, field('else_clause', $.else_clause))),
         ),
       ),
 
-    elseif_clauses: ($) => prec.left(repeat1($.elseif_clause)),
+    elseif_clauses: ($) =>
+      prec.left(seq($.elseif_clause, repeat(seq($._elseif_branch, $.elseif_clause)))),
 
     elseif_clause: ($) =>
       seq(
         reservedWord('elseif'),
         '(',
         field('condition', $.pipeline),
+        $._statement_terminator,
         ')',
         $.statement_block,
       ),
@@ -617,7 +652,7 @@ export default grammar({
 
     switch_condition: ($) =>
       choice(
-        seq('(', $.pipeline, ')'),
+        seq('(', $.pipeline, $._statement_terminator, ')'),
         seq(reservedWord('-file'), $.switch_filename),
       ),
 
@@ -648,6 +683,7 @@ export default grammar({
         $.variable,
         reservedWord('in'),
         $.pipeline,
+        $._statement_terminator,
         ')',
         $.statement_block,
       ),
@@ -709,7 +745,7 @@ export default grammar({
         $.statement_block,
       ),
 
-    while_condition: ($) => $.pipeline,
+    while_condition: ($) => seq($.pipeline, $._statement_terminator),
 
     do_statement: ($) =>
       seq(
@@ -890,7 +926,7 @@ export default grammar({
     command_name: ($) =>
       seq(
         choice(
-          /[^\{\}\(\);,\|\&`"'\s\u00A0\r\n\[\]\+\-\*\/\$@<\!]+/,
+          /[^\{\}\(\);,\|\&`"'\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\r\n\[\]\+\-\*\/\$@<\!]+/,
           // tree-sitter does not allow to control lexer
           // each start keyword into _statement rule must be present here
           // https://github.com/airbus-cert/tree-sitter-powershell/issues/24
@@ -926,8 +962,10 @@ export default grammar({
         ),
         repeat(
           choice(
-            token.immediate(/[^\{\}\(\);,\|\&`"'\s\u00A0\r\n]+/),
-            token.immediate(new RegExp(WORD_ESC)),
+            token.immediate(/[^\{\}\(\);,\|\&`"'\s\u0085\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\r\n]+/),
+            // An attached backtick consumes CR inside the command token;
+            // the following LF remains a statement boundary.
+            token.immediate(new RegExp(ARGUMENT_ESC)),
             seq(token.immediate('"'), $._expandable_string_literal_immediate),
             seq(token.immediate('\''), $._string_literal_immediate),
             token.immediate('""'),
@@ -952,6 +990,19 @@ export default grammar({
       prec.right(
         choice(
           $.command_parameter,
+          // Keep the separator and its comment guard in one command argument.
+          // Comments remain extras before the existing parameter and word rules.
+          seq(
+            $.command_argument_sep,
+            $._commented_argument,
+            choice(
+              $.command_parameter,
+              seq(
+                choice($.generic_token, $._command_argument_list),
+                optional(seq($.argument_list, repeat($._argument_member_tail))),
+              ),
+            ),
+          ),
           seq(
             $._command_argument,
             optional(seq($.argument_list, repeat($._argument_member_tail))),
@@ -972,13 +1023,24 @@ export default grammar({
     // Stop parsing is a token that end the parsing of command line
     stop_parsing: ($) => /--%[^\r\n]*/,
 
-    // Generic token is hard to manage
-    // So a definition is that a generic token must have to begin by one or more space char
-    // sloplint: tabs and NBSP separate arguments like spaces, so an attached
-    // option lexes as generic_token after any of them (see calls.rs:
-    // parameter is opaque). Format characters (U+200B, U+FEFF, U+2060) stay
-    // out: they are extras, not separators.
-    command_argument_sep: ($) => prec.right(choice(repeat1(choice(' ', '\t', '\u00A0')), ':')),
+    // sloplint: command separators use PowerShell's whitespace set without
+    // CR and LF, matching word boundaries and the external bare-dash scanner.
+    // Format marks U+200B, U+FEFF and U+2060 remain word text.
+    // Delimiter tokens outrank word alternatives that can otherwise absorb extras.
+    command_argument_sep: ($) =>
+      prec.right(
+        choice(
+          repeat1(
+            choice(
+              token(prec(2, ' ')),
+              token(prec(2, '\t')),
+              token(prec(2, '\u00A0')),
+              token(prec(2, /[\v\f\u0085\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/)),
+            ),
+          ),
+          ':',
+        ),
+      ),
 
     // Adapt the grammar to have same behavior
 
@@ -1046,7 +1108,13 @@ export default grammar({
     // sloplint: a redirect may follow its operator with no separator, as
     // in '/r'>null — a bare word target then lexes as generic_token.
     redirected_file_name: ($) =>
-      choice($._command_argument, $._primary_expression, $.generic_token),
+      choice(
+        // Attached-option words keep the preceding comment outside the gap.
+        seq($.command_argument_sep, $._commented_redirect, $.generic_token),
+        $._command_argument,
+        $._primary_expression,
+        $.generic_token,
+      ),
 
     // Class
     class_attribute: ($) =>
@@ -1307,7 +1375,7 @@ export default grammar({
         $.variable,
       ),
 
-    parenthesized_expression: ($) => seq('(', $.pipeline, ')'),
+    parenthesized_expression: ($) => seq('(', $.pipeline, $._statement_terminator, ')'),
 
     sub_expression: ($) =>
       seq('$(', field('statements', optional($.statement_list)), ')'),

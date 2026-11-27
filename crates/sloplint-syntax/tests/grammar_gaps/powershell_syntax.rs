@@ -212,11 +212,13 @@ fn a_typed_switch_list_and_bare_word_lists_parse_in_a_script() {
 fn an_argument_may_be_a_variable_followed_by_a_slash_path() {
     let analysis = run_clean(VARIABLE_SLASH);
     let import = call(&analysis, "Import-Module");
-    let path = "$PSScriptRoot/bin/Pester.psd1";
-    assert_eq!(
-        import.args.iter().filter_map(str_len).next(),
-        Some(len(path)),
-        "the variable and its path are one word: {:?}",
+    assert_eq!(import.args.len(), 3);
+    assert!(
+        matches!(
+            import.args[0].shape,
+            ArgShape::Concat { longest_static: 16 }
+        ),
+        "the variable and its path are one word with only the path literal: {:?}",
         import.args
     );
     let dot = call(&analysis, "$PSScriptRoot/doBuild.ps1");
@@ -285,12 +287,13 @@ fn a_double_dash_ends_the_options_of_a_native_command() {
     assert_eq!(dotnet.args[1].shape, ArgShape::Other, "-- is a parameter");
     let build = run_clean(DOTNET_BUILD);
     let dotnet = call(&build, "dotnet");
-    let word = "VersionSuffix=\"$($manifest.PrivateData.PSData.Prerelease)\"";
     assert_eq!(dotnet.args.len(), 9, "nine arguments: {:?}", dotnet.args);
-    assert_eq!(
-        str_len(&dotnet.args[8]),
-        Some(len(word)),
-        "the value after -p: is one word with its quotes and subexpression: {:?}",
+    assert!(
+        matches!(
+            dotnet.args[8].shape,
+            ArgShape::Concat { longest_static: 14 }
+        ),
+        "the value after -p: excludes the complete computed subexpression: {:?}",
         dotnet.args
     );
 }

@@ -2,3 +2,4 @@
 # b.ps1: parenthesized format template measures 20 static chars, so the run passes the minimum.
 # c.ps1: parenthesized concatenation measures 17 static chars, so the run passes the minimum.
 # d.ps1: the bare word after -ForegroundColor is that parameter's value, so the quoted 31-char message is the first string.
+# e.ps1 and f.ps1: the interpolated Windows path retains its literal backslashes.
