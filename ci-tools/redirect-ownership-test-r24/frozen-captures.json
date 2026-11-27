@@ -1,0 +1,493 @@
+{
+  "source_contract": "Existing parser whole-word ownership. Native PowerShell's older '-output' filename plus positional '.log' split remains explicitly separate.",
+  "native_receipt": {
+    "producer": "8e21f8343fb84954514d274a65d46932b80f7b90",
+    "run": 45908737910,
+    "job": 140211698514,
+    "artifact": 15158893506,
+    "zip_sha256": "47566cdd96fd146d7209a8ee2897ec6962e2d859e76b795e2fa6a60bf90c9730",
+    "payload_sha256": "5317d091919632510e93ce933e98ea6a0fe5514b3a213d1d7fcb25b1309dbeeb",
+    "gzip_sha256": "6c4f227856e93d3f01e47b72e8a10dc896677693f4434f82096d690d681eed2f",
+    "payload_bytes": 6859705,
+    "gzip_bytes": 355067,
+    "base64_bytes": 473424,
+    "formatted_observer_sha256": "2151f94ae80983f087bbde46e4c6b1749a522487d541289e018b3b70fd63458b"
+  },
+  "parser_receipt": {
+    "producer": "519e18f939cb8a9796f81ac399096083dbb7995c",
+    "run": 45913796869,
+    "job": 140228090775,
+    "artifact": 15160844099,
+    "zip_sha256": "e9321f407ec0417aba597885bbdfa6e5eb2508d37fdc7157f7aa1052958861bd",
+    "payload_sha256": "db94e0276d22a8ec1cb27f5c73acece3366b6d8d607c368c4794f27edfa6442c",
+    "gzip_sha256": "4f9b7c390dd938ce2391163284911a8d961a47c218813d56887c355cd71ce4f1",
+    "payload_bytes": 5980125,
+    "gzip_bytes": 316495,
+    "base64_bytes": 421996,
+    "reason": "Source checks passed, but line-prefix extraction counted 17 rather than 18 native records. The overall diagnostic remains a failed run."
+  },
+  "final_source_receipt": {
+    "producer": "2283f07cb51e48f5e61d21861e146e2a53518681",
+    "run": 45915713157,
+    "job": 140234290780,
+    "artifact": 15161574716,
+    "zip_sha256": "c5f1b4a0ef22e691426b82d18bb2ba2c7055549b01b650a877a8b485df508e06",
+    "payload_sha256": "6acebcae9d772ebd692f1387f59a66ffaf78849cf1541321a8f30d7a9aaee353",
+    "gzip_sha256": "043ecdce9684bfab59ed3eda3ded923e32ea009b31b6cfee57d1b32789e1d588",
+    "gzip_bytes": 343116,
+    "payload_bytes": 6006473,
+    "base64_bytes": 457488,
+    "chunks": 20,
+    "source": {
+      "base": "e7ee97e84246863766ec7465777a035134533feb",
+      "tree": "a026522088e19dd38731146c90956650506be913",
+      "tracked_blobs": 4907,
+      "index_sha256": "0998a8f0606f2df45d28976c5a607f3e3401fae6a22b5253f16fa96405537283"
+    }
+  },
+  "cases": [
+    {
+      "id": "comment-redirect-single-dash",
+      "kind": "comment",
+      "source": "Write-Output hi > <# note #> -output.log\n",
+      "source_sha256": "e5925a6e0fe9a0f914b16ab24ecaf6c252dfae62091c831af3ad26ef0a2b314e",
+      "accepted": null,
+      "native": {
+        "id": "comment-redirect-single-dash",
+        "kind": "comment",
+        "accepted": true,
+        "source_sha256": "e5925a6e0fe9a0f914b16ab24ecaf6c252dfae62091c831af3ad26ef0a2b314e",
+        "errors": [],
+        "commands": [
+          {
+            "name": "Write-Output",
+            "text": "Write-Output hi > <# note #> -output.log",
+            "count": 2,
+            "arguments": [
+              {
+                "kind": "StringConstantExpressionAst",
+                "text": "hi",
+                "start": 13,
+                "end": 15
+              },
+              {
+                "kind": "StringConstantExpressionAst",
+                "text": ".log",
+                "start": 36,
+                "end": 40
+              }
+            ]
+          }
+        ],
+        "branches": [],
+        "redirections": [
+          {
+            "file": "-output",
+            "location_kind": "StringConstantExpressionAst",
+            "value": "-output",
+            "location_start": 29,
+            "location_end": 36,
+            "text": "> <# note #> -output",
+            "start": 16,
+            "end": 36
+          }
+        ],
+        "assignments": [],
+        "tokens": [
+          {
+            "kind": "Generic",
+            "text": "Write-Output",
+            "flags": "CommandName",
+            "start": 0,
+            "end": 12
+          },
+          {
+            "kind": "Identifier",
+            "text": "hi",
+            "flags": "None",
+            "start": 13,
+            "end": 15
+          },
+          {
+            "kind": "Redirection",
+            "text": ">",
+            "flags": "DisallowedInRestrictedMode",
+            "start": 16,
+            "end": 17
+          },
+          {
+            "kind": "Comment",
+            "text": "<# note #>",
+            "flags": "ParseModeInvariant",
+            "start": 18,
+            "end": 28
+          },
+          {
+            "kind": "Generic",
+            "text": "-output",
+            "flags": "None",
+            "start": 29,
+            "end": 36
+          },
+          {
+            "kind": "Generic",
+            "text": ".log",
+            "flags": "None",
+            "start": 36,
+            "end": 40
+          },
+          {
+            "kind": "NewLine",
+            "text": "\n",
+            "flags": "ParseModeInvariant",
+            "start": 40,
+            "end": 41
+          },
+          {
+            "kind": "EndOfInput",
+            "text": "",
+            "flags": "ParseModeInvariant",
+            "start": 42,
+            "end": 42
+          }
+        ],
+        "matches": true
+      },
+      "parser": {
+        "id": "comment-redirect-single-dash",
+        "exit": 0,
+        "accepted": true,
+        "commands": [
+          "Write-Output hi > <# note #> -output.log"
+        ],
+        "generic_words": [
+          "hi",
+          "-output.log"
+        ],
+        "target_nodes": [
+          " <# note #> -output.log"
+        ],
+        "redirections": [
+          "> <# note #> -output.log"
+        ],
+        "arrays": [],
+        "separator_nodes": [
+          " ",
+          " ",
+          " "
+        ],
+        "comments": [
+          "<# note #>"
+        ],
+        "tree_sha256": "9b63e2c0e1f2bad5ea0bff16470dfcb212b0fbfe5f9059eb0193060d4fed081e",
+        "canonical_tree_sha256": "5c9f083251669b7e265e209a974d04552a20288746c9cf5f37b06a3c0cb9f670"
+      },
+      "public_queries": [
+        "OWNERSHIP_QUERY_ROW comment-redirect-single-dash redirect-word error=false partial=false timeout=false hits=1",
+        "OWNERSHIP_QUERY_HIT comment-redirect-single-dash redirect-word 29 2d6f75747075742e6c6f67",
+        "OWNERSHIP_QUERY_ROW comment-redirect-single-dash redirection error=false partial=false timeout=false hits=1",
+        "OWNERSHIP_QUERY_HIT comment-redirect-single-dash redirection 16 3e203c23206e6f746520233e202d6f75747075742e6c6f67",
+        "OWNERSHIP_QUERY_ROW comment-redirect-single-dash redirect-target error=false partial=false timeout=false hits=1",
+        "OWNERSHIP_QUERY_HIT comment-redirect-single-dash redirect-target 17 203c23206e6f746520233e202d6f75747075742e6c6f67"
+      ]
+    },
+    {
+      "id": "comment-redirect-repeated-dash",
+      "kind": "comment",
+      "source": "Write-Output hi > <# one #><# two #> -output.log\n",
+      "source_sha256": "317232fc54b18b0b2d720f12f24486c97a4f2d2cd49c20a52c46b82759f64b30",
+      "accepted": null,
+      "native": {
+        "id": "comment-redirect-repeated-dash",
+        "kind": "comment",
+        "accepted": true,
+        "source_sha256": "317232fc54b18b0b2d720f12f24486c97a4f2d2cd49c20a52c46b82759f64b30",
+        "errors": [],
+        "commands": [
+          {
+            "name": "Write-Output",
+            "text": "Write-Output hi > <# one #><# two #> -output.log",
+            "count": 2,
+            "arguments": [
+              {
+                "kind": "StringConstantExpressionAst",
+                "text": "hi",
+                "start": 13,
+                "end": 15
+              },
+              {
+                "kind": "StringConstantExpressionAst",
+                "text": ".log",
+                "start": 44,
+                "end": 48
+              }
+            ]
+          }
+        ],
+        "branches": [],
+        "redirections": [
+          {
+            "file": "-output",
+            "location_kind": "StringConstantExpressionAst",
+            "value": "-output",
+            "location_start": 37,
+            "location_end": 44,
+            "text": "> <# one #><# two #> -output",
+            "start": 16,
+            "end": 44
+          }
+        ],
+        "assignments": [],
+        "tokens": [
+          {
+            "kind": "Generic",
+            "text": "Write-Output",
+            "flags": "CommandName",
+            "start": 0,
+            "end": 12
+          },
+          {
+            "kind": "Identifier",
+            "text": "hi",
+            "flags": "None",
+            "start": 13,
+            "end": 15
+          },
+          {
+            "kind": "Redirection",
+            "text": ">",
+            "flags": "DisallowedInRestrictedMode",
+            "start": 16,
+            "end": 17
+          },
+          {
+            "kind": "Comment",
+            "text": "<# one #>",
+            "flags": "ParseModeInvariant",
+            "start": 18,
+            "end": 27
+          },
+          {
+            "kind": "Comment",
+            "text": "<# two #>",
+            "flags": "ParseModeInvariant",
+            "start": 27,
+            "end": 36
+          },
+          {
+            "kind": "Generic",
+            "text": "-output",
+            "flags": "None",
+            "start": 37,
+            "end": 44
+          },
+          {
+            "kind": "Generic",
+            "text": ".log",
+            "flags": "None",
+            "start": 44,
+            "end": 48
+          },
+          {
+            "kind": "NewLine",
+            "text": "\n",
+            "flags": "ParseModeInvariant",
+            "start": 48,
+            "end": 49
+          },
+          {
+            "kind": "EndOfInput",
+            "text": "",
+            "flags": "ParseModeInvariant",
+            "start": 50,
+            "end": 50
+          }
+        ],
+        "matches": true
+      },
+      "parser": {
+        "id": "comment-redirect-repeated-dash",
+        "exit": 0,
+        "accepted": true,
+        "commands": [
+          "Write-Output hi > <# one #><# two #> -output.log"
+        ],
+        "generic_words": [
+          "hi",
+          "-output.log"
+        ],
+        "target_nodes": [
+          " <# one #><# two #> -output.log"
+        ],
+        "redirections": [
+          "> <# one #><# two #> -output.log"
+        ],
+        "arrays": [],
+        "separator_nodes": [
+          " ",
+          " ",
+          " "
+        ],
+        "comments": [
+          "<# one #>",
+          "<# two #>"
+        ],
+        "tree_sha256": "0e8b62daa6c3706da026ce4483c5757e7bda078f3343dec2c3aa3a53b74eed6d",
+        "canonical_tree_sha256": "c7f56aa7cd039360ffd1ddc7705ff9c0d1bb16a299e15a574295b8b70538be99"
+      },
+      "public_queries": [
+        "OWNERSHIP_QUERY_ROW comment-redirect-repeated-dash redirect-word error=false partial=false timeout=false hits=1",
+        "OWNERSHIP_QUERY_HIT comment-redirect-repeated-dash redirect-word 37 2d6f75747075742e6c6f67",
+        "OWNERSHIP_QUERY_ROW comment-redirect-repeated-dash redirection error=false partial=false timeout=false hits=1",
+        "OWNERSHIP_QUERY_HIT comment-redirect-repeated-dash redirection 16 3e203c23206f6e6520233e3c232074776f20233e202d6f75747075742e6c6f67",
+        "OWNERSHIP_QUERY_ROW comment-redirect-repeated-dash redirect-target error=false partial=false timeout=false hits=1",
+        "OWNERSHIP_QUERY_HIT comment-redirect-repeated-dash redirect-target 17 203c23206f6e6520233e3c232074776f20233e202d6f75747075742e6c6f67"
+      ]
+    },
+    {
+      "id": "comment-redirect-multiline-dash",
+      "kind": "comment",
+      "source": "Write-Output hi > <# one\n two #> -output.log\n",
+      "source_sha256": "ef5f8cf5d09716765980cf0325461defa22a772b213be6458f6f7941e2641140",
+      "accepted": null,
+      "native": {
+        "id": "comment-redirect-multiline-dash",
+        "kind": "comment",
+        "accepted": true,
+        "source_sha256": "ef5f8cf5d09716765980cf0325461defa22a772b213be6458f6f7941e2641140",
+        "errors": [],
+        "commands": [
+          {
+            "name": "Write-Output",
+            "text": "Write-Output hi > <# one\n two #> -output.log",
+            "count": 2,
+            "arguments": [
+              {
+                "kind": "StringConstantExpressionAst",
+                "text": "hi",
+                "start": 13,
+                "end": 15
+              },
+              {
+                "kind": "StringConstantExpressionAst",
+                "text": ".log",
+                "start": 40,
+                "end": 44
+              }
+            ]
+          }
+        ],
+        "branches": [],
+        "redirections": [
+          {
+            "file": "-output",
+            "location_kind": "StringConstantExpressionAst",
+            "value": "-output",
+            "location_start": 33,
+            "location_end": 40,
+            "text": "> <# one\n two #> -output",
+            "start": 16,
+            "end": 40
+          }
+        ],
+        "assignments": [],
+        "tokens": [
+          {
+            "kind": "Generic",
+            "text": "Write-Output",
+            "flags": "CommandName",
+            "start": 0,
+            "end": 12
+          },
+          {
+            "kind": "Identifier",
+            "text": "hi",
+            "flags": "None",
+            "start": 13,
+            "end": 15
+          },
+          {
+            "kind": "Redirection",
+            "text": ">",
+            "flags": "DisallowedInRestrictedMode",
+            "start": 16,
+            "end": 17
+          },
+          {
+            "kind": "Comment",
+            "text": "<# one\n two #>",
+            "flags": "ParseModeInvariant",
+            "start": 18,
+            "end": 32
+          },
+          {
+            "kind": "Generic",
+            "text": "-output",
+            "flags": "None",
+            "start": 33,
+            "end": 40
+          },
+          {
+            "kind": "Generic",
+            "text": ".log",
+            "flags": "None",
+            "start": 40,
+            "end": 44
+          },
+          {
+            "kind": "NewLine",
+            "text": "\n",
+            "flags": "ParseModeInvariant",
+            "start": 44,
+            "end": 45
+          },
+          {
+            "kind": "EndOfInput",
+            "text": "",
+            "flags": "ParseModeInvariant",
+            "start": 46,
+            "end": 46
+          }
+        ],
+        "matches": true
+      },
+      "parser": {
+        "id": "comment-redirect-multiline-dash",
+        "exit": 0,
+        "accepted": true,
+        "commands": [
+          "Write-Output hi > <# one\n two #> -output.log"
+        ],
+        "generic_words": [
+          "hi",
+          "-output.log"
+        ],
+        "target_nodes": [
+          " <# one\n two #> -output.log"
+        ],
+        "redirections": [
+          "> <# one\n two #> -output.log"
+        ],
+        "arrays": [],
+        "separator_nodes": [
+          " ",
+          " ",
+          " "
+        ],
+        "comments": [
+          "<# one\n two #>"
+        ],
+        "tree_sha256": "b17c6a04ba5fbe31b755f9a4b621d453ba10fc08de83786b946c68754345ee72",
+        "canonical_tree_sha256": "3cacd6ed00817276d5a1c8cb52e0e0434f651909e65434f4a51f4896f2a098cf"
+      },
+      "public_queries": [
+        "OWNERSHIP_QUERY_ROW comment-redirect-multiline-dash redirect-word error=false partial=false timeout=false hits=1",
+        "OWNERSHIP_QUERY_HIT comment-redirect-multiline-dash redirect-word 33 2d6f75747075742e6c6f67",
+        "OWNERSHIP_QUERY_ROW comment-redirect-multiline-dash redirection error=false partial=false timeout=false hits=1",
+        "OWNERSHIP_QUERY_HIT comment-redirect-multiline-dash redirection 16 3e203c23206f6e650a2074776f20233e202d6f75747075742e6c6f67",
+        "OWNERSHIP_QUERY_ROW comment-redirect-multiline-dash redirect-target error=false partial=false timeout=false hits=1",
+        "OWNERSHIP_QUERY_HIT comment-redirect-multiline-dash redirect-target 17 203c23206f6e650a2074776f20233e202d6f75747075742e6c6f67"
+      ]
+    }
+  ]
+}

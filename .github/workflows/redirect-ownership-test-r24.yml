@@ -1,0 +1,52 @@
+name: Verify permanent PowerShell redirect ownership assertions
+on:
+  push:
+    branches: [ci/powershell-redirect-test-20261127-r24]
+    paths:
+      - .github/workflows/redirect-ownership-test-r24.yml
+      - ci-tools/redirect-ownership-test-r24/**
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+jobs:
+  verify:
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: proof
+          persist-credentials: false
+          sparse-checkout: ci-tools/redirect-ownership-test-r24
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: e7ee97e84246863766ec7465777a035134533feb
+          path: baseline
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 530519c0040c109173710fb7f0f84bf87fbd750c
+          path: source
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          version: 0.13.9
+          python-version: "3.15"
+          require-checksums: true
+          enable-cache: false
+      - name: Verify old-source assertion sensitivity and exact candidate
+        run: |
+          set -euo pipefail
+          uv run --no-project --python 3.15 proof/ci-tools/redirect-ownership-test-r24/verify.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: redirect-ownership-test-r24-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/redirect-ownership-test-r24/*.log
+            ${{ runner.temp }}/redirect-ownership-test-r24/*.json
+          if-no-files-found: error
+          retention-days: 7

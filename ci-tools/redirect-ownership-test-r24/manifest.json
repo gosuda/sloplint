@@ -1,0 +1,61 @@
+{
+  "repository": "gosuda/sloplint",
+  "pull_request": 137,
+  "thread": "PRRT_kwDOVOMFM868mwQd",
+  "comment": 4714600338,
+  "candidate": "530519c0040c109173710fb7f0f84bf87fbd750c",
+  "candidate_tree": "912390b51d8a4908a85dd6969b2c5561a933885b",
+  "published_parent": "d972b52788bbdf88265e50df1a2502663e597df7",
+  "published_parent_tree": "a026522088e19dd38731146c90956650506be913",
+  "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+  "baseline": "e7ee97e84246863766ec7465777a035134533feb",
+  "baseline_tree": "5d2a547a693d073ad9739311e7b653baa96a08d6",
+  "changed_file": "crates/sloplint-syntax/tests/grammar_gaps/powershell_separator_ownership.rs",
+  "original_test_sha256": "fa7076bef1b95e4ae8713972020db8287f1add633d712a4cd4e6ea0908a53dc9",
+  "candidate_test_sha256": "58357128c15623c4888ac629b68b050f680ad4ce4b83362d23d882f9620482d5",
+  "frozen_assertions": [
+    {
+      "comments": "<# note #>",
+      "filename_byte": 29,
+      "redirection_byte": 16,
+      "filename_text": "-output.log"
+    },
+    {
+      "comments": "<# one #><# two #>",
+      "filename_byte": 37,
+      "redirection_byte": 16,
+      "filename_text": "-output.log"
+    },
+    {
+      "comments": "<# one\n two #>",
+      "filename_byte": 33,
+      "redirection_byte": 16,
+      "filename_text": "-output.log"
+    }
+  ],
+  "scope": "Strengthen an existing permanent public query test only. All parser/scanner/grammar/product files remain identical to d972b527.",
+  "native_limit": "PowerShell7.7.0 splits the inherited single-dash filename into '-output' plus positional '.log'. The permanent assertions preserve the parser's existing complete-word ownership and do not claim native target-end parity.",
+  "proof_phases": [
+    "Exact source identity before and after; only the test file differs from published d972.",
+    "On unmodified e7 product source, compile and run the original comment-only test, expecting one passing test.",
+    "On the same e7 product source, compile the strengthened test successfully, then expect one real assertion failure with exit101. Restore all fixture overlays.",
+    "On exact candidate source, run the strengthened test and all116 permanent PowerShell regressions, formatting, Clippy all workspace targets, full workspace tests, release build, self-lint and whitespace."
+  ],
+  "remaining_required_ci": "After verified additive publication, ordinary CI must pass native Linux x64 and ARM64 suites/release plus lint. Existing d972 four-job source proof and ordinary success remain bound to that unchanged product source.",
+  "independent_review": "Parent reviewed exact530519c test-only diff and accepted both mandatory membership/extent assertions before source publication; gates remain required.",
+  "parent_evidence": {
+    "source_run": 45915713157,
+    "source_producer": "2283f07cb51e48f5e61d21861e146e2a53518681",
+    "source_tree": "a026522088e19dd38731146c90956650506be913",
+    "ordinary_run": 45917020535,
+    "ordinary_conclusion": "success",
+    "checkpoint": "4653b2d295d848994b03f5a9f901f17f34e2b60a",
+    "prior_thread_snapshot": "26 resolved at00:44:38UTC; new analysis thread arrived00:45:31UTC."
+  },
+  "proof_files_sha256": {
+    "verify.py": "cb47c211d3dcbbb491ca2423e204be57b36fa61cc81ca65cdac9f0ba104265ff",
+    "original-test.rs": "fa7076bef1b95e4ae8713972020db8287f1add633d712a4cd4e6ea0908a53dc9",
+    "candidate-test.rs": "58357128c15623c4888ac629b68b050f680ad4ce4b83362d23d882f9620482d5",
+    "frozen-captures.json": "61fc4aab06ea3ea390864113532b33ff20d994cc121083e24e9312013b60554c"
+  }
+}
