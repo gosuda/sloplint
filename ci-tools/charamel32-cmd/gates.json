@@ -1,30 +1,47 @@
 {
-  "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
-  "original_tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
-  "candidate_tree": "457cd4529dbca9dfb84a258f6a4854b3ce5c6ac2",
+  "head": "38d586ae3b2bce634e854990844f1db0b7642618",
+  "original_tree": "10a647a31d2e9cca96d31be7189bce76c3017f80",
+  "candidate_tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
+  "prepared_tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
   "source_sha256": {
+    "bin/crush/lib/shell_screen.ml": "76f8ed44a22f5f6d022732aa7d92fba00517fee38ed9d4a3cf28e6d5e0fdd1fe",
+    "bin/crush/lib/tools_shell.ml": "dd04f4b372f42d5ad4d64d09168ded0e8939c8263c25693e4704303d00623928",
+    "test/crush/test_tools_shell.ml": "5ce61e22f1d031bc43a2375a80f5240589e073e41eee6f592b08d97e26a28e8c"
+  },
+  "patch_sha256": "0f6ae438a94789b88a938dc030195f7db756b493f6a83a35c92345a7d9893464",
+  "driver_sha256": "657123549471959be92b5dd0f033cdb934e51a8fbd56aafedc2820b705c49454",
+  "preparation": {
+    "id": 15182191626,
+    "sha256": "f2d8970d0b9d4b0fca6ed2a1e4b16f6b6eedc316ac13293142ecf831c5d5d490",
+    "report": "prepare-result.json",
+    "producer": "8dece2aac1d8cc2adb407a676a231d042eecebbe",
+    "run": 45963141716,
+    "job": 140385428457
+  },
+  "windows_proof": {
+    "id": 15181286677,
+    "sha256": "5459c195bb44cb21a73a43fffa88a67fa67bba8fcd9cfb7575c0806cdd902941",
+    "producer": "0a60a5c81b539444484ffbf596d8a78f179c8cee",
+    "run": 45957479981,
+    "job": 140367202997
+  },
+  "windows_tree": "457cd4529dbca9dfb84a258f6a4854b3ce5c6ac2",
+  "previous_sha256": {
     "bin/crush/lib/shell_screen.ml": "76f8ed44a22f5f6d022732aa7d92fba00517fee38ed9d4a3cf28e6d5e0fdd1fe",
     "bin/crush/lib/tools_shell.ml": "dd04f4b372f42d5ad4d64d09168ded0e8939c8263c25693e4704303d00623928",
     "test/crush/test_tools_shell.ml": "6225ae491aac514cf56594597277cd39e3b53524a53412fc2311444dac65ce77"
   },
-  "patch_sha256": "ee668f1b348e2401d33dc3b0c47cfb51aab4d2e73f73384cf4fd3a78d39db81a",
+  "windows_fixture_sha256": "84e4ea277db9f271b3ecc06e11702e3ff28dc04f2f88a7caf5dba2add2a68e07",
   "native_observed_sha256": "1db8a4202cc9f0d7e3da4b037bd035f2618c24a445ee1ce88390fb2c433f535d",
-  "preparation": {
-    "id": 15178673535,
-    "sha256": "124c3253d98b7eb187b36ac1d9c1fd73ac4f7681f2cfaa9cafc10031c74a2420",
-    "report": "prepare-result.json",
-    "producer": "54dd715eec83b5f0136e304d522ca0e09aa07c03",
-    "run": 45956779383,
-    "job": 140364978854
-  },
-  "source_changes": "Three paths: parser, fd-only read-only integration, and tests. All source bytes must equal the authenticated native formatter output; no later substitutions.",
+  "native_options_sha256": "4828864f66e1c3b3b861d1fe2be1b9fd9571c6e92dccbfb4b751114e3c65d638",
   "required_linux": [
     "dune build @fmt",
     "dune build --profile release",
     "dune runtest --profile release"
   ],
-  "windows_scope": "Full release build and formatter, all 55 frozen native Cmd observations, and actual tools-shell and permission suites including attached-keyword denial and explicit approval; no full Windows-suite claim.",
-  "prepared_tree": "457cd4529dbca9dfb84a258f6a4854b3ce5c6ac2",
-  "driver_sha256": "5d1bda0bfb19ecd27c38b718347525167b1cc04162ca2395502986c3482207fa",
-  "native_options_sha256": "4828864f66e1c3b3b861d1fe2be1b9fd9571c6e92dccbfb4b751114e3c65d638"
+  "limitations": [
+    "Current tree runs all Linux AGENTS gates. Windows evidence is carried only after complete non-test blob/mode equality and exact native permission-fixture equality.",
+    "No claim that the merged test-only tree was run on Windows, or that the full Windows suite passed.",
+    "Historical failed native setup/oracle/transport/fd-integration proofs remain unchanged."
+  ]
 }

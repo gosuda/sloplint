@@ -91,6 +91,66 @@ def identity() -> dict[str, Any]:
     }
 
 
+
+def tree_entries(tree: str) -> dict[str, tuple[str, str, str]]:
+    raw = subprocess.check_output(["git", "-C", str(SOURCE), "ls-tree", "-r", "-z", tree])
+    entries: dict[str, tuple[str, str, str]] = {}
+    for item in raw.split(b"\0"):
+        if not item:
+            continue
+        metadata, path = item.split(b"\t", 1)
+        mode, kind, object_id = metadata.decode("ascii").split()
+        entries[path.decode("utf-8")] = (mode, kind, object_id)
+    return entries
+
+
+def windows_fixture(text: str) -> str:
+    start = text.index("let test_cmd_loop_permissions () =")
+    end = text.index("\nlet test_foreground_capture", start)
+    return text[start:end]
+
+
+def authenticated_windows() -> dict[str, Any]:
+    archive: dict[str, Any] = MANIFEST["windows_proof"]
+    request = urllib.request.Request(
+        f'https://api.github.com/repos/gosuda/sloplint/actions/artifacts/{archive["id"]}/zip',
+        headers={"Authorization": "Bearer " + os.environ["GH_TOKEN"],
+                 "Accept": "application/vnd.github+json"},
+    )
+    opener = urllib.request.build_opener(ArtifactRedirect())
+    with opener.open(request, timeout=90) as response:
+        data = response.read()
+    assert sha256(data) == archive["sha256"], "Windows archive digest"
+    reports: dict[str, dict[str, Any]] = {}
+    with zipfile.ZipFile(io.BytesIO(data)) as contents:
+        for filename in ("gates-result.json", "native-replay.json", "native-selection.json"):
+            matches = [name for name in contents.namelist() if name.endswith(filename)]
+            assert len(matches) == 1, filename
+            reports[filename] = json.loads(contents.read(matches[0]))
+    result = reports["gates-result.json"]
+    assert result["producer"] == archive["producer"]
+    assert str(result["run"]) == str(archive["run"])
+    assert result["lane"] == "windows" and result["accepted"] is True
+    assert result["identity"]["candidate_tree"] == MANIFEST["windows_tree"]
+    assert result["identity"]["source_sha256"] == MANIFEST["previous_sha256"]
+    assert result["identity"]["unstaged_clean"] is True
+    assert result["identity"]["unexpected_untracked"] == []
+    required = {"compiler-and-formatter", "format", "release-build",
+                "native-shell-permission-tests", "whitespace"}
+    assert {command["label"] for command in result["commands"]} == required
+    assert all(command["actual_exit"] == 0 and not command["timeout"]
+               for command in result["commands"])
+    replay = reports["native-replay.json"]
+    assert replay["producer"] == archive["producer"]
+    assert str(replay["run"]) == str(archive["run"])
+    assert replay["identity"]["candidate_tree"] == MANIFEST["windows_tree"]
+    assert len(replay["records"]) == 55 and replay["failures"] == []
+    assert all(record["accepted"] for record in replay["records"])
+    assert reports["native-selection.json"]["selected_and_passed"] is True
+    save("authenticated-windows-reports.json", reports)
+    return result
+
+
 def preflight() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     assert git("rev-parse", "HEAD") == MANIFEST["head"]
@@ -103,13 +163,25 @@ def preflight() -> int:
     assert preparation["original_tree"] == MANIFEST["original_tree"]
     assert preparation["formatted_tree"] == MANIFEST["prepared_tree"]
     assert preparation["candidate_all_pass"] is True
-    assert preparation["candidate_cases"] == 115
-    assert preparation["intermediate_tree"] == "e4dc56c7aa06c798df5eca42ecad54e2ffe83423"
-    assert preparation["intermediate_actual_failures"] == [
-        "for-options-options_5_backtick", "for-options-options_6_backtick"
-    ]
+    assert preparation["candidate_cases"] == 124
+    assert preparation["intermediate_tree"] == MANIFEST["windows_tree"]
+    assert preparation["intermediate_actual_failures"] == []
+    assert preparation["native_record_counts"] == [37, 50, 18, 14]
     assert preparation["source_restored"] is True
-    assert preparation["baseline_actual_failures"] >= 8
+    assert preparation["baseline_actual_failures"] >= 4
+    windows = authenticated_windows()
+    previous: list[dict[str, str]] = json.loads((ROOT / "previous-elements.json").read_text("utf-8"))
+    assert {entry["path"] for entry in previous} == set(MANIFEST["previous_sha256"])
+    for entry in previous:
+        content = entry["content"].encode("utf-8")
+        assert sha256(content) == entry["sha256"] == MANIFEST["previous_sha256"][entry["path"]]
+        (SOURCE / entry["path"]).write_bytes(content)
+    assert git("add", "--", *[entry["path"] for entry in previous]) == ""
+    assert git("write-tree") == MANIFEST["windows_tree"]
+    prior_entries = tree_entries(MANIFEST["windows_tree"])
+    git("reset", "--hard", MANIFEST["head"])
+    assert git("rev-parse", "HEAD") == MANIFEST["head"]
+    assert git("status", "--porcelain") == ""
     patch = ROOT / "candidate.patch"
     assert sha256(patch.read_bytes()) == MANIFEST["patch_sha256"]
     applied = subprocess.run(["git", "apply", "--index", str(patch)], cwd=SOURCE, capture_output=True, check=False)
@@ -123,6 +195,28 @@ def preflight() -> int:
         before = entry["content"]
         assert sha256(before.encode("utf-8")) == entry["sha256"]
         assert (SOURCE / entry["path"]).read_bytes() == before.encode("utf-8"), entry["path"]
+    current_entries = tree_entries(MANIFEST["candidate_tree"])
+    test_path = "test/crush/test_tools_shell.ml"
+    assert prior_entries[test_path][:2] == current_entries[test_path][:2]
+    assert {path: entry for path, entry in prior_entries.items() if path != test_path} == {
+        path: entry for path, entry in current_entries.items() if path != test_path
+    }, "a non-test blob or mode differs from the native Windows source"
+    assert git("diff", "--name-only", MANIFEST["windows_tree"], MANIFEST["candidate_tree"]).splitlines() == [test_path]
+    old_test = next(entry["content"] for entry in previous if entry["path"] == test_path)
+    new_test = (SOURCE / test_path).read_text("utf-8")
+    assert windows_fixture(old_test) == windows_fixture(new_test)
+    assert sha256(windows_fixture(new_test).encode("utf-8")) == MANIFEST["windows_fixture_sha256"]
+    carry = {
+        "from_tree": MANIFEST["windows_tree"], "current_tree": MANIFEST["candidate_tree"],
+        "windows_producer": windows["producer"], "windows_run": windows["run"],
+        "windows_artifact": MANIFEST["windows_proof"], "non_test_entries_identical": len(prior_entries) - 1,
+        "only_changed_path": test_path, "windows_specific_fixture_identical": True,
+        "windows_fixture_sha256": MANIFEST["windows_fixture_sha256"],
+        "scope": "Exact production and native Windows permission fixture evidence; the additional test-only current-head reconciliation runs full Linux gates separately.",
+        "current_tree_executed_on_windows": False,
+    }
+    save("windows-carry-forward.json", carry)
+    print("WINDOWS_CARRY_FORWARD " + json.dumps(carry), flush=True)
     save("exact-candidate.json", current)
     print("EXACT_CHARAMEL_CANDIDATE " + json.dumps(current), flush=True)
     return 0
@@ -273,7 +367,8 @@ def gates(lane: str) -> int:
         accepted = accepted and selected
     report = {"producer": os.environ["GITHUB_SHA"], "run": os.environ["GITHUB_RUN_ID"],
               "lane": lane, "identity": exact, "commands": records, "accepted": accepted,
-              "native_windows_full_suite_claim": False}
+              "native_windows_full_suite_claim": False,
+              "windows_carry_forward": json.loads((OUT / "windows-carry-forward.json").read_text("utf-8"))}
     save("gates-result.json", report)
     print("CHARAMEL_GATES_RESULT " + json.dumps(report), flush=True)
     return 0 if accepted else 1

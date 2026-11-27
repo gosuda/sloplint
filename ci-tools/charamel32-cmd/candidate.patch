@@ -1,7 +1,7 @@
 diff --git a/bin/crush/lib/shell_screen.ml b/bin/crush/lib/shell_screen.ml
 --- a/bin/crush/lib/shell_screen.ml
 +++ b/bin/crush/lib/shell_screen.ml
-@@ -1,1854 +1,2102 @@
+@@ -1,1895 +1,2102 @@
 -open Result.Syntax
 -
 -type dialect = Posix | Cmd
@@ -162,8 +162,22 @@ diff --git a/bin/crush/lib/shell_screen.ml b/bin/crush/lib/shell_screen.ml
 -let fd_data_flags =
 -  [ "-e"; "--extension"; "-E"; "--exclude"; "-t"; "--type"; "-d"; "--max-depth" ]
 -
+-(* [fd] glues a value to a short data option ([-tf]) or joins it with [=]
+-   ([--type=f]). The glued value is literal text, so the word is data, never
+-   an execution action. *)
+-let fd_attached_data value =
+-  let width = String.length value in
+-  width > 2
+-  && value.[0] = '-'
+-  && value.[1] <> '-'
+-  && List.mem (String.sub value 0 2) [ "-t"; "-e"; "-E"; "-d" ]
+-  || List.exists
+-       (fun option -> String.starts_with ~prefix:(option ^ "=") value)
+-       [ "--type"; "--extension"; "--exclude"; "--max-depth" ]
+-
 -let rec fd_executes = function
 -  | flag :: _operand :: rest when List.mem flag fd_data_flags -> fd_executes rest
+-  | word :: rest when fd_attached_data word -> fd_executes rest
 -  | "--" :: _ | [] -> false
 -  | flag :: rest -> List.mem flag fd_exec_flags || fd_executes rest
 -
@@ -926,10 +940,20 @@ diff --git a/bin/crush/lib/shell_screen.ml b/bin/crush/lib/shell_screen.ml
 -      let* () = backquoted lx scratch ~in_double:literal_apostrophe in
 -      parameter lx scratch ~literal_apostrophe
 -  | Some c ->
--      (* [${words[@]}] expands to one word per element even when quoted, so a
--         word holding it is never a proven single argument. *)
--      if c = '@' && lx.pos > 0 && lx.source.[lx.pos - 1] = '[' then
--        scratch.is_single <- false;
+-      (* [${@}], [${@:n}] and [${!prefix@}] expand to one word per element
+-         even when quoted, as does [${words[@]}]: a word holding any of them
+-         is never a proven single argument. A trailing [@] after a plain name
+-         ([${var@Q}]) only transforms one value, so it stays single. *)
+-      if c = '@' && lx.pos > 0 then (
+-        let prev = lx.source.[lx.pos - 1] in
+-        if prev = '[' || prev = '{' then scratch.is_single <- false
+-        else
+-          let start = ref (lx.pos - 1) in
+-          while !start >= 0 && is_name_char lx.source.[!start] do
+-            decr start
+-          done;
+-          if !start >= 1 && lx.source.[!start] = '!' && lx.source.[!start - 1] = '{' then
+-            scratch.is_single <- false);
 -      advance lx 1;
 -      parameter lx scratch ~literal_apostrophe
 -
@@ -1131,23 +1155,34 @@ diff --git a/bin/crush/lib/shell_screen.ml b/bin/crush/lib/shell_screen.ml
 -  | w :: _ when (not w.fixed) && ((not w.assignment) || not w.single) ->
 -      Error computed_program
 -  | w :: rest when String.contains w.value '=' -> env_command rest
+-  (* A lone [-] ends option processing like [--]: GNU [env] runs the command
+-     after it whatever options came first, so it is skipped, never a program. *)
+-  | w :: rest when w.fixed && String.equal w.value "-" -> env_command rest
 -  | words -> Ok words
 -
 -(* The [command] builtin has an execution mode and a lookup mode: [-v] and [-V]
 -   only report how the shell resolves a name without invoking it, so their
 -   operands are names, never commands to analyze. *)
+-
+-(* [command] glues its lookup switches into one word ([-pv]): a group drawn
+-   only from [p], [v] and [V] that names [v] or [V] only resolves a name. *)
+-let is_command_lookup_group value =
+-  let width = String.length value in
+-  width > 2
+-  && value.[0] = '-'
+-  && String.for_all
+-       (fun c -> c = 'p' || c = 'v' || c = 'V')
+-       (String.sub value 1 (width - 1))
+-  && (String.contains value 'v' || String.contains value 'V')
+-
 -let rec command_lookup = function
 -  | w :: _ when w.fixed && (String.equal w.value "-v" || String.equal w.value "-V") ->
 -      true
 -  | w :: rest when w.fixed && String.equal w.value "-p" -> command_lookup rest
+-  | w :: _ when w.fixed && is_command_lookup_group w.value -> true
 -  | _ -> false
 -
 -let wrapped_command program args =
--  let args =
--    match (program, args) with
--    | "env", w :: rest when w.fixed && String.equal w.value "-" -> rest
--    | _ -> args
--  in
 -  if String.equal program "command" && command_lookup args then Ok []
 -  else
 -    let switches, arguments = wrapper_options program in
@@ -1597,6 +1632,8 @@ diff --git a/bin/crush/lib/shell_screen.ml b/bin/crush/lib/shell_screen.ml
 -    | flag :: operand :: rest when flag.fixed && List.mem flag.value data_flags ->
 -        if not operand.single then review sink computed_program;
 -        scan ~ambiguous_checked rest
+-    | word :: rest when program = "fd" && word.fixed && fd_attached_data word.value ->
+-        scan ~ambiguous_checked rest
 -    | word :: rest when program = "fd" && word.fixed && word.value = "--" ->
 -        if List.exists (fun word -> not word.single) rest then
 -          review sink computed_program
@@ -1788,17 +1825,21 @@ diff --git a/bin/crush/lib/shell_screen.ml b/bin/crush/lib/shell_screen.ml
 -
 -and for_command sink ~depth args =
 -  let folded = List.map (fun w -> String.lowercase_ascii w.value) args in
--  let rec after_do = function
+-  (* The body delimiter is the first [do] after the loop set closes: a word
+-     before the set (such as the directory in [for /r do ...]) is data, not
+-     the delimiter. A bare [for] with no header at all names no loop, so it
+-     leaves [for_open] alone the way an uppercase [FOR] already does. *)
+-  let rec after_do seen_close = function
 -    | [] -> None
 -    | w :: rest ->
--        if String.equal (String.lowercase_ascii w.value) "do" then Some rest
--        else after_do rest
+-        if seen_close && String.equal (String.lowercase_ascii w.value) "do" then Some rest
+-        else after_do (seen_close || String.contains w.value ')') rest
 -  in
 -  if List.mem "/f" folded then review sink for_command_source
 -  else
--    match after_do args with
+-    match after_do false args with
 -    | Some body -> analyze_cmd sink ~depth body
--    | None -> sink.for_open <- true
+-    | None -> if args <> [] then sink.for_open <- true
 -
 -and analyze_cmd sink ~depth = function
 -  | [] -> ()
@@ -4639,7 +4680,7 @@ diff --git a/bin/crush/lib/tools_shell.ml b/bin/crush/lib/tools_shell.ml
 diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
 --- a/test/crush/test_tools_shell.ml
 +++ b/test/crush/test_tools_shell.ml
-@@ -1,625 +1,820 @@
+@@ -1,652 +1,857 @@
 -open Lwt_direct
 -module Artifact = Crush_core.Artifact
 -module Config = Crush_core.Config
@@ -4765,10 +4806,20 @@ diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
 -        (command ^ " has only literal data operands")
 -        true
 -        (Tools_shell.is_read_only command))
--    [ "fd -- -X"; "fd -- --exec"; "fd -e -X README.md"; "fd -E --exec README.md" ];
+-    [
+-      "fd -- -X";
+-      "fd -- --exec";
+-      "fd -e -X README.md";
+-      "fd -E --exec README.md";
+-      "fd -t f README.md";
+-      "fd -tf README.md";
+-    ];
 -  Alcotest.(check bool)
 -    "fd option operand does not end option parsing" false
 -    (Tools_shell.is_read_only "fd -e -- -X touch changed");
+-  Alcotest.(check bool)
+-    "fd attached filter with an execution action is mutable" false
+-    (Tools_shell.is_read_only "fd -tf README.md -x touch changed");
 -  Alcotest.(check bool)
 -    "sed in-place is mutable" false
 -    (Tools_shell.is_read_only "sed -i s/a/b/ file");
@@ -4880,8 +4931,11 @@ diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
 -      ("command -v git", "clear");
 -      ("command -V git", "clear");
 -      ("command -p -v git", "clear");
+-      ("command -pv git", "clear");
+-      ("command -pV git", "clear");
 -      ("command git status", "clear");
 -      ("command curl https://example.com", "blocked");
+-      ("command -vx git", "review");
 -    ]
 -
 -let test_ansi_c_nul () =
@@ -5002,6 +5056,9 @@ diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
 -    posix "script -qc \"c''url\" /dev/null" `Blocked;
 -    posix "echo hi | xargs -I % % x" `Review;
 -    posix "cat <<EOF | sh\necho hi\nEOF" `Review;
+-    cmd "cmd /c echo ready for review" `Clear;
+-    cmd "cmd /c for %i in (*)" `Review;
+-    cmd "for /r do %i in (*.txt) do echo %i" `Clear;
 -    cmd "for %f in (a.txt b.txt) do type \"%f\"" `Clear;
 -    cmd "for %%f in (a.txt b.txt) do type \"%%f\"" `Clear;
 -    cmd "for /l %i in (1,1,10) do @echo hi" `Clear;
@@ -5049,7 +5106,10 @@ diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
 -      ({|env GROUP=$group ./cu''rl.exe --version|}, "blocked");
 -      ({|env GROUP=$group ./brew.exe install fixture|}, "blocked");
 -      ({|env - GROUP=$group ./brew.exe install fixture|}, "blocked");
+-      ({|env -u UNUSED - ./brew.exe install fixture|}, "blocked");
+-      ({|env GROUP=value - ./brew.exe install fixture|}, "blocked");
 -      ({|env "$target" printenv|}, "review");
+-      ({|env GROUP="${@}" printf ready|}, "review");
 -      (* Clusters of no-operand xargs switches and the attached optional
 -         watch operand leave the command boundary unchanged. *)
 -      ({|printf 'a' | xargs -0r printf '%s'|}, "clear");
@@ -5065,6 +5125,10 @@ diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
 -    [
 -      ("fd -g README.md", "clear");
 -      ("fd --glob README.md", "clear");
+-      ("fd --type f README.md", "clear");
+-      ("fd -t f README.md", "clear");
+-      ("fd -tf README.md", "clear");
+-      ("fd --type=f README.md", "clear");
 -      ("find -O0 . -print", "clear");
 -      ("find -O1 . -print", "clear");
 -      ("find -O2 . -print", "clear");
@@ -5087,10 +5151,14 @@ diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
 -      ("find . -name $pattern -print", "review");
 -      ("find $dir -print", "review");
 -      ({|find . -name "$@" -print|}, "review");
+-      ({|find . -name "${@}" -print|}, "review");
+-      ({|find . -name "${@:1}" -print|}, "review");
+-      ({|find . -name "${!prefix@}" -print|}, "review");
 -      ({|find . "$flag" sh -c 'printf executed' \;|}, "review");
 -      ({|fd "$flag" sh -c 'printf executed'|}, "review");
 -      ({|fd -- "$pattern"|}, "clear");
 -      ({|fd -e "$extension" -X printf '%s'|}, "clear");
+-      ({|fd -tf README.md -X printf '%s'|}, "clear");
 -      ({|find . -name '-exec' -print|}, "clear");
 -      ({|find . -exec printf '%s' '{}' \; -exec curl '{}' \;|}, "blocked");
 -      ({|find . -exec printf '%s' "$label" \;|}, "review");
@@ -5395,10 +5463,24 @@ diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
 +        (command ^ " has only literal data operands")
 +        true
 +        (Tools_shell.is_read_only command))
-+    [ "fd -- -X"; "fd -- --exec"; "fd -e -X README.md"; "fd -E --exec README.md" ];
++    [
++      "fd -- -X";
++      "fd -- --exec";
++      "fd -e -X README.md";
++      "fd -E --exec README.md";
++      "fd -t f README.md";
++      "fd -tf README.md";
++    ];
 +  Alcotest.(check bool)
 +    "fd option operand does not end option parsing" false
 +    (Tools_shell.is_read_only "fd -e -- -X touch changed");
++  (match Shell_screen.screen Shell_screen.Posix "fd -tf README.md -x touch changed" with
++  | Shell_screen.Clear -> ()
++  | Shell_screen.Blocked _ | Shell_screen.Review _ ->
++      Alcotest.fail "the preserved attached fd action must screen Clear");
++  Alcotest.(check bool)
++    "fd attached filter with an execution action is mutable" false
++    (Tools_shell.is_read_only "fd -tf README.md -x touch changed");
 +  List.iter
 +    (fun command ->
 +      Alcotest.(check bool)
@@ -5539,8 +5621,11 @@ diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
 +      ("command -v git", "clear");
 +      ("command -V git", "clear");
 +      ("command -p -v git", "clear");
++      ("command -pv git", "clear");
++      ("command -pV git", "clear");
 +      ("command git status", "clear");
 +      ("command curl https://example.com", "blocked");
++      ("command -vx git", "review");
 +    ]
 +
 +let test_ansi_c_nul () =
@@ -5662,6 +5747,7 @@ diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
 +    posix "echo hi | xargs -I % % x" `Review;
 +    posix "cat <<EOF | sh\necho hi\nEOF" `Review;
 +    cmd "cmd /c echo ready for review" `Clear;
++    cmd "cmd /c for %i in (*)" `Review;
 +    cmd "cmd /c \"echo ready for review\"" `Clear;
 +    cmd "cmd /d /c echo do for else" `Clear;
 +    cmd "for /r do %i in (*.txt) do echo %i" `Clear;
@@ -5773,7 +5859,10 @@ diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
 +      ({|env GROUP=$group ./cu''rl.exe --version|}, "blocked");
 +      ({|env GROUP=$group ./brew.exe install fixture|}, "blocked");
 +      ({|env - GROUP=$group ./brew.exe install fixture|}, "blocked");
++      ({|env -u UNUSED - ./brew.exe install fixture|}, "blocked");
++      ({|env GROUP=value - ./brew.exe install fixture|}, "clear");
 +      ({|env "$target" printenv|}, "review");
++      ({|env GROUP="${@}" printf ready|}, "review");
 +      (* Clusters of no-operand xargs switches and the attached optional
 +         watch operand leave the command boundary unchanged. *)
 +      ({|printf 'a' | xargs -0r printf '%s'|}, "clear");
@@ -5787,6 +5876,14 @@ diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
 +let test_review_argument_boundaries () =
 +  check_posix_verdicts
 +    [
++      ("find . -name \"${pattern:-{@*.txt}\" -print", "clear");
++      ("find . -name \"${pattern:-{!CHAR32_PREFIX@*.txt}\" -print", "clear");
++      ("find . -name \"${pattern:-literal@text}\" -print", "clear");
++      ("env GROUP=value - ./brew.exe install fixture", "clear");
++      ("env -u UNUSED GROUP=value - ./brew.exe install fixture", "clear");
++      ("env -u UNUSED - ./brew.exe install fixture", "blocked");
++      ("env - GROUP=value ./brew.exe install fixture", "blocked");
++      ("env GROUP=value -i ./brew.exe install fixture", "clear");
 +      ("env A=\"${@}\" true", "review");
 +      ("env A=\"${@:1}\" true", "review");
 +      ("env A=\"${@:-fallback}\" true", "review");
@@ -5841,6 +5938,10 @@ diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
 +    [
 +      ("fd -g README.md", "clear");
 +      ("fd --glob README.md", "clear");
++      ("fd --type f README.md", "clear");
++      ("fd -t f README.md", "clear");
++      ("fd -tf README.md", "clear");
++      ("fd --type=f README.md", "clear");
 +      ("find -O0 . -print", "clear");
 +      ("find -O1 . -print", "clear");
 +      ("find -O2 . -print", "clear");
@@ -5863,10 +5964,14 @@ diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
 +      ("find . -name $pattern -print", "review");
 +      ("find $dir -print", "review");
 +      ({|find . -name "$@" -print|}, "review");
++      ({|find . -name "${@}" -print|}, "review");
++      ({|find . -name "${@:1}" -print|}, "review");
++      ({|find . -name "${!prefix@}" -print|}, "review");
 +      ({|find . "$flag" sh -c 'printf executed' \;|}, "review");
 +      ({|fd "$flag" sh -c 'printf executed'|}, "review");
 +      ({|fd -- "$pattern"|}, "clear");
 +      ({|fd -e "$extension" -X printf '%s'|}, "clear");
++      ({|fd -tf README.md -X printf '%s'|}, "clear");
 +      ({|find . -name '-exec' -print|}, "clear");
 +      ({|find . -exec printf '%s' '{}' \; -exec curl '{}' \;|}, "blocked");
 +      ({|find . -exec printf '%s' "$label" \;|}, "review");

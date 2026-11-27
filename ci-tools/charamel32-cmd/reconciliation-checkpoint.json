@@ -660,8 +660,80 @@
     "Fresh raw refs, additive publication, current findings, ordinary CI, retirement of all three owned temporary workflows."
   ],
   "limitations": [
-    "The older successful457cd Git tree is not the new maintained head.",
-    "No full Windows-suite claim; actual full release build and40 selected shell/permission tests are recorded.",
-    "Earlier setup/oracle/transport/fd failures remain in immutable prior checkpoints."
-  ]
+    "Current tree runs all Linux AGENTS gates. Windows evidence is carried only after complete non-test blob/mode equality and exact native permission-fixture equality.",
+    "No claim that the merged test-only tree was run on Windows, or that the full Windows suite passed.",
+    "Historical failed native setup/oracle/transport/fd-integration proofs remain unchanged."
+  ],
+  "phase": "current-head full Linux source gates; exact production Windows evidence carry-forward",
+  "candidate_tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
+  "full_gate_manifest": {
+    "head": "38d586ae3b2bce634e854990844f1db0b7642618",
+    "original_tree": "10a647a31d2e9cca96d31be7189bce76c3017f80",
+    "candidate_tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
+    "prepared_tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
+    "source_sha256": {
+      "bin/crush/lib/shell_screen.ml": "76f8ed44a22f5f6d022732aa7d92fba00517fee38ed9d4a3cf28e6d5e0fdd1fe",
+      "bin/crush/lib/tools_shell.ml": "dd04f4b372f42d5ad4d64d09168ded0e8939c8263c25693e4704303d00623928",
+      "test/crush/test_tools_shell.ml": "5ce61e22f1d031bc43a2375a80f5240589e073e41eee6f592b08d97e26a28e8c"
+    },
+    "patch_sha256": "0f6ae438a94789b88a938dc030195f7db756b493f6a83a35c92345a7d9893464",
+    "driver_sha256": "657123549471959be92b5dd0f033cdb934e51a8fbd56aafedc2820b705c49454",
+    "preparation": {
+      "id": 15182191626,
+      "sha256": "f2d8970d0b9d4b0fca6ed2a1e4b16f6b6eedc316ac13293142ecf831c5d5d490",
+      "report": "prepare-result.json",
+      "producer": "8dece2aac1d8cc2adb407a676a231d042eecebbe",
+      "run": 45963141716,
+      "job": 140385428457
+    },
+    "windows_proof": {
+      "id": 15181286677,
+      "sha256": "5459c195bb44cb21a73a43fffa88a67fa67bba8fcd9cfb7575c0806cdd902941",
+      "producer": "0a60a5c81b539444484ffbf596d8a78f179c8cee",
+      "run": 45957479981,
+      "job": 140367202997
+    },
+    "windows_tree": "457cd4529dbca9dfb84a258f6a4854b3ce5c6ac2",
+    "previous_sha256": {
+      "bin/crush/lib/shell_screen.ml": "76f8ed44a22f5f6d022732aa7d92fba00517fee38ed9d4a3cf28e6d5e0fdd1fe",
+      "bin/crush/lib/tools_shell.ml": "dd04f4b372f42d5ad4d64d09168ded0e8939c8263c25693e4704303d00623928",
+      "test/crush/test_tools_shell.ml": "6225ae491aac514cf56594597277cd39e3b53524a53412fc2311444dac65ce77"
+    },
+    "windows_fixture_sha256": "84e4ea277db9f271b3ecc06e11702e3ff28dc04f2f88a7caf5dba2add2a68e07",
+    "native_observed_sha256": "1db8a4202cc9f0d7e3da4b037bd035f2618c24a445ee1ce88390fb2c433f535d",
+    "native_options_sha256": "4828864f66e1c3b3b861d1fe2be1b9fd9571c6e92dccbfb4b751114e3c65d638",
+    "required_linux": [
+      "dune build @fmt",
+      "dune build --profile release",
+      "dune runtest --profile release"
+    ],
+    "limitations": [
+      "Current tree runs all Linux AGENTS gates. Windows evidence is carried only after complete non-test blob/mode equality and exact native permission-fixture equality.",
+      "No claim that the merged test-only tree was run on Windows, or that the full Windows suite passed.",
+      "Historical failed native setup/oracle/transport/fd-integration proofs remain unchanged."
+    ]
+  },
+  "full_gate_workflow_sha256": "39326fda1d1267afb83366794c605908b9c96eac9cb469f30c2539f594b27f24",
+  "test_preservation": {
+    "external_added_statement_lines": 25,
+    "all_preserved_except": [
+      "({|env GROUP=value - ./brew.exe install fixture|}, \"blocked\");"
+    ],
+    "justified_replacement": "({|env GROUP=value - ./brew.exe install fixture|}, \"clear\");",
+    "native_run": 45962135575,
+    "native_case": "assignment_then_dash"
+  },
+  "preparation": {
+    "producer": "8dece2aac1d8cc2adb407a676a231d042eecebbe",
+    "run": 45963141716,
+    "job": 140385428457,
+    "artifact": 15182191626,
+    "digest": "f2d8970d0b9d4b0fca6ed2a1e4b16f6b6eedc316ac13293142ecf831c5d5d490",
+    "actual_baseline_mismatches": 30,
+    "candidate_cases": 124,
+    "candidate_mismatches": 0,
+    "source_restored": true
+  },
+  "maintained_published": false,
+  "current_full_gate_status": "not_launched"
 }
