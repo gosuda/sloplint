@@ -1,0 +1,108 @@
+{
+  "schema": 1,
+  "status": "authored candidate; native candidate and required source gates pending",
+  "publication_eligible": false,
+  "source": {
+    "repository": "gosuda/Spira",
+    "head": "e422d148ee77e78abad83b993cd4b255c34504bf",
+    "tree": "9ca31a701e9d51fb857c969328c0c7f43f656cb1",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "blobs": 609
+  },
+  "authored_sha256": "bc627ed7ca6d50e5ea6d8399cca87c98097ac6e534ab1cdfd9fa0ebd61aefcf0",
+  "authored_files": [
+    {
+      "path": "cmd/sqlc-gen-spira/model.lgo",
+      "sha256": "8d7994845af36bb1fe5d1377e1715c383e5c480f6e031a80bccba2414c4c615d"
+    },
+    {
+      "path": "db/db.lgo",
+      "sha256": "ce3aacf92fc9682170995dfc29b969edb742246b83db20cfaaa59b0852cbcec4"
+    },
+    {
+      "path": "migrate/serial_test.lgo",
+      "sha256": "c97190014aad9090fe503454dd84ae9c7de0d9b76466ceb9b07e700066f55eb7"
+    },
+    {
+      "path": "docs/specs/migrate.md",
+      "sha256": "334ef7c031deb393b3f5480f8ca35657e9c658dafb9d6b375a233c7aa48cb97e"
+    },
+    {
+      "path": "docs/specs/sqlc-gen-spira.md",
+      "sha256": "9ffe043069769260748fe49d5f896f3a7395a202dbf1ca568c599270ac9e179e"
+    },
+    {
+      "path": "cmd/sqlc-gen-spira/continued_escape_test.lgo",
+      "sha256": "6c4b73100f578fcb4bc8a5b0d22b2a1e1ca710893a617df60bfeab57d53dadf8"
+    },
+    {
+      "path": "cmd/sqlc-gen-spira/testdata/continued-strings.json",
+      "sha256": "5bdccdcb30ee68ac6d9ffd3f32a31324cb44ac51ccc12a356894f8e3218a028e"
+    }
+  ],
+  "baseline": {
+    "producer": "f6c6b396f0ca8143a6dead92fc41470fce4d2c57",
+    "run": 45980151731,
+    "job": 140441701012,
+    "artifact": 15189556101,
+    "artifact_sha256": "502862af3201a32661e16b71ef56d0643100b01ff461c9ce88ba3e24018a9204",
+    "checkpoint": "f30893825bcdc70aadb59be3ef4c5f6ee5ea9b96",
+    "checkpoint_path": "reviews/spira47-review-r36/baseline-checkpoint.json",
+    "raw_generator_exit": 1,
+    "failed_cases": [
+      "escape-comment-crlf",
+      "escape-comment-lf",
+      "escape-cr",
+      "escape-lf",
+      "escape-lower-crlf",
+      "escape-mixed-whitespace",
+      "string-only-version"
+    ],
+    "native_cases": 14
+  },
+  "invariants": [
+    "The string scanner begins at a valid quote and captures escape mode before blanking. It advances past each segment and carries mode only across a PostgreSQL continuation gap.",
+    "Continuation lookahead is read-only. It admits ASCII horizontal spaces, CR/LF and line comments, requires a newline, and rejects block comments and operators.",
+    "Only accepted continuation gaps are blanked together with their literals, preventing comment or string version words from leaking into the write check.",
+    "A per-acquisition Locked[bool] serializes the one-time token removal; later calls cannot remove another acquisition's token.",
+    "Both Apply and its five-second watchdog are children of the same bounded group. The first child closes its completion channel, and the watchdog's timer and flag have explicit ownership.",
+    "The existing migration prefix behavior and tests remain; the specification states the missing resume guarantee."
+  ],
+  "required_commands": [
+    [
+      "logos",
+      "test",
+      "-race",
+      "-count=1",
+      "-v",
+      "-run",
+      "^TestPostgresContinuedEscapeStrings$",
+      "./cmd/sqlc-gen-spira"
+    ],
+    [
+      "logos",
+      "test",
+      "-race",
+      "-count=1",
+      "-v",
+      "-run",
+      "^(TestQueuedApplyHonorsContext|TestReleaseFreesTheTurnOnlyOnce|TestMigrationTurnRejectsEndedContextOnFreePool|TestApplyPartialPrefixLeavesSchema)$",
+      "./migrate"
+    ],
+    [
+      "just",
+      "gate"
+    ],
+    [
+      "just",
+      "slop"
+    ],
+    [
+      "just",
+      "eject"
+    ]
+  ],
+  "watchdog_negative_control": "Temporarily replace only Apply's acquisition context with context.Background, compile first, require TestQueuedApplyHonorsContext to fail with its watchdog diagnostic within the bounded command deadline, then restore the exact candidate.",
+  "native_reuse": "Reuse only the authenticated unchanged fourteen-query PostgreSQL receipt and unchanged baseline source/test contract; the candidate generator and all prescribed source gates execute anew.",
+  "scope": "No compiler, linter, dependency, configuration, limit or baseline change."
+}
