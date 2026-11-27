@@ -1,0 +1,154 @@
+{
+  "schema": 1,
+  "purpose": "Freeze the two reported identifier-role defects and adjacent syntactic declaration boundaries before source correction; no production publication.",
+  "source": {
+    "repository": "gosuda/spira",
+    "head": "f3a47a04f1defe427494124507ec621118525265",
+    "tree": "cae17384cce41647b686a80932833cf5a7b09b19",
+    "blobs": 633,
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "index_file": "source-index.json"
+  },
+  "tests": {
+    "tree": "7c48c078922ebf058525d773617576f2e7e00f04",
+    "blobs": 635,
+    "index_file": "test-index.json",
+    "production_unchanged": true
+  },
+  "counterfactual": {
+    "tree": "d5114a6f2b47eff83334dd0b114daff3d1e3c1b9",
+    "blobs": 635,
+    "index_file": "counterfactual-index.json",
+    "kind": "one-file prior reference classifier, not a complete old-source snapshot",
+    "path": "cmd/sqlc-gen-spira/version_reference.lgo",
+    "original_commit": "6031a63255bc7496e22b38921e10401a2d50c291",
+    "sha256": "f3c2fb8217abe06f16b9e0651e045d2da72af695b5cf288c8e9d17a042e3fefb",
+    "blob": "de5af94f52d91c2d91e93c0e1608386450d38807"
+  },
+  "toolchain": {
+    "repository": "gosuda/LoGOs",
+    "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+    "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+    "bootstrap_go": "1.27.4",
+    "fresh_build": true
+  },
+  "postgres_image": "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782",
+  "postgres_version_num": "180007",
+  "sqlc_version": "v1.31.2-0.20261023030206-3ad8b20fb02b",
+  "tools": {
+    "uv": "0.13.9",
+    "python": "3.15"
+  },
+  "contracts": {
+    "cases": 30,
+    "native_original": 30,
+    "native_processed": 28,
+    "current_failed": [
+      "qualified-time-select-alias",
+      "qualified-time-select-quoted-alias",
+      "qualified-time-returning-alias",
+      "relation-bare-alias",
+      "relation-quoted-alias",
+      "relation-qualified-alias",
+      "relation-only-alias",
+      "relation-join-alias",
+      "relation-comma-alias",
+      "relation-derived-alias",
+      "relation-lateral-alias",
+      "relation-function-alias",
+      "relation-ordinality-alias",
+      "relation-column-list",
+      "relation-parenthesized-join-alias"
+    ],
+    "current_pipeline_refusals": [
+      "qualified-time-select-explicit-alias",
+      "qualified-quoted-time-select-alias",
+      "relation-explicit-alias"
+    ],
+    "current_pipeline_partition": {
+      "generated": 25,
+      "plugin-refusal": 3,
+      "upstream": 2
+    },
+    "counterfactual_failed": [
+      "qualified-version-select-time",
+      "qualified-time-select-operand",
+      "qualified-time-returning-alias",
+      "relation-qualified-column",
+      "relation-join-on-column",
+      "relation-where-column",
+      "relation-function-argument",
+      "relation-distinct-from-column",
+      "relation-function-from-operand",
+      "relation-using-column",
+      "relation-array-on-column"
+    ],
+    "expected_semantics": {
+      "references": 11,
+      "aliases": 19
+    },
+    "native_schema": "Create each public items table inside its transaction and roll it back; this makes the qualified public.items control identical to the real SQLc schema.",
+    "all_original_633_source_paths_preserved": true,
+    "source_gates_reused": false,
+    "appended_controls": [
+      "relation-using-column",
+      "relation-array-on-column"
+    ],
+    "sqlc_upstream": {
+      "relation-column-list": "queries.sql:1:1: column \"x\" does not exist",
+      "relation-column-list-explicit": "queries.sql:1:1: column \"x\" does not exist"
+    },
+    "sqlc_experiment": "",
+    "upstream_prediction_note": "These exact native-valid statements still have their direct-generator assertions. Pinned SQLc legacy analysis is predicted to reject their renamed x column before the plugin. The baseline must establish actual raw exit 1, exact diagnostic, absent plugin request, and no emitted .lgo; no runtime observation is claimed by this draft."
+  },
+  "source_findings": [
+    "PRRT_kwDOVpFduc687Ofj",
+    "PRRT_kwDOVpFduc687Ogz"
+  ],
+  "preserved_r41_terminal": {
+    "commit": "b6f69d1f9c8ead5d67b925db22dafdb9cfa755ce",
+    "run": 46061112680,
+    "published": "f3a47a04f1defe427494124507ec621118525265",
+    "work_complete_for_r41": true,
+    "overall_pr_work_complete": false
+  },
+  "proof_sha256": {
+    "baseline_support.py": "32676bc6ec68d6dd7091a441b3220606bcc047760f386ef9098bf7b01e5e9bce",
+    "proof_support.py": "e59521ce25de634ceea28a6346991a80327fbfbeeeaf4ce520a8ddd0ff57d326",
+    "native_support.py": "c5f930b77c049a6ac3f4f5c2e1356e13e59cd5047e2d0ab632e1076efa35e1c5",
+    "observer.py": "9b5add22fab01df0219506edf603b200cfca620cb8bbeccc4436f29accd7c8f3",
+    "schema.sql": "250795d402dca7144e24f33dc51026083c7664385436545bca8762b7a66de6bc",
+    "source-index.json": "f82cc1851d56d7cc2e42d29f0e31630934bb204de21e2b252cafc02cbc08c55d",
+    "test-index.json": "f5fa0c95e9de6c63063f3f9909b356233396545acae46e0467b14b4fa0e41ba9",
+    "counterfactual-index.json": "1af8290d57765a1a4bd91d0bd208467c5cdacb5a302911009e05c1b7d37b3d74",
+    "authored-tests.json": "8fb12d993493a4d0aa4227905ba5926e3ef4ca7efb3789c3ac712ba35c9eeaab",
+    "version-relation-roles.json": "2f28a9bf7f5bfa33b9e7f863b8661484c24dae2a803fe4e493ec439938ad85c1",
+    "reference-before-r41.lgo": "f3c2fb8217abe06f16b9e0651e045d2da72af695b5cf288c8e9d17a042e3fefb",
+    "verify_baseline.py": "56a540d03742c76004160961ef49d48752ea57f59b5234804a12b60b23f66b51"
+  },
+  "workflow_sha256": "43e436145e6c962384a40239720f4ec057a1e54b49192c02dbfb16603c24db0c",
+  "publication_eligible": false,
+  "primary_source_prediction": [
+    {
+      "repository": "sqlc-dev/sqlc",
+      "ref": "3ad8b20fb02b",
+      "path": "internal/compiler/output_columns.go",
+      "blob": "557fb7d5752940936ba75d1f15304198bc1258f5",
+      "sha256": "33f2c7058f90498bc862f087d7e39eba147d483b61633a07e3747682fed9a7ce"
+    },
+    {
+      "repository": "sqlc-dev/sqlc",
+      "ref": "3ad8b20fb02b",
+      "path": "internal/opts/experiment.go",
+      "blob": "8d4b1c1ea0f5681b06b2d6000b5d7e240b3cb9eb",
+      "sha256": "c0cf38f5b2c0ec744a3fc278bf10449defa1e03d73517f1d5b0b9883d26e1626"
+    },
+    {
+      "repository": "sqlc-dev/sqlc",
+      "ref": "3ad8b20fb02b",
+      "path": "internal/cmd/generate.go",
+      "blob": "fbdb0844099a43ca2003f4910869e99735bb0f72",
+      "sha256": "f91c6ce240b68906e110d4ccdfac2e50db94a02601ebb8352e13cdc550a03167"
+    }
+  ]
+}
