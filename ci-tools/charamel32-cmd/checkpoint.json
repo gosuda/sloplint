@@ -1,0 +1,15 @@
+{
+  "scope": "Public Charamel PR32 native Cmd baseline",
+  "head": "53cdbc3dd32e34cf0ac6769b1fead9c14dad10a5",
+  "main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
+  "failed_initial": {
+    "producer": "abf26c1f05f2c4786b1e3f1fbf9d734edb2bc387",
+    "run": 45946247831,
+    "job": 140331504858,
+    "conclusion": "failure",
+    "failed_at": "source working-file SHA-256 preflight before any native fixture",
+    "hypothesis": "Windows checkout CRLF conversion; next probe compares working, LF-normalized and Git blob hashes"
+  },
+  "change": "Disable checkout conversion before both checkouts; retain all37 fixture inputs and native expectations; add preflight receipt",
+  "product_source_modified": false
+}

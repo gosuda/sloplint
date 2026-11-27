@@ -31,8 +31,22 @@ def main() -> int:
     manifest: dict[str, Any] = json.loads((ROOT / "baseline.json").read_text("utf-8"))
     assert git("rev-parse", "HEAD") == manifest["head"]
     assert git("rev-parse", "HEAD^{tree}") == manifest["tree"]
+    source_hashes: dict[str, dict[str, str]] = {}
     for name, expected in manifest["source_sha256"].items():
-        assert digest(SOURCE / name) == expected, name
+        blob = subprocess.check_output(["git", "-C", str(SOURCE), "show", f"HEAD:{name}"])
+        source_hashes[name] = {
+            "expected": expected, "working_file": digest(SOURCE / name),
+            "git_blob": hashlib.sha256(blob).hexdigest(),
+            "working_file_lf": hashlib.sha256(
+                (SOURCE / name).read_bytes().replace(b"\r\n", b"\n")
+            ).hexdigest(),
+        }
+    (OUT / "source-preflight.json").write_text(
+        json.dumps(source_hashes, indent=2) + "\n", encoding="utf-8"
+    )
+    print("SOURCE_BYTE_PREFLIGHT " + json.dumps(source_hashes), flush=True)
+    for name, values in source_hashes.items():
+        assert values["working_file"] == values["git_blob"] == values["expected"], name
     comspec = os.environ["COMSPEC"]
     version = subprocess.run(
         f'"{comspec}" /d /c ver', executable=comspec, stdin=subprocess.DEVNULL,

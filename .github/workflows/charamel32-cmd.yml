@@ -16,11 +16,15 @@ jobs:
     runs-on: depot-windows-2025
     timeout-minutes: 10
     steps:
+      - name: Preserve Git blob line endings
+        shell: pwsh
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
           path: proof
+          sparse-checkout: ci-tools/charamel32-cmd
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: gosuda/Charamel
