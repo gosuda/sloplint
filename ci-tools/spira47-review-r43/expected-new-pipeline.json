@@ -1,0 +1,26 @@
+[
+  {
+    "name": "fixture-option-time-alias",
+    "sql": "WITH seed AS MATERIALIZED (SELECT i.version time FROM items AS i) UPDATE items SET name = 'changed';",
+    "columns": [
+      "version",
+      "time"
+    ],
+    "option": "time",
+    "text": "WITH seed AS MATERIALIZED (SELECT i.version time FROM items AS i) UPDATE items SET name = 'changed'",
+    "error": "writes versioned table items without time",
+    "upstream": false
+  },
+  {
+    "name": "fixture-counter-column",
+    "sql": "WITH seed AS MATERIALIZED (SELECT i.counter time FROM items AS i) UPDATE items SET name = 'changed';",
+    "columns": [
+      "counter",
+      "time"
+    ],
+    "option": "counter",
+    "text": "WITH seed AS MATERIALIZED (SELECT i.counter time FROM items AS i) UPDATE items SET name = 'changed'",
+    "error": "",
+    "upstream": false
+  }
+]
