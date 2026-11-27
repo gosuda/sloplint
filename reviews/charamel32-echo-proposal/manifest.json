@@ -1,0 +1,51 @@
+{
+  "source_head": "f879b0156aa32a317cb0e29609df53786a09ec78",
+  "source_tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
+  "main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
+  "stage1_sha256": "b064603318abec17d518d288c5482bcea3f14b561449bb06f5e23ccbc37093ee",
+  "stage2_sha256": "fb7aa000f5f06a1384786a750d3609c3c4638bcac0acb461e355ba73248747c0",
+  "elements": [
+    {
+      "path": "bin/crush/lib/shell_screen.ml",
+      "sha256": "fb7aa000f5f06a1384786a750d3609c3c4638bcac0acb461e355ba73248747c0"
+    },
+    {
+      "path": "test/crush/test_tools_shell.ml",
+      "sha256": "d4ec1bfb70adc15fd94d2d3041abcf23d6be9a65999da2f9c260b7e5fa96540f"
+    }
+  ],
+  "native_baselines": [
+    {
+      "producer": "8b04698a4d975f44e68a0ea1874cf1eb13b5b513",
+      "run": 45967234894,
+      "job": 140398733181,
+      "artifact": 15184225093,
+      "sha256": "7cb74f1665d42f9e50bd268dd0e7ea7e4803cd29fcc239bde5540a6b50b37b17",
+      "records": 40
+    },
+    {
+      "producer": "c28c14270bd2bf2a4896b8ff66072f14969ea9e0",
+      "run": 45969232238,
+      "job": 140405282233,
+      "artifact": 15184765281,
+      "sha256": "4d16f44598986f32717076413765b98195f8d8bcd0f8cad3e98a5ee8b1ebe8e7",
+      "records": 6
+    }
+  ],
+  "unchanged_posix_prefix": true,
+  "existing_classifier_cases": 124,
+  "additional_classifier_cases": 53,
+  "trace_cases": 22,
+  "native_invalid_controls": [
+    "group_text_parens",
+    "loop_bodyless",
+    "group_unclosed"
+  ],
+  "native_valid_retained_review": [
+    "nested_for_equal",
+    "nested_loop_blank"
+  ],
+  "status": "unexecuted source proposal; no maintained write",
+  "stage1_tree": "12fdd29bb499661f291a96638832231715322547",
+  "draft_tree": "2f51d296f639d508627662b6f32e093d907944d3"
+}

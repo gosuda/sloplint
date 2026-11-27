@@ -1,0 +1,318 @@
+[
+  {
+    "id": "nested_blank",
+    "command": "cmd /d /c echo(",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c echo("
+      },
+      {
+        "depth": 1,
+        "source": "echo("
+      }
+    ]
+  },
+  {
+    "id": "nested_quoted_blank",
+    "command": "cmd /d /c \"echo(\"",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c \"echo(\""
+      },
+      {
+        "depth": 1,
+        "source": "echo("
+      }
+    ]
+  },
+  {
+    "id": "nested_double_blank",
+    "command": "cmd /d /c cmd /d /c echo(",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c cmd /d /c echo("
+      },
+      {
+        "depth": 1,
+        "source": "cmd /d /c echo("
+      },
+      {
+        "depth": 2,
+        "source": "echo("
+      }
+    ]
+  },
+  {
+    "id": "nested_equal",
+    "command": "cmd /d /c echo key=value",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c echo key=value"
+      },
+      {
+        "depth": 1,
+        "source": "echo key=value"
+      }
+    ]
+  },
+  {
+    "id": "nested_equal_spaced",
+    "command": "cmd /d /c echo key value",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c echo key value"
+      },
+      {
+        "depth": 1,
+        "source": "echo key value"
+      }
+    ]
+  },
+  {
+    "id": "nested_punctuation",
+    "command": "cmd /d /c echo first,,second;;third=last",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c echo first,,second;;third=last"
+      },
+      {
+        "depth": 1,
+        "source": "echo first,,second;;third=last"
+      }
+    ]
+  },
+  {
+    "id": "nested_punctuation_spaced",
+    "command": "cmd /d /c echo first second third last",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c echo first second third last"
+      },
+      {
+        "depth": 1,
+        "source": "echo first second third last"
+      }
+    ]
+  },
+  {
+    "id": "nested_tab",
+    "command": "cmd /d /c echo key\tvalue",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c echo key\tvalue"
+      },
+      {
+        "depth": 1,
+        "source": "echo key\tvalue"
+      }
+    ]
+  },
+  {
+    "id": "nested_tab_spaced",
+    "command": "cmd /d /c echo key value",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c echo key value"
+      },
+      {
+        "depth": 1,
+        "source": "echo key value"
+      }
+    ]
+  },
+  {
+    "id": "nested_quoted_equal",
+    "command": "cmd /d /c \"echo key=value\"",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c \"echo key=value\""
+      },
+      {
+        "depth": 1,
+        "source": "echo key=value"
+      }
+    ]
+  },
+  {
+    "id": "nested_double_equal",
+    "command": "cmd /d /c cmd /d /c echo key=value",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c cmd /d /c echo key=value"
+      },
+      {
+        "depth": 1,
+        "source": "cmd /d /c echo key=value"
+      },
+      {
+        "depth": 2,
+        "source": "echo key=value"
+      }
+    ]
+  },
+  {
+    "id": "nested_for_equal",
+    "command": "cmd /d /c for /f \"delims==\" %i in (\"key=value\") do @echo %i",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c for /f \"delims==\" %i in (\"key=value\") do @echo %i"
+      },
+      {
+        "depth": 1,
+        "source": "for /f \"delims==\" %i in (\"key=value\") do @echo %i"
+      }
+    ]
+  },
+  {
+    "id": "nested_redirect_equal",
+    "command": "cmd /d /c echo key=value>capture.txt",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c echo key=value>capture.txt"
+      },
+      {
+        "depth": 1,
+        "source": "echo key=value>capture.txt"
+      }
+    ]
+  },
+  {
+    "id": "nested_redirect_prefix",
+    "command": "cmd /d /c 2>capture.txt echo key=value",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c 2>capture.txt echo key=value"
+      },
+      {
+        "depth": 1,
+        "source": "2>capture.txt echo key=value"
+      }
+    ]
+  },
+  {
+    "id": "nested_prefix_separators",
+    "command": "cmd /d /c =,;echo key=value",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c =,;echo key=value"
+      },
+      {
+        "depth": 1,
+        "source": "=,;echo key=value"
+      }
+    ]
+  },
+  {
+    "id": "nested_loop_blank",
+    "command": "cmd /d /c for %i in (alpha) do @echo(",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c for %i in (alpha) do @echo("
+      },
+      {
+        "depth": 1,
+        "source": "for %i in (alpha) do @echo("
+      }
+    ]
+  },
+  {
+    "id": "trailing_plain",
+    "command": "cmd /d /c echo key=value  ",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c echo key=value  "
+      },
+      {
+        "depth": 1,
+        "source": "echo key=value  "
+      }
+    ]
+  },
+  {
+    "id": "trailing_trimmed_control",
+    "command": "cmd /d /c echo key=value",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c echo key=value"
+      },
+      {
+        "depth": 1,
+        "source": "echo key=value"
+      }
+    ]
+  },
+  {
+    "id": "leading_plain",
+    "command": "cmd /d /c   echo key=value",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c   echo key=value"
+      },
+      {
+        "depth": 1,
+        "source": "echo key=value"
+      }
+    ]
+  },
+  {
+    "id": "quoted_trailing_outside",
+    "command": "cmd /d /c \"echo key=value\"  ",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c \"echo key=value\"  "
+      },
+      {
+        "depth": 1,
+        "source": "echo key=value  "
+      }
+    ]
+  },
+  {
+    "id": "quoted_trailing_inside",
+    "command": "cmd /d /c \"echo key=value  \"",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c \"echo key=value  \""
+      },
+      {
+        "depth": 1,
+        "source": "echo key=value  "
+      }
+    ]
+  },
+  {
+    "id": "prefix_trailing",
+    "command": "cmd /d /c =,;echo key=value  ",
+    "expected_trace": [
+      {
+        "depth": 0,
+        "source": "cmd /d /c =,;echo key=value  "
+      },
+      {
+        "depth": 1,
+        "source": "=,;echo key=value  "
+      }
+    ]
+  }
+]
