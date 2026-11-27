@@ -5,3 +5,5 @@ src/macro-braced-local.cpp:6 info complexity/mutable-span
 src/macro-braced-local.cpp:30 info complexity/mutable-span
 # outer-from-closure.cpp: binding line 4, writes lines 5, 34 and 35 (span 30 >= strict major_at 30); the last writes sit inside a capturing lambda with no shadowing.
 src/outer-from-closure.cpp:4 info complexity/mutable-span
+# shared-declaration.cpp: one `int first = 0, second = 0;` declaration binds both names; `first` writes lines 3 and 18 (span 15 >= strict minor_at 15) while `second` writes once, so only `first` fires.
+src/shared-declaration.cpp:2 info complexity/mutable-span
