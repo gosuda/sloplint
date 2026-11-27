@@ -1,15 +1,107 @@
 {
-  "scope": "Public Charamel PR32 native Cmd baseline",
-  "head": "53cdbc3dd32e34cf0ac6769b1fead9c14dad10a5",
+  "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
+  "tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
   "main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-  "failed_initial": {
-    "producer": "abf26c1f05f2c4786b1e3f1fbf9d734edb2bc387",
-    "run": 45946247831,
-    "job": 140331504858,
+  "status": "freezing native POSIX observations after external merge; no maintained source writes",
+  "windows": {
+    "initial_run": 45946247831,
+    "initial_conclusion": "failure",
+    "initial_failure": "working file hash before native execution",
+    "observation_run": 45947106831,
+    "observation_job": 140334220740,
     "conclusion": "failure",
-    "failed_at": "source working-file SHA-256 preflight before any native fixture",
-    "hypothesis": "Windows checkout CRLF conversion; next probe compares working, LF-normalized and Git blob hashes"
+    "actual_records": 37,
+    "source_clean": true,
+    "failed_expectations": [
+      "dynamic_body",
+      "nested_loop",
+      "grouped_body"
+    ],
+    "cause": "frozen simple stdout expectations omitted authentic Cmd command-echo trace; all raw observations retained",
+    "artifact": 15175765148,
+    "artifact_sha256": "ddb69269eed07dcd79c1abd7a83888f17fca287c42f567576e2c685fcfca3d96"
   },
-  "change": "Disable checkout conversion before both checkouts; retain all37 fixture inputs and native expectations; add preflight receipt",
-  "product_source_modified": false
+  "new_threads": [
+    {
+      "id": "PRRT_kwDOUbWGks68pEjK",
+      "is_resolved": false,
+      "path": "bin/crush/lib/shell_screen.ml",
+      "comments": [
+        4715589949
+      ]
+    },
+    {
+      "id": "PRRT_kwDOUbWGks68pEkO",
+      "is_resolved": false,
+      "path": "bin/crush/lib/shell_screen.ml",
+      "comments": [
+        4715590060
+      ]
+    },
+    {
+      "id": "PRRT_kwDOUbWGks68pEky",
+      "is_resolved": false,
+      "path": "bin/crush/lib/shell_screen.ml",
+      "comments": [
+        4715590141
+      ]
+    },
+    {
+      "id": "PRRT_kwDOUbWGks68pElp",
+      "is_resolved": true,
+      "path": "bin/crush/lib/shell_screen.ml",
+      "comments": [
+        4715590231,
+        4716036327
+      ]
+    },
+    {
+      "id": "PRRT_kwDOUbWGks68qHVK",
+      "is_resolved": false,
+      "path": "bin/crush/lib/shell_screen.ml",
+      "comments": [
+        4716036754
+      ]
+    },
+    {
+      "id": "PRRT_kwDOUbWGks68qHWW",
+      "is_resolved": false,
+      "path": "bin/crush/lib/shell_screen.ml",
+      "comments": [
+        4716036873
+      ]
+    },
+    {
+      "id": "PRRT_kwDOUbWGks68qHXk",
+      "is_resolved": false,
+      "path": "bin/crush/lib/shell_screen.ml",
+      "comments": [
+        4716037000
+      ]
+    },
+    {
+      "id": "PRRT_kwDOUbWGks68qHYe",
+      "is_resolved": false,
+      "path": "test/crush/test_tools_shell.ml",
+      "comments": [
+        4716037087
+      ]
+    },
+    {
+      "id": "PRRT_kwDOUbWGks68qHZW",
+      "is_resolved": false,
+      "path": "bin/crush/lib/tools_shell.ml",
+      "comments": [
+        4716037196
+      ]
+    },
+    {
+      "id": "PRRT_kwDOUbWGks68qHaJ",
+      "is_resolved": false,
+      "path": "bin/crush/lib/shell_screen.ml",
+      "comments": [
+        4716037287
+      ]
+    }
+  ]
 }

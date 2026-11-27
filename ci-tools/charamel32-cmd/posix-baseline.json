@@ -1,0 +1,166 @@
+{
+  "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
+  "tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
+  "main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
+  "source_sha256": {
+    "bin/crush/lib/shell_screen.ml": "f36029bf2e6f439448fecdce5090a67c8760cba229159056458e794cff9b8897"
+  },
+  "arity": [
+    {
+      "id": "braced_at",
+      "expression": "\"${@}\"",
+      "lines": [
+        "2",
+        "<alpha>",
+        "<beta>"
+      ]
+    },
+    {
+      "id": "braced_slice",
+      "expression": "\"${@:1}\"",
+      "lines": [
+        "2",
+        "<alpha>",
+        "<beta>"
+      ]
+    },
+    {
+      "id": "braced_default",
+      "expression": "\"${@:-fallback}\"",
+      "lines": [
+        "2",
+        "<alpha>",
+        "<beta>"
+      ]
+    },
+    {
+      "id": "indirect_names_at",
+      "expression": "\"${!CHAR32_PREFIX@}\"",
+      "lines": [
+        "2",
+        "<CHAR32_PREFIX_A>",
+        "<CHAR32_PREFIX_B>"
+      ]
+    },
+    {
+      "id": "literal_at_operand",
+      "expression": "\"${missing:-literal@text}\"",
+      "lines": [
+        "1",
+        "<literal@text>"
+      ]
+    },
+    {
+      "id": "scalar_quote_transform",
+      "expression": "\"${value@Q}\"",
+      "lines": [
+        "1",
+        "<'scalar'>"
+      ]
+    },
+    {
+      "id": "indirect_names_star",
+      "expression": "\"${!CHAR32_PREFIX*}\"",
+      "lines": [
+        "1",
+        "<CHAR32_PREFIX_A CHAR32_PREFIX_B>"
+      ]
+    }
+  ],
+  "fd_pairs": [
+    [
+      "fd_type",
+      [
+        "-t",
+        "f"
+      ],
+      [
+        "-tf"
+      ]
+    ],
+    [
+      "fd_type_long",
+      [
+        "--type",
+        "f"
+      ],
+      [
+        "--type=f"
+      ]
+    ],
+    [
+      "fd_extension",
+      [
+        "-e",
+        "md"
+      ],
+      [
+        "-emd"
+      ]
+    ],
+    [
+      "fd_extension_long",
+      [
+        "--extension",
+        "md"
+      ],
+      [
+        "--extension=md"
+      ]
+    ],
+    [
+      "fd_exclude",
+      [
+        "-E",
+        "target"
+      ],
+      [
+        "-Etarget"
+      ]
+    ],
+    [
+      "fd_exclude_long",
+      [
+        "--exclude",
+        "target"
+      ],
+      [
+        "--exclude=target"
+      ]
+    ],
+    [
+      "fd_depth",
+      [
+        "-d",
+        "2"
+      ],
+      [
+        "-d2"
+      ]
+    ],
+    [
+      "fd_depth_long",
+      [
+        "--max-depth",
+        "2"
+      ],
+      [
+        "--max-depth=2"
+      ]
+    ],
+    [
+      "fd_option_text_data",
+      [
+        "--extension=-X"
+      ],
+      [
+        "-e-X"
+      ]
+    ]
+  ],
+  "notes": [
+    "No candidate source is applied.",
+    "curl.exe is a temporary benign fixture that only prints BENIGN_STUB; no network tool is invoked.",
+    "The two native cases marked expected_exit:null are observations of option-boundary behavior, not success assertions."
+  ]
+}
