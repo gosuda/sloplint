@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "phase": "remaining-source-gates-running",
+  "producer": "52e03d798e5aa54d3b45f21c0439f3bff122ad5b",
+  "tree": "1fee3767985263e071d9708875be0caad8d85c9e",
+  "run": 46019378430,
+  "job": 140574730781,
+  "url": "https://github.com/gosuda/sloplint/actions/runs/46019378430",
+  "source": {
+    "repository": "gosuda/spira",
+    "head": "593d792bf282f7b7119dafb057a389b04c91fd6d",
+    "main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332"
+  },
+  "candidate": {
+    "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+    "blobs": 621,
+    "index_sha256": "3ac9074f7cdce055c9d99c656ea683e5323921dc8beee595debf175b6f80e7a1",
+    "source_delta_since_focused_proof": false
+  },
+  "manifest_sha256": "f269bc4c0859be44aa02bb668032804ce104ac3983d92dc8941b7043721d351a",
+  "review": {
+    "reviewer": "/root/bitcoin_round7/bamti_relation_followup/elegant_mermaid_followup",
+    "commit": "52ed94cd9bc8152c515419134d82d1584cad8a8a",
+    "verdict": "No concrete blocker. All22 proof hashes/transitive imports,10 source paths,actual195 receipts/report and official ripgrep asset digest independently matched.",
+    "native_execution": false,
+    "artifact_zip_download": false,
+    "source": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+    "driver_sha256": "e4964d090832d64e8820aeecdc270a786647922fdb8d0cb34ad28b0fa183f540",
+    "support_sha256": "26e7f6822ff3299959c47468c7ff87ba0cb6734603140b9039a106fa822f30de",
+    "manifest_sha256": "f269bc4c0859be44aa02bb668032804ce104ac3983d92dc8941b7043721d351a",
+    "workflow_sha256": "00147aa0e080dbede628bb795bbf70b90807cd5b8bfa441ede0ca7a61940d80d"
+  },
+  "focused_producer": {
+    "run": 46016220487,
+    "producer": "94dadaf62ae595080dd34e51a9cebd0bae0acd75",
+    "conclusion": "failure",
+    "actual_full_gate_exit": 127,
+    "reason": "rg missing",
+    "source_restored": true,
+    "artifact": 15205559337,
+    "zip_sha256": "30e8a5e7155b95a44a45c53154c541766851b564d3d77c13dd5f33051bddf136"
+  },
+  "required_fresh_commands": [
+    [
+      "just",
+      "gate"
+    ],
+    [
+      "just",
+      "slop"
+    ],
+    [
+      "just",
+      "eject"
+    ]
+  ],
+  "reuse_scope": "Only completed focused RED/GREEN/native evidence; the failed full gate remains failed.",
+  "source_gates_passed": false,
+  "publication_eligible": false
+}
