@@ -1,0 +1,84 @@
+{
+  "schema": 1,
+  "purpose": "Authenticate the unchanged candidate's completed focused evidence and execute all remaining full source gates after installing the missing required ripgrep tool.",
+  "source": {
+    "repository": "gosuda/spira",
+    "head": "593d792bf282f7b7119dafb057a389b04c91fd6d",
+    "tree": "1ec9a3d1e6a53ad1a50723869c6d381cf64d7877",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "blobs": 616,
+    "index_file": "source-index.json"
+  },
+  "candidate": {
+    "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+    "blobs": 621,
+    "index_file": "candidate-index.json",
+    "changed_paths": [
+      "cmd/sqlc-gen-spira/dollar_literal_test.lgo",
+      "cmd/sqlc-gen-spira/testdata/dollar-strings.json",
+      "cmd/sqlc-gen-spira/query_constants_test.lgo",
+      "cmd/sqlc-gen-spira/testdata/query_constants_test.lgo.tmpl",
+      "cmd/sqlc-gen-spira/testdata/query-constant-values.json",
+      "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo",
+      "cmd/sqlc-gen-spira/testdata/sqlc-literal-pipeline.json",
+      "cmd/sqlc-gen-spira/model.lgo",
+      "cmd/sqlc-gen-spira/gen.lgo",
+      "docs/specs/sqlc-gen-spira.md"
+    ]
+  },
+  "original_manifest_sha256": "411f45334c4ad2ba03b923d4d761519a644d17df90f1250248095e24186ba9be",
+  "proof_sha256": {
+    "baseline_support.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
+    "native_support.py": "d288f94d76a058d418a289b8c6dc4a77e0a1fbbf00ef52f3b5dbdc53da8d531e",
+    "verify_baseline.py": "49d5a534981a8bdb69273f62b31d58b210e198be2b74416b5af94eaf3c091e44",
+    "artifact_support.py": "b3f27ccd5d75efea94530f1294d7e0d23d89b46d7d9e5771cc0b3d32a56d1b28",
+    "candidate_support.py": "6ce7910d468e426e034ccf7c1ef286fd56866571cfeb437b67098b5b57ed8c49",
+    "pipeline_support.py": "5d80d840defefd6df01bcc6fd0c056cd9781c2de1d13e2d10890540db66e53ad",
+    "verify_candidate.py": "e2835159527ec276d9cad9a319ed5fde245576713a26b63f6e78c47847c0070f",
+    "authored-candidate.json": "ba4813fb7bcae07979f275f59441c7b1ea5daaa4ad425f8a410f224d735a1139",
+    "source-index.json": "8db1a56dbe2e97087478a3e25b5a7298cb2c75f42607d2ffb51def942834b2b6",
+    "current-final-tests-index.json": "dae20fec3dc054f9351a1e69e5eac8edf3815db1a8b186dfdf8f7e28af33cd3e",
+    "candidate-index.json": "628d91c699ed64ab99c4dd00f936fc2187aa5d7daa53377e306daae80177b9fc",
+    "dollar-strings-final.json": "067a846ece8471f659dcab5c2a69f25ae3aee33f4437e5d07b33317d201af70f",
+    "query-constant-values.json": "a15051e112569f683775ec9242b5077d7c9fe167b8d852062b838d8ab68cfbd7",
+    "retained-native-cases.json": "50ddfc2bfad5d2454d4557d54c8f2d08ad2f3281596dce28fd4f624ac0423b78",
+    "sqlc-literal-pipeline-final.json": "ad36d1af1d66770d6a3f6bcaf911787b3141f824c8316d59723529dc2f3650b8",
+    "schema.sql": "bfa56ef159e985b85976918f7fdc7bb79c82095913a8470ce42fd6494b2e99cc",
+    "baseline-report.json": "b79f38301fd14dc0d15a53584402a70c5dd0450ab782cebd090b46bbbc448ce1",
+    "candidate-manifest.json": "411f45334c4ad2ba03b923d4d761519a644d17df90f1250248095e24186ba9be",
+    "pipeline_observer.py": "c3a797b3fd4a9312c2d009bcc462426bfde91bd724398b306d1292eccbcad039",
+    "verify_completion.py": "e4964d090832d64e8820aeecdc270a786647922fdb8d0cb34ad28b0fa183f540",
+    "completion_support.py": "26e7f6822ff3299959c47468c7ff87ba0cb6734603140b9039a106fa822f30de",
+    "failed-candidate-report.json": "c2ad7f02bae0908373e46f3daea62c023abd7a750e41ec377fe45df637654cb6"
+  },
+  "workflow": ".github/workflows/spira47-review-r38.yml",
+  "workflow_sha256": "00147aa0e080dbede628bb795bbf70b90807cd5b8bfa441ede0ca7a61940d80d",
+  "focused_artifact": {
+    "producer": "94dadaf62ae595080dd34e51a9cebd0bae0acd75",
+    "run": 46016220487,
+    "job": 140563913964,
+    "artifact": 15205559337,
+    "name": "spira47-dollar-runtime-candidate-r38",
+    "zip_bytes": 922998,
+    "zip_sha256": "30e8a5e7155b95a44a45c53154c541766851b564d3d77c13dd5f33051bddf136",
+    "conclusion": "failure"
+  },
+  "failed_gate_log_sha256": "93092c961cb8d7d550f35191c99d73f66cc5f658cb1e662c92fb872188713908",
+  "candidate_index_sha256": "3ac9074f7cdce055c9d99c656ea683e5323921dc8beee595debf175b6f80e7a1",
+  "failure_receipt": {
+    "commit": "22b1169d349a89e7b48cc040b5c13a6055e1abf6",
+    "path": "reviews/spira47-review-r38/failed-run-46016220487.json",
+    "sha256": "e79a770d817feaddf59e5d7e643a3a44af9fb9c68f8e1c6853bd0f0dcc83e626",
+    "raw_log_sha256": "51e10622d453ba9c92fa065c2336fb0f69d21cb1c578b55017055bd615b1ee55"
+  },
+  "ripgrep": {
+    "version": "15.1.0",
+    "url": "https://github.com/BurntSushi/ripgrep/releases/download/15.1.0/ripgrep-15.1.0-x86_64-unknown-linux-musl.tar.gz",
+    "sha256": "1c9297be4a084eea7ecaedf93eb03d058d6faae29bbc57ecdaf5063921491599",
+    "source": "Official BurntSushi/ripgrep release API digest"
+  },
+  "reuse_boundary": "All 195 original command logs and the exact failed report/source identities are authenticated. Focused RED/GREEN/native evidence is reused; failed just gate is not reused as a pass. Actual just gate, just slop and just eject are required again.",
+  "product_changes": false,
+  "source_gate_threshold_changes": false,
+  "publication_eligible": false
+}
