@@ -2,7 +2,7 @@
   "base": "e7ee97e84246863766ec7465777a035134533feb",
   "base_tree": "5d2a547a693d073ad9739311e7b653baa96a08d6",
   "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
-  "kind": "Bounded second guard experiment. All 801 frozen cases, 21 public queries, nine rejected-candidate assertions and two completed-prefix controls are retained. Two new double-space redirects receive native and old/current observations before candidate application. Diagnostic source is ineligible for publication without full source gates.",
+  "kind": "Repeat the byte-identical second guard candidate after authenticating the previous 17-versus-18 log-reader failure. Preserve every source assertion and strengthen argument-record identity checks; diagnostic source remains unpublished.",
   "stages": [
     {
       "id": "last-comment-and-redirect-guards",
@@ -56,7 +56,7 @@
     "base64_bytes": 2984
   },
   "proof_sha256": {
-    "guard-experiment.py": "b864691c0ff7d2762bfe43f4e1eeacb5b37aa9bf4b24d9e93d23f373689a04e9",
+    "guard-experiment.py": "2042b9c318e447106e9cca74ba2de8fb5fe128f083b9292ba199878df43dd3ba",
     "guard-experiment-grammar.js": "213dfd728746463bdc1831e8458e959e0b843d9c216105d6216a90ec074c9fc8",
     "guard-experiment-scanner.c": "9585a11787bed671288d8a6a650a7efe1744c01b7b0f73d2454c8faf087276ef",
     "guard-regression.rs": "e0353b383bca935e7f14c640c9b28102cbd7fed68f4e93f4526b6a4461ae46fd",
@@ -76,7 +76,8 @@
     "double-gap-cases.json": "917047b37a5435f74150422d583415fc8fc0c428a65e9238929aba9aeb1b3160",
     "double-gap-cases.tsv": "02851e3eae58ef4333ae98a8ca96bbe732eda840ee11973bf862281370279872",
     "double-gap-oracle.ps1": "521d82f956d0192f33e5b2ba51996ef20b16590957c16172d51298e6fe3dffcd",
-    "rejected-first-guard.json": "cb65bee17a91282ac0de09035b741ff86a437beb79dc14e6df3c29fb9184c330"
+    "rejected-first-guard.json": "cb65bee17a91282ac0de09035b741ff86a437beb79dc14e6df3c29fb9184c330",
+    "rejected-second-guard.json": "3e83b996b9a6babd5a0079a719ae74223e4f48d2647a585cce7b66ee362d8e9e"
   },
   "additional_double_gap_controls": 2,
   "previous_candidate": {
@@ -90,5 +91,17 @@
     "payload_bytes": 5967760,
     "gzip_bytes": 313862,
     "base64_bytes": 418484
+  },
+  "observer_correction": {
+    "producer": "519e18f939cb8a9796f81ac399096083dbb7995c",
+    "run": 45913796869,
+    "job": 140228090775,
+    "artifact": 15160844099,
+    "zip_sha256": "e9321f407ec0417aba597885bbdfa6e5eb2508d37fdc7157f7aa1052958861bd",
+    "payload_sha256": "db94e0276d22a8ec1cb27f5c73acece3366b6d8d607c368c4794f27edfa6442c",
+    "gzip_sha256": "4f9b7c390dd938ce2391163284911a8d961a47c218813d56887c355cd71ce4f1",
+    "payload_bytes": 5980125,
+    "gzip_bytes": 316495,
+    "base64_bytes": 421996
   }
 }

@@ -1,0 +1,38 @@
+{
+  "receipt": {
+    "producer": "519e18f939cb8a9796f81ac399096083dbb7995c",
+    "run": 45913796869,
+    "job": 140228090775,
+    "artifact": 15160844099,
+    "zip_sha256": "e9321f407ec0417aba597885bbdfa6e5eb2508d37fdc7157f7aa1052958861bd",
+    "payload_sha256": "db94e0276d22a8ec1cb27f5c73acece3366b6d8d607c368c4794f27edfa6442c",
+    "gzip_sha256": "4f9b7c390dd938ce2391163284911a8d961a47c218813d56887c355cd71ce4f1",
+    "payload_bytes": 5980125,
+    "gzip_bytes": 316495,
+    "base64_bytes": 421996
+  },
+  "source": {
+    "base": "e7ee97e84246863766ec7465777a035134533feb",
+    "tree": "77d52dbb006b484a4a0386a9e70b0e7fa146093b",
+    "tracked_blobs": 4906,
+    "index_sha256": "71a1b59931d12c1d7b67c0a78e77f1771e60907e8a5da398744771f6dca09265",
+    "files": {
+      "vendor/tree-sitter-powershell/grammar.js": "213dfd728746463bdc1831e8458e959e0b843d9c216105d6216a90ec074c9fc8",
+      "vendor/tree-sitter-powershell/src/grammar.json": "ce40db9b60c8d032d3ccede4436fdf7dc3a3f73a9be0a4541bda741925b59222",
+      "vendor/tree-sitter-powershell/src/parser.c": "95c83bd0c91ace73e0210e82e8e92f96d9446eab4cae64dc7114b69b9c955bd0",
+      "vendor/tree-sitter-powershell/src/node-types.json": "cc0ca0ff480d8278d54719e0dc7a5213018e4a39333e7f1986481972bec64404",
+      "vendor/tree-sitter-powershell/src/scanner.c": "9585a11787bed671288d8a6a650a7efe1744c01b7b0f73d2454c8faf087276ef"
+    }
+  },
+  "failures": [
+    {
+      "kind": "native-argument-case-count",
+      "id": "last-comment-and-redirect-guards",
+      "expected": 18,
+      "actual": 17
+    }
+  ],
+  "actual_focused_exit": 0,
+  "eligible": false,
+  "correction": "Inspect the authenticated complete focused log and require all 18 exact native count records and identities. Product source and frozen tests remain byte-identical."
+}

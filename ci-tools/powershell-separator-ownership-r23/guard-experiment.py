@@ -451,6 +451,53 @@ for label, vendor in (("previous", historical_vendor), ("current", VENDOR)):
     double_gap_baseline[label] = records
 assert unchanged_identity(SOURCE, str(MANIFEST["base"]), str(MANIFEST["base_tree"])) == initial
 
+
+# Preserve the rejected run and prove the output-reader correction from its full log.
+previous_guard_receipt = json.loads((PROOF / "rejected-second-guard.json").read_text())["receipt"]
+rejected_archives = [path for path in (EVIDENCE / "rejected-second-guard").rglob("*")
+                    if path.is_file() and zipfile.is_zipfile(path)]
+assert len(rejected_archives) == 1
+assert hashlib.sha256(rejected_archives[0].read_bytes()).hexdigest() == previous_guard_receipt["zip_sha256"]
+with zipfile.ZipFile(rejected_archives[0]) as handle:
+    def rejected_member(name: str) -> bytes:
+        members = [entry for entry in handle.namelist() if Path(entry).name == name]
+        assert len(members) == 1, (name, members)
+        return handle.read(members[0])
+    previous_packed = rejected_member("experiment-packed.json.gz")
+    assert len(previous_packed) == previous_guard_receipt["gzip_bytes"]
+    assert hashlib.sha256(previous_packed).hexdigest() == previous_guard_receipt["gzip_sha256"]
+    previous_bytes = gzip.decompress(previous_packed)
+    assert len(previous_bytes) == previous_guard_receipt["payload_bytes"]
+    assert hashlib.sha256(previous_bytes).hexdigest() == previous_guard_receipt["payload_sha256"]
+    previous_guard = json.loads(previous_bytes)
+    previous_outcome = previous_guard["outcomes"][0]
+    assert not previous_outcome["eligible"]
+    assert previous_outcome["failures"] == [{"kind": "native-argument-case-count", "id": "last-comment-and-redirect-guards", "expected": 18, "actual": 17}]
+    for name in ("guard-experiment-grammar.js", "guard-experiment-scanner.c", "guard-regression.rs",
+                 "external-observer.rs", "external-boundary-cases.json", "external-boundary-cases.tsv",
+                 "double-gap-cases.json", "double-gap-cases.tsv"):
+        assert previous_guard["manifest"]["proof_sha256"][name] == MANIFEST["proof_sha256"][name], name
+    failed_result = next(item for item in previous_guard["results"] if item["name"] == "last-comment-and-redirect-guards-focused-powershell")
+    failed_log_bytes = rejected_member(failed_result["name"] + ".log")
+    assert failed_result["exit"] == 0 and not failed_result["timed_out"]
+    assert hashlib.sha256(failed_log_bytes).hexdigest() == failed_result["log_sha256"]
+    failed_log = failed_log_bytes.decode()
+    assert "117 passed; 0 failed" in failed_log
+    old_rows = [line for line in failed_log.splitlines() if line.startswith("GUARD_NATIVE_ARG_CASE ")]
+    corrected_rows = re.findall(r"\bGUARD_NATIVE_ARG_CASE ([a-z0-9-]+) ([0-9]+)(?=\s|$)", failed_log)
+    expected_arguments = {identity: native["native_count"] for identity, native in native_by_id.items()
+                          if identity in boundary_by_id and boundary_by_id[identity]["scope"] == "word-list"}
+    assert len(old_rows) == 17 and len(corrected_rows) == len(expected_arguments) == 18
+    assert {identity: int(count) for identity, count in corrected_rows} == expected_arguments
+    for line in failed_log.splitlines():
+        if "GUARD_NATIVE_ARG_CASE " in line:
+            print("PRESERVED_RAW_ARGUMENT_RECORD " + json.dumps(line), flush=True)
+    print("VERIFIED_ARGUMENT_LOG_READER_CORRECTION " + json.dumps({
+        "receipt": previous_guard_receipt, "old_line_prefix_count": len(old_rows), "complete_record_count": len(corrected_rows),
+        "records": corrected_rows, "focused_exit": failed_result["exit"], "log_sha256": failed_result["log_sha256"],
+        "unchanged_grammar": previous_outcome["source"]["files"],
+    }), flush=True)
+
 for stage in MANIFEST["stages"]:
     label = stage["id"]
     try:
@@ -606,11 +653,14 @@ for stage in MANIFEST["stages"]:
                     fail("double-gap-target:" + query, identity, expected, actual)
         print("DOUBLE_GAP_QUERY_RECORDS " + json.dumps([line for line in queries if line.split()[1].startswith("redirect-double-gap-")]), flush=True)
         argument_log = (EVIDENCE / (label + "-focused-powershell.log")).read_text()
-        argument_rows = [line.split() for line in argument_log.splitlines() if line.startswith("GUARD_NATIVE_ARG_CASE ")]
+        argument_rows = [["GUARD_NATIVE_ARG_CASE", identity, count] for identity, count in
+                         re.findall(r"\bGUARD_NATIVE_ARG_CASE ([a-z0-9-]+) ([0-9]+)(?=\s|$)", argument_log)]
         expected_arguments = {identity: native for identity, native in native_by_id.items()
                               if identity in boundary_by_id and boundary_by_id[identity]["scope"] == "word-list"}
         if len(argument_rows) != len(expected_arguments):
             fail("native-argument-case-count", label, len(expected_arguments), len(argument_rows))
+        if {fields[1] for fields in argument_rows} != set(expected_arguments):
+            fail("native-argument-case-identities", label, sorted(expected_arguments), sorted({fields[1] for fields in argument_rows}))
         for fields in argument_rows:
             identity, count = fields[1], int(fields[2])
             native = expected_arguments[identity]
