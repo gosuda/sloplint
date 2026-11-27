@@ -227,5 +227,89 @@
       "PRRT_kwDOUbWGks68pElp"
     ],
     "read_window": "2026-11-27T05:37Z through candidate preparation"
-  }
+  },
+  "current_stage": "Prepare narrow fd read-only integration correction",
+  "prior_candidate_tree": "2dc5be64073c90b88fa0031c0f9b9c07e286831c",
+  "draft_candidate_tree": "67d7cdfdf0704e3bc15fe2cfab768ffac954dea4",
+  "write_paths": [
+    "bin/crush/lib/shell_screen.ml",
+    "bin/crush/lib/tools_shell.ml",
+    "test/crush/test_tools_shell.ml"
+  ],
+  "linux_full_result": {
+    "producer": "b0c2aa373c940621481b7e341925c3dbd7a1697b",
+    "run": "45951139556",
+    "lane": "linux",
+    "identity": {
+      "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
+      "original_tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
+      "candidate_tree": "2dc5be64073c90b88fa0031c0f9b9c07e286831c",
+      "source_sha256": {
+        "bin/crush/lib/shell_screen.ml": "a8e7e443a07c064d76e948b84bfdd75e0d08e88f51bad19bf4064859cc85e888",
+        "test/crush/test_tools_shell.ml": "4b866dde806696d7658a18b4dec1a867d793d6ce2dfc391cce9ac0ab9532ac87"
+      },
+      "changed_paths": [
+        "bin/crush/lib/shell_screen.ml",
+        "test/crush/test_tools_shell.ml"
+      ],
+      "unstaged_clean": true,
+      "unexpected_untracked": [],
+      "index_sha256": "eb9afa2a9ce4d1fa2fc89e086d3fd2cdde2543e3ca57b27520d495955d08cd65"
+    },
+    "commands": [
+      {
+        "label": "compiler-and-formatter",
+        "script": "test \"$(ocamlc -version)\" = 5.5.1\ntest \"$(ocamlformat --version)\" = 0.29.0\nopam list --installed",
+        "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.16382649599995602,
+        "log_sha256": "380d384b5cb72e8aa68600edaeb03228ac298c5f6330d5fed6631aec9305dcb3"
+      },
+      {
+        "label": "format",
+        "script": "dune build @fmt",
+        "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 8.141123807999975,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "release-build",
+        "script": "dune build --profile release",
+        "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 23.636763460999987,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "release-tests",
+        "script": "dune runtest --profile release",
+        "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+        "actual_exit": 1,
+        "timeout": false,
+        "seconds": 14.200451711000028,
+        "log_sha256": "1a2c79a9bcde966558efe35b6fbbf4b4e4e59a0a3b090444e49131797a61baab"
+      },
+      {
+        "label": "whitespace",
+        "script": "git diff --cached --check",
+        "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.0182119529999909,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "accepted": false,
+    "native_windows_full_suite_claim": false
+  },
+  "linux_artifact": {
+    "id": 15176922159,
+    "sha256": "156bdaed52fb0109a79906aa9b20aaf61b2585217b6ceed4806575a5189e1805"
+  },
+  "correction": "Only screened fd tokens may retain equals signs as literal data; all non-fd equals guards and fd execution-option detection remain. Exact original failure remains recorded.",
+  "windows_prior_candidate": "Run 45951139556 still running; 37 native replay cases already passed."
 }
