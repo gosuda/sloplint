@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "purpose": "Prove unchanged-production final regression tests, exact compiled query values and native PostgreSQL semantics, then all prescribed source gates on the reviewed repair.",
+  "source": {
+    "repository": "gosuda/spira",
+    "head": "593d792bf282f7b7119dafb057a389b04c91fd6d",
+    "tree": "1ec9a3d1e6a53ad1a50723869c6d381cf64d7877",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "blobs": 616,
+    "index_file": "source-index.json"
+  },
+  "current_tests": {
+    "tree": "bed0006e87b548f6d2c668d538243a73c9f3f39c",
+    "blobs": 621,
+    "index_file": "current-final-tests-index.json",
+    "scope": "Only the seven final test/data paths applied to unchanged maintained production."
+  },
+  "candidate": {
+    "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+    "blobs": 621,
+    "index_file": "candidate-index.json",
+    "changed_paths": [
+      "cmd/sqlc-gen-spira/dollar_literal_test.lgo",
+      "cmd/sqlc-gen-spira/testdata/dollar-strings.json",
+      "cmd/sqlc-gen-spira/query_constants_test.lgo",
+      "cmd/sqlc-gen-spira/testdata/query_constants_test.lgo.tmpl",
+      "cmd/sqlc-gen-spira/testdata/query-constant-values.json",
+      "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo",
+      "cmd/sqlc-gen-spira/testdata/sqlc-literal-pipeline.json",
+      "cmd/sqlc-gen-spira/model.lgo",
+      "cmd/sqlc-gen-spira/gen.lgo",
+      "docs/specs/sqlc-gen-spira.md"
+    ]
+  },
+  "proof_sha256": {
+    "baseline_support.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
+    "native_support.py": "d288f94d76a058d418a289b8c6dc4a77e0a1fbbf00ef52f3b5dbdc53da8d531e",
+    "verify_baseline.py": "49d5a534981a8bdb69273f62b31d58b210e198be2b74416b5af94eaf3c091e44",
+    "artifact_support.py": "b3f27ccd5d75efea94530f1294d7e0d23d89b46d7d9e5771cc0b3d32a56d1b28",
+    "candidate_support.py": "6ce7910d468e426e034ccf7c1ef286fd56866571cfeb437b67098b5b57ed8c49",
+    "pipeline_support.py": "5d80d840defefd6df01bcc6fd0c056cd9781c2de1d13e2d10890540db66e53ad",
+    "verify_candidate.py": "e2835159527ec276d9cad9a319ed5fde245576713a26b63f6e78c47847c0070f",
+    "authored-candidate.json": "ba4813fb7bcae07979f275f59441c7b1ea5daaa4ad425f8a410f224d735a1139",
+    "source-index.json": "8db1a56dbe2e97087478a3e25b5a7298cb2c75f42607d2ffb51def942834b2b6",
+    "current-final-tests-index.json": "dae20fec3dc054f9351a1e69e5eac8edf3815db1a8b186dfdf8f7e28af33cd3e",
+    "candidate-index.json": "628d91c699ed64ab99c4dd00f936fc2187aa5d7daa53377e306daae80177b9fc",
+    "dollar-strings-final.json": "067a846ece8471f659dcab5c2a69f25ae3aee33f4437e5d07b33317d201af70f",
+    "query-constant-values.json": "a15051e112569f683775ec9242b5077d7c9fe167b8d852062b838d8ab68cfbd7",
+    "retained-native-cases.json": "50ddfc2bfad5d2454d4557d54c8f2d08ad2f3281596dce28fd4f624ac0423b78",
+    "sqlc-literal-pipeline-final.json": "ad36d1af1d66770d6a3f6bcaf911787b3141f824c8316d59723529dc2f3650b8",
+    "schema.sql": "bfa56ef159e985b85976918f7fdc7bb79c82095913a8470ce42fd6494b2e99cc",
+    "baseline-report.json": "b79f38301fd14dc0d15a53584402a70c5dd0450ab782cebd090b46bbbc448ce1",
+    "pipeline_observer.py": "c3a797b3fd4a9312c2d009bcc462426bfde91bd724398b306d1292eccbcad039"
+  },
+  "workflow_sha256": "07659444f6bad3113def8b9d73fd0890292f6ed40c22c1da8da8aef1c9271467",
+  "toolchain": {
+    "repository": "gosuda/LoGOs",
+    "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+    "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+    "bootstrap_go": "1.27.4",
+    "fresh_build": true
+  },
+  "postgres_image": "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782",
+  "postgres_version_num": "180007",
+  "sqlc_version": "v1.31.2-0.20261023030206-3ad8b20fb02b",
+  "tools": {
+    "node": "26.13.1",
+    "pnpm": "12.21.0",
+    "just": "1.59.0",
+    "uv": "0.13.9",
+    "python": "3.15"
+  },
+  "baseline_artifact": {
+    "producer": "c95e03f77fe277a4f973ce475e8804dd983fa42b",
+    "run": 46010784691,
+    "job": 140545433373,
+    "artifact": 15203947679,
+    "name": "spira47-dollar-runtime-baseline-r38",
+    "zip_bytes": 346701,
+    "zip_sha256": "42ba8f98c5cee2703cb0c10a2efd062836d425fc6431e19a09806e4aa361fd9f",
+    "conclusion": "success"
+  },
+  "linter_artifact": {
+    "producer": "bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+    "run": 45765398446,
+    "job": 139724970737,
+    "artifact": 15091303567,
+    "name": "lean-rust-and-cli-bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+    "zip_bytes": 17472007,
+    "zip_sha256": "e362f672d39498374a637a68ded7f57205b415e68006a4dc4a4a882405f5af33",
+    "binary_sha256": "a04c9c3e53c8aae18e2d5f89faaf3ad68b89980218ca9d1fc4af5ce487401024",
+    "conclusion": "success"
+  },
+  "contracts": {
+    "dollar_cases": 14,
+    "original_dollar_prefix_unchanged": 13,
+    "direct_compiled_cases": 8,
+    "pipeline_cases": 40,
+    "generated_packages": 32,
+    "version_refusals": 4,
+    "upstream_refusals": 4,
+    "unchanged_pipeline_red": 11,
+    "unchanged_pipeline_controls": 29,
+    "original_native": 48,
+    "captured_request_native": 36,
+    "compiled_query_native": 40,
+    "source_literal_spelling": "Only declaration identity is checked lexically; complete generated packages are compiled and runtime values must equal external JSON byte-for-byte."
+  },
+  "source_review": {
+    "proposal": "b59e61effa0f165eebdffc21e17f7ccf43238e63",
+    "authored_sha256": "ba4813fb7bcae07979f275f59441c7b1ea5daaa4ad425f8a410f224d735a1139",
+    "parent_review_pending": true,
+    "child_design_review": "No blocking dollar-token design finding; doubled-quote identifier control appended without changing original 13."
+  },
+  "prior_scope": {
+    "r37_source": "593d792bf282f7b7119dafb057a389b04c91fd6d",
+    "r37_full_run": 46003935409,
+    "r37_retired_at": "870adb73916931b75bdb48076d34a7870fcc9323",
+    "r38_baseline_receipt": "5a9e19a49eda94237f6a2b3fd16326bb18aafd53",
+    "new_threads": [
+      "PRRT_kwDOVpFduc68zFK3",
+      "PRRT_kwDOVpFduc68zFMT"
+    ]
+  },
+  "publication_eligible": false
+}

@@ -1,4 +1,4 @@
-name: "Spira 47 dollar tokens and compiled query baseline r38"
+name: "Spira 47 dollar tokens and compiled query source gates r38"
 on:
   push:
     branches: ["ci/spira47-dollar-runtime-20261127-r38"]
@@ -7,6 +7,7 @@ on:
       - "ci-tools/spira47-review-r38/**"
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: "spira47-review-r38-${{ github.ref }}"
   cancel-in-progress: false
@@ -16,7 +17,7 @@ defaults:
 jobs:
   verify:
     runs-on: depot-ubuntu-24.04-8
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - name: Checkout this isolated proof
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -57,23 +58,38 @@ jobs:
           echo "LOGOS_ROOT=$GITHUB_WORKSPACE/compiler" >> "$GITHUB_ENV"
           echo "GOROOT=$GITHUB_WORKSPACE/compiler" >> "$GITHUB_ENV"
           echo "$GITHUB_WORKSPACE/compiler/bin" >> "$GITHUB_PATH"
+      - name: Install required recipe runner
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39
+        with:
+          tool: "just@1.59.0"
+      - name: Install the source-pinned package manager
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115
+        with:
+          version: "12.21.0"
+      - name: Install pinned Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: "26.13.1"
+          package-manager-cache: false
       - name: Install uv and Python
         uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
         with:
           version: "0.13.9"
           python-version: "3.15"
           enable-cache: false
-      - name: Observe unchanged-source failures and exact native controls
+      - name: Verify the frozen repair and all required source gates
+        env:
+          SPIRA_ARTIFACT_TOKEN: ${{ github.token }}
         run: |
           export GOENV=off GOCACHEPROG=''
           test -z "$(go env GOCACHEPROG)"
-          uv run --no-project --python 3.15 proof/ci-tools/spira47-review-r38/verify_baseline.py \
-            source proof/ci-tools/spira47-review-r38 "$RUNNER_TEMP/spira47-dollar-runtime-evidence"
-      - name: Preserve baseline observations and source restoration
+          uv run --no-project --python 3.15 proof/ci-tools/spira47-review-r38/verify_candidate.py \
+            source proof/ci-tools/spira47-review-r38 "$RUNNER_TEMP/spira47-dollar-runtime-candidate-evidence"
+      - name: Preserve source, baseline and complete gate evidence
         if: always()
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
-          name: spira47-dollar-runtime-baseline-r38
-          path: ${{ runner.temp }}/spira47-dollar-runtime-evidence
+          name: spira47-dollar-runtime-candidate-r38
+          path: ${{ runner.temp }}/spira47-dollar-runtime-candidate-evidence
           if-no-files-found: error
           retention-days: 14

@@ -1,0 +1,3467 @@
+{
+  "schema": 1,
+  "manifest": {
+    "schema": 1,
+    "purpose": "Freeze native dollar-quoted SQL and actual compiled query constants on unchanged production before either repair.",
+    "source": {
+      "repository": "gosuda/spira",
+      "head": "593d792bf282f7b7119dafb057a389b04c91fd6d",
+      "tree": "1ec9a3d1e6a53ad1a50723869c6d381cf64d7877",
+      "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+      "blobs": 616,
+      "index_file": "source-index.json"
+    },
+    "current_tests": {
+      "tree": "4921be4909780bcd3461701281b141db768b68eb",
+      "blobs": 621,
+      "index_file": "current-tests-index.json"
+    },
+    "previous_prefix_tests": {
+      "tree": "81bd16d6dd73c48d2790b22dec13aaea7fbf56b7",
+      "blobs": 621,
+      "index_file": "previous-prefix-index.json",
+      "selection": "Same unchanged maintained tree plus frozen tests, with only model.lgo restored to pre-r37 content from82ce. This is a counterfactual selected-file comparison, not a claim that the entire old source head ran."
+    },
+    "previous_model_sha256": "8d7994845af36bb1fe5d1377e1715c383e5c480f6e031a80bccba2414c4c615d",
+    "proof_sha256": {
+      "baseline_support.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
+      "native_support.py": "d288f94d76a058d418a289b8c6dc4a77e0a1fbbf00ef52f3b5dbdc53da8d531e",
+      "pipeline_observer.py": "c3a797b3fd4a9312c2d009bcc462426bfde91bd724398b306d1292eccbcad039",
+      "verify_baseline.py": "49d5a534981a8bdb69273f62b31d58b210e198be2b74416b5af94eaf3c091e44",
+      "authored-tests.json": "d4fe217963d3f58bbcb678cb6e76a52b38362b4c354e22dde713d7783f05e087",
+      "source-index.json": "8db1a56dbe2e97087478a3e25b5a7298cb2c75f42607d2ffb51def942834b2b6",
+      "current-tests-index.json": "cd6ab0c4429a2f15d63ed73367b5086990debc1e9a3b39bfa604288cddaa86bb",
+      "previous-prefix-index.json": "1b38bb684e33cdbeb2c20873d3ef8ab5e520a22c4ca9689797891339277c673b",
+      "dollar-strings.json": "c250b5c63bf91162bddf9d7150ab47eea3ab4872dc9e915c1d4554cf6d985871",
+      "query-constant-values.json": "a15051e112569f683775ec9242b5077d7c9fe167b8d852062b838d8ab68cfbd7",
+      "previous-model.lgo": "8d7994845af36bb1fe5d1377e1715c383e5c480f6e031a80bccba2414c4c615d",
+      "schema.sql": "bfa56ef159e985b85976918f7fdc7bb79c82095913a8470ce42fd6494b2e99cc",
+      "retained-native-cases.json": "50ddfc2bfad5d2454d4557d54c8f2d08ad2f3281596dce28fd4f624ac0423b78",
+      "retained-pipeline.json": "1b08df2d6d3c4a4d141b72244819d4290a39cf9b357bfe5212d82da97a31c48f"
+    },
+    "workflow_sha256": "0f1171e4080f2e2ff056bf116d793ed6ef882f78b16fbf998b8d811741a1738f",
+    "toolchain": {
+      "repository": "gosuda/LoGOs",
+      "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+      "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+      "bootstrap_go": "1.27.4",
+      "fresh_build": true
+    },
+    "postgres_image": "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782",
+    "postgres_version_num": "180007",
+    "sqlc_version": "v1.31.2-0.20261023030206-3ad8b20fb02b",
+    "contracts": {
+      "dollar_cases": 13,
+      "direct_compiled_cases": 8,
+      "retained_pipeline": 26,
+      "retained_generated": 20,
+      "primary_dollar_current_fail": "dollar-untagged",
+      "primary_dollar_previous_prefix_pass": "dollar-untagged",
+      "direct_byte_mismatches": [
+        "runtime-cr",
+        "runtime-crlf",
+        "runtime-cr-value",
+        "runtime-crlf-value"
+      ],
+      "direct_native_mismatches": [
+        "runtime-cr",
+        "runtime-cr-value",
+        "runtime-crlf-value"
+      ],
+      "pipeline_byte_and_native_mismatch": "escape-cr",
+      "strictly_read_expected_json_at_runtime": true,
+      "all_generated_files_preserved": true,
+      "quoted_identifier_control": "dollar-quoted-identifier-boundary"
+    },
+    "prior_success": {
+      "run": 46003935409,
+      "source_head": "593d792bf282f7b7119dafb057a389b04c91fd6d",
+      "scope": "Source-byte and captured SQL verification passed. That proof did not compile the emitted temporary package constants.",
+      "retired_at": "870adb73916931b75bdb48076d34a7870fcc9323"
+    },
+    "new_threads": [
+      "PRRT_kwDOVpFduc68zFK3",
+      "PRRT_kwDOVpFduc68zFMT"
+    ],
+    "production_mutation": false,
+    "publication_eligible": false,
+    "proposed_future_repairs": [
+      "Recognize PostgreSQL dollar-quote delimiters and identifier boundaries before scanning inner apostrophes, subject to native baseline.",
+      "Use the existing interpreted literal branch when the query contains CR, preserving CR-free output, subject to actual compiled-query baseline."
+    ],
+    "unexecuted_prior_draft": "a563f9fe495378d442d380c73b2c3dae8525f4fc"
+  },
+  "baseline_gates_passed": true,
+  "source_restored": true,
+  "baseline_verified": true,
+  "publication_eligible": false,
+  "before": {
+    "label": "source",
+    "tree": "1ec9a3d1e6a53ad1a50723869c6d381cf64d7877",
+    "blobs": 616,
+    "index_sha256": "6a7281d2131f03a2f2494e090d5d8569fe2b583f0e8e660fb054f5f5fd233a85"
+  },
+  "native_version": "180007",
+  "original_native": [
+    {
+      "id": "dollar-untagged",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = $$name'.*\\\\\\'.*'$$, version = version + 1 WHERE id = 1;",
+      "sql_sha256": "677d4d925bdb35f95ce26741f847bab8ac24d6c9d9dc876b1704d66cf5b19630",
+      "observed": {
+        "name": "name'.*\\\\\\'.*'",
+        "version": 1
+      },
+      "expected": {
+        "name": "name'.*\\\\\\'.*'",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "dollar-tagged",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = $re$name'.*\\\\\\'.*'$re$, version = version + 1 WHERE id = 1;",
+      "sql_sha256": "802fcac5fb63b92a53a14a9503858ba777b3e27fc076d77997d0084129e34c06",
+      "observed": {
+        "name": "name'.*\\\\\\'.*'",
+        "version": 1
+      },
+      "expected": {
+        "name": "name'.*\\\\\\'.*'",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "dollar-case-sensitive",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = $Tag$name'.*\\\\\\'.*' $tag$ version$Tag$, version = version + 1 WHERE id = 1;",
+      "sql_sha256": "32f9edae3ef0bd49cd14455820870123c7407e3ebdf7d9cf79c8ad1665536d72",
+      "observed": {
+        "name": "name'.*\\\\\\'.*' $tag$ version",
+        "version": 1
+      },
+      "expected": {
+        "name": "name'.*\\\\\\'.*' $tag$ version",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "dollar-nested-tag",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = $outer$name'.*\\\\\\'.*' $inner$ 'version'$outer$, version = version + 1 WHERE id = 1;",
+      "sql_sha256": "126b914a53f9d9cb073e9c4cf2e6ea6d0c99a09ee31aaf5c66771f6ff6a77bda",
+      "observed": {
+        "name": "name'.*\\\\\\'.*' $inner$ 'version'",
+        "version": 1
+      },
+      "expected": {
+        "name": "name'.*\\\\\\'.*' $inner$ 'version'",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "dollar-overlap-close",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = $tag$name'.*\\\\\\'.*'$other$tag$, version = version + 1 WHERE id = 1;",
+      "sql_sha256": "98876dbe45cbc2d9d059fbcba6f307896a726062415253f36b5f10eda7447873",
+      "observed": {
+        "name": "name'.*\\\\\\'.*'$other",
+        "version": 1
+      },
+      "expected": {
+        "name": "name'.*\\\\\\'.*'$other",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "dollar-unicode-tag",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = $tég$name'.*\\\\\\'.*'$tég$, version = version + 1 WHERE id = 1;",
+      "sql_sha256": "5079725ac3ace9850a4443bc20cc4c12cf17f4b8e4530cf36ff161ae81fab623",
+      "observed": {
+        "name": "name'.*\\\\\\'.*'",
+        "version": 1
+      },
+      "expected": {
+        "name": "name'.*\\\\\\'.*'",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "dollar-underscore-tag",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = $a_2$name'.*\\\\\\'.*'$a_2$, version = version + 1 WHERE id = 1;",
+      "sql_sha256": "f78b3c9fc6695f6f4829dd116742065e732f1e91029bb8c719217e49355286e0",
+      "observed": {
+        "name": "name'.*\\\\\\'.*'",
+        "version": 1
+      },
+      "expected": {
+        "name": "name'.*\\\\\\'.*'",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "dollar-version-only",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = $$version$$ WHERE id = 1;",
+      "sql_sha256": "3b4356b89252f45f36e18496a790751fcecf0db81d851ff49a4301ef88ced104",
+      "observed": {
+        "name": "version",
+        "version": 0
+      },
+      "expected": {
+        "name": "version",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "id": "dollar-tagged-version-only",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = $v$version$v$ WHERE id = 1;",
+      "sql_sha256": "fc5c3bc80d64baeac99f9bdf6555ff4ffc6d2e52dd6ee14fa8a669ee04c5c655",
+      "observed": {
+        "name": "version",
+        "version": 0
+      },
+      "expected": {
+        "name": "version",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "id": "dollar-quoted-type",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = \"name\" $$name'.*\\\\\\'.*'$$, version = version + 1 WHERE id = 1;",
+      "sql_sha256": "134b3a2f87d3cedd0f5c0f9363e1b71cee881f711e7448a8323c2fa3b6a1729a",
+      "observed": {
+        "name": "name'.*\\\\\\'.*'",
+        "version": 1
+      },
+      "expected": {
+        "name": "name'.*\\\\\\'.*'",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "dollar-read-only-write-text",
+      "lane": "new-original",
+      "sql": "SELECT id FROM items WHERE name = $$UPDATE items SET name = 'not here'$$;",
+      "sql_sha256": "2335f528316f98cd083473eb96da54e099a7b61fd5abaffd7978da54a2947100",
+      "observed": {
+        "name": "before",
+        "version": 0
+      },
+      "expected": {
+        "name": "before",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "id": "dollar-identifier-boundary",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = v.name$tag$, version = version + 1 FROM (VALUES ('identifier')) AS v(name$tag$) WHERE items.id = 1;",
+      "sql_sha256": "6595cb7916211883a08275bda0d49bcb9bcfa7feb2293081c1e9f67824cd5500",
+      "observed": {
+        "name": "identifier",
+        "version": 1
+      },
+      "expected": {
+        "name": "identifier",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "dollar-quoted-identifier-boundary",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = v.\"$tag$\", version = version + 1 FROM (VALUES ('quoted')) AS v(\"$tag$\") WHERE items.id = 1;",
+      "sql_sha256": "a2ae55654a4855f9c66100d7d9f8c94fa093aec6fe785ada7f9336f85cb93737",
+      "observed": {
+        "name": "quoted",
+        "version": 1
+      },
+      "expected": {
+        "name": "quoted",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "runtime-cr",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = E'first '\r'it\\'s', version = version + 1 WHERE id = 1;",
+      "sql_sha256": "a88b7dc18622b76c166b2ab03badb9157750c06e3273f47121da85c0ea2d405b",
+      "observed": {
+        "name": "first it's",
+        "version": 1
+      },
+      "expected": {
+        "name": "first it's",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "runtime-crlf",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = e'first '\r\n\t'it\\'s', version = version + 1 WHERE id = 1;",
+      "sql_sha256": "ceeb0d45a7dc8d5f5c8a0c6f77888bb1dfcedb50fc0e108bef9e7c40a480aac3",
+      "observed": {
+        "name": "first it's",
+        "version": 1
+      },
+      "expected": {
+        "name": "first it's",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "runtime-lf",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1;",
+      "sql_sha256": "07224c02a2ce8ceb6742eb9489b6a17716b1bc8277e9842d36daee5510a9ff55",
+      "observed": {
+        "name": "first it's",
+        "version": 1
+      },
+      "expected": {
+        "name": "first it's",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "runtime-cr-value",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = 'left\rright', version = version + 1 WHERE id = 1;",
+      "sql_sha256": "c72f3f943a133ce5871c12bd06d0a96e9d9f3f0e9128700b3904299a281f7f61",
+      "observed": {
+        "name": "left\rright",
+        "version": 1
+      },
+      "expected": {
+        "name": "left\rright",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "runtime-crlf-value",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = 'left\r\nright', version = version + 1 WHERE id = 1;",
+      "sql_sha256": "5df5bf179894c3ed0a26c127d1c761da952bfb53efcdc666b6701c35b699f1b5",
+      "observed": {
+        "name": "left\r\nright",
+        "version": 1
+      },
+      "expected": {
+        "name": "left\r\nright",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "runtime-backquote",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = 'tick`slash\\r', version = version + 1 WHERE id = 1;",
+      "sql_sha256": "39b912718cab4724bee5bcaf3e9b773f0a463f39f5b1577411315722481b29e8",
+      "observed": {
+        "name": "tick`slash\\r",
+        "version": 1
+      },
+      "expected": {
+        "name": "tick`slash\\r",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "runtime-cr-backquote",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = 'left`\rright', version = version + 1 WHERE id = 1;",
+      "sql_sha256": "de030719d1e3609773c69f0d4ccc94e079131e19f9379bb83c546c2dd7744319",
+      "observed": {
+        "name": "left`\rright",
+        "version": 1
+      },
+      "expected": {
+        "name": "left`\rright",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "runtime-quote-backslash",
+      "lane": "new-original",
+      "sql": "UPDATE items SET name = 'double \"quote\" \\r', version = version + 1 WHERE id = 1;",
+      "sql_sha256": "b2c273b9c8d347cb0ec76e7e1dcd169cff7352a3ae9f99129fc2010aa1a91f3d",
+      "observed": {
+        "name": "double \"quote\" \\r",
+        "version": 1
+      },
+      "expected": {
+        "name": "double \"quote\" \\r",
+        "version": 1
+      },
+      "matches": true
+    }
+  ],
+  "current_test_tree": {
+    "label": "current_tests",
+    "tree": "4921be4909780bcd3461701281b141db768b68eb",
+    "blobs": 621,
+    "index_sha256": "acaa6ba9b13d9f948edd071c8739d6b69acd622bb7d6d942d2bcf1c98c7173e1"
+  },
+  "dollar_current": {
+    "passed": [
+      "dollar-identifier-boundary",
+      "dollar-nested-tag",
+      "dollar-quoted-identifier-boundary"
+    ],
+    "failed": [
+      "dollar-case-sensitive",
+      "dollar-overlap-close",
+      "dollar-quoted-type",
+      "dollar-read-only-write-text",
+      "dollar-tagged",
+      "dollar-tagged-version-only",
+      "dollar-underscore-tag",
+      "dollar-unicode-tag",
+      "dollar-untagged",
+      "dollar-version-only"
+    ]
+  },
+  "compiled_direct": {
+    "observed": {
+      "runtime-cr-value": "UPDATE items SET name = 'leftright', version = version + 1 WHERE id = 1;",
+      "runtime-crlf-value": "UPDATE items SET name = 'left\nright', version = version + 1 WHERE id = 1;",
+      "runtime-backquote": "UPDATE items SET name = 'tick`slash\\r', version = version + 1 WHERE id = 1;",
+      "runtime-cr-backquote": "UPDATE items SET name = 'left`\rright', version = version + 1 WHERE id = 1;",
+      "runtime-quote-backslash": "UPDATE items SET name = 'double \"quote\" \\r', version = version + 1 WHERE id = 1;",
+      "runtime-cr": "UPDATE items SET name = E'first ''it\\'s', version = version + 1 WHERE id = 1;",
+      "runtime-crlf": "UPDATE items SET name = e'first '\n\t'it\\'s', version = version + 1 WHERE id = 1;",
+      "runtime-lf": "UPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1;"
+    },
+    "expected": {
+      "runtime-cr": "UPDATE items SET name = E'first '\r'it\\'s', version = version + 1 WHERE id = 1;",
+      "runtime-crlf": "UPDATE items SET name = e'first '\r\n\t'it\\'s', version = version + 1 WHERE id = 1;",
+      "runtime-lf": "UPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1;",
+      "runtime-cr-value": "UPDATE items SET name = 'left\rright', version = version + 1 WHERE id = 1;",
+      "runtime-crlf-value": "UPDATE items SET name = 'left\r\nright', version = version + 1 WHERE id = 1;",
+      "runtime-backquote": "UPDATE items SET name = 'tick`slash\\r', version = version + 1 WHERE id = 1;",
+      "runtime-cr-backquote": "UPDATE items SET name = 'left`\rright', version = version + 1 WHERE id = 1;",
+      "runtime-quote-backslash": "UPDATE items SET name = 'double \"quote\" \\r', version = version + 1 WHERE id = 1;"
+    },
+    "mismatches": [
+      "runtime-cr",
+      "runtime-cr-value",
+      "runtime-crlf",
+      "runtime-crlf-value"
+    ]
+  },
+  "retained_source_pipeline": {
+    "passed": [
+      "comment-only-version",
+      "escape-boundary-control",
+      "escape-comment-crlf",
+      "escape-comment-lf",
+      "escape-cr",
+      "escape-lf",
+      "escape-lower-crlf",
+      "escape-mixed-whitespace",
+      "escape-single",
+      "escape-three",
+      "independent-escape",
+      "independent-standard",
+      "quoted-type-control",
+      "standard-continuation",
+      "standard-final-backslash",
+      "standard-text-control",
+      "string-only-version",
+      "typed-digit-tail",
+      "typed-dollar-tail",
+      "typed-name-crlf",
+      "typed-name-lf",
+      "typed-name-single",
+      "typed-qualified-comment",
+      "typed-string-only-version",
+      "typed-underscore-tail",
+      "typed-utf8-tail"
+    ],
+    "failed": []
+  },
+  "compiled_pipeline": {
+    "observed": {
+      "typed-name-crlf": "UPDATE items SET name = NAME'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "quoted-type-control": "UPDATE items SET name = \"name\"'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "escape-lf": "UPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1",
+      "standard-final-backslash": "UPDATE items SET name = 'first\\', version = version + 1 WHERE id = 1",
+      "typed-digit-tail": "UPDATE items SET name = name1e'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "escape-lower-crlf": "UPDATE items SET name = e'first '\n\t'it\\'s', version = version + 1 WHERE id = 1",
+      "escape-mixed-whitespace": "UPDATE items SET name = E'first '\u000b\f \n\t'it\\'s', version = version + 1 WHERE id = 1",
+      "escape-single": "UPDATE items SET name = E'first it\\'s', version = version + 1 WHERE id = 1",
+      "standard-continuation": "UPDATE items SET name = 'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "typed-name-single": "UPDATE items SET name = name'last\\', version = version + 1 WHERE id = 1",
+      "typed-underscore-tail": "UPDATE items SET name = name_e'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "typed-dollar-tail": "UPDATE items SET name = name$e'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "typed-utf8-tail": "UPDATE items SET name = namée'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "escape-cr": "UPDATE items SET name = E'first ''it\\'s', version = version + 1 WHERE id = 1",
+      "escape-three": "UPDATE items SET name = E'first '\n'it\\'s '\n'ready\\'s', version = version + 1 WHERE id = 1",
+      "independent-standard": "UPDATE items SET name = E'first ' || '\\', version = version + 1 WHERE id = 1",
+      "independent-escape": "UPDATE items SET name = 'first ' || E'it\\'s', version = version + 1 WHERE id = 1",
+      "standard-text-control": "UPDATE items SET name = text'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "escape-boundary-control": "UPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1",
+      "typed-name-lf": "UPDATE items SET name = name'first '\n'last\\', version = version + 1 WHERE id = 1"
+    },
+    "expected": {
+      "escape-lf": "UPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1",
+      "escape-lower-crlf": "UPDATE items SET name = e'first '\n\t'it\\'s', version = version + 1 WHERE id = 1",
+      "escape-cr": "UPDATE items SET name = E'first '\r'it\\'s', version = version + 1 WHERE id = 1",
+      "escape-three": "UPDATE items SET name = E'first '\n'it\\'s '\n'ready\\'s', version = version + 1 WHERE id = 1",
+      "escape-mixed-whitespace": "UPDATE items SET name = E'first '\u000b\f \n\t'it\\'s', version = version + 1 WHERE id = 1",
+      "escape-single": "UPDATE items SET name = E'first it\\'s', version = version + 1 WHERE id = 1",
+      "standard-continuation": "UPDATE items SET name = 'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "independent-standard": "UPDATE items SET name = E'first ' || '\\', version = version + 1 WHERE id = 1",
+      "independent-escape": "UPDATE items SET name = 'first ' || E'it\\'s', version = version + 1 WHERE id = 1",
+      "standard-final-backslash": "UPDATE items SET name = 'first\\', version = version + 1 WHERE id = 1",
+      "typed-name-lf": "UPDATE items SET name = name'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "typed-name-crlf": "UPDATE items SET name = NAME'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "typed-name-single": "UPDATE items SET name = name'last\\', version = version + 1 WHERE id = 1",
+      "typed-digit-tail": "UPDATE items SET name = name1e'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "typed-underscore-tail": "UPDATE items SET name = name_e'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "typed-dollar-tail": "UPDATE items SET name = name$e'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "typed-utf8-tail": "UPDATE items SET name = namée'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "quoted-type-control": "UPDATE items SET name = \"name\"'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "standard-text-control": "UPDATE items SET name = text'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "escape-boundary-control": "UPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1"
+    },
+    "mismatches": [
+      "escape-cr"
+    ]
+  },
+  "previous_prefix_tree": {
+    "label": "previous_prefix_tests",
+    "tree": "81bd16d6dd73c48d2790b22dec13aaea7fbf56b7",
+    "blobs": 621,
+    "index_sha256": "5db34059ce70903904be37581bb4fde70acc2c16874a86955cdeefda6bf2992d"
+  },
+  "dollar_previous_prefix": {
+    "passed": [
+      "dollar-case-sensitive",
+      "dollar-identifier-boundary",
+      "dollar-nested-tag",
+      "dollar-overlap-close",
+      "dollar-quoted-identifier-boundary",
+      "dollar-quoted-type",
+      "dollar-tagged",
+      "dollar-underscore-tag",
+      "dollar-unicode-tag",
+      "dollar-untagged"
+    ],
+    "failed": [
+      "dollar-read-only-write-text",
+      "dollar-tagged-version-only",
+      "dollar-version-only"
+    ]
+  },
+  "after_prefix_restore": {
+    "label": "current_tests",
+    "tree": "4921be4909780bcd3461701281b141db768b68eb",
+    "blobs": 621,
+    "index_sha256": "acaa6ba9b13d9f948edd071c8739d6b69acd622bb7d6d942d2bcf1c98c7173e1"
+  },
+  "dollar_pipeline": [
+    {
+      "id": "dollar-untagged",
+      "input_sql": "UPDATE items SET name = $$name'.*\\\\\\'.*'$$, version = version + 1 WHERE id = 1;",
+      "input_sha256": "677d4d925bdb35f95ce26741f847bab8ac24d6c9d9dc876b1704d66cf5b19630",
+      "raw_exit": 1,
+      "predicted_exit": 1,
+      "prediction_is_correctness_oracle": false,
+      "captured_request": true,
+      "log": "# package spira\nerror generating code: process: error running command sqlc-gen-spira: ContinueItem: writes versioned table items without version\n\n",
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b",
+      "generated_files": [],
+      "request_sha256": "421ef1128ef0ffe029fc74d5ff3b6bd9bbe2256b9defbef2a93512cf5fc1df9e",
+      "sqlc_version": "v1.31.1",
+      "processed_sql": "UPDATE items SET name = $$name'.*\\\\\\'.*'$$, version = version + 1 WHERE id = 1",
+      "processed_sha256": "b0a4ee0aa7e5038a071a24f7369a05a1055e11d0fc33950694bbce70178d631d",
+      "processed_native": {
+        "id": "dollar-untagged",
+        "lane": "dollar-processed",
+        "sql": "UPDATE items SET name = $$name'.*\\\\\\'.*'$$, version = version + 1 WHERE id = 1",
+        "sql_sha256": "b0a4ee0aa7e5038a071a24f7369a05a1055e11d0fc33950694bbce70178d631d",
+        "observed": {
+          "name": "name'.*\\\\\\'.*'",
+          "version": 1
+        },
+        "expected": {
+          "name": "name'.*\\\\\\'.*'",
+          "version": 1
+        },
+        "matches": true
+      },
+      "outcome": "false-refusal"
+    },
+    {
+      "id": "dollar-tagged",
+      "input_sql": "UPDATE items SET name = $re$name'.*\\\\\\'.*'$re$, version = version + 1 WHERE id = 1;",
+      "input_sha256": "802fcac5fb63b92a53a14a9503858ba777b3e27fc076d77997d0084129e34c06",
+      "raw_exit": 1,
+      "predicted_exit": 1,
+      "prediction_is_correctness_oracle": false,
+      "captured_request": true,
+      "log": "# package spira\nerror generating code: process: error running command sqlc-gen-spira: ContinueItem: writes versioned table items without version\n\n",
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b",
+      "generated_files": [],
+      "request_sha256": "c40028c392f3b358ad3947c4092ddd9ba2ed12111ed42e48406ce1137db65598",
+      "sqlc_version": "v1.31.1",
+      "processed_sql": "UPDATE items SET name = $re$name'.*\\\\\\'.*'$re$, version = version + 1 WHERE id = 1",
+      "processed_sha256": "00d17e9ddc2bb6e7bdb7f0fb4e153a1262c56778f97eb79624cd2ceb128316d0",
+      "processed_native": {
+        "id": "dollar-tagged",
+        "lane": "dollar-processed",
+        "sql": "UPDATE items SET name = $re$name'.*\\\\\\'.*'$re$, version = version + 1 WHERE id = 1",
+        "sql_sha256": "00d17e9ddc2bb6e7bdb7f0fb4e153a1262c56778f97eb79624cd2ceb128316d0",
+        "observed": {
+          "name": "name'.*\\\\\\'.*'",
+          "version": 1
+        },
+        "expected": {
+          "name": "name'.*\\\\\\'.*'",
+          "version": 1
+        },
+        "matches": true
+      },
+      "outcome": "false-refusal"
+    },
+    {
+      "id": "dollar-case-sensitive",
+      "input_sql": "UPDATE items SET name = $Tag$name'.*\\\\\\'.*' $tag$ version$Tag$, version = version + 1 WHERE id = 1;",
+      "input_sha256": "32f9edae3ef0bd49cd14455820870123c7407e3ebdf7d9cf79c8ad1665536d72",
+      "raw_exit": 1,
+      "predicted_exit": 1,
+      "prediction_is_correctness_oracle": false,
+      "captured_request": true,
+      "log": "# package spira\nerror generating code: process: error running command sqlc-gen-spira: ContinueItem: writes versioned table items without version\n\n",
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b",
+      "generated_files": [],
+      "request_sha256": "001bce7531570e8e8ff05b4a216dbcf21775374bd009d1daef14a7a9039c8b7a",
+      "sqlc_version": "v1.31.1",
+      "processed_sql": "UPDATE items SET name = $Tag$name'.*\\\\\\'.*' $tag$ version$Tag$, version = version + 1 WHERE id = 1",
+      "processed_sha256": "0d7e538ffbee995deb613052f281b9db840e31c8d11452a6017ffa1218b90806",
+      "processed_native": {
+        "id": "dollar-case-sensitive",
+        "lane": "dollar-processed",
+        "sql": "UPDATE items SET name = $Tag$name'.*\\\\\\'.*' $tag$ version$Tag$, version = version + 1 WHERE id = 1",
+        "sql_sha256": "0d7e538ffbee995deb613052f281b9db840e31c8d11452a6017ffa1218b90806",
+        "observed": {
+          "name": "name'.*\\\\\\'.*' $tag$ version",
+          "version": 1
+        },
+        "expected": {
+          "name": "name'.*\\\\\\'.*' $tag$ version",
+          "version": 1
+        },
+        "matches": true
+      },
+      "outcome": "false-refusal"
+    },
+    {
+      "id": "dollar-nested-tag",
+      "input_sql": "UPDATE items SET name = $outer$name'.*\\\\\\'.*' $inner$ 'version'$outer$, version = version + 1 WHERE id = 1;",
+      "input_sha256": "126b914a53f9d9cb073e9c4cf2e6ea6d0c99a09ee31aaf5c66771f6ff6a77bda",
+      "raw_exit": 0,
+      "predicted_exit": 0,
+      "prediction_is_correctness_oracle": false,
+      "captured_request": true,
+      "log": "",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "generated_files": [
+        {
+          "path": "models.sql.lgo",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET name = $outer$name'.*\\\\\\'.*' $inner$ 'version'$outer$, version = version + 1 WHERE id = 1`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n",
+          "sha256": "462bdf12b964daba31acead3ab7733367759d7cd0e250d70f5e9d481e5feeccb"
+        }
+      ],
+      "request_sha256": "fb205f859f7f1efbbfef296a5ebb2fb34bdeb4f48f80dff1ba79a2aedd1341b5",
+      "sqlc_version": "v1.31.1",
+      "processed_sql": "UPDATE items SET name = $outer$name'.*\\\\\\'.*' $inner$ 'version'$outer$, version = version + 1 WHERE id = 1",
+      "processed_sha256": "67b7601ef9067621457be2787ee3135fb30692edc3ef744a53584ac1b361b01b",
+      "processed_native": {
+        "id": "dollar-nested-tag",
+        "lane": "dollar-processed",
+        "sql": "UPDATE items SET name = $outer$name'.*\\\\\\'.*' $inner$ 'version'$outer$, version = version + 1 WHERE id = 1",
+        "sql_sha256": "67b7601ef9067621457be2787ee3135fb30692edc3ef744a53584ac1b361b01b",
+        "observed": {
+          "name": "name'.*\\\\\\'.*' $inner$ 'version'",
+          "version": 1
+        },
+        "expected": {
+          "name": "name'.*\\\\\\'.*' $inner$ 'version'",
+          "version": 1
+        },
+        "matches": true
+      },
+      "outcome": "generated"
+    },
+    {
+      "id": "dollar-overlap-close",
+      "input_sql": "UPDATE items SET name = $tag$name'.*\\\\\\'.*'$other$tag$, version = version + 1 WHERE id = 1;",
+      "input_sha256": "98876dbe45cbc2d9d059fbcba6f307896a726062415253f36b5f10eda7447873",
+      "raw_exit": 1,
+      "predicted_exit": 1,
+      "prediction_is_correctness_oracle": false,
+      "captured_request": true,
+      "log": "# package spira\nerror generating code: process: error running command sqlc-gen-spira: ContinueItem: writes versioned table items without version\n\n",
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b",
+      "generated_files": [],
+      "request_sha256": "984db751aab93538155dc618219f203105c3fefdb86c4481985e4baae6e59eb2",
+      "sqlc_version": "v1.31.1",
+      "processed_sql": "UPDATE items SET name = $tag$name'.*\\\\\\'.*'$other$tag$, version = version + 1 WHERE id = 1",
+      "processed_sha256": "8c8d24668267286b545f6813bcedeea32ecfc94d123f3e4da565f03354517095",
+      "processed_native": {
+        "id": "dollar-overlap-close",
+        "lane": "dollar-processed",
+        "sql": "UPDATE items SET name = $tag$name'.*\\\\\\'.*'$other$tag$, version = version + 1 WHERE id = 1",
+        "sql_sha256": "8c8d24668267286b545f6813bcedeea32ecfc94d123f3e4da565f03354517095",
+        "observed": {
+          "name": "name'.*\\\\\\'.*'$other",
+          "version": 1
+        },
+        "expected": {
+          "name": "name'.*\\\\\\'.*'$other",
+          "version": 1
+        },
+        "matches": true
+      },
+      "outcome": "false-refusal"
+    },
+    {
+      "id": "dollar-unicode-tag",
+      "input_sql": "UPDATE items SET name = $tég$name'.*\\\\\\'.*'$tég$, version = version + 1 WHERE id = 1;",
+      "input_sha256": "5079725ac3ace9850a4443bc20cc4c12cf17f4b8e4530cf36ff161ae81fab623",
+      "raw_exit": 1,
+      "predicted_exit": 1,
+      "prediction_is_correctness_oracle": false,
+      "captured_request": true,
+      "log": "# package spira\nerror generating code: process: error running command sqlc-gen-spira: ContinueItem: writes versioned table items without version\n\n",
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b",
+      "generated_files": [],
+      "request_sha256": "965d5cbb0630a6e7f8396f8853f3a82b313f08df4f2a9e586422fc75761bf7fb",
+      "sqlc_version": "v1.31.1",
+      "processed_sql": "UPDATE items SET name = $tég$name'.*\\\\\\'.*'$tég$, version = version + 1 WHERE id = 1",
+      "processed_sha256": "9d6af781193c5cfb702f93d7651e4f40429eec30829f864b55d6df7515567150",
+      "processed_native": {
+        "id": "dollar-unicode-tag",
+        "lane": "dollar-processed",
+        "sql": "UPDATE items SET name = $tég$name'.*\\\\\\'.*'$tég$, version = version + 1 WHERE id = 1",
+        "sql_sha256": "9d6af781193c5cfb702f93d7651e4f40429eec30829f864b55d6df7515567150",
+        "observed": {
+          "name": "name'.*\\\\\\'.*'",
+          "version": 1
+        },
+        "expected": {
+          "name": "name'.*\\\\\\'.*'",
+          "version": 1
+        },
+        "matches": true
+      },
+      "outcome": "false-refusal"
+    },
+    {
+      "id": "dollar-underscore-tag",
+      "input_sql": "UPDATE items SET name = $a_2$name'.*\\\\\\'.*'$a_2$, version = version + 1 WHERE id = 1;",
+      "input_sha256": "f78b3c9fc6695f6f4829dd116742065e732f1e91029bb8c719217e49355286e0",
+      "raw_exit": 1,
+      "predicted_exit": 1,
+      "prediction_is_correctness_oracle": false,
+      "captured_request": true,
+      "log": "# package spira\nerror generating code: process: error running command sqlc-gen-spira: ContinueItem: writes versioned table items without version\n\n",
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b",
+      "generated_files": [],
+      "request_sha256": "34c0cb7121f302a6ac60a744b4bc0c4995b0eb18d5ea0d9621f9d475b30dcd77",
+      "sqlc_version": "v1.31.1",
+      "processed_sql": "UPDATE items SET name = $a_2$name'.*\\\\\\'.*'$a_2$, version = version + 1 WHERE id = 1",
+      "processed_sha256": "616b7e0b759e46bf23b2dd4b8e94ac289dc1fb30e5932e19334031ceb4abf7fa",
+      "processed_native": {
+        "id": "dollar-underscore-tag",
+        "lane": "dollar-processed",
+        "sql": "UPDATE items SET name = $a_2$name'.*\\\\\\'.*'$a_2$, version = version + 1 WHERE id = 1",
+        "sql_sha256": "616b7e0b759e46bf23b2dd4b8e94ac289dc1fb30e5932e19334031ceb4abf7fa",
+        "observed": {
+          "name": "name'.*\\\\\\'.*'",
+          "version": 1
+        },
+        "expected": {
+          "name": "name'.*\\\\\\'.*'",
+          "version": 1
+        },
+        "matches": true
+      },
+      "outcome": "false-refusal"
+    },
+    {
+      "id": "dollar-version-only",
+      "input_sql": "UPDATE items SET name = $$version$$ WHERE id = 1;",
+      "input_sha256": "3b4356b89252f45f36e18496a790751fcecf0db81d851ff49a4301ef88ced104",
+      "raw_exit": 0,
+      "predicted_exit": 0,
+      "prediction_is_correctness_oracle": false,
+      "captured_request": true,
+      "log": "",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "generated_files": [
+        {
+          "path": "models.sql.lgo",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET name = $$version$$ WHERE id = 1`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n",
+          "sha256": "f9bc07637d6130a8a849c8ce4ea9f5bb0fe6c8ab0bde514460f55d619ea83795"
+        }
+      ],
+      "request_sha256": "8f382c737796e6e34e28b24015b297ff097da8f4330feab8043a761868d9b45b",
+      "sqlc_version": "v1.31.1",
+      "processed_sql": "UPDATE items SET name = $$version$$ WHERE id = 1",
+      "processed_sha256": "c3d1a5b44ca8fa5bfe00cc4370ee9d723b89a6304ab87f955d48a3b6e2653e77",
+      "processed_native": {
+        "id": "dollar-version-only",
+        "lane": "dollar-processed",
+        "sql": "UPDATE items SET name = $$version$$ WHERE id = 1",
+        "sql_sha256": "c3d1a5b44ca8fa5bfe00cc4370ee9d723b89a6304ab87f955d48a3b6e2653e77",
+        "observed": {
+          "name": "version",
+          "version": 0
+        },
+        "expected": {
+          "name": "version",
+          "version": 0
+        },
+        "matches": true
+      },
+      "outcome": "false-acceptance"
+    },
+    {
+      "id": "dollar-tagged-version-only",
+      "input_sql": "UPDATE items SET name = $v$version$v$ WHERE id = 1;",
+      "input_sha256": "fc5c3bc80d64baeac99f9bdf6555ff4ffc6d2e52dd6ee14fa8a669ee04c5c655",
+      "raw_exit": 0,
+      "predicted_exit": 0,
+      "prediction_is_correctness_oracle": false,
+      "captured_request": true,
+      "log": "",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "generated_files": [
+        {
+          "path": "models.sql.lgo",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET name = $v$version$v$ WHERE id = 1`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n",
+          "sha256": "6ae627c62a8e556e98b778ccce948086625f6c485b90c315f628d8683c1bc7ec"
+        }
+      ],
+      "request_sha256": "21d2ed30d42bfcea059ec8220199c8c567032f59a6fb5e9aee1896c0685e24f3",
+      "sqlc_version": "v1.31.1",
+      "processed_sql": "UPDATE items SET name = $v$version$v$ WHERE id = 1",
+      "processed_sha256": "57b9008501d674e7121844a42fa04fa242b6eacdbce79bb5fab749babf377a84",
+      "processed_native": {
+        "id": "dollar-tagged-version-only",
+        "lane": "dollar-processed",
+        "sql": "UPDATE items SET name = $v$version$v$ WHERE id = 1",
+        "sql_sha256": "57b9008501d674e7121844a42fa04fa242b6eacdbce79bb5fab749babf377a84",
+        "observed": {
+          "name": "version",
+          "version": 0
+        },
+        "expected": {
+          "name": "version",
+          "version": 0
+        },
+        "matches": true
+      },
+      "outcome": "false-acceptance"
+    },
+    {
+      "id": "dollar-quoted-type",
+      "input_sql": "UPDATE items SET name = \"name\" $$name'.*\\\\\\'.*'$$, version = version + 1 WHERE id = 1;",
+      "input_sha256": "134b3a2f87d3cedd0f5c0f9363e1b71cee881f711e7448a8323c2fa3b6a1729a",
+      "raw_exit": 1,
+      "predicted_exit": 1,
+      "prediction_is_correctness_oracle": false,
+      "captured_request": true,
+      "log": "# package spira\nerror generating code: process: error running command sqlc-gen-spira: ContinueItem: writes versioned table items without version\n\n",
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b",
+      "generated_files": [],
+      "request_sha256": "106004c39b37d685f0d2f1db9b6dc708dcb54c45abbd4c02057808aa1db7a959",
+      "sqlc_version": "v1.31.1",
+      "processed_sql": "UPDATE items SET name = \"name\" $$name'.*\\\\\\'.*'$$, version = version + 1 WHERE id = 1",
+      "processed_sha256": "6fc00162f0e6f7e65c1f772e614c8c757e109fee0a1010424ae97443262d59e2",
+      "processed_native": {
+        "id": "dollar-quoted-type",
+        "lane": "dollar-processed",
+        "sql": "UPDATE items SET name = \"name\" $$name'.*\\\\\\'.*'$$, version = version + 1 WHERE id = 1",
+        "sql_sha256": "6fc00162f0e6f7e65c1f772e614c8c757e109fee0a1010424ae97443262d59e2",
+        "observed": {
+          "name": "name'.*\\\\\\'.*'",
+          "version": 1
+        },
+        "expected": {
+          "name": "name'.*\\\\\\'.*'",
+          "version": 1
+        },
+        "matches": true
+      },
+      "outcome": "false-refusal"
+    },
+    {
+      "id": "dollar-read-only-write-text",
+      "input_sql": "SELECT id FROM items WHERE name = $$UPDATE items SET name = 'not here'$$;",
+      "input_sha256": "2335f528316f98cd083473eb96da54e099a7b61fd5abaffd7978da54a2947100",
+      "raw_exit": 1,
+      "predicted_exit": 1,
+      "prediction_is_correctness_oracle": false,
+      "captured_request": true,
+      "log": "# package spira\nerror generating code: process: error running command sqlc-gen-spira: ContinueItem: writes versioned table items without version\n\n",
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b",
+      "generated_files": [],
+      "request_sha256": "c248cb0ceb8d9d3068c397f3f88424a82c4f2cb786852022630825d921f3e7cd",
+      "sqlc_version": "v1.31.1",
+      "processed_sql": "SELECT id FROM items WHERE name = $$UPDATE items SET name = 'not here'$$",
+      "processed_sha256": "af5b630734bfd16bda17bbbb93451047dc120dbfea5dc9de15d550f56c8edcfb",
+      "processed_native": {
+        "id": "dollar-read-only-write-text",
+        "lane": "dollar-processed",
+        "sql": "SELECT id FROM items WHERE name = $$UPDATE items SET name = 'not here'$$",
+        "sql_sha256": "af5b630734bfd16bda17bbbb93451047dc120dbfea5dc9de15d550f56c8edcfb",
+        "observed": {
+          "name": "before",
+          "version": 0
+        },
+        "expected": {
+          "name": "before",
+          "version": 0
+        },
+        "matches": true
+      },
+      "outcome": "false-refusal"
+    },
+    {
+      "id": "dollar-identifier-boundary",
+      "input_sql": "UPDATE items SET name = v.name$tag$, version = version + 1 FROM (VALUES ('identifier')) AS v(name$tag$) WHERE items.id = 1;",
+      "input_sha256": "6595cb7916211883a08275bda0d49bcb9bcfa7feb2293081c1e9f67824cd5500",
+      "raw_exit": 0,
+      "predicted_exit": 0,
+      "prediction_is_correctness_oracle": false,
+      "captured_request": true,
+      "log": "",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "generated_files": [
+        {
+          "path": "models.sql.lgo",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET name = v.name$tag$, version = version + 1 FROM (VALUES ('identifier')) AS v(name$tag$) WHERE items.id = 1`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n",
+          "sha256": "0733668c5b83e0bdc57f2118d3d01576d21f907020700afbda8319ac64dff01e"
+        }
+      ],
+      "request_sha256": "5b059d284b9548a069cf89a5edb0d71f96efc93a60271021eab68bd61a3e1d73",
+      "sqlc_version": "v1.31.1",
+      "processed_sql": "UPDATE items SET name = v.name$tag$, version = version + 1 FROM (VALUES ('identifier')) AS v(name$tag$) WHERE items.id = 1",
+      "processed_sha256": "8690da53a22dac6f8b53941f045cadec44701fa6f38f7ee6a9511db45d5c3464",
+      "processed_native": {
+        "id": "dollar-identifier-boundary",
+        "lane": "dollar-processed",
+        "sql": "UPDATE items SET name = v.name$tag$, version = version + 1 FROM (VALUES ('identifier')) AS v(name$tag$) WHERE items.id = 1",
+        "sql_sha256": "8690da53a22dac6f8b53941f045cadec44701fa6f38f7ee6a9511db45d5c3464",
+        "observed": {
+          "name": "identifier",
+          "version": 1
+        },
+        "expected": {
+          "name": "identifier",
+          "version": 1
+        },
+        "matches": true
+      },
+      "outcome": "generated"
+    },
+    {
+      "id": "dollar-quoted-identifier-boundary",
+      "input_sql": "UPDATE items SET name = v.\"$tag$\", version = version + 1 FROM (VALUES ('quoted')) AS v(\"$tag$\") WHERE items.id = 1;",
+      "input_sha256": "a2ae55654a4855f9c66100d7d9f8c94fa093aec6fe785ada7f9336f85cb93737",
+      "raw_exit": 0,
+      "predicted_exit": 0,
+      "prediction_is_correctness_oracle": false,
+      "captured_request": true,
+      "log": "",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "generated_files": [
+        {
+          "path": "models.sql.lgo",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET name = v.\"$tag$\", version = version + 1 FROM (VALUES ('quoted')) AS v(\"$tag$\") WHERE items.id = 1`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n",
+          "sha256": "61c16bc493e65e1a9101a17454ae89c221d80e26621574a4f1ebf1a3de69dd42"
+        }
+      ],
+      "request_sha256": "453f0433967de453df3a3ad1307721d58a9a0677cd76f9d57676ae2164ef5e55",
+      "sqlc_version": "v1.31.1",
+      "processed_sql": "UPDATE items SET name = v.\"$tag$\", version = version + 1 FROM (VALUES ('quoted')) AS v(\"$tag$\") WHERE items.id = 1",
+      "processed_sha256": "16a6d176b1e0e532d798dfb1d8803be18ab292c51beee27b0130b4f426e1c55b",
+      "processed_native": {
+        "id": "dollar-quoted-identifier-boundary",
+        "lane": "dollar-processed",
+        "sql": "UPDATE items SET name = v.\"$tag$\", version = version + 1 FROM (VALUES ('quoted')) AS v(\"$tag$\") WHERE items.id = 1",
+        "sql_sha256": "16a6d176b1e0e532d798dfb1d8803be18ab292c51beee27b0130b4f426e1c55b",
+        "observed": {
+          "name": "quoted",
+          "version": 1
+        },
+        "expected": {
+          "name": "quoted",
+          "version": 1
+        },
+        "matches": true
+      },
+      "outcome": "generated"
+    }
+  ],
+  "direct_compiled_native": [
+    {
+      "id": "runtime-cr",
+      "lane": "direct-compiled",
+      "sql": "UPDATE items SET name = E'first ''it\\'s', version = version + 1 WHERE id = 1;",
+      "sql_sha256": "d26a200f0d91549b1cef38dddf0b450a8bd681d417014e8cef6439f89fcef296",
+      "observed": {
+        "name": "first 'it's",
+        "version": 1
+      },
+      "expected": {
+        "name": "first it's",
+        "version": 1
+      },
+      "matches": false
+    },
+    {
+      "id": "runtime-crlf",
+      "lane": "direct-compiled",
+      "sql": "UPDATE items SET name = e'first '\n\t'it\\'s', version = version + 1 WHERE id = 1;",
+      "sql_sha256": "a3cc42cac3bb6fa708d252dfcbfde78893351cffb8d0ee4d598493cb50bcf796",
+      "observed": {
+        "name": "first it's",
+        "version": 1
+      },
+      "expected": {
+        "name": "first it's",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "runtime-lf",
+      "lane": "direct-compiled",
+      "sql": "UPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1;",
+      "sql_sha256": "07224c02a2ce8ceb6742eb9489b6a17716b1bc8277e9842d36daee5510a9ff55",
+      "observed": {
+        "name": "first it's",
+        "version": 1
+      },
+      "expected": {
+        "name": "first it's",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "runtime-cr-value",
+      "lane": "direct-compiled",
+      "sql": "UPDATE items SET name = 'leftright', version = version + 1 WHERE id = 1;",
+      "sql_sha256": "7224ff38c3a0ea43e203305a0ff246b0f3d2b1e6d08b575b66459812710c4f57",
+      "observed": {
+        "name": "leftright",
+        "version": 1
+      },
+      "expected": {
+        "name": "left\rright",
+        "version": 1
+      },
+      "matches": false
+    },
+    {
+      "id": "runtime-crlf-value",
+      "lane": "direct-compiled",
+      "sql": "UPDATE items SET name = 'left\nright', version = version + 1 WHERE id = 1;",
+      "sql_sha256": "17a337b3965bd6af65b46dbd61b711af1d939d5cb542f46aebbe19891b4cba0e",
+      "observed": {
+        "name": "left\nright",
+        "version": 1
+      },
+      "expected": {
+        "name": "left\r\nright",
+        "version": 1
+      },
+      "matches": false
+    },
+    {
+      "id": "runtime-backquote",
+      "lane": "direct-compiled",
+      "sql": "UPDATE items SET name = 'tick`slash\\r', version = version + 1 WHERE id = 1;",
+      "sql_sha256": "39b912718cab4724bee5bcaf3e9b773f0a463f39f5b1577411315722481b29e8",
+      "observed": {
+        "name": "tick`slash\\r",
+        "version": 1
+      },
+      "expected": {
+        "name": "tick`slash\\r",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "runtime-cr-backquote",
+      "lane": "direct-compiled",
+      "sql": "UPDATE items SET name = 'left`\rright', version = version + 1 WHERE id = 1;",
+      "sql_sha256": "de030719d1e3609773c69f0d4ccc94e079131e19f9379bb83c546c2dd7744319",
+      "observed": {
+        "name": "left`\rright",
+        "version": 1
+      },
+      "expected": {
+        "name": "left`\rright",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "runtime-quote-backslash",
+      "lane": "direct-compiled",
+      "sql": "UPDATE items SET name = 'double \"quote\" \\r', version = version + 1 WHERE id = 1;",
+      "sql_sha256": "b2c273b9c8d347cb0ec76e7e1dcd169cff7352a3ae9f99129fc2010aa1a91f3d",
+      "observed": {
+        "name": "double \"quote\" \\r",
+        "version": 1
+      },
+      "expected": {
+        "name": "double \"quote\" \\r",
+        "version": 1
+      },
+      "matches": true
+    }
+  ],
+  "pipeline_compiled_native": [
+    {
+      "id": "escape-lf",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1",
+      "sql_sha256": "a14afc4d436b8e1db3d0fea7b6c928c9da9f2fb3f73e744adc1eefccbb76dba5",
+      "observed": {
+        "name": "first it's",
+        "version": 1
+      },
+      "expected": {
+        "name": "first it's",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "escape-lower-crlf",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = e'first '\n\t'it\\'s', version = version + 1 WHERE id = 1",
+      "sql_sha256": "123180cf949e1794d7763b177f19b9696257b6cc3e50c0c1a50a48035c6b57ff",
+      "observed": {
+        "name": "first it's",
+        "version": 1
+      },
+      "expected": {
+        "name": "first it's",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "escape-cr",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = E'first ''it\\'s', version = version + 1 WHERE id = 1",
+      "sql_sha256": "c96a8641385b3615d2a32ab719a11f2368501f1758834c2574afd7b1d6070891",
+      "observed": {
+        "name": "first 'it's",
+        "version": 1
+      },
+      "expected": {
+        "name": "first it's",
+        "version": 1
+      },
+      "matches": false
+    },
+    {
+      "id": "escape-three",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = E'first '\n'it\\'s '\n'ready\\'s', version = version + 1 WHERE id = 1",
+      "sql_sha256": "07aa3e455ecff52cddf87e0fecabc161f3d49c61334b9bdb4f024076a5981e85",
+      "observed": {
+        "name": "first it's ready's",
+        "version": 1
+      },
+      "expected": {
+        "name": "first it's ready's",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "escape-mixed-whitespace",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = E'first '\u000b\f \n\t'it\\'s', version = version + 1 WHERE id = 1",
+      "sql_sha256": "689ba3d4211029dbe0eb399377fbc813c86106e42e6234cba406216ff42fffc9",
+      "observed": {
+        "name": "first it's",
+        "version": 1
+      },
+      "expected": {
+        "name": "first it's",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "escape-single",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = E'first it\\'s', version = version + 1 WHERE id = 1",
+      "sql_sha256": "b4db6094fd25cc2175cfadf655eead7fb61ad7e4294bb0f5508bc2f5588526ee",
+      "observed": {
+        "name": "first it's",
+        "version": 1
+      },
+      "expected": {
+        "name": "first it's",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "standard-continuation",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = 'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "sql_sha256": "ed816342ceab8d8ff95bf0bf2c742d50579c101e67cebaa2262d80db0521a10f",
+      "observed": {
+        "name": "first last\\",
+        "version": 1
+      },
+      "expected": {
+        "name": "first last\\",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "independent-standard",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = E'first ' || '\\', version = version + 1 WHERE id = 1",
+      "sql_sha256": "077e242549c444cad3b71b9d2d07ec0b9b713f7d232f156275f2f6117c55e0f4",
+      "observed": {
+        "name": "first \\",
+        "version": 1
+      },
+      "expected": {
+        "name": "first \\",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "independent-escape",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = 'first ' || E'it\\'s', version = version + 1 WHERE id = 1",
+      "sql_sha256": "7020b99f84ca83eb58e1590a869e9ef207c6b77d909a651908e00b192e80c4cc",
+      "observed": {
+        "name": "first it's",
+        "version": 1
+      },
+      "expected": {
+        "name": "first it's",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "standard-final-backslash",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = 'first\\', version = version + 1 WHERE id = 1",
+      "sql_sha256": "cb363c2649a968e5c59e91cd11bcdc493f9cb26d29df0841cd99a863fb88a0e7",
+      "observed": {
+        "name": "first\\",
+        "version": 1
+      },
+      "expected": {
+        "name": "first\\",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "typed-name-lf",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = name'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "sql_sha256": "f48812014c2e74fa7c0afdadb27119a51f03ea25764a985f3475dcd76679d999",
+      "observed": {
+        "name": "first last\\",
+        "version": 1
+      },
+      "expected": {
+        "name": "first last\\",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "typed-name-crlf",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = NAME'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "sql_sha256": "3958514c0bbcaaa5c63a1f606c9ca2eb4e6eef1e6c179fab65b55e938bbd82ff",
+      "observed": {
+        "name": "first last\\",
+        "version": 1
+      },
+      "expected": {
+        "name": "first last\\",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "typed-name-single",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = name'last\\', version = version + 1 WHERE id = 1",
+      "sql_sha256": "0bc27de042b0d64d78dfc127dd9bc8520123b56e2682e7f5146ae2c4aa35b928",
+      "observed": {
+        "name": "last\\",
+        "version": 1
+      },
+      "expected": {
+        "name": "last\\",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "typed-digit-tail",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = name1e'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "sql_sha256": "908778f1094fbf308d420d4b1ac838a2693f0dd83a1a48619b3312782f76025b",
+      "observed": {
+        "name": "first last\\",
+        "version": 1
+      },
+      "expected": {
+        "name": "first last\\",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "typed-underscore-tail",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = name_e'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "sql_sha256": "6c0a1a814758ba6f6d8afa2d76d5beedda0c51f46fa4feeef41c2e218f8bf010",
+      "observed": {
+        "name": "first last\\",
+        "version": 1
+      },
+      "expected": {
+        "name": "first last\\",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "typed-dollar-tail",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = name$e'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "sql_sha256": "9ff90a1db3ef557cddd6c137d68508d6d382a00ff037b54ac29fa0db5f2f53cb",
+      "observed": {
+        "name": "first last\\",
+        "version": 1
+      },
+      "expected": {
+        "name": "first last\\",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "typed-utf8-tail",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = namée'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "sql_sha256": "ad0507227449a0e263fa84361008d18c25d84578277c2058c8de5d5865f0472b",
+      "observed": {
+        "name": "first last\\",
+        "version": 1
+      },
+      "expected": {
+        "name": "first last\\",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "quoted-type-control",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = \"name\"'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "sql_sha256": "653e77eabca811b8fee1add357f9c470746251bb2f2fa0642f85b2ac3623a8cd",
+      "observed": {
+        "name": "first last\\",
+        "version": 1
+      },
+      "expected": {
+        "name": "first last\\",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "standard-text-control",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = text'first '\n'last\\', version = version + 1 WHERE id = 1",
+      "sql_sha256": "d22029d6364cfeb938f5972ff91b92219463ce75f45ca88e20a7c2a6e13ea011",
+      "observed": {
+        "name": "first last\\",
+        "version": 1
+      },
+      "expected": {
+        "name": "first last\\",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "id": "escape-boundary-control",
+      "lane": "pipeline-compiled",
+      "sql": "UPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1",
+      "sql_sha256": "a14afc4d436b8e1db3d0fea7b6c928c9da9f2fb3f73e744adc1eefccbb76dba5",
+      "observed": {
+        "name": "first it's",
+        "version": 1
+      },
+      "expected": {
+        "name": "first it's",
+        "version": 1
+      },
+      "matches": true
+    }
+  ],
+  "after_observations": {
+    "label": "current_tests",
+    "tree": "4921be4909780bcd3461701281b141db768b68eb",
+    "blobs": 621,
+    "index_sha256": "acaa6ba9b13d9f948edd071c8739d6b69acd622bb7d6d942d2bcf1c98c7173e1"
+  },
+  "restored": {
+    "label": "source",
+    "tree": "1ec9a3d1e6a53ad1a50723869c6d381cf64d7877",
+    "blobs": 616,
+    "index_sha256": "6a7281d2131f03a2f2494e090d5d8569fe2b583f0e8e660fb054f5f5fd233a85"
+  },
+  "commands": [
+    {
+      "name": "source-head",
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "8b5c0c72a1604715f006a54361faf570e93efb1f6d54b104de900c8792951a85"
+    },
+    {
+      "name": "logos-version",
+      "command": [
+        "logos",
+        "version"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "3a7b14cf792a79c78a9e42aab8906e0774b54ecddbbbc520ce94651a34aec2f9"
+    },
+    {
+      "name": "go-cache-disabled",
+      "command": [
+        "go",
+        "env",
+        "GOCACHEPROG"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "name": "sqlc-modules",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "mod",
+        "download"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "sqlc-module",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "list",
+        "-m",
+        "-json",
+        "github.com/sqlc-dev/sqlc"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "78fe4571c2a0ec0aca3a70bff3218c5a6e5d56ddc513732f01ecd45fd9717dc6"
+    },
+    {
+      "name": "postgres-image",
+      "command": [
+        "docker",
+        "pull",
+        "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "77d4ae037d95270b465284d8329d8607b43dd52126707fb4d955db1eb876ab42"
+    },
+    {
+      "name": "postgres-image-identity",
+      "command": [
+        "docker",
+        "image",
+        "inspect",
+        "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "86c6b0c8a211bcc1fea86942a504c1fc65498b83f73fb76c76a8570ded5402fc"
+    },
+    {
+      "name": "postgres-start",
+      "command": [
+        "docker",
+        "run",
+        "--detach",
+        "--network",
+        "none",
+        "--name",
+        "spira47-dollar-46010784691-1",
+        "--env",
+        "POSTGRES_HOST_AUTH_METHOD=trust",
+        "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "cca41e11dcb1d98d12c28d703ec61f0f02c43295158654158a970f032a0faf89"
+    },
+    {
+      "name": "postgres-version",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "SHOW server_version_num;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "23115ea6bcfc1e8cf9bf3b7e201ecf38f5a9c76d337eea137c01265e768d7c31"
+    },
+    {
+      "name": "postgres-schema",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "CREATE DOMAIN name1e AS text;\nCREATE DOMAIN name_e AS text;\nCREATE DOMAIN name$e AS text;\nCREATE DOMAIN namée AS text;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, version integer NOT NULL DEFAULT 0);\n"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "new-original-dollar-untagged",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = $$name'.*\\\\\\'.*'$$, version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f2b108be860b9c90d261c573d80e87505afb2a35e9dc6f7e65bfc8022b594ed8"
+    },
+    {
+      "name": "new-original-dollar-tagged",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = $re$name'.*\\\\\\'.*'$re$, version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f2b108be860b9c90d261c573d80e87505afb2a35e9dc6f7e65bfc8022b594ed8"
+    },
+    {
+      "name": "new-original-dollar-case-sensitive",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = $Tag$name'.*\\\\\\'.*' $tag$ version$Tag$, version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "6ee5306d37a236b8455dcc417b0a2846f9cc7aa549a1e52b7d29087efbf6922e"
+    },
+    {
+      "name": "new-original-dollar-nested-tag",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = $outer$name'.*\\\\\\'.*' $inner$ 'version'$outer$, version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "8ac1d1a27da0c688567079021041a57622963970b92c68602e22c301794d2682"
+    },
+    {
+      "name": "new-original-dollar-overlap-close",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = $tag$name'.*\\\\\\'.*'$other$tag$, version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "03dc6cfa4b26c9d1d44622c672e714b96b55a25cd5a15c27c671a6b65339aba3"
+    },
+    {
+      "name": "new-original-dollar-unicode-tag",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = $tég$name'.*\\\\\\'.*'$tég$, version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f2b108be860b9c90d261c573d80e87505afb2a35e9dc6f7e65bfc8022b594ed8"
+    },
+    {
+      "name": "new-original-dollar-underscore-tag",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = $a_2$name'.*\\\\\\'.*'$a_2$, version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f2b108be860b9c90d261c573d80e87505afb2a35e9dc6f7e65bfc8022b594ed8"
+    },
+    {
+      "name": "new-original-dollar-version-only",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = $$version$$ WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f03cbc3eb703124af1167bbc2428bd163161a89ff8b18199235473174b082786"
+    },
+    {
+      "name": "new-original-dollar-tagged-version-only",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = $v$version$v$ WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f03cbc3eb703124af1167bbc2428bd163161a89ff8b18199235473174b082786"
+    },
+    {
+      "name": "new-original-dollar-quoted-type",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = \"name\" $$name'.*\\\\\\'.*'$$, version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f2b108be860b9c90d261c573d80e87505afb2a35e9dc6f7e65bfc8022b594ed8"
+    },
+    {
+      "name": "new-original-dollar-read-only-write-text",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nSELECT id FROM items WHERE name = $$UPDATE items SET name = 'not here'$$;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "4be799d32fb88be554f1d3ff95ff0e521662ecd825b37eb522663ea4e444c42b"
+    },
+    {
+      "name": "new-original-dollar-identifier-boundary",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = v.name$tag$, version = version + 1 FROM (VALUES ('identifier')) AS v(name$tag$) WHERE items.id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f634f389b3ec3edb47ef8f7693f9a4595f1db100bed8f297e4819a28bfa2c12f"
+    },
+    {
+      "name": "new-original-dollar-quoted-identifier-boundary",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = v.\"$tag$\", version = version + 1 FROM (VALUES ('quoted')) AS v(\"$tag$\") WHERE items.id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e1fff682928b06c1e7bd20ed15076fbbadd714d9be0ec2e2077d8eabed0d2c85"
+    },
+    {
+      "name": "new-original-runtime-cr",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first '\r'it\\'s', version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "0e5edba7aae29a44b356f897ecedadcaf842c1c95e611fd897f6b9629c3050cc"
+    },
+    {
+      "name": "new-original-runtime-crlf",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = e'first '\r\n\t'it\\'s', version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "0e5edba7aae29a44b356f897ecedadcaf842c1c95e611fd897f6b9629c3050cc"
+    },
+    {
+      "name": "new-original-runtime-lf",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "0e5edba7aae29a44b356f897ecedadcaf842c1c95e611fd897f6b9629c3050cc"
+    },
+    {
+      "name": "new-original-runtime-cr-value",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'left\rright', version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "54385280c94b45ef3e46f4e950d0f9c0df656af21e1784a6c44a4dec59711388"
+    },
+    {
+      "name": "new-original-runtime-crlf-value",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'left\r\nright', version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "a2cc36a54bc8f28bf0e1024c9d94ddf53a1a67ca3f8833d29251f9bfdf3499a6"
+    },
+    {
+      "name": "new-original-runtime-backquote",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'tick`slash\\r', version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ff1761a315ee3cb5a793356df17d817829314aed672bb63a3372c1696594c413"
+    },
+    {
+      "name": "new-original-runtime-cr-backquote",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'left`\rright', version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "8f19a90e45af372f0c4249cab2b5be9a654dd5bf7ebfd07c14b7c390b9f68887"
+    },
+    {
+      "name": "new-original-runtime-quote-backslash",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'double \"quote\" \\r', version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "0aebe7b9626829ddc72a0a12976fb09d691d5962e2e1b22f7622042572cb5a76"
+    },
+    {
+      "name": "stage-frozen-tests",
+      "command": [
+        "git",
+        "add",
+        "--",
+        "cmd/sqlc-gen-spira/dollar_literal_test.lgo",
+        "cmd/sqlc-gen-spira/testdata/dollar-strings.json",
+        "cmd/sqlc-gen-spira/query_constants_test.lgo",
+        "cmd/sqlc-gen-spira/testdata/query_constants_test.lgo.tmpl",
+        "cmd/sqlc-gen-spira/testdata/query-constant-values.json",
+        "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "test-compile",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-run",
+        "^$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "d3d9a20c6e953b90de8ce7d0e0e5a2b7692901dd9afd49f6c4d22052dc2f2457"
+    },
+    {
+      "name": "dollar-current-red",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "-run",
+        "^TestPostgresDollarQuotedBoundaries$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "92d8c8b520eae360782f03e0758c8dd2fe936760c1aa1265aea3709b119be7c0"
+    },
+    {
+      "name": "compiled-direct-red",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "-run",
+        "^TestGeneratedQueryConstants$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "311996429c0426f9f477c8e3913157b5f75fe8fa27fe052af2c98833f6d55488"
+    },
+    {
+      "name": "compiled-pipeline-red",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "-run",
+        "^TestSQLcPostgresLiteralPipeline$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "2a4f74eb4d777aacae074cdf996cebadfd8a5d16dced73f60604dd35270dd72c"
+    },
+    {
+      "name": "retained-generator-controls",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "-run",
+        "^(TestPostgresTypedLiteralBoundaries|TestPostgresContinuedEscapeStrings|TestVersionedWrite)",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "353cc0c369f878c5576b7188113790c13979601953b96180f6498208064aa852"
+    },
+    {
+      "name": "stage-prior-prefix",
+      "command": [
+        "git",
+        "add",
+        "--",
+        "cmd/sqlc-gen-spira/model.lgo"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "previous-prefix-compile",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-run",
+        "^$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "3d6f43d30e00ced2022c6b162e0d78574894f28a6bc994b4fff77f8bc9b1e026"
+    },
+    {
+      "name": "previous-prefix-dollar-observation",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "-run",
+        "^TestPostgresDollarQuotedBoundaries$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "7d9fe55a4492b719ef6028783670e4d5659684a45a18eb40892d5ac52c42c294"
+    },
+    {
+      "name": "restore-current-prefix",
+      "command": [
+        "git",
+        "add",
+        "--",
+        "cmd/sqlc-gen-spira/model.lgo"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "build-current-plugin",
+      "command": [
+        "logos",
+        "build",
+        "-o",
+        "/home/runner/work/_temp/spira47-baseline-build/sqlc-gen-spira",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "dollar-sqlc-dollar-untagged",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/dollar-pipeline/dollar-untagged/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "dollar-processed-dollar-untagged",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = $$name'.*\\\\\\'.*'$$, version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f2b108be860b9c90d261c573d80e87505afb2a35e9dc6f7e65bfc8022b594ed8"
+    },
+    {
+      "name": "dollar-sqlc-dollar-tagged",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/dollar-pipeline/dollar-tagged/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "dollar-processed-dollar-tagged",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = $re$name'.*\\\\\\'.*'$re$, version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f2b108be860b9c90d261c573d80e87505afb2a35e9dc6f7e65bfc8022b594ed8"
+    },
+    {
+      "name": "dollar-sqlc-dollar-case-sensitive",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/dollar-pipeline/dollar-case-sensitive/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "dollar-processed-dollar-case-sensitive",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = $Tag$name'.*\\\\\\'.*' $tag$ version$Tag$, version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "6ee5306d37a236b8455dcc417b0a2846f9cc7aa549a1e52b7d29087efbf6922e"
+    },
+    {
+      "name": "dollar-sqlc-dollar-nested-tag",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/dollar-pipeline/dollar-nested-tag/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "dollar-processed-dollar-nested-tag",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = $outer$name'.*\\\\\\'.*' $inner$ 'version'$outer$, version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "8ac1d1a27da0c688567079021041a57622963970b92c68602e22c301794d2682"
+    },
+    {
+      "name": "dollar-sqlc-dollar-overlap-close",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/dollar-pipeline/dollar-overlap-close/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "dollar-processed-dollar-overlap-close",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = $tag$name'.*\\\\\\'.*'$other$tag$, version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "03dc6cfa4b26c9d1d44622c672e714b96b55a25cd5a15c27c671a6b65339aba3"
+    },
+    {
+      "name": "dollar-sqlc-dollar-unicode-tag",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/dollar-pipeline/dollar-unicode-tag/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "dollar-processed-dollar-unicode-tag",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = $tég$name'.*\\\\\\'.*'$tég$, version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f2b108be860b9c90d261c573d80e87505afb2a35e9dc6f7e65bfc8022b594ed8"
+    },
+    {
+      "name": "dollar-sqlc-dollar-underscore-tag",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/dollar-pipeline/dollar-underscore-tag/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "dollar-processed-dollar-underscore-tag",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = $a_2$name'.*\\\\\\'.*'$a_2$, version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f2b108be860b9c90d261c573d80e87505afb2a35e9dc6f7e65bfc8022b594ed8"
+    },
+    {
+      "name": "dollar-sqlc-dollar-version-only",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/dollar-pipeline/dollar-version-only/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "dollar-processed-dollar-version-only",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = $$version$$ WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f03cbc3eb703124af1167bbc2428bd163161a89ff8b18199235473174b082786"
+    },
+    {
+      "name": "dollar-sqlc-dollar-tagged-version-only",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/dollar-pipeline/dollar-tagged-version-only/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "dollar-processed-dollar-tagged-version-only",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = $v$version$v$ WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f03cbc3eb703124af1167bbc2428bd163161a89ff8b18199235473174b082786"
+    },
+    {
+      "name": "dollar-sqlc-dollar-quoted-type",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/dollar-pipeline/dollar-quoted-type/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "dollar-processed-dollar-quoted-type",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = \"name\" $$name'.*\\\\\\'.*'$$, version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f2b108be860b9c90d261c573d80e87505afb2a35e9dc6f7e65bfc8022b594ed8"
+    },
+    {
+      "name": "dollar-sqlc-dollar-read-only-write-text",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/dollar-pipeline/dollar-read-only-write-text/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "dollar-processed-dollar-read-only-write-text",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nSELECT id FROM items WHERE name = $$UPDATE items SET name = 'not here'$$\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "4be799d32fb88be554f1d3ff95ff0e521662ecd825b37eb522663ea4e444c42b"
+    },
+    {
+      "name": "dollar-sqlc-dollar-identifier-boundary",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/dollar-pipeline/dollar-identifier-boundary/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "dollar-processed-dollar-identifier-boundary",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = v.name$tag$, version = version + 1 FROM (VALUES ('identifier')) AS v(name$tag$) WHERE items.id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f634f389b3ec3edb47ef8f7693f9a4595f1db100bed8f297e4819a28bfa2c12f"
+    },
+    {
+      "name": "dollar-sqlc-dollar-quoted-identifier-boundary",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/dollar-pipeline/dollar-quoted-identifier-boundary/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "dollar-processed-dollar-quoted-identifier-boundary",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = v.\"$tag$\", version = version + 1 FROM (VALUES ('quoted')) AS v(\"$tag$\") WHERE items.id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e1fff682928b06c1e7bd20ed15076fbbadd714d9be0ec2e2077d8eabed0d2c85"
+    },
+    {
+      "name": "direct-compiled-runtime-cr",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first ''it\\'s', version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "247015159f9620ff8ac2c2fd224048336af299df7fe49c515c62be72129866e3"
+    },
+    {
+      "name": "direct-compiled-runtime-crlf",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = e'first '\n\t'it\\'s', version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "0e5edba7aae29a44b356f897ecedadcaf842c1c95e611fd897f6b9629c3050cc"
+    },
+    {
+      "name": "direct-compiled-runtime-lf",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "0e5edba7aae29a44b356f897ecedadcaf842c1c95e611fd897f6b9629c3050cc"
+    },
+    {
+      "name": "direct-compiled-runtime-cr-value",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'leftright', version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "16e3ba6763f7f958404faa659e36904d1f615fb26a09d93253a24fca6d3e8d9f"
+    },
+    {
+      "name": "direct-compiled-runtime-crlf-value",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'left\nright', version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "0101bda51ba56d9883356159afe5b992ee0c648683a41d3937d9d66e4868928b"
+    },
+    {
+      "name": "direct-compiled-runtime-backquote",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'tick`slash\\r', version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ff1761a315ee3cb5a793356df17d817829314aed672bb63a3372c1696594c413"
+    },
+    {
+      "name": "direct-compiled-runtime-cr-backquote",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'left`\rright', version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "8f19a90e45af372f0c4249cab2b5be9a654dd5bf7ebfd07c14b7c390b9f68887"
+    },
+    {
+      "name": "direct-compiled-runtime-quote-backslash",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'double \"quote\" \\r', version = version + 1 WHERE id = 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "0aebe7b9626829ddc72a0a12976fb09d691d5962e2e1b22f7622042572cb5a76"
+    },
+    {
+      "name": "pipeline-compiled-escape-lf",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "0e5edba7aae29a44b356f897ecedadcaf842c1c95e611fd897f6b9629c3050cc"
+    },
+    {
+      "name": "pipeline-compiled-escape-lower-crlf",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = e'first '\n\t'it\\'s', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "0e5edba7aae29a44b356f897ecedadcaf842c1c95e611fd897f6b9629c3050cc"
+    },
+    {
+      "name": "pipeline-compiled-escape-cr",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first ''it\\'s', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "247015159f9620ff8ac2c2fd224048336af299df7fe49c515c62be72129866e3"
+    },
+    {
+      "name": "pipeline-compiled-escape-three",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first '\n'it\\'s '\n'ready\\'s', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fb11573e9790707a6142b8795b278777e36616d246825d8f771e1f2ddb6ac814"
+    },
+    {
+      "name": "pipeline-compiled-escape-mixed-whitespace",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first '\u000b\f \n\t'it\\'s', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "0e5edba7aae29a44b356f897ecedadcaf842c1c95e611fd897f6b9629c3050cc"
+    },
+    {
+      "name": "pipeline-compiled-escape-single",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first it\\'s', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "0e5edba7aae29a44b356f897ecedadcaf842c1c95e611fd897f6b9629c3050cc"
+    },
+    {
+      "name": "pipeline-compiled-standard-continuation",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'first '\n'last\\', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "d050252f4facd82196e979625f54092d997457fefdbd395cc576ba50c810d3a2"
+    },
+    {
+      "name": "pipeline-compiled-independent-standard",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first ' || '\\', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "a9a7a1162d1cff6d80079cecb3227ace655ef01bb6fcc8328f17e79b6bf27910"
+    },
+    {
+      "name": "pipeline-compiled-independent-escape",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'first ' || E'it\\'s', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "0e5edba7aae29a44b356f897ecedadcaf842c1c95e611fd897f6b9629c3050cc"
+    },
+    {
+      "name": "pipeline-compiled-standard-final-backslash",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'first\\', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "47c9dd7889e62bf6e7cf89a182c0b38b4bab5d8782f1517d4bcbb5c2995812df"
+    },
+    {
+      "name": "pipeline-compiled-typed-name-lf",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = name'first '\n'last\\', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "d050252f4facd82196e979625f54092d997457fefdbd395cc576ba50c810d3a2"
+    },
+    {
+      "name": "pipeline-compiled-typed-name-crlf",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = NAME'first '\n'last\\', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "d050252f4facd82196e979625f54092d997457fefdbd395cc576ba50c810d3a2"
+    },
+    {
+      "name": "pipeline-compiled-typed-name-single",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = name'last\\', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "52f5871cb0a0f6d5fb9b0d818c46d942253e23207612c0c669a2769170b95571"
+    },
+    {
+      "name": "pipeline-compiled-typed-digit-tail",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = name1e'first '\n'last\\', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "d050252f4facd82196e979625f54092d997457fefdbd395cc576ba50c810d3a2"
+    },
+    {
+      "name": "pipeline-compiled-typed-underscore-tail",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = name_e'first '\n'last\\', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "d050252f4facd82196e979625f54092d997457fefdbd395cc576ba50c810d3a2"
+    },
+    {
+      "name": "pipeline-compiled-typed-dollar-tail",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = name$e'first '\n'last\\', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "d050252f4facd82196e979625f54092d997457fefdbd395cc576ba50c810d3a2"
+    },
+    {
+      "name": "pipeline-compiled-typed-utf8-tail",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = namée'first '\n'last\\', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "d050252f4facd82196e979625f54092d997457fefdbd395cc576ba50c810d3a2"
+    },
+    {
+      "name": "pipeline-compiled-quoted-type-control",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = \"name\"'first '\n'last\\', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "d050252f4facd82196e979625f54092d997457fefdbd395cc576ba50c810d3a2"
+    },
+    {
+      "name": "pipeline-compiled-standard-text-control",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = text'first '\n'last\\', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "d050252f4facd82196e979625f54092d997457fefdbd395cc576ba50c810d3a2"
+    },
+    {
+      "name": "pipeline-compiled-escape-boundary-control",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-dollar-46010784691-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "0e5edba7aae29a44b356f897ecedadcaf842c1c95e611fd897f6b9629c3050cc"
+    },
+    {
+      "name": "postgres-cleanup",
+      "command": [
+        "docker",
+        "rm",
+        "-f",
+        "-v",
+        "spira47-dollar-46010784691-1"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "73bc317b0fc5c519fd51ad346a10573246ffaac5ca02ffb965afa3f76706203a"
+    },
+    {
+      "name": "restore-original-source",
+      "command": [
+        "git",
+        "restore",
+        "--source",
+        "593d792bf282f7b7119dafb057a389b04c91fd6d",
+        "--staged",
+        "--worktree",
+        "--",
+        "."
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "source-restoration",
+      "command": [
+        "git",
+        "diff",
+        "--exit-code",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "untracked-source",
+      "command": [
+        "git",
+        "ls-files",
+        "--others",
+        "--exclude-standard"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

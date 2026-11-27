@@ -1,0 +1,202 @@
+[
+  {
+    "name": "escape-lf",
+    "text": "UPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "escape-lower-crlf",
+    "text": "UPDATE items SET name = e'first '\n\t'it\\'s', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "escape-cr",
+    "text": "UPDATE items SET name = E'first '\r'it\\'s', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "escape-three",
+    "text": "UPDATE items SET name = E'first '\n'it\\'s '\n'ready\\'s', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "escape-comment-lf",
+    "text": "",
+    "sqlc_error": "# package spira\nqueries.sql:3:2: syntax error at or near \"'it\\'\""
+  },
+  {
+    "name": "escape-comment-crlf",
+    "text": "",
+    "sqlc_error": "# package spira\nqueries.sql:3:2: syntax error at or near \"'it\\'\""
+  },
+  {
+    "name": "escape-mixed-whitespace",
+    "text": "UPDATE items SET name = E'first '\u000b\f \n\t'it\\'s', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "escape-single",
+    "text": "UPDATE items SET name = E'first it\\'s', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "standard-continuation",
+    "text": "UPDATE items SET name = 'first '\n'last\\', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "independent-standard",
+    "text": "UPDATE items SET name = E'first ' || '\\', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "independent-escape",
+    "text": "UPDATE items SET name = 'first ' || E'it\\'s', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "string-only-version",
+    "text": "UPDATE items SET name = E'first '\n'it\\'s version' WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "comment-only-version",
+    "text": "",
+    "sqlc_error": "# package spira\nqueries.sql:3:2: syntax error at or near \"'it\\'\""
+  },
+  {
+    "name": "standard-final-backslash",
+    "text": "UPDATE items SET name = 'first\\', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "typed-name-lf",
+    "text": "UPDATE items SET name = name'first '\n'last\\', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "typed-name-crlf",
+    "text": "UPDATE items SET name = NAME'first '\n'last\\', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "typed-qualified-comment",
+    "text": "",
+    "sqlc_error": "# package spira\nqueries.sql:3:2: syntax error at or near \"'last\\'\""
+  },
+  {
+    "name": "typed-name-single",
+    "text": "UPDATE items SET name = name'last\\', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "typed-digit-tail",
+    "text": "UPDATE items SET name = name1e'first '\n'last\\', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "typed-underscore-tail",
+    "text": "UPDATE items SET name = name_e'first '\n'last\\', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "typed-dollar-tail",
+    "text": "UPDATE items SET name = name$e'first '\n'last\\', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "typed-utf8-tail",
+    "text": "UPDATE items SET name = namée'first '\n'last\\', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "quoted-type-control",
+    "text": "UPDATE items SET name = \"name\"'first '\n'last\\', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "standard-text-control",
+    "text": "UPDATE items SET name = text'first '\n'last\\', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "escape-boundary-control",
+    "text": "UPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "typed-string-only-version",
+    "text": "UPDATE items SET name = name'first '\n'last\\ version' WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "dollar-untagged",
+    "text": "UPDATE items SET name = $$name'.*\\\\\\'.*'$$, version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "dollar-tagged",
+    "text": "UPDATE items SET name = $re$name'.*\\\\\\'.*'$re$, version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "dollar-case-sensitive",
+    "text": "UPDATE items SET name = $Tag$name'.*\\\\\\'.*' $tag$ version$Tag$, version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "dollar-nested-tag",
+    "text": "UPDATE items SET name = $outer$name'.*\\\\\\'.*' $inner$ 'version'$outer$, version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "dollar-overlap-close",
+    "text": "UPDATE items SET name = $tag$name'.*\\\\\\'.*'$other$tag$, version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "dollar-unicode-tag",
+    "text": "UPDATE items SET name = $tég$name'.*\\\\\\'.*'$tég$, version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "dollar-underscore-tag",
+    "text": "UPDATE items SET name = $a_2$name'.*\\\\\\'.*'$a_2$, version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "dollar-version-only",
+    "text": "UPDATE items SET name = $$version$$ WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "dollar-tagged-version-only",
+    "text": "UPDATE items SET name = $v$version$v$ WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "dollar-quoted-type",
+    "text": "UPDATE items SET name = \"name\" $$name'.*\\\\\\'.*'$$, version = version + 1 WHERE id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "dollar-read-only-write-text",
+    "text": "SELECT id FROM items WHERE name = $$UPDATE items SET name = 'not here'$$",
+    "sqlc_error": ""
+  },
+  {
+    "name": "dollar-identifier-boundary",
+    "text": "UPDATE items SET name = v.name$tag$, version = version + 1 FROM (VALUES ('identifier')) AS v(name$tag$) WHERE items.id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "dollar-quoted-identifier-boundary",
+    "text": "UPDATE items SET name = v.\"$tag$\", version = version + 1 FROM (VALUES ('quoted')) AS v(\"$tag$\") WHERE items.id = 1",
+    "sqlc_error": ""
+  },
+  {
+    "name": "dollar-escaped-quoted-identifier",
+    "text": "UPDATE items SET name = v.\"a\"\"$tag$'b\", version = version + 1 FROM (VALUES ('quoted')) AS v(\"a\"\"$tag$'b\") WHERE items.id = 1",
+    "sqlc_error": ""
+  }
+]
