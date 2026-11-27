@@ -1,0 +1,74 @@
+package main_test
+
+import (
+	"encoding/json/v2"
+	"os"
+	"strings"
+	"testing"
+
+	sqlcgen "github.com/gosuda/spira/cmd/sqlc-gen-spira"
+)
+
+type continuedStringCase struct {
+	Name  string `json:"name"`
+	SQL   string `json:"sql"`
+	Allow bool   `json:"allow"`
+}
+
+func TestPostgresContinuedEscapeStrings(t *testing.T) {
+	data, err := os.ReadFile("testdata/continued-strings.json")
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+	var cases []continuedStringCase
+	if err := json.Unmarshal(data, &cases); err != nil {
+		t.Fatal(err)
+		return
+	}
+	if len(cases) != 14 {
+		t.Fatalf("continued-string cases = %d; want 14", len(cases))
+		return
+	}
+	for _, tc := range cases {
+		t.Run(tc.Name, func(t *testing.T) {
+			checkContinuedString(t, tc)
+		})
+	}
+}
+
+func checkContinuedString(t *testing.T, tc continuedStringCase) {
+	t.Helper()
+	req := loadRequest(t, "postgresql")
+	req.PluginOptions = pluginOptions(t, map[string]any{
+		"tables": map[string]any{
+			"items": map[string]any{"type": "Item", "key": "id", "key_type": "ItemID", "version": "version"},
+		},
+	})
+	req.Queries = []sqlcgen.Query{{
+		Name: "ContinueItem", Cmd: ":exec", Filename: "items.sql", Text: tc.SQL,
+	}}
+	model, files, err := sqlcgen.Generate(req)
+	if !tc.Allow {
+		if err == nil {
+			t.Fatal("Generate accepted a write whose version appears only in literal data or comments")
+			return
+		}
+		if !strings.Contains(err.Error(), "writes versioned table items without version") {
+			t.Fatalf("Generate refusal = %v; want the version refusal", err)
+		}
+		return
+	}
+	if err != nil {
+		t.Fatalf("Generate rejected native-valid versioned SQL %q: %v", tc.SQL, err)
+		return
+	}
+	if model.Engine != "postgresql" || len(files) == 0 {
+		t.Fatalf("Generate result = %q, %d files; want PostgreSQL output", model.Engine, len(files))
+		return
+	}
+	query := findQuery(t, model, "ContinueItem")
+	if query.Text != tc.SQL {
+		t.Fatalf("generated SQL = %q; want exact input %q", query.Text, tc.SQL)
+	}
+}

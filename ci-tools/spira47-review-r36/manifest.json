@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "purpose": "Unchanged-source PostgreSQL continuation and existing migration baseline",
+  "source": {
+    "repository": "gosuda/Spira",
+    "head": "e422d148ee77e78abad83b993cd4b255c34504bf",
+    "tree": "9ca31a701e9d51fb857c969328c0c7f43f656cb1",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "blobs": 609
+  },
+  "toolchain": {
+    "repository": "gosuda/LoGOs",
+    "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+    "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+    "bootstrap_go": "1.27.4",
+    "fresh_build": true
+  },
+  "postgres_image": "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782",
+  "postgres_version_num": "180007",
+  "proof_sha256": {
+    "verify.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
+    "continued_escape_test.lgo": "6c4b73100f578fcb4bc8a5b0d22b2a1e1ca710893a617df60bfeab57d53dadf8",
+    "continued-strings.json": "5bdccdcb30ee68ac6d9ffd3f32a31324cb44ac51ccc12a356894f8e3218a028e",
+    "source-index.json": "6543e3d7b335754d5c99a31666fc35f1d872949d15beebfd10d6b0ef8717a717"
+  },
+  "workflow_sha256": "94255fea224b7f0a38c06fee27e112bc6bf10f2211c761c213c8b872a8795bb7",
+  "cases": 14,
+  "source_changes": "None. Inject only frozen external test and data, then restore the complete source and remove only created paths.",
+  "expected_primary": "PostgreSQL accepts escape-lf and returns the frozen value; unchanged public Generate rejects its valid versioned update.",
+  "publication_eligible": false,
+  "host": {
+    "repository": "gosuda/sloplint",
+    "isolated_base": "57248742cfc7f29d72fede5c20b0ce8e73a62420",
+    "actual_main_at_preparation": "dc99ed955cf78862a6f8811289f606de1fb50dfa"
+  }
+}
