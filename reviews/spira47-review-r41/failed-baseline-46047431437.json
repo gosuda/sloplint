@@ -1,0 +1,3451 @@
+{
+  "schema": 1,
+  "producer": "c039ed58a5b39004cb52c062ff62901eb10b8c2a",
+  "run": 46047431437,
+  "job": 140670082779,
+  "conclusion": "failure",
+  "raw_log_sha256": "3d70e6423265e6eddbfd75b0e66719adf40a0beefdcaeb59a5aedda2948972fb",
+  "artifact": {
+    "id": 15223182778,
+    "name": "spira47-catalog-cte-baseline-r41",
+    "size_in_bytes": 21154,
+    "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15223182778",
+    "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15223182778/zip",
+    "expired": false,
+    "created_at": "2026-11-27T18:14:53Z",
+    "expires_at": "2026-12-11T18:14:52Z",
+    "updated_at": "2026-11-27T18:14:53Z",
+    "digest": "sha256:703384184775309a749e96966ff13b7174061a396ead6cb41128788ebcc84102",
+    "workflow_run": {
+      "id": 46047431437,
+      "repository_id": 1424164147,
+      "head_repository_id": 1424164147,
+      "head_branch": "ci/spira47-catalog-cte-20261127-r41",
+      "head_sha": "c039ed58a5b39004cb52c062ff62901eb10b8c2a"
+    }
+  },
+  "api_and_upload_digest_match": true,
+  "independent_zip_download": false,
+  "commands": [
+    {
+      "name": "proof-head",
+      "command": [
+        "git",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/proof",
+        "rev-parse",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ee7f7c45269065b704a1fd98f255017bd661e17a685eecfc3327c19829a3dcc4"
+    },
+    {
+      "name": "source-head",
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "029bfa9c0a56fe53e6194b18557ccfb49089d77d468c95b8858369c166ff0988"
+    },
+    {
+      "name": "logos-version",
+      "command": [
+        "logos",
+        "version"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "3a7b14cf792a79c78a9e42aab8906e0774b54ecddbbbc520ce94651a34aec2f9"
+    },
+    {
+      "name": "go-cache-disabled",
+      "command": [
+        "go",
+        "env",
+        "GOCACHEPROG"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "name": "sqlc-modules",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "mod",
+        "download"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "sqlc-module",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "list",
+        "-m",
+        "-json",
+        "github.com/sqlc-dev/sqlc"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "78fe4571c2a0ec0aca3a70bff3218c5a6e5d56ddc513732f01ecd45fd9717dc6"
+    },
+    {
+      "name": "postgres-image",
+      "command": [
+        "docker",
+        "pull",
+        "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "11502b4ed74c5a622cfa79977edc9f52d43d53533d7a9fffb06eaf719930021b"
+    },
+    {
+      "name": "postgres-image-identity",
+      "command": [
+        "docker",
+        "image",
+        "inspect",
+        "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "6290150a6fe07299be905fbed99eb5a57e46ce2cf9abc95f0a4ca0b3e5ea95c6"
+    },
+    {
+      "name": "postgres-start",
+      "command": [
+        "docker",
+        "run",
+        "--detach",
+        "--network",
+        "none",
+        "--name",
+        "spira47-refs-46047431437-1",
+        "--env",
+        "POSTGRES_HOST_AUTH_METHOD=trust",
+        "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "37e75c6b66d6398ae8d44f69b4ec9d76f5849234eeb4dff0ec3d2d721174de74"
+    },
+    {
+      "name": "postgres-version",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "SHOW server_version_num;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "23115ea6bcfc1e8cf9bf3b7e201ecf38f5a9c76d337eea137c01265e768d7c31"
+    },
+    {
+      "name": "postgres-schema",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "CREATE DOMAIN version AS text;\nCREATE COLLATION version FROM \"C\";\n"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "original-lower-option-lower-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET version = version + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+    },
+    {
+      "name": "original-mixed-option-lower-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET version = version + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+    },
+    {
+      "name": "original-upper-option-lower-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET version = version + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+    },
+    {
+      "name": "original-mixed-option-alias-refusal",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING name AS version;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "61e3e3ab05786aeb00b93ee369c028dc8e95d76fabde7cdb687972331ebfcc96"
+    },
+    {
+      "name": "original-quoted-column-exact-option",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET \"Version\" = \"Version\" + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"Version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+    },
+    {
+      "name": "original-quoted-column-folded-option",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET \"Version\" = \"Version\" + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"Version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+    },
+    {
+      "name": "original-quoted-column-alias-refusal",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING name AS \"Version\";\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"Version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "61e3e3ab05786aeb00b93ee369c028dc8e95d76fabde7cdb687972331ebfcc96"
+    },
+    {
+      "name": "original-missing-configured-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nSELECT id FROM items;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "9bbec63997532eeea319a0f4a22d9a359dc1e8b8c19ad3d608cdb461e5f50f83"
+    },
+    {
+      "name": "original-ambiguous-folded-option",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"VERSION\" integer NOT NULL DEFAULT 0, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nUPDATE items SET \"Version\" = \"Version\" + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"VERSION\", \"Version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac40648e2643fe1c02952a3ad8279d683a7db6a0db9281ac1f2e3d475d632796"
+    },
+    {
+      "name": "original-exact-option-before-fold-collision",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"VERSION\" integer NOT NULL DEFAULT 0, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nUPDATE items SET \"Version\" = \"Version\" + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"VERSION\", \"Version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac40648e2643fe1c02952a3ad8279d683a7db6a0db9281ac1f2e3d475d632796"
+    },
+    {
+      "name": "original-exact-option-rejects-quoted-sibling",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"VERSION\" integer NOT NULL DEFAULT 0, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nUPDATE items SET \"VERSION\" = \"VERSION\" + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"VERSION\", \"Version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "8e9ba54b651b1030a822c9c8e595a84c320e0358757382363e62393f392bc592"
+    },
+    {
+      "name": "original-plain-cte-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-materialized-cte-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-not-materialized-cte-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS NOT MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-plain-cte-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "original-materialized-cte-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "original-not-materialized-cte-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS NOT MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "original-mixed-case-materialized-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nwItH bumped aS mAtErIaLiZeD (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-column-list-materialized-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped(result_id) AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT result_id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-second-materialized-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS (SELECT 1 AS value), bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-recursive-materialized-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-quoted-cte-name-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH \"materialized\" AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM \"materialized\";\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-main-alias-list-after-with",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS (SELECT 1 AS value) UPDATE items SET name = 'changed' FROM (VALUES (1)) AS materialized(version);\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "original-main-cast-after-with",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS (SELECT 1 AS value) UPDATE items SET name = CAST('changed' AS version);\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "original-main-alias-list-without-with",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' FROM (VALUES (1)) AS materialized(version);\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "original-materialized-cte-output-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id AS version FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "original-ordinality-alias-list-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' FROM unnest(ARRAY[1]) WITH ORDINALITY AS materialized(version, position) RETURNING items.id;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "original-ordinality-cte-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH ordinality AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM ordinality;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-nested-materialized-cte-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH a AS MATERIALIZED (WITH b AS MATERIALIZED (SELECT version FROM items) SELECT 1 FROM b) UPDATE items SET name = 'changed' WHERE EXISTS (SELECT 1 FROM a);\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "original-search-sibling-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-search-sibling-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "original-cycle-sibling-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-cycle-sibling-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "original-search-cycle-sibling-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-search-cycle-sibling-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "original-explicit-cycle-mark-sibling-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-explicit-cycle-mark-sibling-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46047431437-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "stage-test-only-source",
+      "command": [
+        "git",
+        "add",
+        "--",
+        "cmd/sqlc-gen-spira/version_catalog_test.lgo",
+        "cmd/sqlc-gen-spira/testdata/version-catalog.json",
+        "cmd/sqlc-gen-spira/testdata/version-ctes.json",
+        "cmd/sqlc-gen-spira/version_reference_test.lgo",
+        "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo",
+        "cmd/sqlc-gen-spira/testdata/sqlc-literal-pipeline.json",
+        "cmd/sqlc-gen-spira/testdata/literal-schema.sql"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "unchanged-test-compile",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-run",
+        "^$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 1,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "8d993c2e4de238800e517c66eb643f37e870339cd2ede66f0288658495544c7b"
+    },
+    {
+      "name": "postgres-cleanup",
+      "command": [
+        "docker",
+        "rm",
+        "-f",
+        "-v",
+        "spira47-refs-46047431437-1"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c0e4541cb8652c5a229ee384b603fa6ee8e6dbff6115c3bcac44d1cf6e7a0478"
+    },
+    {
+      "name": "restore-original-source",
+      "command": [
+        "git",
+        "restore",
+        "--source",
+        "6031a63255bc7496e22b38921e10401a2d50c291",
+        "--staged",
+        "--worktree",
+        "--",
+        "."
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "source-restoration",
+      "command": [
+        "git",
+        "diff",
+        "--exit-code",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "untracked-restoration",
+      "command": [
+        "git",
+        "ls-files",
+        "--others",
+        "--exclude-standard"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "command_log_hash_verification": [
+    {
+      "name": "proof-head",
+      "sha256": "ee7f7c45269065b704a1fd98f255017bd661e17a685eecfc3327c19829a3dcc4",
+      "bytes": 41
+    },
+    {
+      "name": "source-head",
+      "sha256": "029bfa9c0a56fe53e6194b18557ccfb49089d77d468c95b8858369c166ff0988",
+      "bytes": 41
+    },
+    {
+      "name": "logos-version",
+      "sha256": "3a7b14cf792a79c78a9e42aab8906e0774b54ecddbbbc520ce94651a34aec2f9",
+      "bytes": 35
+    },
+    {
+      "name": "go-cache-disabled",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "bytes": 1
+    },
+    {
+      "name": "sqlc-modules",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "name": "sqlc-module",
+      "sha256": "78fe4571c2a0ec0aca3a70bff3218c5a6e5d56ddc513732f01ecd45fd9717dc6",
+      "bytes": 512
+    },
+    {
+      "name": "postgres-image",
+      "sha256": "11502b4ed74c5a622cfa79977edc9f52d43d53533d7a9fffb06eaf719930021b",
+      "bytes": 1802
+    },
+    {
+      "name": "postgres-image-identity",
+      "sha256": "6290150a6fe07299be905fbed99eb5a57e46ce2cf9abc95f0a4ca0b3e5ea95c6",
+      "bytes": 3615
+    },
+    {
+      "name": "postgres-start",
+      "sha256": "37e75c6b66d6398ae8d44f69b4ec9d76f5849234eeb4dff0ec3d2d721174de74",
+      "bytes": 65
+    },
+    {
+      "name": "postgres-version",
+      "sha256": "23115ea6bcfc1e8cf9bf3b7e201ecf38f5a9c76d337eea137c01265e768d7c31",
+      "bytes": 7
+    },
+    {
+      "name": "postgres-schema",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "name": "original-lower-option-lower-column",
+      "sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27",
+      "bytes": 38
+    },
+    {
+      "name": "original-mixed-option-lower-column",
+      "sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27",
+      "bytes": 38
+    },
+    {
+      "name": "original-upper-option-lower-column",
+      "sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27",
+      "bytes": 38
+    },
+    {
+      "name": "original-mixed-option-alias-refusal",
+      "sha256": "61e3e3ab05786aeb00b93ee369c028dc8e95d76fabde7cdb687972331ebfcc96",
+      "bytes": 47
+    },
+    {
+      "name": "original-quoted-column-exact-option",
+      "sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27",
+      "bytes": 38
+    },
+    {
+      "name": "original-quoted-column-folded-option",
+      "sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27",
+      "bytes": 38
+    },
+    {
+      "name": "original-quoted-column-alias-refusal",
+      "sha256": "61e3e3ab05786aeb00b93ee369c028dc8e95d76fabde7cdb687972331ebfcc96",
+      "bytes": 47
+    },
+    {
+      "name": "original-missing-configured-column",
+      "sha256": "9bbec63997532eeea319a0f4a22d9a359dc1e8b8c19ad3d608cdb461e5f50f83",
+      "bytes": 40
+    },
+    {
+      "name": "original-ambiguous-folded-option",
+      "sha256": "ac40648e2643fe1c02952a3ad8279d683a7db6a0db9281ac1f2e3d475d632796",
+      "bytes": 40
+    },
+    {
+      "name": "original-exact-option-before-fold-collision",
+      "sha256": "ac40648e2643fe1c02952a3ad8279d683a7db6a0db9281ac1f2e3d475d632796",
+      "bytes": 40
+    },
+    {
+      "name": "original-exact-option-rejects-quoted-sibling",
+      "sha256": "8e9ba54b651b1030a822c9c8e595a84c320e0358757382363e62393f392bc592",
+      "bytes": 40
+    },
+    {
+      "name": "original-plain-cte-reference",
+      "sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5",
+      "bytes": 40
+    },
+    {
+      "name": "original-materialized-cte-reference",
+      "sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5",
+      "bytes": 40
+    },
+    {
+      "name": "original-not-materialized-cte-reference",
+      "sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5",
+      "bytes": 40
+    },
+    {
+      "name": "original-plain-cte-omission",
+      "sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb",
+      "bytes": 41
+    },
+    {
+      "name": "original-materialized-cte-omission",
+      "sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb",
+      "bytes": 41
+    },
+    {
+      "name": "original-not-materialized-cte-omission",
+      "sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb",
+      "bytes": 41
+    },
+    {
+      "name": "original-mixed-case-materialized-reference",
+      "sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5",
+      "bytes": 40
+    },
+    {
+      "name": "original-column-list-materialized-reference",
+      "sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5",
+      "bytes": 40
+    },
+    {
+      "name": "original-second-materialized-reference",
+      "sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5",
+      "bytes": 40
+    },
+    {
+      "name": "original-recursive-materialized-reference",
+      "sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5",
+      "bytes": 40
+    },
+    {
+      "name": "original-quoted-cte-name-reference",
+      "sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5",
+      "bytes": 40
+    },
+    {
+      "name": "original-main-alias-list-after-with",
+      "sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b",
+      "bytes": 39
+    },
+    {
+      "name": "original-main-cast-after-with",
+      "sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b",
+      "bytes": 39
+    },
+    {
+      "name": "original-main-alias-list-without-with",
+      "sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b",
+      "bytes": 39
+    },
+    {
+      "name": "original-materialized-cte-output-alias",
+      "sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb",
+      "bytes": 41
+    },
+    {
+      "name": "original-ordinality-alias-list-omission",
+      "sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb",
+      "bytes": 41
+    },
+    {
+      "name": "original-ordinality-cte-reference",
+      "sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5",
+      "bytes": 40
+    },
+    {
+      "name": "original-nested-materialized-cte-reference",
+      "sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b",
+      "bytes": 39
+    },
+    {
+      "name": "original-search-sibling-reference",
+      "sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5",
+      "bytes": 40
+    },
+    {
+      "name": "original-search-sibling-omission",
+      "sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb",
+      "bytes": 41
+    },
+    {
+      "name": "original-cycle-sibling-reference",
+      "sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5",
+      "bytes": 40
+    },
+    {
+      "name": "original-cycle-sibling-omission",
+      "sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb",
+      "bytes": 41
+    },
+    {
+      "name": "original-search-cycle-sibling-reference",
+      "sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5",
+      "bytes": 40
+    },
+    {
+      "name": "original-search-cycle-sibling-omission",
+      "sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb",
+      "bytes": 41
+    },
+    {
+      "name": "original-explicit-cycle-mark-sibling-reference",
+      "sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5",
+      "bytes": 40
+    },
+    {
+      "name": "original-explicit-cycle-mark-sibling-omission",
+      "sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb",
+      "bytes": 41
+    },
+    {
+      "name": "stage-test-only-source",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "name": "unchanged-test-compile",
+      "sha256": "8d993c2e4de238800e517c66eb643f37e870339cd2ede66f0288658495544c7b",
+      "bytes": 502
+    },
+    {
+      "name": "postgres-cleanup",
+      "sha256": "c0e4541cb8652c5a229ee384b603fa6ee8e6dbff6115c3bcac44d1cf6e7a0478",
+      "bytes": 27
+    },
+    {
+      "name": "restore-original-source",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "name": "source-restoration",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "name": "untracked-restoration",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  ],
+  "native_original_count": 37,
+  "native_original_all_match": true,
+  "failed_phase": "unchanged-test-compile",
+  "actual_exit": 1,
+  "expected_exit": 0,
+  "diagnostics": [
+    "version_catalog_test.lgo:51:10 correctness::result_before_error_check",
+    "version_catalog_test.lgo:52:79 correctness::result_before_error_check"
+  ],
+  "source_regression_tests_reached": false,
+  "real_sqlc_pipeline_reached": false,
+  "source_restored": true,
+  "source_gates_passed": false,
+  "publication_eligible": false,
+  "report": {
+    "schema": 1,
+    "producer": "c039ed58a5b39004cb52c062ff62901eb10b8c2a",
+    "run": "46047431437",
+    "manifest": {
+      "schema": 1,
+      "purpose": "Unchanged-production native baseline for catalog version resolution, true CTE bodies and retained SQLc role coverage.",
+      "source": {
+        "repository": "gosuda/spira",
+        "head": "6031a63255bc7496e22b38921e10401a2d50c291",
+        "tree": "e4214ecf0b2b5a214d26921664313b98d14efb13",
+        "blobs": 625,
+        "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+        "index_file": "source-index.json"
+      },
+      "tests": {
+        "tree": "540ae00a83784120d82f0583530858e8d1aeaebb",
+        "blobs": 628,
+        "index_file": "test-index.json",
+        "changed_paths": [
+          "cmd/sqlc-gen-spira/version_catalog_test.lgo",
+          "cmd/sqlc-gen-spira/testdata/version-catalog.json",
+          "cmd/sqlc-gen-spira/testdata/version-ctes.json",
+          "cmd/sqlc-gen-spira/version_reference_test.lgo",
+          "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo",
+          "cmd/sqlc-gen-spira/testdata/sqlc-literal-pipeline.json",
+          "cmd/sqlc-gen-spira/testdata/literal-schema.sql"
+        ],
+        "production_unchanged": true
+      },
+      "counterfactual": {
+        "tree": "f770d87494d1f0bcdcbe24329785be59201de636",
+        "blobs": 628,
+        "index_file": "counterfactual-index.json",
+        "model_source_commit": "4bde2ec5e8bf23ffbeca0b4b54e8c9c7c005e33f",
+        "model_path": "cmd/sqlc-gen-spira/model.lgo",
+        "model_sha256": "097b8f4a47f905fb8d2cf329358bbdda0e24cdffcbaa1d35028b444bc458fad1",
+        "model_blob": "0f170412a191b644ed7081f00ab06f30564b2fb4",
+        "only_production_delta": "cmd/sqlc-gen-spira/model.lgo"
+      },
+      "toolchain": {
+        "repository": "gosuda/LoGOs",
+        "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+        "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+        "bootstrap_go": "1.27.4",
+        "fresh_build": true
+      },
+      "postgres_image": "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782",
+      "postgres_version_num": "180007",
+      "sqlc_version": "v1.31.2-0.20261023030206-3ad8b20fb02b",
+      "tools": {
+        "uv": "0.13.9",
+        "python": "3.15"
+      },
+      "contracts": {
+        "catalog_failed": [
+          "mixed-option-lower-column",
+          "upper-option-lower-column",
+          "quoted-column-folded-option",
+          "missing-configured-column",
+          "ambiguous-folded-option"
+        ],
+        "cte_failed": [
+          "materialized-cte-reference",
+          "mixed-case-materialized-reference",
+          "column-list-materialized-reference",
+          "second-materialized-reference",
+          "recursive-materialized-reference",
+          "ordinality-cte-reference",
+          "nested-materialized-cte-reference",
+          "search-sibling-reference",
+          "cycle-sibling-reference",
+          "search-cycle-sibling-reference",
+          "explicit-cycle-mark-sibling-reference"
+        ],
+        "pipeline_names": [
+          "escape-lf",
+          "escape-lower-crlf",
+          "escape-cr",
+          "escape-three",
+          "escape-comment-lf",
+          "escape-comment-crlf",
+          "escape-mixed-whitespace",
+          "escape-single",
+          "standard-continuation",
+          "independent-standard",
+          "independent-escape",
+          "string-only-version",
+          "comment-only-version",
+          "standard-final-backslash",
+          "typed-name-lf",
+          "typed-name-crlf",
+          "typed-qualified-comment",
+          "typed-name-single",
+          "typed-digit-tail",
+          "typed-underscore-tail",
+          "typed-dollar-tail",
+          "typed-utf8-tail",
+          "quoted-type-control",
+          "standard-text-control",
+          "escape-boundary-control",
+          "typed-string-only-version",
+          "dollar-untagged",
+          "dollar-tagged",
+          "dollar-case-sensitive",
+          "dollar-nested-tag",
+          "dollar-overlap-close",
+          "dollar-unicode-tag",
+          "dollar-underscore-tag",
+          "dollar-version-only",
+          "dollar-tagged-version-only",
+          "dollar-quoted-type",
+          "dollar-read-only-write-text",
+          "dollar-identifier-boundary",
+          "dollar-quoted-identifier-boundary",
+          "dollar-escaped-quoted-identifier",
+          "reported-alias",
+          "alias-exact",
+          "alias-quoted",
+          "alias-bare",
+          "alias-bare-quoted",
+          "qualifier-only",
+          "function-name",
+          "cast-type",
+          "postfix-type",
+          "typed-literal",
+          "collation-name",
+          "longer-identifier",
+          "quoted-assignment",
+          "unquoted-assignment",
+          "predicate-only",
+          "qualified-predicate",
+          "returned-reference",
+          "function-argument",
+          "delete-reference",
+          "qualified-returned"
+        ],
+        "counterfactual_failed": [
+          "reported-alias",
+          "alias-exact",
+          "alias-quoted",
+          "alias-bare",
+          "alias-bare-quoted",
+          "qualifier-only",
+          "function-name",
+          "cast-type",
+          "postfix-type",
+          "typed-literal",
+          "collation-name",
+          "longer-identifier"
+        ],
+        "catalog_pipeline_refusal": [
+          "mixed-option-lower-column",
+          "upper-option-lower-column",
+          "mixed-option-alias-refusal",
+          "quoted-column-folded-option",
+          "quoted-column-alias-refusal",
+          "ambiguous-folded-option",
+          "exact-option-rejects-quoted-sibling"
+        ],
+        "cte_pipeline_refusal": [
+          "materialized-cte-reference",
+          "plain-cte-omission",
+          "materialized-cte-omission",
+          "not-materialized-cte-omission",
+          "mixed-case-materialized-reference",
+          "column-list-materialized-reference",
+          "second-materialized-reference",
+          "recursive-materialized-reference",
+          "main-alias-list-after-with",
+          "main-cast-after-with",
+          "main-alias-list-without-with",
+          "materialized-cte-output-alias",
+          "ordinality-alias-list-omission",
+          "ordinality-cte-reference",
+          "nested-materialized-cte-reference",
+          "search-sibling-reference",
+          "search-sibling-omission",
+          "cycle-sibling-reference",
+          "cycle-sibling-omission",
+          "search-cycle-sibling-reference",
+          "search-cycle-sibling-omission",
+          "explicit-cycle-mark-sibling-reference",
+          "explicit-cycle-mark-sibling-omission"
+        ],
+        "catalog_cases": 11,
+        "cte_cases": 26,
+        "pipeline_cases": 60,
+        "source_gates_reused": false,
+        "publication_eligible": false,
+        "counterfactual_scope": "Only model.lgo is replaced by its exact pre-r40 bytes from 4bde2ec5; all other production and new permanent tests remain current. This proves added retained pipeline assertions; it is not an old full-source checkout."
+      },
+      "proof_sha256": {
+        "baseline_support.py": "c1124b78e01e1cbb8b296c2199240a3f19b2673f2add1b327f2ba2d40b348e38",
+        "proof_support.py": "e24d7a897bbafc7f1d29557be3b0dd8fdd2756258b91161b92fb48c4b5df74f5",
+        "native_support.py": "70e59aad5436371c7c7e08772b89f797f01755d02ca71214180309cc916afd53",
+        "observer.py": "80eff0bbf8ec85873579fa25acc0a9d48dc2a59a2fba40390c20c59df1044404",
+        "schema.sql": "250795d402dca7144e24f33dc51026083c7664385436545bca8762b7a66de6bc",
+        "source-index.json": "9172ff6ef0f04168d8c9c0ffbb32612f672beef67af29b7c6b65af107a746615",
+        "test-index.json": "f225c24bb60f7d677298254b71b5c55834b4ea907489eead92da1954c5a96001",
+        "counterfactual-index.json": "e489b4dfa150b4415d832b230a7eddf4eb7b4463056957396e3a541ca27c495d",
+        "authored-tests.json": "908cba5e80db89da6d3043d957b3dd2cf2592112460b42f895013477f891608f",
+        "version-catalog.json": "3eb8eb324f1394693ee653772a439b4b742295829c92e137363f8e0ba0f35384",
+        "version-ctes.json": "3dc4c74efb3eaa8996649ca18b528c47e344608a06d98d8bc9d288d8c0449382",
+        "model-before-r40.lgo": "097b8f4a47f905fb8d2cf329358bbdda0e24cdffcbaa1d35028b444bc458fad1",
+        "verify_baseline.py": "24a55fd0b9912b53401922a9c5d71325952d63d212f5a67531623d8330abf855"
+      },
+      "workflow_sha256": "5b1c023551aa49d877d518b2a502a190a823a610532ae13b7c0929148db10519",
+      "publication_eligible": false,
+      "native_contract_scope": "37 original statements and 37 actual SQLc-processed statements must produce their frozen native final values. PostgreSQL does not interpret plugin configuration; catalog-option validity is the explicit public Generate contract. Existing 20 role rows join the prior 40 permanent pipeline rows unchanged.",
+      "production_changes_in_this_baseline": false
+    },
+    "manifest_sha256": "93bf9d3dbe45be71582dca7ddbd037ec1e8f20920e0a2b2f10f8d0916aa44745",
+    "observations_complete": false,
+    "source_restored": true,
+    "baseline_verified": false,
+    "source_gates_passed": false,
+    "publication_eligible": false,
+    "before": {
+      "label": "source",
+      "tree": "e4214ecf0b2b5a214d26921664313b98d14efb13",
+      "blobs": 625,
+      "index_sha256": "5f9db7b6da063c1b66ee549ca72338ada4c5fe54b77f02bea571c231d3b59e29"
+    },
+    "postgres_version_num": "180007",
+    "native_original": [
+      {
+        "name": "lower-option-lower-column",
+        "lane": "original",
+        "sql": "UPDATE items SET version = version + 1;",
+        "sql_sha256": "39cfeb26a6f437dd3f7dff7825ec070fdd4f919e7f13a075aa26dec672eabeef",
+        "raw_output": "{\"name\" : \"before\", \"versions\" : [1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "mixed-option-lower-column",
+        "lane": "original",
+        "sql": "UPDATE items SET version = version + 1;",
+        "sql_sha256": "39cfeb26a6f437dd3f7dff7825ec070fdd4f919e7f13a075aa26dec672eabeef",
+        "raw_output": "{\"name\" : \"before\", \"versions\" : [1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "upper-option-lower-column",
+        "lane": "original",
+        "sql": "UPDATE items SET version = version + 1;",
+        "sql_sha256": "39cfeb26a6f437dd3f7dff7825ec070fdd4f919e7f13a075aa26dec672eabeef",
+        "raw_output": "{\"name\" : \"before\", \"versions\" : [1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "mixed-option-alias-refusal",
+        "lane": "original",
+        "sql": "UPDATE items SET name = 'changed' RETURNING name AS version;",
+        "sql_sha256": "464fda2a8a52698419ac73c585e2a434e4992f40d3cf657b4f9d24b4cc40a97d",
+        "raw_output": "changed\n{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "quoted-column-exact-option",
+        "lane": "original",
+        "sql": "UPDATE items SET \"Version\" = \"Version\" + 1;",
+        "sql_sha256": "0641c6154b8f545d5f0ee4c9b57638ad72a15c273b209995e794db59af584870",
+        "raw_output": "{\"name\" : \"before\", \"versions\" : [1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "quoted-column-folded-option",
+        "lane": "original",
+        "sql": "UPDATE items SET \"Version\" = \"Version\" + 1;",
+        "sql_sha256": "0641c6154b8f545d5f0ee4c9b57638ad72a15c273b209995e794db59af584870",
+        "raw_output": "{\"name\" : \"before\", \"versions\" : [1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "quoted-column-alias-refusal",
+        "lane": "original",
+        "sql": "UPDATE items SET name = 'changed' RETURNING name AS \"Version\";",
+        "sql_sha256": "580548b5817b71efda56bf333aa1e56b571607dfd4efb3433845891d65150211",
+        "raw_output": "changed\n{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "missing-configured-column",
+        "lane": "original",
+        "sql": "SELECT id FROM items;",
+        "sql_sha256": "a04685b24b6f44c83c41887c8f8350b9fadc977c5f662ee4e88761947b6be62b",
+        "raw_output": "1\n{\"name\" : \"before\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "ambiguous-folded-option",
+        "lane": "original",
+        "sql": "UPDATE items SET \"Version\" = \"Version\" + 1;",
+        "sql_sha256": "0641c6154b8f545d5f0ee4c9b57638ad72a15c273b209995e794db59af584870",
+        "raw_output": "{\"name\" : \"before\", \"versions\" : [0,1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            0,
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            0,
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "exact-option-before-fold-collision",
+        "lane": "original",
+        "sql": "UPDATE items SET \"Version\" = \"Version\" + 1;",
+        "sql_sha256": "0641c6154b8f545d5f0ee4c9b57638ad72a15c273b209995e794db59af584870",
+        "raw_output": "{\"name\" : \"before\", \"versions\" : [0,1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            0,
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            0,
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "exact-option-rejects-quoted-sibling",
+        "lane": "original",
+        "sql": "UPDATE items SET \"VERSION\" = \"VERSION\" + 1;",
+        "sql_sha256": "9c3b2d5af2bdb7f0cd5930e67f39d80a7c19c12eb0e90b33d9cd25375cc1d2a7",
+        "raw_output": "{\"name\" : \"before\", \"versions\" : [1,0]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            1,
+            0
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            1,
+            0
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "plain-cte-reference",
+        "lane": "original",
+        "sql": "WITH bumped AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;",
+        "sql_sha256": "c11b2a1ab9f86a5ac3bbbdfb5aba69bc210ac040b43ebcd60b57f8e6ab728190",
+        "raw_output": "1\n{\"name\" : \"before\", \"versions\" : [1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "materialized-cte-reference",
+        "lane": "original",
+        "sql": "WITH bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;",
+        "sql_sha256": "1705ae2ac284eef4192e158bb39e11e943a80edac16513c1636a9a5112e7ee9b",
+        "raw_output": "1\n{\"name\" : \"before\", \"versions\" : [1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "not-materialized-cte-reference",
+        "lane": "original",
+        "sql": "WITH bumped AS NOT MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;",
+        "sql_sha256": "59db620715491800d36899e12387445144d6a6f4d671c4edf0d36a50317e9514",
+        "raw_output": "1\n{\"name\" : \"before\", \"versions\" : [1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "plain-cte-omission",
+        "lane": "original",
+        "sql": "WITH bumped AS (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped;",
+        "sql_sha256": "05320f8af332a6ff526141cbf2d13a868c0b527aba1cfa0f4fc011becfbc2f08",
+        "raw_output": "1\n{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "materialized-cte-omission",
+        "lane": "original",
+        "sql": "WITH bumped AS MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped;",
+        "sql_sha256": "9161556f779b6620341292ef74095fbc37c1a54a3d47910697b212a8a639d7d1",
+        "raw_output": "1\n{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "not-materialized-cte-omission",
+        "lane": "original",
+        "sql": "WITH bumped AS NOT MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped;",
+        "sql_sha256": "2f556f371d403879e07288c60e4d47632c640d19ffcfb2272dfcefa7bee72ea8",
+        "raw_output": "1\n{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "mixed-case-materialized-reference",
+        "lane": "original",
+        "sql": "wItH bumped aS mAtErIaLiZeD (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;",
+        "sql_sha256": "7f8eee2c164c15e9cc8b604fd1b9e5e3c3cce76c9fae622ce46daffd028b0e6a",
+        "raw_output": "1\n{\"name\" : \"before\", \"versions\" : [1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "column-list-materialized-reference",
+        "lane": "original",
+        "sql": "WITH bumped(result_id) AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT result_id FROM bumped;",
+        "sql_sha256": "abdfe858bb61ac6fa8aabf17770002186b9e4ef90470352f3e3e68a174433852",
+        "raw_output": "1\n{\"name\" : \"before\", \"versions\" : [1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "second-materialized-reference",
+        "lane": "original",
+        "sql": "WITH seed AS (SELECT 1 AS value), bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;",
+        "sql_sha256": "ed0a1c2886d68eaa5de47fc5e432ce1c9c58269f19191b4cab1c8d2b7e8ef88b",
+        "raw_output": "1\n{\"name\" : \"before\", \"versions\" : [1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "recursive-materialized-reference",
+        "lane": "original",
+        "sql": "WITH RECURSIVE bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;",
+        "sql_sha256": "3f0b59839ab4aa2f268ed2f25d1a0c150cfc57fba18c199fb5da05997950fd0b",
+        "raw_output": "1\n{\"name\" : \"before\", \"versions\" : [1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "quoted-cte-name-reference",
+        "lane": "original",
+        "sql": "WITH \"materialized\" AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM \"materialized\";",
+        "sql_sha256": "1b57a2317af0a910af24f071a98fc59911c14f04b19857f470d6eb2abe76dc89",
+        "raw_output": "1\n{\"name\" : \"before\", \"versions\" : [1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "main-alias-list-after-with",
+        "lane": "original",
+        "sql": "WITH seed AS (SELECT 1 AS value) UPDATE items SET name = 'changed' FROM (VALUES (1)) AS materialized(version);",
+        "sql_sha256": "dd5f3921b9bcd56407405a02f22b6a4ba7d3f29d5636b4d1ca55ac440d37a40c",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "main-cast-after-with",
+        "lane": "original",
+        "sql": "WITH seed AS (SELECT 1 AS value) UPDATE items SET name = CAST('changed' AS version);",
+        "sql_sha256": "880c22205aece754deb6150afbc754134e8dcda3708a7a11ef160f83ce33cf1b",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "main-alias-list-without-with",
+        "lane": "original",
+        "sql": "UPDATE items SET name = 'changed' FROM (VALUES (1)) AS materialized(version);",
+        "sql_sha256": "df46ef5ee835c15e8b2343d99a3e34a9d19d962d617af547516e7749886d1bbf",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "materialized-cte-output-alias",
+        "lane": "original",
+        "sql": "WITH bumped AS MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id AS version FROM bumped;",
+        "sql_sha256": "eefa35db9ae55a149cda322388700521e60ea2c291629524ac6bfd62496be693",
+        "raw_output": "1\n{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "ordinality-alias-list-omission",
+        "lane": "original",
+        "sql": "UPDATE items SET name = 'changed' FROM unnest(ARRAY[1]) WITH ORDINALITY AS materialized(version, position) RETURNING items.id;",
+        "sql_sha256": "f83e20bb3d2879cee80c547c5b36bf90ad9eaec64db9c8cce93d6e446bd05149",
+        "raw_output": "1\n{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "ordinality-cte-reference",
+        "lane": "original",
+        "sql": "WITH ordinality AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM ordinality;",
+        "sql_sha256": "60bcb6f03204eff95648a65554a52a6e12f92e8107ba5403d99fdff9c36c3901",
+        "raw_output": "1\n{\"name\" : \"before\", \"versions\" : [1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "nested-materialized-cte-reference",
+        "lane": "original",
+        "sql": "WITH a AS MATERIALIZED (WITH b AS MATERIALIZED (SELECT version FROM items) SELECT 1 FROM b) UPDATE items SET name = 'changed' WHERE EXISTS (SELECT 1 FROM a);",
+        "sql_sha256": "3086946304fda105f17a1d5d90dd7130e7d66bff7aa6c3547137a4087d455f76",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "search-sibling-reference",
+        "lane": "original",
+        "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;",
+        "sql_sha256": "992f90f0944ec66ab227c1ff6c151043996ff2b102d1809b6b9a2ac0cb45dfcc",
+        "raw_output": "1\n{\"name\" : \"before\", \"versions\" : [1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "search-sibling-omission",
+        "lane": "original",
+        "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;",
+        "sql_sha256": "f20ebc11e9006330eed78c62eaafadad5ee91b4d2ddc2ef623c8ec0652c84234",
+        "raw_output": "1\n{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "cycle-sibling-reference",
+        "lane": "original",
+        "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;",
+        "sql_sha256": "f134d69fe9c6d241732a3a8aaf3a5efccb18880e5252bd131962f42934d668b4",
+        "raw_output": "1\n{\"name\" : \"before\", \"versions\" : [1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "cycle-sibling-omission",
+        "lane": "original",
+        "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;",
+        "sql_sha256": "db93b6543e862a9b514359dad98308ccc2033e47494a128531f012e4b9d4464a",
+        "raw_output": "1\n{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "search-cycle-sibling-reference",
+        "lane": "original",
+        "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;",
+        "sql_sha256": "8b0d445d2ac3f890c0d4fa74cd3cc0f7c35b70dd89ffb08382eef6c608deb409",
+        "raw_output": "1\n{\"name\" : \"before\", \"versions\" : [1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "search-cycle-sibling-omission",
+        "lane": "original",
+        "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;",
+        "sql_sha256": "dc938c294ac8e7d4e7380792a2324a8271af2df8642dc25b90437d72d2c21bf4",
+        "raw_output": "1\n{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "explicit-cycle-mark-sibling-reference",
+        "lane": "original",
+        "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;",
+        "sql_sha256": "175a12fd47c05a4395a54121fcb64ccf77e11af8225fdafee3c407c179dc4934",
+        "raw_output": "1\n{\"name\" : \"before\", \"versions\" : [1]}\n",
+        "observed": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "expected": {
+          "name": "before",
+          "versions": [
+            1
+          ]
+        },
+        "matches": true
+      },
+      {
+        "name": "explicit-cycle-mark-sibling-omission",
+        "lane": "original",
+        "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;",
+        "sql_sha256": "82fbfa273abc73c90348d4fad6a55c7d1064d6925d275f46d7b297b7a456799b",
+        "raw_output": "1\n{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    ],
+    "tests_before": {
+      "label": "tests",
+      "tree": "540ae00a83784120d82f0583530858e8d1aeaebb",
+      "blobs": 628,
+      "index_sha256": "7397f68415a8becb73928616e08029e38c47ad1e221569a6eb7c582b19e8a6c3"
+    },
+    "restored": {
+      "label": "source",
+      "tree": "e4214ecf0b2b5a214d26921664313b98d14efb13",
+      "blobs": 625,
+      "index_sha256": "5f9db7b6da063c1b66ee549ca72338ada4c5fe54b77f02bea571c231d3b59e29"
+    },
+    "commands": [
+      {
+        "name": "proof-head",
+        "command": [
+          "git",
+          "-C",
+          "/home/runner/work/sloplint/sloplint/proof",
+          "rev-parse",
+          "HEAD"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "ee7f7c45269065b704a1fd98f255017bd661e17a685eecfc3327c19829a3dcc4"
+      },
+      {
+        "name": "source-head",
+        "command": [
+          "git",
+          "rev-parse",
+          "HEAD"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "029bfa9c0a56fe53e6194b18557ccfb49089d77d468c95b8858369c166ff0988"
+      },
+      {
+        "name": "logos-version",
+        "command": [
+          "logos",
+          "version"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "3a7b14cf792a79c78a9e42aab8906e0774b54ecddbbbc520ce94651a34aec2f9"
+      },
+      {
+        "name": "go-cache-disabled",
+        "command": [
+          "go",
+          "env",
+          "GOCACHEPROG"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+      },
+      {
+        "name": "sqlc-modules",
+        "command": [
+          "go",
+          "-C",
+          "/home/runner/work/sloplint/sloplint/source/tools",
+          "mod",
+          "download"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "sqlc-module",
+        "command": [
+          "go",
+          "-C",
+          "/home/runner/work/sloplint/sloplint/source/tools",
+          "list",
+          "-m",
+          "-json",
+          "github.com/sqlc-dev/sqlc"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "78fe4571c2a0ec0aca3a70bff3218c5a6e5d56ddc513732f01ecd45fd9717dc6"
+      },
+      {
+        "name": "postgres-image",
+        "command": [
+          "docker",
+          "pull",
+          "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "11502b4ed74c5a622cfa79977edc9f52d43d53533d7a9fffb06eaf719930021b"
+      },
+      {
+        "name": "postgres-image-identity",
+        "command": [
+          "docker",
+          "image",
+          "inspect",
+          "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "6290150a6fe07299be905fbed99eb5a57e46ce2cf9abc95f0a4ca0b3e5ea95c6"
+      },
+      {
+        "name": "postgres-start",
+        "command": [
+          "docker",
+          "run",
+          "--detach",
+          "--network",
+          "none",
+          "--name",
+          "spira47-refs-46047431437-1",
+          "--env",
+          "POSTGRES_HOST_AUTH_METHOD=trust",
+          "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "37e75c6b66d6398ae8d44f69b4ec9d76f5849234eeb4dff0ec3d2d721174de74"
+      },
+      {
+        "name": "postgres-version",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "SHOW server_version_num;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "23115ea6bcfc1e8cf9bf3b7e201ecf38f5a9c76d337eea137c01265e768d7c31"
+      },
+      {
+        "name": "postgres-schema",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "CREATE DOMAIN version AS text;\nCREATE COLLATION version FROM \"C\";\n"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "original-lower-option-lower-column",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET version = version + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+      },
+      {
+        "name": "original-mixed-option-lower-column",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET version = version + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+      },
+      {
+        "name": "original-upper-option-lower-column",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET version = version + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+      },
+      {
+        "name": "original-mixed-option-alias-refusal",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING name AS version;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "61e3e3ab05786aeb00b93ee369c028dc8e95d76fabde7cdb687972331ebfcc96"
+      },
+      {
+        "name": "original-quoted-column-exact-option",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET \"Version\" = \"Version\" + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"Version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+      },
+      {
+        "name": "original-quoted-column-folded-option",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET \"Version\" = \"Version\" + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"Version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+      },
+      {
+        "name": "original-quoted-column-alias-refusal",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING name AS \"Version\";\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"Version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "61e3e3ab05786aeb00b93ee369c028dc8e95d76fabde7cdb687972331ebfcc96"
+      },
+      {
+        "name": "original-missing-configured-column",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nSELECT id FROM items;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "9bbec63997532eeea319a0f4a22d9a359dc1e8b8c19ad3d608cdb461e5f50f83"
+      },
+      {
+        "name": "original-ambiguous-folded-option",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"VERSION\" integer NOT NULL DEFAULT 0, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nUPDATE items SET \"Version\" = \"Version\" + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"VERSION\", \"Version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "ac40648e2643fe1c02952a3ad8279d683a7db6a0db9281ac1f2e3d475d632796"
+      },
+      {
+        "name": "original-exact-option-before-fold-collision",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"VERSION\" integer NOT NULL DEFAULT 0, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nUPDATE items SET \"Version\" = \"Version\" + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"VERSION\", \"Version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "ac40648e2643fe1c02952a3ad8279d683a7db6a0db9281ac1f2e3d475d632796"
+      },
+      {
+        "name": "original-exact-option-rejects-quoted-sibling",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"VERSION\" integer NOT NULL DEFAULT 0, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nUPDATE items SET \"VERSION\" = \"VERSION\" + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"VERSION\", \"Version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "8e9ba54b651b1030a822c9c8e595a84c320e0358757382363e62393f392bc592"
+      },
+      {
+        "name": "original-plain-cte-reference",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+      },
+      {
+        "name": "original-materialized-cte-reference",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+      },
+      {
+        "name": "original-not-materialized-cte-reference",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS NOT MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+      },
+      {
+        "name": "original-plain-cte-omission",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+      },
+      {
+        "name": "original-materialized-cte-omission",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+      },
+      {
+        "name": "original-not-materialized-cte-omission",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS NOT MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+      },
+      {
+        "name": "original-mixed-case-materialized-reference",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nwItH bumped aS mAtErIaLiZeD (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+      },
+      {
+        "name": "original-column-list-materialized-reference",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped(result_id) AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT result_id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+      },
+      {
+        "name": "original-second-materialized-reference",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS (SELECT 1 AS value), bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+      },
+      {
+        "name": "original-recursive-materialized-reference",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+      },
+      {
+        "name": "original-quoted-cte-name-reference",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH \"materialized\" AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM \"materialized\";\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+      },
+      {
+        "name": "original-main-alias-list-after-with",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS (SELECT 1 AS value) UPDATE items SET name = 'changed' FROM (VALUES (1)) AS materialized(version);\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+      },
+      {
+        "name": "original-main-cast-after-with",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS (SELECT 1 AS value) UPDATE items SET name = CAST('changed' AS version);\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+      },
+      {
+        "name": "original-main-alias-list-without-with",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' FROM (VALUES (1)) AS materialized(version);\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+      },
+      {
+        "name": "original-materialized-cte-output-alias",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id AS version FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+      },
+      {
+        "name": "original-ordinality-alias-list-omission",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' FROM unnest(ARRAY[1]) WITH ORDINALITY AS materialized(version, position) RETURNING items.id;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+      },
+      {
+        "name": "original-ordinality-cte-reference",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH ordinality AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM ordinality;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+      },
+      {
+        "name": "original-nested-materialized-cte-reference",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH a AS MATERIALIZED (WITH b AS MATERIALIZED (SELECT version FROM items) SELECT 1 FROM b) UPDATE items SET name = 'changed' WHERE EXISTS (SELECT 1 FROM a);\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+      },
+      {
+        "name": "original-search-sibling-reference",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+      },
+      {
+        "name": "original-search-sibling-omission",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+      },
+      {
+        "name": "original-cycle-sibling-reference",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+      },
+      {
+        "name": "original-cycle-sibling-omission",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+      },
+      {
+        "name": "original-search-cycle-sibling-reference",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+      },
+      {
+        "name": "original-search-cycle-sibling-omission",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+      },
+      {
+        "name": "original-explicit-cycle-mark-sibling-reference",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+      },
+      {
+        "name": "original-explicit-cycle-mark-sibling-omission",
+        "command": [
+          "docker",
+          "exec",
+          "spira47-refs-46047431437-1",
+          "psql",
+          "-XAtq",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-c",
+          "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+      },
+      {
+        "name": "stage-test-only-source",
+        "command": [
+          "git",
+          "add",
+          "--",
+          "cmd/sqlc-gen-spira/version_catalog_test.lgo",
+          "cmd/sqlc-gen-spira/testdata/version-catalog.json",
+          "cmd/sqlc-gen-spira/testdata/version-ctes.json",
+          "cmd/sqlc-gen-spira/version_reference_test.lgo",
+          "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo",
+          "cmd/sqlc-gen-spira/testdata/sqlc-literal-pipeline.json",
+          "cmd/sqlc-gen-spira/testdata/literal-schema.sql"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "unchanged-test-compile",
+        "command": [
+          "logos",
+          "test",
+          "-race",
+          "-count=1",
+          "-run",
+          "^$",
+          "./cmd/sqlc-gen-spira"
+        ],
+        "raw_exit": 1,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "8d993c2e4de238800e517c66eb643f37e870339cd2ede66f0288658495544c7b"
+      },
+      {
+        "name": "postgres-cleanup",
+        "command": [
+          "docker",
+          "rm",
+          "-f",
+          "-v",
+          "spira47-refs-46047431437-1"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "c0e4541cb8652c5a229ee384b603fa6ee8e6dbff6115c3bcac44d1cf6e7a0478"
+      },
+      {
+        "name": "restore-original-source",
+        "command": [
+          "git",
+          "restore",
+          "--source",
+          "6031a63255bc7496e22b38921e10401a2d50c291",
+          "--staged",
+          "--worktree",
+          "--",
+          "."
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "source-restoration",
+        "command": [
+          "git",
+          "diff",
+          "--exit-code",
+          "HEAD"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "untracked-restoration",
+        "command": [
+          "git",
+          "ls-files",
+          "--others",
+          "--exclude-standard"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  }
+}
