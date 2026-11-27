@@ -238,8 +238,8 @@ def permanent_pipeline_red(original: dict[str, object]) -> dict[str, object]:
             path = SOURCE / row["path"]
             if path.exists():
                 raise RuntimeError("Permanent baseline fixture already exists")
-            path.write_bytes(row["content"].encode())
             created.append(path)
+            path.write_bytes(row["content"].encode())
         if len(created) != 5:
             raise RuntimeError("Permanent baseline fixture set differs")
         baseline.run("baseline-sqlc-modules", ["go", "-C", str(SOURCE / "tools"), "mod", "download"],

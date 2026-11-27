@@ -25,7 +25,7 @@
     "production_commit_created": false
   },
   "proof_sha256": {
-    "verify_candidate.py": "12b2ed789c07ad0d4a3e0457575e015d4f5c698989695654430a38ec7031068f",
+    "verify_candidate.py": "4ed9377fb48917faca003840e1537bce6292802f04696dc38e4746254164de35",
     "baseline_support.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
     "pipeline_support.py": "bb43e9b905feec0cb47116785fc25143be1dbaaf0f7d7bfec9cd087905f045d9",
     "artifact_support.py": "b3f27ccd5d75efea94530f1294d7e0d23d89b46d7d9e5771cc0b3d32a56d1b28",
@@ -119,5 +119,6 @@
     "rejected_unexecuted": "247af08677a1351dc5d9a78c72e9baa4b957634e",
     "subsequent_delta": "Only two documentation phrases qualify native-validated fixtures and request-model tests; compiled/test bytes unchanged."
   },
-  "publication_eligible": false
+  "publication_eligible": false,
+  "proof_review_delta": "Before writing a temporary permanent-test fixture, register its path for cleanup. A failed partial write is therefore removed by the same finally block; source/assertions/gate order unchanged."
 }

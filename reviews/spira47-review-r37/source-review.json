@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "reviewer": "elegant_mermaid_followup",
+  "scope": "Read-only exact source and integration test review; no execution claim.",
+  "accepted_proposal": "247e61d985cacec22710752ba6a74cd564b23ddc",
+  "reviewed_tree": "11048bd42c9e73d8542140a2fe5509632b1e68a7",
+  "final_tree": "497c679c6e56ce8cd1abbf1004d9e5938503bbd5",
+  "verdict": "No production or integration-test blocker. Two documentation phrases qualified in final tree; compiled/test bytes unchanged.",
+  "model_sha256": "a3da6b03897ce3feddd9f758b544227b846b3a8db368e5d7bdd4c87d34b77cdf",
+  "test_sha256": "5b05d3a969f9939d5f6582ec00c55b810465a745dc4df3804812f774b99bd420",
+  "checks": [
+    "Exact one-function boundary change plus identifier helper reconstructs original when inverted; other engine/continuation semantics unchanged.",
+    "All22processed texts and4upstream diagnostics match authenticated terminal observation.",
+    "Real pinned sqlc and actual built plugin; successful case2files+exactonequeryconstant; refusals exit1+specificdiagnostic+no.lgooutput; timeout cannot pass.",
+    "os.ReadFile preserves bareCR bytes; original14 and typed12fixtures unchanged.",
+    "Reviewed full616path/blob/mode index, only7declaredpaths differ."
+  ],
+  "rejected_unexecuted": {
+    "commit": "247af08677a1351dc5d9a78c72e9baa4b957634e",
+    "reason": "JavaScript replacement-string expansion of dollar-plus-quote duplicated suffix; corrected with callback."
+  },
+  "documentation_qualifications": [
+    "Typed literal permanent test uses native-validated fixtures; it does not itself execute PostgreSQL.",
+    "Request-model tests build models from captured fixtures; real pipeline tests are distinct."
+  ],
+  "remaining_required": "New permanent unchanged-source RED; native candidate contracts; just gate/slop/eject; complete source restoration.",
+  "publication_eligible": false
+}
