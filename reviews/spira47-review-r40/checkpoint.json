@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "recorded_at": "2026-11-27T17:20:27Z",
-  "state": "source_published_review_pending_proof_retirement",
+  "recorded_at": "2026-11-27 17:26:22 UTC",
+  "state": "r40_source_published_verified_and_retired_three_new_review_findings_open",
   "publication": {
     "repository": "gosuda/spira",
     "pull_request": 47,
@@ -61,8 +61,11 @@
     "ordinary_check_runs": 0,
     "review_status": {
       "context": "Devin Review",
-      "state": "pending"
-    }
+      "state": "success",
+      "description": "Completed analysis in 5m 56s",
+      "updated_at": "2026-11-27T17:24:55Z"
+    },
+    "mergeable_state": "clean"
   },
   "addressed_threads": [
     {
@@ -79,9 +82,45 @@
     }
   ],
   "review_snapshot": {
-    "threads": 20,
-    "unresolved": 0,
-    "status": "Automated review remains pending; later feedback must be reconciled before a terminal completion claim."
+    "threads": 23,
+    "unresolved": 3,
+    "completed_review_sha": "6031a63255bc7496e22b38921e10401a2d50c291",
+    "new_findings": [
+      {
+        "thread": "PRRT_kwDOVpFduc684Wq4",
+        "path": "cmd/sqlc-gen-spira/model.lgo",
+        "comments": [
+          {
+            "comment": 4722144191,
+            "body": "<!-- devin-review-comment {\"id\": \"BUG_pr-review-job-99d83065328a4375b026926ca89af5f8_0001\", \"file_path\": \"cmd/sqlc-gen-spira/model.lgo\", \"start_line\": 904, \"end_line\": 904, \"side\": \"RIGHT\", \"based_on_repo_rules\": false, \"kind\": \"bug\"} -->\n\n🟡 **Version option casing blocks generation**\n\nWith `version: Version` configured for a lowercase `version` column, `postgresReferencesColumn` rejects writes that reference the column. [MapColumn](https://github.com/gosuda/spira/blob/6031a63255bc7496e22b38921e10401a2d50c291/orm/table.lgo#L115-L124 \"orm/table.lgo:115-124\") accepts either spelling, but the generation check compares the SQL name to the raw option.\n\n<details>\n<summary>Learn more</summary>\n\nThe version option identifies the column an entity uses for optimistic locking. [buildVersions](https://github.com/gosuda/spira/blob/6031a63255bc7496e22b38921e10401a2d50c291/cmd/sqlc-gen-spira/model.lgo#L1237-L1255 \"cmd/sqlc-gen-spira/model.lgo:1237-1255\") stores that option without resolving it to the catalog column. [MapColumn](https://github.com/gosuda/spira/blob/6031a63255bc7496e22b38921e10401a2d50c291/orm/table.lgo#L115-L124 \"orm/table.lgo:115-124\") resolves the same option case-insensitively, but [postgresReferencesColumn](https://github.com/gosuda/spira/blob/6031a63255bc7496e22b38921e10401a2d50c291/cmd/sqlc-gen-spira/version_reference.lgo#L22-L36 \"cmd/sqlc-gen-spira/version_reference.lgo:22-36\") requires exact equality with the SQL identifier. Consequently, the generator reports a missing version column even when the SQL references the column that the ORM would map.\n\n**Example:** Set `tables.items.version` to `Version` and generate [UpdateItem](https://github.com/gosuda/spira/blob/6031a63255bc7496e22b38921e10401a2d50c291/cmd/sqlc-gen-spira/testdata/postgresql/db/queries/items.sql#L6-L9 \"cmd/sqlc-gen-spira/testdata/postgresql/db/queries/items.sql:6-9\") against the lowercase `version` column. Both the assignment and the predicate name that column, but generation returns `writes versioned table items without Version`.\n\n**Recommended fix:** Resolve the PostgreSQL version option against the table catalog before storing it in `buildVersions`. Prefer an exact match, then apply the supported case-insensitive lookup when the match is unambiguous. Compare SQL tokens against the resolved catalog name so distinct quoted identifiers remain distinct. Add a generation test for a mixed-case option and a control for a quoted mixed-case column.\n\n</details>\n\n<!-- devin-review-badge-begin -->\n<a href=\"https://app.devin.ai/review/gosuda/spira/pull/47\" target=\"_blank\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://static.devin.ai/assets/gh-devin-review-dark.svg?v=4\"><img src=\"https://static.devin.ai/assets/gh-devin-review-light.svg?v=4\" alt=\"Devin Review\"></picture></a>\n<!-- devin-review-badge-end -->\n\n---\n*Was this helpful? React with 👍 or 👎 to provide feedback.*",
+            "created_at": "2026-11-27T17:24:46Z"
+          }
+        ]
+      },
+      {
+        "thread": "PRRT_kwDOVpFduc684Wsr",
+        "path": "cmd/sqlc-gen-spira/version_reference.lgo",
+        "comments": [
+          {
+            "comment": 4722144365,
+            "body": "<!-- devin-review-comment {\"id\": \"BUG_pr-review-job-99d83065328a4375b026926ca89af5f8_0002\", \"file_path\": \"cmd/sqlc-gen-spira/version_reference.lgo\", \"start_line\": 168, \"end_line\": 172, \"side\": \"RIGHT\", \"based_on_repo_rules\": false, \"kind\": \"bug\"} -->\n\n🟡 **Versioned writes rejected in materialized CTEs**\n\nWhen a write uses `AS MATERIALIZED`, `excludeReferenceDeclarations` hides the version column inside the CTE body. Generation fails if that body contains the only real version references.\n\n<details>\n<summary>Learn more</summary>\n\nA PostgreSQL common table expression can contain an `UPDATE` and expose its returned rows to the outer statement. [writeTargets](https://github.com/gosuda/spira/blob/6031a63255bc7496e22b38921e10401a2d50c291/cmd/sqlc-gen-spira/model.lgo#L1112-L1132 \"cmd/sqlc-gen-spira/model.lgo:1112-1132\") detects the update inside the CTE. The declaration pass treats `MATERIALIZED` after `AS` as a declared name and excludes the parenthesized statement after it. [postgresReferencesColumn](https://github.com/gosuda/spira/blob/6031a63255bc7496e22b38921e10401a2d50c291/cmd/sqlc-gen-spira/version_reference.lgo#L22-L36 \"cmd/sqlc-gen-spira/version_reference.lgo:22-36\") then ignores genuine version references inside the write itself; this is independent of binding names across scopes.\n\n**Example:** `WITH bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;` updates `version`, but generation reports that the query writes `items` without `version`.\n\n**Recommended fix:** Recognize `AS MATERIALIZED (...)` in CTE declarations and leave the body visible to the reference scan. Keep excluding actual declaration lists and cast modifiers. Add matching generator cases for a materialized CTE that updates `version` and one that omits it.\n\n</details>\n\n<!-- devin-review-badge-begin -->\n<a href=\"https://app.devin.ai/review/gosuda/spira/pull/47\" target=\"_blank\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://static.devin.ai/assets/gh-devin-review-dark.svg?v=4\"><img src=\"https://static.devin.ai/assets/gh-devin-review-light.svg?v=4\" alt=\"Devin Review\"></picture></a>\n<!-- devin-review-badge-end -->\n\n---\n*Was this helpful? React with 👍 or 👎 to provide feedback.*",
+            "created_at": "2026-11-27T17:24:47Z"
+          }
+        ]
+      },
+      {
+        "thread": "PRRT_kwDOVpFduc684WvB",
+        "path": "cmd/sqlc-gen-spira/version_reference_test.lgo",
+        "comments": [
+          {
+            "comment": 4722144592,
+            "body": "<!-- devin-review-comment {\"id\": \"ANALYSIS_pr-review-job-99d83065328a4375b026926ca89af5f8_0001\", \"file_path\": \"cmd/sqlc-gen-spira/version_reference_test.lgo\", \"start_line\": 24, \"end_line\": 27, \"side\": \"RIGHT\", \"kind\": \"analysis\"} -->\n\n🔍 **No pipeline coverage for alias refusals**\n\nThe role tests call `Generate` with fixture SQL directly. [readSQLcLiteralInputs](https://github.com/gosuda/spira/blob/6031a63255bc7496e22b38921e10401a2d50c291/cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo#L85-L89 \"cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo:85-89\") omits those fixtures, so no alias refusal is asserted on SQL emitted by sqlc.\n\n<!-- devin-review-badge-begin -->\n<a href=\"https://app.devin.ai/review/gosuda/spira/pull/47\" target=\"_blank\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://static.devin.ai/assets/gh-devin-review-dark.svg?v=4\"><img src=\"https://static.devin.ai/assets/gh-devin-review-light.svg?v=4\" alt=\"Devin Review\"></picture></a>\n<!-- devin-review-badge-end -->\n\n---\n*Was this helpful? React with 👍 or 👎 to provide feedback.*",
+            "created_at": "2026-11-27T17:24:48Z"
+          }
+        ]
+      }
+    ],
+    "scope": "The two r40 findings remain resolved. These three later findings are not claimed fixed by the completed r40 verification."
   },
   "native_proof": {
     "producer": "7a587b12c28fb7150a36b86ab8aeacf271c92d58",
@@ -140,7 +179,15 @@
     "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
     "removed_workflow": ".github/workflows/spira47-review-r40.yml",
     "scope": "Only the owned terminal proof workflow is removed; source/proof history and failed receipts are preserved.",
-    "post_write_absence_readback_pending": true
+    "commit": "a18a26f8923e414b2245be1d7e667baaf6fc6ec6",
+    "tree": "886c7b72ced3158e3b3a95331fd4010466e504d8",
+    "owned_workflow_absent_verified": true,
+    "remaining_workflows": [
+      ".github/workflows/ci.yml",
+      ".github/workflows/release.yml"
+    ],
+    "retirement_workflow_runs": 0,
+    "retirement_checkpoint_sha256": "14366ecee67c264787f2c3d1b89a05640302644bf9743a2927d6cf8e43fabc20"
   },
   "preserved_failures": {
     "observer_path": {
@@ -190,5 +237,6 @@
     "The maintained Spira source contains no ordinary GitHub Actions or Depot workflow. The isolated Depot proof supplies source-gate evidence; it is not an ordinary PR CI run.",
     "Earlier failed runs remain failures. No failed full-source gate was reused."
   ],
-  "next_action": "Verify the retired workflow is absent, reconcile the automated review on the exact published head, then save the terminal checkpoint."
+  "next_action": "Own the three new reference-option, materialized-CTE and permanent-pipeline findings on a separate isolated r41 proof. Keep r40 retired and preserve its completed and failed evidence.",
+  "overall_pr_work_complete": false
 }
