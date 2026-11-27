@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "round": 43,
+  "repository": "gosuda/spira",
+  "pull_request": 47,
+  "head": "c4e424ba3a580f04d5ff260b2030c5e56267c8e7",
+  "parent": "6d4f84fc8a1a50603fbdf5c024bdc1966436ea31",
+  "tree": "42ac87ebaf4cad019a5f53bfe61c7d1455f9d041",
+  "blobs": 638,
+  "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+  "published_at": {
+    "current_time": "2026-11-27 23:19:35 UTC"
+  },
+  "additive": true,
+  "force": false,
+  "production_changes": false,
+  "authored_paths": [
+    {
+      "path": "cmd/sqlc-gen-spira/version_relation_test.lgo",
+      "blob": "009100f8853619b612ffcb4f920d6fc949d00585",
+      "sha256": "44c2f1029128e39e09a97ed04d46c93e2ee5bdf5af5d1800338b3c8d3a60fc52"
+    },
+    {
+      "path": "cmd/sqlc-gen-spira/testdata/version-relation-roles.json",
+      "blob": "fe2a945a9825ba20ed9e28d7a5aa2c950c7d8127",
+      "sha256": "686032e6a9c7b6049825845da4455498adcbfbbabad4edc62bf558acc96bf921"
+    },
+    {
+      "path": "cmd/sqlc-gen-spira/sqlc_postgres_version_test.lgo",
+      "blob": "56b626ffae2310dcddd2e97cbc929c48bdc8903a",
+      "sha256": "76af5850ffe96198f71019477d3a942e6c07e56987badda4164f9bb9d7b63f82"
+    },
+    {
+      "path": "cmd/sqlc-gen-spira/testdata/sqlc-version-pipeline.json",
+      "blob": "eaadb172b45f3b53977bd10443aa24a400fec4f1",
+      "sha256": "79e82a027719f141dfeba85aee06f1df8c9a919aeb636c2cc262656482221843"
+    },
+    {
+      "path": "docs/specs/sqlc-gen-spira.md",
+      "blob": "df63156409369b6aa5f4b3b1a4c6348abe60d1b2",
+      "sha256": "7db5595fa2ca5f48843eb2c1859b7dc3ed53de9124c3d46c05ec057b9ccd9510"
+    }
+  ],
+  "native": {
+    "producer": "b1eda8d382132098028e88d4be9737aac1ff00ce",
+    "run": 46080218773,
+    "job": 140777215364,
+    "conclusion": "success",
+    "artifact": 15236782785,
+    "artifact_sha256": "0f7199b5f7fc0025559299c16fd2dd10ec124c9195a6f517f01f26d04452172f",
+    "raw_log_sha256": "24bc7968c9dcc58d2df30098ee3ee91431ed100d9b88152db0355fe4c864c267",
+    "report_projection_sha256": "13cfdd057f462cbca705df89415e2ebf3060d25861aa3067afd89b36e45760b0",
+    "commands": 38,
+    "candidate_index_sha256": "57a3f08469b52cffafb3e35b5b15bff2a926df79555e90d238281caa4e652e57",
+    "source_restored": true
+  },
+  "evidence": {
+    "commit": "0dd3bf8f8afa16c02feede039e3c085fe67d644c",
+    "file": "reviews/spira47-review-r43/verified-candidate-46080218773.json",
+    "sha256": "cfb26066a9c32508f2f2d40bb2e85e24b4356a35902f80b226ebe8ca81e48028"
+  },
+  "thread": {
+    "id": "PRRT_kwDOVpFduc688xES",
+    "comment": 4724046389,
+    "reply": 4724343741,
+    "is_resolved": true,
+    "reply_readback_exact": true
+  },
+  "pr_body_readback_exact": true,
+  "feedback": {
+    "observed_at": {
+      "current_time": "2026-11-27 23:20:11 UTC"
+    },
+    "threads": 28,
+    "unresolved": 0,
+    "devin_review": "pending",
+    "source_check_runs": 0,
+    "source_workflow_runs": 0
+  },
+  "first_failure": {
+    "run": 46079109930,
+    "conclusion": "failure",
+    "preserved_at": "86dbfc5804104e285d590401100d9443eca12d36",
+    "test_or_source_phases_reached": false,
+    "gate_reuse": false
+  },
+  "owned_workflow": ".github/workflows/spira47-review-r43.yml",
+  "retirement_action": "Delete only the owned R43 workflow in this additive evidence commit; verify the remaining inherited workflow blobs afterward.",
+  "retirement_readback_pending": true,
+  "overall_pr_work_complete": false
+}
