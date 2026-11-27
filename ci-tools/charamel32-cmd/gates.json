@@ -1,0 +1,26 @@
+{
+  "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
+  "original_tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
+  "candidate_tree": "2dc5be64073c90b88fa0031c0f9b9c07e286831c",
+  "source_sha256": {
+    "bin/crush/lib/shell_screen.ml": "a8e7e443a07c064d76e948b84bfdd75e0d08e88f51bad19bf4064859cc85e888",
+    "test/crush/test_tools_shell.ml": "4b866dde806696d7658a18b4dec1a867d793d6ce2dfc391cce9ac0ab9532ac87"
+  },
+  "patch_sha256": "95fc13396b5ce95ca8b5ace51f3ba51edc01cc5b0cebd8c9c99cd2e9fafe9b2e",
+  "native_observed_sha256": "1db8a4202cc9f0d7e3da4b037bd035f2618c24a445ee1ce88390fb2c433f535d",
+  "preparation": {
+    "id": 15176985285,
+    "sha256": "bfd9e9e2813b0767bc1628d477f10d1ab7bdcaeda01e7dbfe25bb8e892be6952",
+    "report": "prepare-result.json",
+    "producer": "563815851452a16fef28278dc4314e0fb2fa95cb",
+    "run": 45950356366,
+    "job": 140344510433
+  },
+  "source_changes": "Only shell_screen.ml and test_tools_shell.ml; imported external API and tool implementation preserved.",
+  "required_linux": [
+    "dune build @fmt",
+    "dune build --profile release",
+    "dune runtest --profile release"
+  ],
+  "windows_scope": "Full release build and formatter, complete frozen native Cmd outputs, tools-shell and permission suites; no full Windows-suite claim."
+}

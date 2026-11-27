@@ -1,15 +1,231 @@
 {
-  "scope": "Charamel32 parser repairs",
-  "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
-  "draft_tree": "b452f15ea02f5ea086b04bc63d58aac369ddac74",
-  "prior_prepare": {
-    "run": 45949463414,
-    "job": 140341687023,
-    "producer": "4a567f62c4e15f23eb8b284cac09bfb94e9c9ad0",
-    "conclusion": "failure",
-    "cause": "Artifact download followed GitHub's302 while forwarding its Authorization header; signed artifact host returned401 before source compilation/application"
+  "task": "Charamel PR32 shell parser review repairs",
+  "public_only": true,
+  "maintained_head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
+  "actual_main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
+  "maintained_source_updated": false,
+  "candidate": {
+    "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
+    "original_tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
+    "candidate_tree": "2dc5be64073c90b88fa0031c0f9b9c07e286831c",
+    "source_sha256": {
+      "bin/crush/lib/shell_screen.ml": "a8e7e443a07c064d76e948b84bfdd75e0d08e88f51bad19bf4064859cc85e888",
+      "test/crush/test_tools_shell.ml": "4b866dde806696d7658a18b4dec1a867d793d6ce2dfc391cce9ac0ab9532ac87"
+    },
+    "patch_sha256": "95fc13396b5ce95ca8b5ace51f3ba51edc01cc5b0cebd8c9c99cd2e9fafe9b2e",
+    "native_observed_sha256": "1db8a4202cc9f0d7e3da4b037bd035f2618c24a445ee1ce88390fb2c433f535d",
+    "preparation": {
+      "id": 15176985285,
+      "sha256": "bfd9e9e2813b0767bc1628d477f10d1ab7bdcaeda01e7dbfe25bb8e892be6952",
+      "report": "prepare-result.json",
+      "producer": "563815851452a16fef28278dc4314e0fb2fa95cb",
+      "run": 45950356366,
+      "job": 140344510433
+    },
+    "source_changes": "Only shell_screen.ml and test_tools_shell.ml; imported external API and tool implementation preserved.",
+    "required_linux": [
+      "dune build @fmt",
+      "dune build --profile release",
+      "dune runtest --profile release"
+    ],
+    "windows_scope": "Full release build and formatter, complete frozen native Cmd outputs, tools-shell and permission suites; no full Windows-suite claim."
   },
-  "revision": "Remove Authorization from the HTTPS download redirect; GitHub API request retains normal actions:read authentication and ZIP SHA-256 remains mandatory. All source/fixture/manifest bytes unchanged.",
-  "full_required_gates": "pending",
-  "maintained_source_updated": false
+  "preparation_result": {
+    "producer": "563815851452a16fef28278dc4314e0fb2fa95cb",
+    "run": "45950356366",
+    "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
+    "original_tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
+    "formatted_tree": "2dc5be64073c90b88fa0031c0f9b9c07e286831c",
+    "native_archives": [
+      {
+        "id": 15175765148,
+        "sha256": "ddb69269eed07dcd79c1abd7a83888f17fca287c42f567576e2c685fcfca3d96",
+        "report": "native-baseline.json",
+        "producer": "d3d970b69736556d42c96a6974fca1eb0d040340",
+        "source": "53cdbc3dd32e34cf0ac6769b1fead9c14dad10a5",
+        "records": 37,
+        "failures": [
+          "dynamic_body",
+          "nested_loop",
+          "grouped_body"
+        ]
+      },
+      {
+        "id": 15175727233,
+        "sha256": "e64712b6a5df8b75d12d983d202d72abe8b3e9395a1c089d78e2f843fcf13487",
+        "report": "posix-baseline-result.json",
+        "producer": "a79da117ab77b45fe6adf5d02a6e1e38eb5618f1",
+        "source": "5be8cba8e9150be37b35dec47f2cace5647d704f",
+        "records": 50,
+        "failures": []
+      }
+    ],
+    "native_record_counts": [
+      37,
+      50
+    ],
+    "baseline_cases": 97,
+    "baseline_actual_failures": 53,
+    "candidate_cases": 97,
+    "candidate_actual_failures": 0,
+    "candidate_all_pass": true,
+    "source_restored": true,
+    "commands": [
+      {
+        "label": "compiler-version",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=/home/runner/work/sloplint/sloplint",
+          "--",
+          "ocamlc",
+          "-version"
+        ],
+        "cwd": "/home/runner/work/sloplint/sloplint/source",
+        "actual_exit": 0,
+        "seconds": 0.01022793000001343,
+        "log_sha256": "db74d0caf81f43029fa28ce9888695d0b54d0a99003e6042823c9bc914897865"
+      },
+      {
+        "label": "formatter-version",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=/home/runner/work/sloplint/sloplint",
+          "--",
+          "ocamlformat",
+          "--version"
+        ],
+        "cwd": "/home/runner/work/sloplint/sloplint/source",
+        "actual_exit": 0,
+        "seconds": 0.012810817999991286,
+        "log_sha256": "a68641c6aacd345c4931a6217331d2bf43398c7bc134666a2f756953eab407aa"
+      },
+      {
+        "label": "baseline-compile",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=/home/runner/work/sloplint/sloplint",
+          "--",
+          "ocamlc",
+          "-strict-sequence",
+          "-strict-formats",
+          "-short-paths",
+          "-principal",
+          "-warn-error",
+          "+a",
+          "-o",
+          "/tmp/charamel32-compile-9mq6e0o0/old/screen-probe",
+          "shell_screen.mli",
+          "shell_screen.ml",
+          "probe.ml"
+        ],
+        "cwd": "/tmp/charamel32-compile-9mq6e0o0/old",
+        "actual_exit": 0,
+        "seconds": 0.06636556199998722,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "format-authored-candidate",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=/home/runner/work/sloplint/sloplint",
+          "--",
+          "ocamlformat",
+          "-i",
+          "bin/crush/lib/shell_screen.ml",
+          "test/crush/test_tools_shell.ml"
+        ],
+        "cwd": "/home/runner/work/sloplint/sloplint/source",
+        "actual_exit": 0,
+        "seconds": 0.192663519000007,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "candidate-compile",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=/home/runner/work/sloplint/sloplint",
+          "--",
+          "ocamlc",
+          "-strict-sequence",
+          "-strict-formats",
+          "-short-paths",
+          "-principal",
+          "-warn-error",
+          "+a",
+          "-o",
+          "/tmp/charamel32-compile-9mq6e0o0/candidate/screen-probe",
+          "shell_screen.mli",
+          "shell_screen.ml",
+          "probe.ml"
+        ],
+        "cwd": "/tmp/charamel32-compile-9mq6e0o0/candidate",
+        "actual_exit": 0,
+        "seconds": 0.0669148980000216,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "restore-original",
+        "argv": [
+          "git",
+          "reset",
+          "--hard",
+          "5be8cba8e9150be37b35dec47f2cace5647d704f"
+        ],
+        "cwd": "/home/runner/work/sloplint/sloplint/source",
+        "actual_exit": 0,
+        "seconds": 0.00312908600000128,
+        "log_sha256": "4012a69cabf599d9232baf21663646a6828eef20d85b7b785832a6091e94a6b3"
+      }
+    ]
+  },
+  "preparation_log_sha256": "a3518bfe55cb0217525da21f83009ec5c1dc0528ac707cb90f671caecbe561d3",
+  "driver_sha256": "7cc232dc0e60a1890613b7701557d8db1d67a1a76341216856dfd210bedbd370",
+  "workflow_sha256": "a9026ec831f1aab0569b9c9ded4105d0b2cd1923324379da34f4daabff1a2cf9",
+  "historical_runs": [
+    {
+      "run": 45946247831,
+      "conclusion": "failure",
+      "scope": "Windows checkout line endings; no native fixtures ran."
+    },
+    {
+      "run": 45947106831,
+      "conclusion": "failure",
+      "scope": "37 complete Windows observations; three initial stdout expectations omitted Cmd echo traces."
+    },
+    {
+      "run": 45948949283,
+      "conclusion": "success",
+      "scope": "50 native POSIX boundary observations at unchanged maintained source."
+    },
+    {
+      "run": 45949463414,
+      "conclusion": "failure",
+      "scope": "Artifact redirect retained Authorization; failure before baseline compile or source mutation."
+    },
+    {
+      "run": 45950356366,
+      "conclusion": "success",
+      "scope": "Authenticated native archives, old 53/97 mismatches, candidate 97/97 green, formatter and compile green; original source restored."
+    }
+  ],
+  "pending": [
+    "Full Linux prescribed gates with rd switch",
+    "Native Windows complete frozen outputs and real permission/tool tests",
+    "Fresh maintained/base lease and additive publication",
+    "Actual addressed-thread resolutions and PR scope body",
+    "Ordinary CI and owned workflow retirement"
+  ],
+  "review_state": {
+    "total": 10,
+    "unresolved": 9,
+    "externally_resolved": [
+      "PRRT_kwDOUbWGks68pElp"
+    ],
+    "read_window": "2026-11-27T05:37Z through candidate preparation"
+  }
 }
