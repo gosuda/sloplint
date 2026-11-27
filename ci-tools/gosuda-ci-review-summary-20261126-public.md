@@ -1,81 +1,68 @@
-# Gosuda CI and PR reconciliation
+# Gosuda public CI and PR audit
 
-Observed through 2026-11-26T23:03:43.891Z. This is a finite snapshot, not an atomic organization-wide transaction.
+Snapshot R28: 2026-11-27T02:51:15.733Z to 2026-11-27T02:57:57.472Z. This public report omits private repository identities, source revisions and findings. PR titles, branch names and review bodies are omitted from the data projection, including private-origin metadata in the public landing mirror.
 
-## Runner result
+## Current result
 
-Every audited maintained PR head selects Depot runners or contains no runner jobs. All declared macOS selections on those heads are exactly `depot-macos-latest`. No Ubuntu 26.04 runner selection was found.
+All runner selections on the **150 open public PR heads** use Depot, or the head contains no runner jobs. Every declared macOS runner on those heads is exactly `depot-macos-latest`. No Ubuntu 26.04 runner selection was found.
 
-| Scope | Count |
-| --- | ---: |
-| Repositories | 115 |
-| Open PRs | 149 |
-| Exact source commits inspected | 288 |
-| Unique workflow blobs | 244 |
-| Unique job definitions | 772 |
-| Open PR heads with non-Depot or forbidden runner labels | 0 |
-| Unresolved review threads | 21 |
-| Confirmed merge conflicts | 1 |
-| Unknown mergeability states | 0 |
+The public scope contains **115 repositories, 150 PRs across 52 repositories, 430 review threads and 958 inline comments**. Canonical open-PR lists were read for every repository. All inline-comment counts agree with GitHub's REST counts. No read failed and no mergeability value is unknown.
 
-## Default branches still awaiting rollout
+The runner audit covers **289 immutable source commits, 244 unique YAML blobs and 772 unique job definitions**. It includes current defaults, actual base refs and maintained PR heads. Static labels, finite matrix variants, local reusable workflows and cargo-dist runner mappings are resolved. The report verifies declared selection; it does not claim that every CI run passed or estimate billing savings.
 
-| Repository | Disposition |
+## Default branches still awaiting published migrations
+
+| Repository | Published change |
 | --- | --- |
-| [gosuda/bitcoin-wallet](https://github.com/gosuda/bitcoin-wallet) | Migration is published in [PR #76](https://github.com/gosuda/bitcoin-wallet/pull/76); the PR remains unmerged. |
-| [gosuda/BiBeam](https://github.com/gosuda/BiBeam) | Migration is published in [PR #24](https://github.com/gosuda/BiBeam/pull/24); the PR remains unmerged. |
-| [gosuda/gstime](https://github.com/gosuda/gstime) | Migration is published in [PR #10](https://github.com/gosuda/gstime/pull/10); the PR remains unmerged. |
+| [bitcoin-wallet](https://github.com/gosuda/bitcoin-wallet) | [PR #76](https://github.com/gosuda/bitcoin-wallet/pull/76) |
+| [BiBeam](https://github.com/gosuda/BiBeam) | [PR #24](https://github.com/gosuda/BiBeam/pull/24) |
+| [gstime](https://github.com/gosuda/gstime) | [PR #10](https://github.com/gosuda/gstime/pull/10) |
 
-PR publication does not change an unmerged default branch. No PR was merged, force-pushed, amended or configured for auto-merge.
+These active public default branches still contain legacy runner labels. Their audited open PR heads already carry Depot selections. No PR has been merged by this audit.
 
-## Concrete CI reductions
+## Published CI reductions
 
 | Change | Reduction and retained coverage |
 | --- | --- |
 | [BiBeam #24](https://github.com/gosuda/BiBeam/pull/24) | Routine PR execution drops from eight CI jobs plus a release-plan job to two Linux jobs. Full nextest and the 50% coverage floor remain. Native macOS and Windows tests move to weekly/manual runs. All five release targets remain; Intel macOS artifacts cross-build on Apple Silicon. |
-| [gstime #10](https://github.com/gosuda/gstime/pull/10) | Routine execution drops from three jobs to two by sharing Linux setup for static checks, race tests and integration tests. Linux/macOS tests and parser fuzz coverage remain. |
-| [bitcoin-wallet #76](https://github.com/gosuda/bitcoin-wallet/pull/76) | Core tests and release linking run once on Linux, frontend/WASM setup is consolidated, and CodeQL runs weekly/manually. All ten required check names, native Clippy checks and release artifact sets remain. Native Linux, Windows, macOS, Android debug and iOS Simulator packaging were verified; signed-device packaging was skipped when keys were absent. |
+| [gstime #10](https://github.com/gosuda/gstime/pull/10) | Routine execution drops from three jobs to two by sharing Linux setup for static checks, race tests and integration tests. Linux/macOS tests and parser fuzz coverage remain. Validation for this reduction is static; a universal green native gate is not claimed. |
+| [bitcoin-wallet #76](https://github.com/gosuda/bitcoin-wallet/pull/76) | Core tests and release linking run once on Linux, frontend/WASM setup is consolidated, and CodeQL runs weekly/manually. All ten required check names, native Clippy checks and release artifact sets remain. Native Linux, Windows, macOS, Android debug and iOS Simulator packaging were verified; signed-device packaging was skipped when keys were absent. Existing advisory findings are not waived. |
 
-These are changes to repository-controlled workflows. No billing saving or universal CI success is inferred from job-count reductions.
+## Recent verified source publications
 
-## Completed follow-up repairs
+| PR | Exact published head | Verification |
+| --- | --- | --- |
+| [gosuda/flats #266](https://github.com/gosuda/flats/pull/266) | `066c32dcf2e0` | [Native 45861924362](https://github.com/gosuda/sloplint/actions/runs/45861924362) / [ordinary 45868856946](https://github.com/gosuda/flats/actions/runs/45868856946) |
+| [gosuda/flats #273](https://github.com/gosuda/flats/pull/273) | `17b44ec73e98` | [Native 45865269020](https://github.com/gosuda/sloplint/actions/runs/45865269020) / [ordinary 45869522998](https://github.com/gosuda/flats/actions/runs/45869522998) |
+| [gosuda/bamTiScript #253](https://github.com/gosuda/bamTiScript/pull/253) | `c5c3ec93ec4b` | [Native 45865746729](https://github.com/gosuda/sloplint/actions/runs/45865746729) / [ordinary 45867667858](https://github.com/gosuda/bamTiScript/actions/runs/45867667858) |
+| [gosuda/sloplint #137](https://github.com/gosuda/sloplint/pull/137) | `530519c0040c` | [Native 45920800138](https://github.com/gosuda/sloplint/actions/runs/45920800138) / [ordinary 45921682807](https://github.com/gosuda/sloplint/actions/runs/45921682807) |
 
-| PR and exact head | Result | Native proof | Ordinary PR workflow |
-| --- | --- | --- | --- |
-| [gosuda/flats #266](https://github.com/gosuda/flats/pull/266) at [`066c32dcf2e0`](https://github.com/gosuda/flats/commit/066c32dcf2e0d2a9d9ea0d41e7aacf68524c1518) | Measure settled notebook heap after the third actual read, excluding the test-owned response without subtracting response capacity. Independent design, implementation and final testing reviews accepted; both follow-up threads resolved. | [success](https://github.com/gosuda/sloplint/actions/runs/45861924362) | [success](https://github.com/gosuda/flats/actions/runs/45868856946) |
-| [gosuda/flats #273](https://github.com/gosuda/flats/pull/273) at [`17b44ec73e98`](https://github.com/gosuda/flats/commit/17b44ec73e9826c8d09ccc438f81fd543cb9701f) | Exercise backward deletion with a rendered Mermaid widget in both keyboard and native-input paths; all 20 browser cases retained. Independent implementation carry-forward and final testing reviews accepted; the follow-up thread resolved. | [success](https://github.com/gosuda/sloplint/actions/runs/45865269020) | [success](https://github.com/gosuda/flats/actions/runs/45869522998) |
-| [gosuda/bamTiScript #253](https://github.com/gosuda/bamTiScript/pull/253) at [`c5c3ec93ec4b`](https://github.com/gosuda/bamTiScript/commit/c5c3ec93ec4b6c355054503f368b2ae874a2bfa0) | Verify both invalid source-alias union orders and compatible controls through the actual binder, compared with TypeScript 7.0.2. The follow-up thread resolved; all 25 threads are resolved at the snapshot. | [success](https://github.com/gosuda/sloplint/actions/runs/45865746729) | [success](https://github.com/gosuda/bamTiScript/actions/runs/45867667858) |
+The published changes have native evidence and separate successful ordinary CI. Their owned temporary proof workflows were removed additively. The evidence preserves failed experiments and actual command exits; no failed run was relabeled as a successful run.
 
-Each completed repair has an immutable checkpoint linking its source tree, native run and probe retirement. Earlier failed or expected-failure controls remain in that evidence; they are not presented as passing full runs.
+For sloplint #137, the published repair verifies complete PowerShell redirection ownership through immutable parser, CLI and Lean tests. Its first test gate failed because of stale Cargo target reuse; that receipt remains preserved. The passing gate compiled the exact candidate into a fresh isolated target. The report does not claim that a native PowerShell API supplied a complete redirection-end extent.
 
-## Verified publications with later findings
+## Remaining review threads
 
-[gosuda/sloplint #137](https://github.com/gosuda/sloplint/pull/137) has a verified publication at [`57adc9fff126`](https://github.com/gosuda/sloplint/commit/57adc9fff126a9826e0fb0be921c28e6cdb08391). Its [native verification](https://github.com/gosuda/sloplint/actions/runs/45893490495) passed for source tree `f518b3943c6b86af53c334175309303c3d79f38b`, and its [ordinary PR workflow](https://github.com/gosuda/sloplint/actions/runs/45895428017) completed success.
+There are **26 unresolved public review threads on seven PRs**.
 
-The maintained PR has since moved to [`e7ee97e84246`](https://github.com/gosuda/sloplint/commit/e7ee97e84246863766ec7465777a035134533feb). The earlier passing evidence does not certify that later source tree.
+| PR | Threads | Exact current head | State |
+| --- | ---: | --- | --- |
+| [gosuda/gglint #33](https://github.com/gosuda/gglint/pull/33) | 5 | `b7f2808eb6b9` | Preserved pause |
+| [gosuda/LoGOs #334](https://github.com/gosuda/LoGOs/pull/334) | 1 | `682c21d440d5` | Preserved pause |
+| [gosuda/LoGOs #336](https://github.com/gosuda/LoGOs/pull/336) | 5 | `aaabdc702edc` | Preserved pause |
+| [gosuda/LoGOs #339](https://github.com/gosuda/LoGOs/pull/339) | 3 | `1cccd8960b7a` | Preserved pause |
+| [gosuda/LoGOs #342](https://github.com/gosuda/LoGOs/pull/342) | 4 | `9cb0ef15ac9a` | Preserved pause |
+| [gosuda/LoGOs #343](https://github.com/gosuda/LoGOs/pull/343) | 5 | `1ea43146195b` | Preserved pause |
+| [gosuda/ruk #20](https://github.com/gosuda/ruk/pull/20) | 3 | `adbb6ff975bb` | Preserved pause |
 
-undefined later findings remain open. An external actor advanced the maintained PR. The prior native and ordinary success certifies only the listed historical source. Current review findings and any candidate proof are being reconciled separately.
+LoGOs source changes, gglint repairs, BiBeam source/dependency-gate investigation and Ruk20 publication remain within a preserved execution pause. The agent registry reports a possible-cybersecurity-risk flag on the root worker, but it does not identify a repository, action, tool call or PR. No separate action-specific rejection record has been recovered. This report does not assign an unsupported repository-specific reason or retry those actions.
 
-The [immutable checkpoint](https://github.com/gosuda/sloplint/blob/03a275c9b8b72820d5bcb0925e43da127d0e25b9/ci-tools/powershell-context-boundaries-r22/checkpoint.json) records the exact verified source, native results and temporary-workflow retirement.
+One actual public conflict remains: [gosuda/ssh-chat #1](https://github.com/gosuda/ssh-chat/pull/1). Its PR head is in `fatheradvisor/ssh-chat`, outside the authorized write boundary. The branch was not changed.
 
-## Remaining review and conflict work
+## Evidence and limits
 
-| PR | Unresolved threads | Merge conflict |
-| --- | ---: | --- |
-| [gosuda/ssh-chat #1](https://github.com/gosuda/ssh-chat/pull/1) | 0 | Confirmed |
-| [gosuda/ruk #20](https://github.com/gosuda/ruk/pull/20) | 3 | No confirmed conflict |
-| [gosuda/sloplint #137](https://github.com/gosuda/sloplint/pull/137) | 1 | No confirmed conflict |
-| [gosuda/LoGOs #343](https://github.com/gosuda/LoGOs/pull/343) | 3 | No confirmed conflict |
-| [gosuda/LoGOs #342](https://github.com/gosuda/LoGOs/pull/342) | 4 | No confirmed conflict |
-| [gosuda/LoGOs #339](https://github.com/gosuda/LoGOs/pull/339) | 3 | No confirmed conflict |
-| [gosuda/LoGOs #336](https://github.com/gosuda/LoGOs/pull/336) | 4 | No confirmed conflict |
-| [gosuda/LoGOs #334](https://github.com/gosuda/LoGOs/pull/334) | 1 | No confirmed conflict |
-| [gosuda/gglint #33](https://github.com/gosuda/gglint/pull/33) | 2 | No confirmed conflict |
+The complete public snapshot is `ci-tools/gosuda-pr-audit-20261126-public.json`, SHA-256 `ae37fef792f99741665670790c9df42e3dd8193d8a2cadb34afd82ce274a6127`. It records source heads, actual bases, review resolution, runner declarations and observation times. Files cached from earlier reads are reused only by identical immutable source commit and Git blob SHA.
 
-## Audit method and limits
+This is a finite, non-atomic read window. Later pushes, comments, closures and merges can change the result. An unstable check state is not treated as a merge conflict. Review resolution is determined by `is_resolved`, including outdated threads.
 
-The owner-filtered repository catalog was read through its empty final page. Canonical per-repository open-PR lists are authoritative; search indexing is not used as the completeness boundary. Thread state comes from `is_resolved`, and inline comment counts agree with REST metadata. Actual base commits come from raw target refs.
-
-Workflow YAML is parsed, finite matrices and conditional literal matrices are enumerated, local reusable workflows are resolved, and generated cargo-dist matrices are checked against the exact configuration and pinned generator source. Unchanged source is reused only by immutable commit or blob identity; original source observation times remain in the JSON.
-
-The audit covers current defaults, actual PR bases and maintained open PR heads. Retired diagnostic branches and historical commits are outside that scope. Runner selection does not prove runtime availability or that all application checks pass. Known baseline failures and uncompleted source repairs remain explicit in their PR evidence.
+All publishing was additive. No force push, commit amendment, PR merge, automatic merge, archive change or repository-setting change was performed.
