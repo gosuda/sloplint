@@ -10,17 +10,17 @@
     "index_file": "source-index.json"
   },
   "candidate": {
-    "tree": "44dd3cc555b6d74a2822434df5cd6900f650d31d",
+    "tree": "64a505b0a8661017f2aee4e6333e4e2de6a18c64",
     "blobs": 625,
     "index_file": "candidate-index.json"
   },
   "unchanged_production_tests": {
-    "tree": "543ea70d39a50d60a96f109c13e9672afcb5f166",
+    "tree": "3df6aca0284b97978126635a1f15c1649b2593a1",
     "blobs": 624,
     "index_file": "final-test-index.json",
     "runtime_helper_unchanged": true
   },
-  "authored_sha256": "a090fe5d9b3c7d41ff4ce397457aecd3ea1ef90e98d3949469364c4e808d7ede",
+  "authored_sha256": "55e787e4532f4e8f49ad3049e1481a96d2804f1afcaf49d32712f4f63f60ee25",
   "files": [
     {
       "path": "cmd/sqlc-gen-spira/model.lgo",
@@ -31,8 +31,8 @@
     {
       "path": "cmd/sqlc-gen-spira/version_reference.lgo",
       "mode": "100644",
-      "sha256": "e91343b7e3670919cbb6a1ce964256af9aeb0d39f8fce6def42f3076aafa9445",
-      "blob": "537b56948be29e7dbd1249b34332b929ff713ebe"
+      "sha256": "94500100999ad9a6f9ba76c5fc3fae3f659ccbfc5792e9f67c1bebbec0eea7a4",
+      "blob": "152b8557f877801905e2ceaf58119148de5e0d5d"
     },
     {
       "path": "cmd/sqlc-gen-spira/query_constants_test.lgo",
@@ -49,8 +49,8 @@
     {
       "path": "cmd/sqlc-gen-spira/version_reference_test.lgo",
       "mode": "100644",
-      "sha256": "014bd23d0fc1da8e5af3103942019aac02c1e70db9dbe55aea7da44cbc0ef04f",
-      "blob": "6d1a4314a9748866a5297d530323b66c0ff5c07b"
+      "sha256": "6df20cfdea4fc73e84b118c0ae031a1565406435d4167663bcc20d726c9113e4",
+      "blob": "878ac564cc74d4cbad397bb75efcb47b6a352347"
     },
     {
       "path": "cmd/sqlc-gen-spira/testdata/version-references.json",
@@ -61,14 +61,14 @@
     {
       "path": "cmd/sqlc-gen-spira/testdata/version-reference-boundaries.json",
       "mode": "100644",
-      "sha256": "d8ef59628c70c6b82f80b43763fa98a75f463ca24b5bf4a69b0f2c37bc5dea7e",
-      "blob": "5a0c3705de7e22630014a7b17f0cb7aca9d7cc2c"
+      "sha256": "56ed7003b803bb3781f92d52eeafb96647d920d31b75b07666aac1462556442b",
+      "blob": "971dacb39f081bbafcc3a0c69c401b0a5634636a"
     },
     {
       "path": "docs/specs/sqlc-gen-spira.md",
       "mode": "100644",
-      "sha256": "14b0b410b326b4379a3ba07fa569a1e8c640d680e579dcbc4a8353b1b60c395b",
-      "blob": "1ccdca4bd84efa2449a2f64aab60a2132a9ace2a"
+      "sha256": "319ee77b2e74136590484ac8fc53948d7eb78ba8a2d3cb91edeada691409a93b",
+      "blob": "f0f3870c83cc4a04ff6a13c51082b8f1502296b2"
     }
   ],
   "frozen_original": {
@@ -77,21 +77,25 @@
     "controls": 8,
     "json_sha256": "dd4ce8e234ddd6f4fd668608944dc5bd3b15ce23f3ff9de463d48b9706d8332a",
     "test_function_prefix_unchanged": true,
-    "observed_run": 46027118627,
-    "run_conclusion": "failure",
+    "observed_run": 46031066075,
+    "run_conclusion": "success",
     "completed_source_red": true,
-    "failure_phase": "nested argv observer"
+    "failure_phase": null,
+    "baseline_verified": true
   },
   "new_structural_controls": {
-    "cases": 3,
+    "cases": 6,
     "file": "version-reference-boundaries.json",
-    "sha256": "d8ef59628c70c6b82f80b43763fa98a75f463ca24b5bf4a69b0f2c37bc5dea7e",
+    "sha256": "56ed7003b803bb3781f92d52eeafb96647d920d31b75b07666aac1462556442b",
     "expected_unchanged_red": [
       "parenthesized-bare-alias",
-      "qualified-cast-type"
+      "qualified-cast-type",
+      "quoted-depth-punctuation"
     ],
-    "expected_control": [
-      "function-from-operand"
+    "expected_controls": [
+      "function-from-operand",
+      "quoted-call-punctuation",
+      "qualified-operator-operand"
     ],
     "native_observation": "pending in the final proof before any production application"
   },
@@ -109,11 +113,33 @@
   },
   "required_gates": [
     "Authenticated unchanged-source and missing-race baseline; preserve both observer failures",
-    "Native original and actual captured SQL for23 cases, with unchanged-production14RED/9controls before application",
+    "Native original and actual captured SQL for26 cases, with unchanged-production15RED/11controls before application",
     "All existing14dollar/12typed/14continued/8compiled/40pipeline cases",
     "Actual nested argv includes-race in both generated module directories",
     "Native compiler/race focused tests and actual just gate/slop/eject",
     "Complete625-byte/mode/tree identity and original621 restoration"
   ],
-  "publication_eligible": false
+  "publication_eligible": false,
+  "rejected_source_proposal": {
+    "commit": "1d0ab35d7b6f8a50bb925239b6ef7234acf6fbc3",
+    "candidate_tree": "44dd3cc555b6d74a2822434df5cd6900f650d31d",
+    "executed": false,
+    "findings": [
+      {
+        "problem": "Quoted identifier text was used as structural punctuation.",
+        "correction": "All delimiter, depth, cast and name-head checks now require referencePunctuation through the private punctuation method.",
+        "witnesses": [
+          "quoted-call-punctuation",
+          "quoted-depth-punctuation"
+        ]
+      },
+      {
+        "problem": "The closing parenthesis of a qualified OPERATOR name was treated as the end of an expression that could take a bare alias.",
+        "correction": "Bare-alias classification now distinguishes OPERATOR's matching parentheses by token kind and depth.",
+        "witnesses": [
+          "qualified-operator-operand"
+        ]
+      }
+    ]
+  }
 }
