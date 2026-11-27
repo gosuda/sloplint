@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "source": {
+    "repository": "gosuda/spira",
+    "head": "82ce092dd0799ee6f644262d3c724c587350633a",
+    "tree": "d34e094ffcd7ec2f63727bae30b8bf83582a6767",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332"
+  },
+  "candidate": {
+    "tree": "f2719f0eced1f02de5a7eae59270211f37432b47",
+    "blobs": 616,
+    "production_commit_created": false,
+    "changed_paths": [
+      "cmd/sqlc-gen-spira/model.lgo",
+      "cmd/sqlc-gen-spira/typed_literal_test.lgo",
+      "cmd/sqlc-gen-spira/testdata/typed-literals.json",
+      "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo",
+      "cmd/sqlc-gen-spira/testdata/sqlc-literal-pipeline.json",
+      "cmd/sqlc-gen-spira/testdata/literal-schema.sql",
+      "docs/specs/sqlc-gen-spira.md"
+    ],
+    "authored_sha256": "e738cc46ccfb790276c04d8007d68d33c7d4458101b84325d4d091cd3fb01f3e",
+    "index_sha256": "ff3deae0714dc506cd61d4ffc893c9019bbb4f7e62ad7d6241b1025166d3feda"
+  },
+  "native_baseline": {
+    "producer": "b1233de9007bdc53a3f64a468d43a831b8bfb96c",
+    "run": 45997251529,
+    "job": 140499633974,
+    "status": "failure",
+    "evidence_commit": "d20a55cda740f9576a5e4512c517070ea65d5ca0",
+    "receipt_sha256": "b043a89bad7144811cf6033fd1d33aa811b2ae2afaafc3081553724ce0bf81f5",
+    "native_original": 26,
+    "captured_native": 22,
+    "direct_red": 8,
+    "pipeline_red": 7,
+    "upstream_rejections": 4
+  },
+  "invariants": [
+    "Only an identifier-boundary E/e starts a PostgreSQL escape string; ASCII letters/digits, underscore, dollar and high bytes continue identifiers.",
+    "MySQL, other engines, and inherited PostgreSQL continuation mode remain unchanged.",
+    "All original14 and frozen typed12 source inputs/results remain byte-identical.",
+    "Permanent real sqlc test uses the source-pinned tool and actual built plugin, exact captured query literal bytes from22 inputs,20successful outputs,2specificversionrefusals,4explicitupstreamdiagnostic/no-output controls.",
+    "The four upstream rejections do not count as plugin coverage. PostgreSQL still accepts all26; no sqlc implementation or dependency changes.",
+    "Generated source is read as bytes to preserve the actual bareCR; no universal-newline observer normalization."
+  ],
+  "required": [
+    "New permanent pipeline test must compile then show the7realpipelinefalse-refusals on unchanged model before candidate applies.",
+    "Candidate must pass12typed and14retained direct cases and26realpipelinecontracts.",
+    "Actual native26andcaptured22 semantics must match; exactsource/bytes/restoration.",
+    "Actual justgate,justslop,justeject0."
+  ],
+  "publication_eligible": false
+}
