@@ -151,7 +151,7 @@ def compile_probe(label: str, directory: Path, source: bytes, interface: bytes, 
     })
     binary = directory / "screen-probe"
     result = run(label, [
-        "opam", "exec", "--", "ocamlc", "-strict-sequence", "-strict-formats",
+        "opam", "exec", "--switch=" + str(WORKSPACE), "--", "ocamlc", "-strict-sequence", "-strict-formats",
         "-short-paths", "-principal", "-warn-error", "+a", "-o", str(binary),
         "shell_screen.mli", "shell_screen.ml", "probe.ml",
     ], directory)
@@ -216,7 +216,7 @@ def main() -> int:
         assert digest(entry["content"].encode("utf-8")) == entry["sha256"]
     ml = "bin/crush/lib/shell_screen.ml"
     mli = "bin/crush/lib/shell_screen.mli"
-    assert run("compiler-version", ["opam", "exec", "--", "ocamlc", "-version"], SOURCE).stdout.strip() == b"5.5.1"
+    assert run("compiler-version", ["opam", "exec", "--switch=" + str(WORKSPACE), "--", "ocamlc", "-version"], SOURCE).stdout.strip() == b"5.5.1"
     assert run("fetch-prior-source", ["git", "fetch", "--no-tags", "--depth=1", "origin",
                MANIFEST["prior_head"]], SOURCE).returncode == 0
     assert git("rev-parse", MANIFEST["prior_head"] + "^{tree}") == MANIFEST["prior_tree"]
