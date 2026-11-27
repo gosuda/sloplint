@@ -1,0 +1,291 @@
+{
+  "schema": 1,
+  "repository": "gosuda/dstack-skills",
+  "pull_request": 34,
+  "publication": {
+    "head": "b65e8f54eb9b685a2e77c34398446074c941b6e6",
+    "tree": "8c9829b8436be4d06ea56ace60b257c6edff18c1",
+    "parent": "3fd028e709641b72b75afe7bdb7785bedca2a959",
+    "actual_base": "8c544c514101d99e5fc52f5fc3d06e970c09ae29",
+    "force": false,
+    "changes": [
+      {
+        "path": "scripts/check-voice.py",
+        "mode": "100755",
+        "sha256": "ebb586ac988ff64609fed0b06ee2f9a1fdae00a69fe37f9cd05946b5b9689ff3"
+      },
+      {
+        "path": ".pre-commit-config.yaml",
+        "mode": "100644",
+        "sha256": "95016d784d90bddd19abc3f039b5e57e3bab01aa1fd8b758aaa51bd2502c71f8"
+      }
+    ]
+  },
+  "evidence": {
+    "repository": "gosuda/sloplint",
+    "producer": "7c4e4b39ab4f76f562bb36fa09451ab8e7f826f9",
+    "run": 45946829843,
+    "job": 140333336225,
+    "conclusion": "success",
+    "artifact": 15175295552,
+    "zip_sha256": "b42a4feb4063301b9068ebe72d657a7bf1cfa58655ff1377f0faa00c16d4082c",
+    "log_sha256": "6d0309bffa29859302fbf9de3ac5bf83092b570dfa18f5949d91550012ce3bf7",
+    "report": {
+      "candidate_tree": "8c9829b8436be4d06ea56ace60b257c6edff18c1",
+      "manifest": {
+        "comment": 4715613284,
+        "contract": "The existing voice self-test hook executes gate and transitive draw startup on Python3.9, regardless of the modern invoking host. Eliminate the source-text annotation assertion. No new permanent CI job or test hook.",
+        "proof_sha256": {
+          "authored.json": "19b608ca6d3be61844bed158118d412d9230c8163ef4180317b56aebca41edaf",
+          "prove.py": "c4d314d2b32f4d11d09b8261ccd39ca8d3deeb6e542d7f13e72089f833fa4138"
+        },
+        "pull_request": 34,
+        "repository": "gosuda/dstack-skills",
+        "required_gates": [
+          "original hook succeeds on Python3.10 with complete source",
+          "original hook still succeeds after removal of draw's future import, reproducing blind spot",
+          "candidate hook fails with the same mutation under managed Python3.9",
+          "restored candidate hook succeeds",
+          "unmodified just check command",
+          "exact candidate identity and complete original source restoration"
+        ],
+        "review_thread": "PRRT_kwDOVZ-5j868pIEa",
+        "schema": 1,
+        "source": {
+          "actual_base": "8c544c514101d99e5fc52f5fc3d06e970c09ae29",
+          "head": "3fd028e709641b72b75afe7bdb7785bedca2a959",
+          "tree": "f465cbf542b6899d9aacbbab8d7f595ec582f074"
+        },
+        "source_guards": {
+          ".pre-commit-config.yaml": "05157d536b225153d970ad478050379f7c96785966c2b2177cf31ce1bae5e3f3",
+          "plugins/dstack-core/skills/let-fate-decide/scripts/draw.py": "befa40cc7f14a27ac594e200f55db7634d6fcd971e3ceb634f4a0b3ddb89de9d",
+          "scripts/check-voice.py": "bdd07df74c5a215332d91d199cff24da310ceb3c5be41742dec60b18dc5b6a33"
+        },
+        "workflow_sha256": "b015d1b83fdf95e4dbdbd40e918424c9085830b0d52377aff1c9f779f325df2d"
+      },
+      "results": [
+        {
+          "accepted": true,
+          "command": [
+            "uv",
+            "run",
+            "--no-project",
+            "--python",
+            "3.10",
+            "--",
+            "python",
+            "-c",
+            "import sys; print(sys.version); assert sys.version_info[:2] == (3, 10)"
+          ],
+          "expected_exit": 0,
+          "log_sha256": "a1b5afe02a4363213de62403c2de0838e12ca604a9cf379ef55ad535d29ce92e",
+          "name": "host-310-identity",
+          "raw_exit": 0,
+          "seconds": 0.14704535899999982,
+          "timed_out": false
+        },
+        {
+          "accepted": true,
+          "command": [
+            "uv",
+            "run",
+            "--no-project",
+            "--python",
+            "3.15",
+            "--",
+            "python",
+            "-c",
+            "import sys; print(sys.version); assert sys.version_info[:2] == (3, 15)"
+          ],
+          "expected_exit": 0,
+          "log_sha256": "d5ff9de6a4f311df50f096e51973a755708445412399031c29e4b0204f4debe9",
+          "name": "host-315-identity",
+          "raw_exit": 0,
+          "seconds": 0.011686446000000572,
+          "timed_out": false
+        },
+        {
+          "accepted": true,
+          "command": [
+            "prek",
+            "--version"
+          ],
+          "expected_exit": 0,
+          "log_sha256": "b606afc52ae5bc97a000167eeb80999832f26a00b4b65c84e74939e3f290ae43",
+          "name": "prek-identity",
+          "raw_exit": 0,
+          "seconds": 0.0012308850000000149,
+          "timed_out": false
+        },
+        {
+          "accepted": true,
+          "command": [
+            "uv",
+            "run",
+            "--no-project",
+            "--python",
+            "3.10",
+            "--",
+            "prek",
+            "run",
+            "--all-files",
+            "--verbose",
+            "check-voice-self-test"
+          ],
+          "expected_exit": 0,
+          "log_sha256": "3696786a00127eaed00d120c397a2d667c291c0128176c2e9fb281033c4705b0",
+          "name": "original-hook-control",
+          "raw_exit": 0,
+          "seconds": 0.2658364569999989,
+          "timed_out": false
+        },
+        {
+          "accepted": true,
+          "command": [
+            "uv",
+            "run",
+            "--no-project",
+            "--python",
+            "3.10",
+            "--",
+            "prek",
+            "run",
+            "--all-files",
+            "--verbose",
+            "check-voice-self-test"
+          ],
+          "expected_exit": 0,
+          "log_sha256": "3696786a00127eaed00d120c397a2d667c291c0128176c2e9fb281033c4705b0",
+          "name": "original-hook-misses-dependency-fault",
+          "raw_exit": 0,
+          "seconds": 0.14277460799999986,
+          "timed_out": false
+        },
+        {
+          "accepted": true,
+          "command": [
+            "uv",
+            "run",
+            "--no-project",
+            "--python",
+            "3.10",
+            "--",
+            "prek",
+            "run",
+            "--all-files",
+            "--verbose",
+            "check-voice-self-test"
+          ],
+          "expected_exit": 0,
+          "log_sha256": "4286b3993ecc1ca599adb1e97bbd9727f35a2b54b5e4ba8ab7b9a48ff0751125",
+          "name": "candidate-hook-on-modern-host",
+          "raw_exit": 0,
+          "seconds": 0.2756742929999998,
+          "timed_out": false
+        },
+        {
+          "accepted": true,
+          "command": [
+            "uv",
+            "run",
+            "--no-project",
+            "--python",
+            "3.10",
+            "--",
+            "prek",
+            "run",
+            "--all-files",
+            "--verbose",
+            "check-voice-self-test"
+          ],
+          "expected_exit": 1,
+          "log_sha256": "95376b1c1242a292e93f8bc6590afa8262ad4f1d6106011e3738a0432da68634",
+          "name": "candidate-hook-catches-dependency-fault",
+          "raw_exit": 1,
+          "seconds": 0.10718036499999961,
+          "timed_out": false
+        },
+        {
+          "accepted": true,
+          "command": [
+            "uv",
+            "run",
+            "--no-project",
+            "--python",
+            "3.10",
+            "--",
+            "prek",
+            "run",
+            "--all-files",
+            "--verbose",
+            "check-voice-self-test"
+          ],
+          "expected_exit": 0,
+          "log_sha256": "4286b3993ecc1ca599adb1e97bbd9727f35a2b54b5e4ba8ab7b9a48ff0751125",
+          "name": "candidate-hook-restored",
+          "raw_exit": 0,
+          "seconds": 0.13854289399999864,
+          "timed_out": false
+        },
+        {
+          "accepted": true,
+          "command": [
+            "uv",
+            "run",
+            "--no-project",
+            "--python",
+            "3.15",
+            "--",
+            "just",
+            "check"
+          ],
+          "expected_exit": 0,
+          "log_sha256": "8d092cd540a67421c5a581bb7e6a91523a83213fa373578cde2c4a3e302fc0c6",
+          "name": "required-just-check",
+          "raw_exit": 0,
+          "seconds": 2.462595196999999,
+          "timed_out": false
+        },
+        {
+          "accepted": true,
+          "command": [
+            "git",
+            "diff",
+            "--check"
+          ],
+          "expected_exit": 0,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "name": "candidate-whitespace",
+          "raw_exit": 0,
+          "seconds": 0.0015644109999986,
+          "timed_out": false
+        }
+      ],
+      "schema": 1,
+      "source_head": "3fd028e709641b72b75afe7bdb7785bedca2a959",
+      "source_restored": true,
+      "source_tree": "f465cbf542b6899d9aacbbab8d7f595ec582f074",
+      "status": "Exact candidate passed original blind-spot control, real Python3.9 dependency mutation failure, restored hook and required just check."
+    }
+  },
+  "review": {
+    "thread": "PRRT_kwDOVZ-5j868pIEa",
+    "comment": 4715613284,
+    "reply": 4716063941,
+    "is_resolved": true
+  },
+  "maintained_ci": {
+    "workflow_directory_absent": true,
+    "ordinary_actions_runs_at_publication": [],
+    "permanent_workflow_added": false
+  },
+  "retirement": {
+    "owned_workflow_removed": true,
+    "path": ".github/workflows/dstack-voice-runtime-r32.yml",
+    "other_workflows_unchanged": true
+  },
+  "limitations": [
+    "The native proof used real Python 3.10.22 and managed Python 3.9.25; compatibility beyond the supported floor is not inferred from source text.",
+    "Artifact identity was checked against the workflow upload and GitHub artifact metadata; no independent local ZIP download was performed."
+  ]
+}
