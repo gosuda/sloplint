@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "scope": "Read-only recovery of exact failed r41 artifact; no product checkout, source command or baseline rerun.",
+  "artifact": {
+    "producer": "105fa98dfd8c58107a9a36bb41f05ccc7671251d",
+    "run": 46051338072,
+    "job": 140683124786,
+    "artifact": 15224512377,
+    "name": "spira47-catalog-cte-baseline-r41",
+    "conclusion": "failure",
+    "zip_bytes": 2886626,
+    "zip_sha256": "2d643bcf9dd38d606df75fd3ef4ac5ef523a40ec74111d1f61a5331331ae796c",
+    "manifest_sha256": "ff461483f3032717b3e25b44eb07dc68410644fd37e62f29f1671632dda48364"
+  },
+  "proof_sha256": {
+    "artifact_support.py": "b3f27ccd5d75efea94530f1294d7e0d23d89b46d7d9e5771cc0b3d32a56d1b28",
+    "recover.py": "d2b71f16222fd378bf0df305c3dc8a22288280226b93502fc5e83313729e8850"
+  },
+  "workflow_sha256": "a0ff1be23a2af4db994d2cf1776036fcfa7034fda571d90120cca275d37e0704",
+  "publication_eligible": false
+}
