@@ -1,0 +1,210 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-11-27 22:18:22 UTC",
+  "repository": "gosuda/spira",
+  "pr": 47,
+  "publication": {
+    "commit": "6d4f84fc8a1a50603fbdf5c024bdc1966436ea31",
+    "parent": "f3a47a04f1defe427494124507ec621118525265",
+    "tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0",
+    "blobs": 638,
+    "branch": "followup/merged-threads-1127",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "published_at": "2026-11-27 22:16:53 UTC",
+    "full_tree_mode_blob_readback": true,
+    "changed_files": [
+      {
+        "path": "cmd/sqlc-gen-spira/version_reference.lgo",
+        "blob": "e0dda4058a5b67783d504c07a2fc922536c1278a",
+        "sha256": "345476a0fbc44f85f0ebad5bbc75eed3167bcb11576aa71d12c8002c7ebfafef"
+      },
+      {
+        "path": "cmd/sqlc-gen-spira/version_relation.lgo",
+        "blob": "c5ae9ff4a519e4da0a84dca4c00634eb4ca4e726",
+        "sha256": "2c1491b16761874732e162fd17492cb3e82b159157d30be1b535204931f95676"
+      },
+      {
+        "path": "cmd/sqlc-gen-spira/version_relation_test.lgo",
+        "blob": "f820746877b832d07c8182e096be8eef2480fdf6",
+        "sha256": "7727fd7d55f314a6e1a2df4f1a170760309bd1d8061043d9610562d5c7bc3954"
+      },
+      {
+        "path": "cmd/sqlc-gen-spira/testdata/version-relation-roles.json",
+        "blob": "9896e68ec7f16e3d5cddb100c11fb541b2ed7fde",
+        "sha256": "2f28a9bf7f5bfa33b9e7f863b8661484c24dae2a803fe4e493ec439938ad85c1"
+      },
+      {
+        "path": "cmd/sqlc-gen-spira/sqlc_postgres_version_test.lgo",
+        "blob": "5ef2f6b5c0088a610fbd733858086702975e419a",
+        "sha256": "dad875f570797c65e0edd8817a0d4ff581e3a22b037c7ac50489bb31cfaefb31"
+      },
+      {
+        "path": "cmd/sqlc-gen-spira/testdata/sqlc-version-pipeline.json",
+        "blob": "9560cfb8015ac23a5ef0adc23b268e35107ab11d",
+        "sha256": "f8341c992395a9e0ab1bb74fdf27351f29792b4f510fa4869583b5d3756ee26b"
+      },
+      {
+        "path": "docs/specs/sqlc-gen-spira.md",
+        "blob": "9d7f770425e579108666c220cd9875f93ef28b31",
+        "sha256": "3021600071843e8009d747675ef1ab9b0c496f6513c3c3aec84f3a27f43d7988"
+      }
+    ]
+  },
+  "proof": {
+    "producer": "673f0c39445d4b583c4d3371609ce585c39be87b",
+    "run": 46073659117,
+    "job": 140756258552,
+    "status": "success",
+    "evidence_commit": "4b2f06292446cf44f2857d562d810aae4dab17a5",
+    "verification_file": "reviews/spira47-review-r42/verified-candidate-46073659117.json",
+    "verification_sha256": "79832cbc520f40a5e22f6daf227ee7d60a9f2ff6b312f757d2f3a9543073c6e0",
+    "report_sha256": "8337d9925f35c55aac6130e07be6803bda972fa5625cbda0354fccce2d64b822",
+    "raw_log_sha256": "4f5b21b67a78eeee807a4a3343fd0ee13372686d42d614d497bb033e7c5c9ad8",
+    "artifact": 15233558976,
+    "artifact_sha256": "88a17b5cfb3a981851d2341641280fb8ac12b13ae59733bc47c4ba76621370b0",
+    "command_count": 228,
+    "source_restored": true,
+    "full_source_gates_passed": true
+  },
+  "static_reviews": [
+    {
+      "commit": "bbc5598ec35787a73c683aceb99bd154352b4595",
+      "reviewer": "/root/bitcoin_round7",
+      "verdict": "No finding",
+      "verified_proof_workflow_files": 25,
+      "candidate_tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0",
+      "tests_tree": "1023a56edb760173d0d69ccc582567b94509c877",
+      "base_tree": "cae17384cce41647b686a80932833cf5a7b09b19",
+      "native_execution": false
+    },
+    {
+      "commit": "bbc5598ec35787a73c683aceb99bd154352b4595",
+      "reviewer": "/root/bitcoin_round7/spira40_oracle_review",
+      "verdict": "No concrete defect found",
+      "archive_sha256": "fc3aba54e149c53de6b13319517cf03449cd95db82aa60f5f10d3a969f515069",
+      "artifact_sha256": "b3f27ccd5d75efea94530f1294d7e0d23d89b46d7d9e5771cc0b3d32a56d1b28",
+      "baseline_unique_logs": 110,
+      "prior_selected_unique_logs": 113,
+      "prior_receipts": 204,
+      "prior_distinct_log_filenames": 198,
+      "prior_excluded_repeated_names": 6,
+      "native_execution": false,
+      "zip_download": false
+    }
+  ],
+  "terminal_reviews": [
+    {
+      "reviewer": "/root/bitcoin_round7",
+      "verdict": "No discrepancy",
+      "run": 46073659117,
+      "job": 140756258552,
+      "producer": "673f0c39445d4b583c4d3371609ce585c39be87b",
+      "unique_receipts": 228,
+      "all_start_result_report_stdout_hashes": true,
+      "raw_log_sha256": "4f5b21b67a78eeee807a4a3343fd0ee13372686d42d614d497bb033e7c5c9ad8",
+      "report_sha256": "8337d9925f35c55aac6130e07be6803bda972fa5625cbda0354fccce2d64b822",
+      "candidate_tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0",
+      "candidate_blobs": 638,
+      "full_prepared_product_tree_verified": true,
+      "prepared_commit": "6d4f84fc8a1a50603fbdf5c024bdc1966436ea31",
+      "artifact": 15233558976,
+      "artifact_api_upload_digest_match": true,
+      "reviewer_zip_download": false,
+      "source_restored": true,
+      "source_gates_actual_zero": [
+        "just gate",
+        "just slop",
+        "just eject"
+      ]
+    },
+    {
+      "reviewer": "/root/bitcoin_round7/spira40_oracle_review",
+      "verdict": "No discrepancy",
+      "run": 46073659117,
+      "job": 140756258552,
+      "producer": "673f0c39445d4b583c4d3371609ce585c39be87b",
+      "unchanged_roles": {
+        "failed": 15,
+        "passed": 15
+      },
+      "unchanged_permanent": {
+        "failed": 14,
+        "passed": 53
+      },
+      "candidate_direct_parent_tests": 15,
+      "candidate_direct_named_subcases": 147,
+      "retained_pipeline": 60,
+      "new_permanent_pipeline": 67,
+      "native_original": 67,
+      "native_processed": 64,
+      "postgres_version_num": 180007,
+      "pipeline": {
+        "generated": 30,
+        "plugin_refusal": 34,
+        "upstream": 3
+      },
+      "nested_race_modules": 3,
+      "compiled_value_map_counts": [
+        8,
+        40,
+        30
+      ],
+      "source_gates_actual_zero": [
+        "just gate",
+        "just slop",
+        "just eject"
+      ],
+      "independent_zip_download": false,
+      "qualification": "One existing Handle minor, 12 linter skips; eject is stock-Go 1.27.4 build only."
+    }
+  ],
+  "addressed_threads": [
+    {
+      "thread": "PRRT_kwDOVpFduc687Ofj",
+      "comment": 4723385630,
+      "reply": 4724031102,
+      "is_resolved": true
+    },
+    {
+      "thread": "PRRT_kwDOVpFduc687Ogz",
+      "comment": 4723385762,
+      "reply": 4724032728,
+      "is_resolved": true
+    },
+    {
+      "thread": "PRRT_kwDOVpFduc687OiK",
+      "comment": 4723385899,
+      "reply": 4724033331,
+      "is_resolved": true
+    },
+    {
+      "thread": "PRRT_kwDOVpFduc687Ojg",
+      "comment": 4723386039,
+      "reply": 4724033861,
+      "is_resolved": true
+    }
+  ],
+  "pr_body_sha256": "dc9966164b7db902221276cdae8fc4dcb499fa85a1a9d73a2c26a90068c75556",
+  "fresh_feedback": {
+    "thread_count": 27,
+    "unresolved": 0,
+    "review_status": "Devin Review pending",
+    "source_check_runs": 0,
+    "ordinary_source_workflow": false
+  },
+  "retirement": {
+    "workflow": ".github/workflows/spira47-review-r42.yml",
+    "deletion_in_this_commit": true,
+    "other_workflows_preserved": [
+      {
+        "path": ".github/workflows/ci.yml",
+        "sha": "318af336a730492b08e20ec84b4c62568ec48bab"
+      },
+      {
+        "path": ".github/workflows/release.yml",
+        "sha": "de1e7d15549b146df23409451844860e931a74f2"
+      }
+    ]
+  },
+  "overall_pr_work_complete": false
+}
