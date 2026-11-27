@@ -1,0 +1,217 @@
+{
+  "schema": 1,
+  "status": "published_native_proof_retired_external_review_pending",
+  "observed_at": "2026-11-27 13:19:10 UTC",
+  "repository": "gosuda/spira",
+  "pull_request": 47,
+  "branch": "followup/merged-threads-1127",
+  "published_head": "593d792bf282f7b7119dafb057a389b04c91fd6d",
+  "published_parent": "82ce092dd0799ee6f644262d3c724c587350633a",
+  "published_tree": "1ec9a3d1e6a53ad1a50723869c6d381cf64d7877",
+  "published_blobs": 616,
+  "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+  "source_hashes": [
+    {
+      "path": "cmd/sqlc-gen-spira/model.lgo",
+      "sha256": "a3da6b03897ce3feddd9f758b544227b846b3a8db368e5d7bdd4c87d34b77cdf",
+      "blob": "769861a7e11d70f32501d595dd86f2034c41c236"
+    },
+    {
+      "path": "cmd/sqlc-gen-spira/typed_literal_test.lgo",
+      "sha256": "c5435f53affa2c19a5864e0bbcc7bfc731ee9cd0d66f92d70fe1fd8ea88e34a3",
+      "blob": "94b1d49d9dd2cba227853e7d491a678d2c976b21"
+    },
+    {
+      "path": "cmd/sqlc-gen-spira/testdata/typed-literals.json",
+      "sha256": "af4a4119677d429c96be284283fc9caf6db658b13644633cad7e23915cd33b1a",
+      "blob": "e1a5108b9a6c837c61a5128722e99dd5641f5645"
+    },
+    {
+      "path": "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo",
+      "sha256": "8e3f97188f37e03fc5d48ffee069238aa1a99ba310eb3456d869188fd72fc0cc",
+      "blob": "0b544bb57a976cee0963042b950a8aa1de13713c"
+    },
+    {
+      "path": "cmd/sqlc-gen-spira/testdata/sqlc-literal-pipeline.json",
+      "sha256": "1b08df2d6d3c4a4d141b72244819d4290a39cf9b357bfe5212d82da97a31c48f",
+      "blob": "581fe855ef181f525423eba97645eb61f5f8dd4c"
+    },
+    {
+      "path": "cmd/sqlc-gen-spira/testdata/literal-schema.sql",
+      "sha256": "bfa56ef159e985b85976918f7fdc7bb79c82095913a8470ce42fd6494b2e99cc",
+      "blob": "a333e8d4548cde918d997e793977d17b0cab2c4e"
+    },
+    {
+      "path": "docs/specs/sqlc-gen-spira.md",
+      "sha256": "09f4a5fd309d768514b9c46b37baf2b9a2a4319b7c1704a588e479ea2b9ff908",
+      "blob": "1fcce0b908661e5bf65c6cb2292e0ec817cdf1fb"
+    }
+  ],
+  "native": {
+    "producer": "686ec4055949fe7c439776196636604f287b039e",
+    "run": 46003935409,
+    "job": 140522249882,
+    "status": "success",
+    "raw_log_sha256": "18be9a3060f198db535ff438341b0ab39e561c2cfbd60f67c14bb8da8065b54a",
+    "commands": 108,
+    "expected_exits": true,
+    "no_timeouts": true,
+    "source_gates_passed": true,
+    "source_restored": true,
+    "publication_eligible": true,
+    "original_index": "83bdd56e301e0af66ae28bface94f2b81ff484d77cd79124224e84605bb453a6",
+    "candidate": {
+      "label": "after",
+      "tree": "1ec9a3d1e6a53ad1a50723869c6d381cf64d7877",
+      "blobs": 616,
+      "index_sha256": "6a7281d2131f03a2f2494e090d5d8569fe2b583f0e8e660fb054f5f5fd233a85"
+    },
+    "permanent_pipeline_baseline": {
+      "source_restored": true,
+      "raw_exit": 1,
+      "failed": [
+        "typed-digit-tail",
+        "typed-dollar-tail",
+        "typed-name-crlf",
+        "typed-name-lf",
+        "typed-name-single",
+        "typed-underscore-tail",
+        "typed-utf8-tail"
+      ],
+      "passed": [
+        "comment-only-version",
+        "escape-boundary-control",
+        "escape-comment-crlf",
+        "escape-comment-lf",
+        "escape-cr",
+        "escape-lf",
+        "escape-lower-crlf",
+        "escape-mixed-whitespace",
+        "escape-single",
+        "escape-three",
+        "independent-escape",
+        "independent-standard",
+        "quoted-type-control",
+        "standard-continuation",
+        "standard-final-backslash",
+        "standard-text-control",
+        "string-only-version",
+        "typed-qualified-comment",
+        "typed-string-only-version"
+      ],
+      "restored_index_sha256": "83bdd56e301e0af66ae28bface94f2b81ff484d77cd79124224e84605bb453a6"
+    },
+    "native_version": "180007",
+    "original_native": 26,
+    "captured_native": 22,
+    "pipeline_outcomes": {
+      "generated": 20,
+      "upstream-rejection": 4,
+      "version-refusal": 2
+    },
+    "exact_sublogs": [
+      {
+        "name": "permanent-pipeline-compile",
+        "sha256": "3d6f43d30e00ced2022c6b162e0d78574894f28a6bc994b4fff77f8bc9b1e026",
+        "bytes": 73
+      },
+      {
+        "name": "permanent-pipeline-unchanged-red",
+        "sha256": "c1c4f6bae60c610f08cf00541e69314a55798c95655f07c099802bf48332e4e4",
+        "bytes": 6694
+      },
+      {
+        "name": "candidate-compile",
+        "sha256": "8b4805091558210fb467d26cee57af0da46660a878fcd3f5fac736b8440ffe2c",
+        "bytes": 73
+      },
+      {
+        "name": "literal-generator-green",
+        "sha256": "3ad9fb9293791416cf22e4b1ee236c6495b60018cc6498627ac111eff1284bd2",
+        "bytes": 3892
+      },
+      {
+        "name": "permanent-pipeline-green",
+        "sha256": "a852a4e9fd83ef196af1a0504bf0c46d0bb48eb3e7115b63736d8a3f6051316e",
+        "bytes": 3632
+      },
+      {
+        "name": "just-gate",
+        "sha256": "94cbec3982230e69a2444ac74f3267cb27e39dd708549092d8138c2b1036ce93",
+        "bytes": 35569
+      },
+      {
+        "name": "just-slop",
+        "sha256": "ac21c03f2e7a737244e0ded15f5ed8de0592e83c9d43bf70c19073b0d6fd4fca",
+        "bytes": 559
+      },
+      {
+        "name": "just-eject",
+        "sha256": "5529e4ed21404befac767d28f00932926502d571c1a7ab7796db50deb866c9b8",
+        "bytes": 33097
+      }
+    ],
+    "artifact": {
+      "id": 15200650568,
+      "bytes": 697618,
+      "zip_sha256": "ce8eb1c70083cb30ac6989fe3270d360f2cff19ad1dde2624e61614294855be1",
+      "api_upload_digest_agree": true
+    },
+    "linter_summary": "strictness=standard files=371 findings=1 blocker=0 critical=0 major=0 minor=1 info=0 baselined=0 stale=0 skipped=12"
+  },
+  "evidence": {
+    "commit": "97778270161a7307b91d5f045f34c327430bcd9b",
+    "path": "reviews/spira47-review-r37/verified-run-46003935409.json",
+    "sha256": "ec3ab5eeb182668e455305232d072dcaca08eb955fc962779234e9c3ad272bbb",
+    "job_log_path": "reviews/spira47-review-r37/verified-run-46003935409-job-log.json",
+    "job_log_sha256": "e6d80473b4dca9697c13cc0af0a36bff8cab017abd027f4608db2eaba6b63344"
+  },
+  "review": {
+    "threads": 16,
+    "unresolved": 0,
+    "inline_comments": 32,
+    "replies": [
+      {
+        "thread": "PRRT_kwDOVpFduc68wxcA",
+        "reply": 4719864865,
+        "is_resolved": true
+      },
+      {
+        "thread": "PRRT_kwDOVpFduc68wxdV",
+        "reply": 4719869248,
+        "is_resolved": true
+      }
+    ],
+    "mergeable": true,
+    "mergeable_state": "unstable",
+    "status_contexts": [
+      {
+        "context": "Devin Review",
+        "state": "pending"
+      }
+    ]
+  },
+  "ordinary_actions": {
+    "workflow_files": 0,
+    "runs": 0,
+    "check_runs": 0,
+    "claim": "No ordinary Actions workflow exists on this source. Native source verification is the isolated Depot proof; the external review is still pending."
+  },
+  "retirement": {
+    "branch": "ci/spira47-typed-prefix-20261127-r37",
+    "parent": "97778270161a7307b91d5f045f34c327430bcd9b",
+    "deleted_workflow": ".github/workflows/spira47-review-r37.yml",
+    "active_owned_jobs": 0,
+    "previous_failures_preserved": [
+      45996676867,
+      45997251529,
+      46002462860
+    ]
+  },
+  "limitations": [
+    "Four native-valid inputs remain pinned-sqlc syntax rejections before plugin invocation; no upstream dependency changed.",
+    "The focused native PostgreSQL oracle is not a just engines run.",
+    "Linter passed the unchanged major threshold with one minor Handle finding in unchanged web/web.lgo and twelve skipped files.",
+    "New feedback after this snapshot remains subject to fresh review."
+  ]
+}
