@@ -1,0 +1,613 @@
+{
+  "schema": 1,
+  "producer": "32e9fdb0f678a274d05e26f0774e685f549580d4",
+  "run": 46052685691,
+  "job": 140687626050,
+  "conclusion": "failure",
+  "raw_log_sha256": "9763292821a88a84529ed9cdc1ec1a37b98fcb9a5c91e8c35bccfa9183bb1f4c",
+  "phase": "bounded report read",
+  "diagnostic": "ValueError: selected archive member exceeds its bound: report.json",
+  "report_bytes": 70404886,
+  "old_read_limit_bytes": 67108864,
+  "artifact": {
+    "id": 15224443645,
+    "name": "spira47-r41-recovered-46051338072",
+    "size_in_bytes": 1326,
+    "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15224443645",
+    "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15224443645/zip",
+    "expired": false,
+    "created_at": "2026-11-27T18:54:07Z",
+    "expires_at": "2026-12-11T18:54:06Z",
+    "updated_at": "2026-11-27T18:54:07Z",
+    "digest": "sha256:d1855434b473e0872f1a1a5ae888e64b733c5d1a596a96107802029525b40322",
+    "workflow_run": {
+      "id": 46052685691,
+      "repository_id": 1424164147,
+      "head_repository_id": 1424164147,
+      "head_branch": "ci/spira47-catalog-cte-20261127-r41",
+      "head_sha": "32e9fdb0f678a274d05e26f0774e685f549580d4"
+    }
+  },
+  "members": [
+    {
+      "name": "build-unchanged-plugin.log",
+      "bytes": 0
+    },
+    {
+      "name": "catalog-unchanged-red.log",
+      "bytes": 2771
+    },
+    {
+      "name": "go-cache-disabled.log",
+      "bytes": 1
+    },
+    {
+      "name": "cte-unchanged-red.log",
+      "bytes": 7286
+    },
+    {
+      "name": "logos-version.log",
+      "bytes": 35
+    },
+    {
+      "name": "original-ambiguous-folded-option.log",
+      "bytes": 40
+    },
+    {
+      "name": "original-column-list-materialized-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "original-cycle-sibling-omission.log",
+      "bytes": 41
+    },
+    {
+      "name": "original-cycle-sibling-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "original-exact-option-before-fold-collision.log",
+      "bytes": 40
+    },
+    {
+      "name": "original-exact-option-rejects-quoted-sibling.log",
+      "bytes": 40
+    },
+    {
+      "name": "original-explicit-cycle-mark-sibling-omission.log",
+      "bytes": 41
+    },
+    {
+      "name": "original-explicit-cycle-mark-sibling-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "original-lower-option-lower-column.log",
+      "bytes": 38
+    },
+    {
+      "name": "original-main-alias-list-after-with.log",
+      "bytes": 39
+    },
+    {
+      "name": "original-main-alias-list-without-with.log",
+      "bytes": 39
+    },
+    {
+      "name": "original-main-cast-after-with.log",
+      "bytes": 39
+    },
+    {
+      "name": "original-materialized-cte-omission.log",
+      "bytes": 41
+    },
+    {
+      "name": "original-materialized-cte-output-alias.log",
+      "bytes": 41
+    },
+    {
+      "name": "original-materialized-cte-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "original-missing-configured-column.log",
+      "bytes": 40
+    },
+    {
+      "name": "original-mixed-option-alias-refusal.log",
+      "bytes": 47
+    },
+    {
+      "name": "original-mixed-case-materialized-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "original-mixed-option-lower-column.log",
+      "bytes": 38
+    },
+    {
+      "name": "original-nested-materialized-cte-reference.log",
+      "bytes": 39
+    },
+    {
+      "name": "original-not-materialized-cte-omission.log",
+      "bytes": 41
+    },
+    {
+      "name": "original-not-materialized-cte-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "original-ordinality-alias-list-omission.log",
+      "bytes": 41
+    },
+    {
+      "name": "original-plain-cte-omission.log",
+      "bytes": 41
+    },
+    {
+      "name": "original-ordinality-cte-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "original-plain-cte-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "original-quoted-column-alias-refusal.log",
+      "bytes": 47
+    },
+    {
+      "name": "original-quoted-column-exact-option.log",
+      "bytes": 38
+    },
+    {
+      "name": "original-quoted-column-folded-option.log",
+      "bytes": 38
+    },
+    {
+      "name": "original-quoted-cte-name-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "original-recursive-materialized-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "original-search-cycle-sibling-omission.log",
+      "bytes": 41
+    },
+    {
+      "name": "original-search-cycle-sibling-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "original-search-sibling-omission.log",
+      "bytes": 41
+    },
+    {
+      "name": "original-second-materialized-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "original-search-sibling-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "original-upper-option-lower-column.log",
+      "bytes": 38
+    },
+    {
+      "name": "pipeline.json",
+      "bytes": 66433972
+    },
+    {
+      "name": "postgres-cleanup.log",
+      "bytes": 27
+    },
+    {
+      "name": "postgres-image-identity.log",
+      "bytes": 3616
+    },
+    {
+      "name": "postgres-image.log",
+      "bytes": 1802
+    },
+    {
+      "name": "postgres-schema.log",
+      "bytes": 0
+    },
+    {
+      "name": "postgres-start.log",
+      "bytes": 65
+    },
+    {
+      "name": "postgres-version.log",
+      "bytes": 7
+    },
+    {
+      "name": "proof-head.log",
+      "bytes": 41
+    },
+    {
+      "name": "report.json",
+      "bytes": 70404886
+    },
+    {
+      "name": "source-head.log",
+      "bytes": 41
+    },
+    {
+      "name": "restore-original-source.log",
+      "bytes": 0
+    },
+    {
+      "name": "source-restoration.log",
+      "bytes": 0
+    },
+    {
+      "name": "sqlc-module.log",
+      "bytes": 512
+    },
+    {
+      "name": "sqlc-modules.log",
+      "bytes": 0
+    },
+    {
+      "name": "unchanged-ambiguous-folded-option-request.json",
+      "bytes": 996136
+    },
+    {
+      "name": "stage-test-only-source.log",
+      "bytes": 0
+    },
+    {
+      "name": "unchanged-column-list-materialized-reference-request.json",
+      "bytes": 996233
+    },
+    {
+      "name": "unchanged-exact-option-before-fold-collision-request.json",
+      "bytes": 996147
+    },
+    {
+      "name": "unchanged-exact-option-rejects-quoted-sibling-request.json",
+      "bytes": 996148
+    },
+    {
+      "name": "unchanged-lower-option-lower-column-request.json",
+      "bytes": 995764
+    },
+    {
+      "name": "unchanged-main-alias-list-after-with-request.json",
+      "bytes": 995836
+    },
+    {
+      "name": "unchanged-main-alias-list-without-with-request.json",
+      "bytes": 995805
+    },
+    {
+      "name": "unchanged-main-cast-after-with-request.json",
+      "bytes": 995804
+    },
+    {
+      "name": "unchanged-materialized-cte-omission-request.json",
+      "bytes": 996187
+    },
+    {
+      "name": "unchanged-materialized-cte-output-alias-request.json",
+      "bytes": 996207
+    },
+    {
+      "name": "unchanged-materialized-cte-reference-request.json",
+      "bytes": 996193
+    },
+    {
+      "name": "unchanged-missing-configured-column-request.json",
+      "bytes": 996108
+    },
+    {
+      "name": "unchanged-mixed-case-materialized-reference-request.json",
+      "bytes": 996200
+    },
+    {
+      "name": "unchanged-mixed-option-alias-refusal-request.json",
+      "bytes": 996145
+    },
+    {
+      "name": "unchanged-mixed-option-lower-column-request.json",
+      "bytes": 995764
+    },
+    {
+      "name": "unchanged-not-materialized-cte-omission-request.json",
+      "bytes": 996195
+    },
+    {
+      "name": "unchanged-not-materialized-cte-reference-request.json",
+      "bytes": 996201
+    },
+    {
+      "name": "unchanged-ordinality-alias-list-omission-request.json",
+      "bytes": 996218
+    },
+    {
+      "name": "unchanged-ordinality-cte-reference-request.json",
+      "bytes": 996203
+    },
+    {
+      "name": "unchanged-plain-cte-omission-request.json",
+      "bytes": 996167
+    },
+    {
+      "name": "unchanged-plain-cte-reference-request.json",
+      "bytes": 996173
+    },
+    {
+      "name": "unchanged-processed-ambiguous-folded-option.log",
+      "bytes": 40
+    },
+    {
+      "name": "unchanged-processed-column-list-materialized-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "unchanged-processed-exact-option-before-fold-collision.log",
+      "bytes": 40
+    },
+    {
+      "name": "unchanged-processed-exact-option-rejects-quoted-sibling.log",
+      "bytes": 40
+    },
+    {
+      "name": "unchanged-processed-lower-option-lower-column.log",
+      "bytes": 38
+    },
+    {
+      "name": "unchanged-processed-main-alias-list-after-with.log",
+      "bytes": 39
+    },
+    {
+      "name": "unchanged-processed-main-cast-after-with.log",
+      "bytes": 39
+    },
+    {
+      "name": "unchanged-processed-main-alias-list-without-with.log",
+      "bytes": 39
+    },
+    {
+      "name": "unchanged-processed-materialized-cte-omission.log",
+      "bytes": 41
+    },
+    {
+      "name": "unchanged-processed-materialized-cte-output-alias.log",
+      "bytes": 41
+    },
+    {
+      "name": "unchanged-processed-materialized-cte-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "unchanged-processed-missing-configured-column.log",
+      "bytes": 40
+    },
+    {
+      "name": "unchanged-processed-mixed-case-materialized-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "unchanged-processed-mixed-option-lower-column.log",
+      "bytes": 38
+    },
+    {
+      "name": "unchanged-processed-mixed-option-alias-refusal.log",
+      "bytes": 47
+    },
+    {
+      "name": "unchanged-processed-not-materialized-cte-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "unchanged-processed-ordinality-alias-list-omission.log",
+      "bytes": 41
+    },
+    {
+      "name": "unchanged-processed-not-materialized-cte-omission.log",
+      "bytes": 41
+    },
+    {
+      "name": "unchanged-processed-ordinality-cte-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "unchanged-processed-plain-cte-omission.log",
+      "bytes": 41
+    },
+    {
+      "name": "unchanged-processed-plain-cte-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "unchanged-processed-quoted-column-alias-refusal.log",
+      "bytes": 47
+    },
+    {
+      "name": "unchanged-processed-quoted-column-exact-option.log",
+      "bytes": 38
+    },
+    {
+      "name": "unchanged-processed-quoted-column-folded-option.log",
+      "bytes": 38
+    },
+    {
+      "name": "unchanged-processed-quoted-cte-name-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "unchanged-processed-recursive-materialized-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "unchanged-processed-second-materialized-reference.log",
+      "bytes": 40
+    },
+    {
+      "name": "unchanged-processed-upper-option-lower-column.log",
+      "bytes": 38
+    },
+    {
+      "name": "unchanged-quoted-column-alias-refusal-request.json",
+      "bytes": 996150
+    },
+    {
+      "name": "unchanged-quoted-column-exact-option-request.json",
+      "bytes": 995773
+    },
+    {
+      "name": "unchanged-quoted-column-folded-option-request.json",
+      "bytes": 995774
+    },
+    {
+      "name": "unchanged-quoted-cte-name-reference-request.json",
+      "bytes": 996205
+    },
+    {
+      "name": "unchanged-recursive-materialized-reference-request.json",
+      "bytes": 996209
+    },
+    {
+      "name": "unchanged-second-materialized-reference-request.json",
+      "bytes": 996225
+    },
+    {
+      "name": "unchanged-sqlc-ambiguous-folded-option.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-column-list-materialized-reference.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-exact-option-before-fold-collision.log",
+      "bytes": 0
+    },
+    {
+      "name": "unchanged-sqlc-exact-option-rejects-quoted-sibling.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-lower-option-lower-column.log",
+      "bytes": 0
+    },
+    {
+      "name": "unchanged-sqlc-main-alias-list-after-with.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-main-alias-list-without-with.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-main-cast-after-with.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-materialized-cte-omission.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-materialized-cte-output-alias.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-materialized-cte-reference.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-missing-configured-column.log",
+      "bytes": 0
+    },
+    {
+      "name": "unchanged-sqlc-mixed-case-materialized-reference.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-mixed-option-alias-refusal.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-mixed-option-lower-column.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-nested-materialized-cte-reference.log",
+      "bytes": 61
+    },
+    {
+      "name": "unchanged-sqlc-not-materialized-cte-omission.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-not-materialized-cte-reference.log",
+      "bytes": 0
+    },
+    {
+      "name": "unchanged-sqlc-ordinality-alias-list-omission.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-ordinality-cte-reference.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-plain-cte-omission.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-plain-cte-reference.log",
+      "bytes": 0
+    },
+    {
+      "name": "unchanged-sqlc-quoted-column-alias-refusal.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-quoted-column-exact-option.log",
+      "bytes": 0
+    },
+    {
+      "name": "unchanged-sqlc-quoted-column-folded-option.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-quoted-cte-name-reference.log",
+      "bytes": 0
+    },
+    {
+      "name": "unchanged-sqlc-recursive-materialized-reference.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-second-materialized-reference.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-sqlc-upper-option-lower-column.log",
+      "bytes": 146
+    },
+    {
+      "name": "unchanged-test-compile.log",
+      "bytes": 73
+    },
+    {
+      "name": "unchanged-upper-option-lower-column-request.json",
+      "bytes": 995764
+    },
+    {
+      "name": "untracked-restoration.log",
+      "bytes": 0
+    }
+  ],
+  "source_executed": false,
+  "source_outcome_claim": false,
+  "scope": "Central-directory sizes are observed from the authenticated exact archive. The report body and original source results were not recovered in this failed reader.",
+  "raw_log": "﻿2026-11-27T18:52:58.6085676Z Current runner version: '2.338.0'\n2026-11-27T18:52:58.6180777Z Runner name: 'depot-z1x7wd8cqz'\n2026-11-27T18:52:58.6181940Z Runner group name: 'default'\n2026-11-27T18:52:58.6182717Z Machine name: 'depot-machine'\n2026-11-27T18:52:58.6184506Z ##[group]GITHUB_TOKEN Permissions\n2026-11-27T18:52:58.6186157Z Actions: read\n2026-11-27T18:52:58.6186735Z Contents: read\n2026-11-27T18:52:58.6187201Z Metadata: read\n2026-11-27T18:52:58.6187631Z ##[endgroup]\n2026-11-27T18:52:58.6188114Z Secret source: Actions\n2026-11-27T18:52:58.6190823Z Cache mode: write\n2026-11-27T18:52:58.6191505Z Prepare workflow directory\n2026-11-27T18:52:58.6440338Z Prepare all required actions\n2026-11-27T18:52:58.6474262Z Getting action download info\n2026-11-27T18:52:58.8080521Z Download action repository 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)\n2026-11-27T18:52:58.8616853Z Download action repository 'astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d' (SHA:1db35dd8eee11c5894872e0b383ae6c406cf738d)\n2026-11-27T18:52:59.0046265Z Download action repository 'actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f' (SHA:bbbca2ddaa5d8feaa63e36b76fdaad77386f024f)\n2026-11-27T18:52:59.1293519Z Complete job name: archive\n2026-11-27T18:52:59.1775743Z ##[group]Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1\n2026-11-27T18:52:59.1777289Z with:\n2026-11-27T18:52:59.1777765Z   path: proof\n2026-11-27T18:52:59.1778170Z   persist-credentials: false\n2026-11-27T18:52:59.1778608Z   repository: gosuda/sloplint\n2026-11-27T18:52:59.1780871Z   token: ***\n2026-11-27T18:52:59.1781263Z   ssh-strict: true\n2026-11-27T18:52:59.1781647Z   ssh-user: git\n2026-11-27T18:52:59.1782021Z   clean: true\n2026-11-27T18:52:59.1782410Z   sparse-checkout-cone-mode: true\n2026-11-27T18:52:59.1782847Z   fetch-depth: 1\n2026-11-27T18:52:59.1783248Z   fetch-tags: false\n2026-11-27T18:52:59.1783639Z   show-progress: true\n2026-11-27T18:52:59.1784026Z   lfs: false\n2026-11-27T18:52:59.1784399Z   submodules: false\n2026-11-27T18:52:59.1784813Z   set-safe-directory: true\n2026-11-27T18:52:59.1785258Z   allow-unsafe-pr-checkout: false\n2026-11-27T18:52:59.1785858Z ##[endgroup]\n2026-11-27T18:52:59.3277901Z Syncing repository: gosuda/sloplint\n2026-11-27T18:52:59.3280590Z ##[group]Getting Git version info\n2026-11-27T18:52:59.3281287Z Working directory is '/home/runner/work/sloplint/sloplint/proof'\n2026-11-27T18:52:59.3282065Z [command]/usr/bin/git version\n2026-11-27T18:52:59.3282476Z git version 2.56.1\n2026-11-27T18:52:59.3283503Z ##[endgroup]\n2026-11-27T18:52:59.3287257Z Temporarily overriding HOME='/home/runner/work/_temp/8b500c76-88cf-4c5f-9dbf-9fa993231424' before making global git config changes\n2026-11-27T18:52:59.3288328Z Adding repository directory to the temporary git global config as a safe directory\n2026-11-27T18:52:59.3323195Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/sloplint/sloplint/proof\n2026-11-27T18:52:59.3342895Z ##[group]Determining repository object format\n2026-11-27T18:52:59.3344306Z ##[endgroup]\n2026-11-27T18:52:59.3345311Z ##[group]Initializing the repository\n2026-11-27T18:52:59.3346797Z [command]/usr/bin/git init /home/runner/work/sloplint/sloplint/proof\n2026-11-27T18:52:59.3372832Z hint: Using 'master' as the name for the initial branch. This default branch name\n2026-11-27T18:52:59.3374111Z hint: will change to \"main\" in Git 3.0. To configure the initial branch name\n2026-11-27T18:52:59.3374856Z hint: to use in all of your new repositories, which will suppress this warning,\n2026-11-27T18:52:59.3375393Z hint: call:\n2026-11-27T18:52:59.3375737Z hint:\n2026-11-27T18:52:59.3376160Z hint: \tgit config --global init.defaultBranch <name>\n2026-11-27T18:52:59.3376631Z hint:\n2026-11-27T18:52:59.3377083Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and\n2026-11-27T18:52:59.3377720Z hint: 'development'. The just-created branch can be renamed via this command:\n2026-11-27T18:52:59.3378241Z hint:\n2026-11-27T18:52:59.3378586Z hint: \tgit branch -m <name>\n2026-11-27T18:52:59.3379102Z hint:\n2026-11-27T18:52:59.3379570Z hint: Disable this message with \"git config set advice.defaultBranchName false\"\n2026-11-27T18:52:59.3380259Z Initialized empty Git repository in /home/runner/work/sloplint/sloplint/proof/.git/\n2026-11-27T18:52:59.3381332Z [command]/usr/bin/git remote add origin https://github.com/gosuda/sloplint\n2026-11-27T18:52:59.3398391Z ##[endgroup]\n2026-11-27T18:52:59.3399041Z ##[group]Disabling automatic garbage collection\n2026-11-27T18:52:59.3400815Z [command]/usr/bin/git config --local gc.auto 0\n2026-11-27T18:52:59.3414765Z ##[endgroup]\n2026-11-27T18:52:59.3415366Z ##[group]Setting up auth\n2026-11-27T18:52:59.3415811Z Removing SSH command configuration\n2026-11-27T18:52:59.3419153Z [command]/usr/bin/git config --local --name-only --get-regexp core\\.sshCommand\n2026-11-27T18:52:59.3435209Z [command]/usr/bin/git submodule foreach --recursive sh -c \"git config --local --name-only --get-regexp 'core\\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\"\n2026-11-27T18:52:59.3616587Z Removing HTTP extra header\n2026-11-27T18:52:59.3621302Z [command]/usr/bin/git config --local --name-only --get-regexp http\\.https\\:\\/\\/github\\.com\\/\\.extraheader\n2026-11-27T18:52:59.3639141Z [command]/usr/bin/git submodule foreach --recursive sh -c \"git config --local --name-only --get-regexp 'http\\.https\\:\\/\\/github\\.com\\/\\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\"\n2026-11-27T18:52:59.3754648Z Removing includeIf entries pointing to credentials config files\n2026-11-27T18:52:59.3756845Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\\.gitdir:\n2026-11-27T18:52:59.3772309Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url\n2026-11-27T18:52:59.3876100Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-b4a0a0c7-321f-44a6-b7fa-27c105d1c704.config http.https://github.com/.extraheader AUTHORIZATION: basic ***\n2026-11-27T18:52:59.3895904Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/sloplint/sloplint/proof/.git.path /home/runner/work/_temp/git-credentials-b4a0a0c7-321f-44a6-b7fa-27c105d1c704.config\n2026-11-27T18:52:59.3910831Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/sloplint/sloplint/proof/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-b4a0a0c7-321f-44a6-b7fa-27c105d1c704.config\n2026-11-27T18:52:59.3923681Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/proof/.git.path /github/runner_temp/git-credentials-b4a0a0c7-321f-44a6-b7fa-27c105d1c704.config\n2026-11-27T18:52:59.3937113Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/proof/.git/worktrees/*.path /github/runner_temp/git-credentials-b4a0a0c7-321f-44a6-b7fa-27c105d1c704.config\n2026-11-27T18:52:59.3949455Z ##[endgroup]\n2026-11-27T18:52:59.3950401Z ##[group]Fetching the repository\n2026-11-27T18:52:59.3954557Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +32e9fdb0f678a274d05e26f0774e685f549580d4:refs/remotes/origin/ci/spira47-catalog-cte-20261127-r41\n2026-11-27T18:54:02.8327505Z From https://github.com/gosuda/sloplint\n2026-11-27T18:54:02.8330612Z  * [new ref]         32e9fdb0f678a274d05e26f0774e685f549580d4 -> origin/ci/spira47-catalog-cte-20261127-r41\n2026-11-27T18:54:02.8333735Z [command]/usr/bin/git branch --list --remote origin/ci/spira47-catalog-cte-20261127-r41\n2026-11-27T18:54:02.8346137Z   origin/ci/spira47-catalog-cte-20261127-r41\n2026-11-27T18:54:02.8350172Z [command]/usr/bin/git rev-parse refs/remotes/origin/ci/spira47-catalog-cte-20261127-r41\n2026-11-27T18:54:02.8359736Z 32e9fdb0f678a274d05e26f0774e685f549580d4\n2026-11-27T18:54:02.8361140Z ##[endgroup]\n2026-11-27T18:54:02.8361712Z ##[group]Determining the checkout info\n2026-11-27T18:54:02.8362423Z ##[endgroup]\n2026-11-27T18:54:02.8364221Z [command]/usr/bin/git sparse-checkout disable\n2026-11-27T18:54:02.8381149Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig\n2026-11-27T18:54:02.8392739Z ##[group]Checking out the ref\n2026-11-27T18:54:02.8394966Z [command]/usr/bin/git checkout --progress --force -B ci/spira47-catalog-cte-20261127-r41 refs/remotes/origin/ci/spira47-catalog-cte-20261127-r41\n2026-11-27T18:54:03.8698307Z Updating files:  89% (4392/4900)\n2026-11-27T18:54:03.8850584Z Updating files:  90% (4410/4900)\n2026-11-27T18:54:03.9031281Z Updating files:  91% (4459/4900)\n2026-11-27T18:54:03.9158870Z Updating files:  92% (4508/4900)\n2026-11-27T18:54:03.9242477Z Updating files:  93% (4557/4900)\n2026-11-27T18:54:03.9407772Z Updating files:  94% (4606/4900)\n2026-11-27T18:54:03.9774855Z Updating files:  95% (4655/4900)\n2026-11-27T18:54:04.0076453Z Updating files:  96% (4704/4900)\n2026-11-27T18:54:04.0386023Z Updating files:  97% (4753/4900)\n2026-11-27T18:54:04.0399994Z Updating files:  98% (4802/4900)\n2026-11-27T18:54:04.0591586Z Updating files:  99% (4851/4900)\n2026-11-27T18:54:04.0592784Z Updating files: 100% (4900/4900)\n2026-11-27T18:54:04.0593179Z Updating files: 100% (4900/4900), done.\n2026-11-27T18:54:04.0654600Z Switched to a new branch 'ci/spira47-catalog-cte-20261127-r41'\n2026-11-27T18:54:04.0655746Z branch 'ci/spira47-catalog-cte-20261127-r41' set up to track 'origin/ci/spira47-catalog-cte-20261127-r41'.\n2026-11-27T18:54:04.0720762Z ##[endgroup]\n2026-11-27T18:54:04.0724305Z [command]/usr/bin/git log -1 --format=%H\n2026-11-27T18:54:04.0725239Z 32e9fdb0f678a274d05e26f0774e685f549580d4\n2026-11-27T18:54:04.0726191Z ##[group]Removing auth\n2026-11-27T18:54:04.0726529Z Removing SSH command configuration\n2026-11-27T18:54:04.0726985Z [command]/usr/bin/git config --local --name-only --get-regexp core\\.sshCommand\n2026-11-27T18:54:04.0727779Z [command]/usr/bin/git submodule foreach --recursive sh -c \"git config --local --name-only --get-regexp 'core\\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\"\n2026-11-27T18:54:04.0814982Z Removing HTTP extra header\n2026-11-27T18:54:04.0817368Z [command]/usr/bin/git config --local --name-only --get-regexp http\\.https\\:\\/\\/github\\.com\\/\\.extraheader\n2026-11-27T18:54:04.0832183Z [command]/usr/bin/git submodule foreach --recursive sh -c \"git config --local --name-only --get-regexp 'http\\.https\\:\\/\\/github\\.com\\/\\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\"\n2026-11-27T18:54:04.0928275Z Removing includeIf entries pointing to credentials config files\n2026-11-27T18:54:04.0929004Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\\.gitdir:\n2026-11-27T18:54:04.0938294Z includeif.gitdir:/home/runner/work/sloplint/sloplint/proof/.git.path\n2026-11-27T18:54:04.0939131Z includeif.gitdir:/home/runner/work/sloplint/sloplint/proof/.git/worktrees/*.path\n2026-11-27T18:54:04.0939618Z includeif.gitdir:/github/workspace/proof/.git.path\n2026-11-27T18:54:04.0940026Z includeif.gitdir:/github/workspace/proof/.git/worktrees/*.path\n2026-11-27T18:54:04.0942575Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/sloplint/sloplint/proof/.git.path\n2026-11-27T18:54:04.0952762Z /home/runner/work/_temp/git-credentials-b4a0a0c7-321f-44a6-b7fa-27c105d1c704.config\n2026-11-27T18:54:04.0961063Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/sloplint/sloplint/proof/.git.path \\/home\\/runner\\/work\\/_temp\\/git\\-credentials\\-b4a0a0c7\\-321f\\-44a6\\-b7fa\\-27c105d1c704\\.config\n2026-11-27T18:54:04.0974399Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/sloplint/sloplint/proof/.git/worktrees/*.path\n2026-11-27T18:54:04.0982397Z /home/runner/work/_temp/git-credentials-b4a0a0c7-321f-44a6-b7fa-27c105d1c704.config\n2026-11-27T18:54:04.0986118Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/sloplint/sloplint/proof/.git/worktrees/*.path \\/home\\/runner\\/work\\/_temp\\/git\\-credentials\\-b4a0a0c7\\-321f\\-44a6\\-b7fa\\-27c105d1c704\\.config\n2026-11-27T18:54:04.0999988Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/proof/.git.path\n2026-11-27T18:54:04.1012601Z /github/runner_temp/git-credentials-b4a0a0c7-321f-44a6-b7fa-27c105d1c704.config\n2026-11-27T18:54:04.1015987Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/proof/.git.path \\/github\\/runner_temp\\/git\\-credentials\\-b4a0a0c7\\-321f\\-44a6\\-b7fa\\-27c105d1c704\\.config\n2026-11-27T18:54:04.1027876Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/proof/.git/worktrees/*.path\n2026-11-27T18:54:04.1036412Z /github/runner_temp/git-credentials-b4a0a0c7-321f-44a6-b7fa-27c105d1c704.config\n2026-11-27T18:54:04.1039501Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/proof/.git/worktrees/*.path \\/github\\/runner_temp\\/git\\-credentials\\-b4a0a0c7\\-321f\\-44a6\\-b7fa\\-27c105d1c704\\.config\n2026-11-27T18:54:04.1052764Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url\n2026-11-27T18:54:04.1145233Z Removing credentials config '/home/runner/work/_temp/git-credentials-b4a0a0c7-321f-44a6-b7fa-27c105d1c704.config'\n2026-11-27T18:54:04.1149785Z ##[endgroup]\n2026-11-27T18:54:04.1298663Z ##[group]Run astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d\n2026-11-27T18:54:04.1299215Z with:\n2026-11-27T18:54:04.1299404Z   version: 0.13.9\n2026-11-27T18:54:04.1299577Z   python-version: 3.15\n2026-11-27T18:54:04.1299752Z   enable-cache: false\n2026-11-27T18:54:04.1299932Z   activate-environment: false\n2026-11-27T18:54:04.1300146Z   no-project: false\n2026-11-27T18:54:04.1300352Z   working-directory: /home/runner/work/sloplint/sloplint\n2026-11-27T18:54:04.1300579Z   require-checksums: false\n2026-11-27T18:54:04.1301829Z   github-token: ***\n2026-11-27T18:54:04.1302190Z   cache-dependency-glob: **/*requirements*.txt\n**/*requirements*.in\n**/*constraints*.txt\n**/*constraints*.in\n**/pyproject.toml\n**/uv.lock\n**/*.py.lock\n\n2026-11-27T18:54:04.1302586Z   restore-cache: true\n2026-11-27T18:54:04.1302758Z   save-cache: auto\n2026-11-27T18:54:04.1302937Z   prune-cache: false\n2026-11-27T18:54:04.1303106Z   cache-python: false\n2026-11-27T18:54:04.1303311Z   ignore-nothing-to-cache: false\n2026-11-27T18:54:04.1303507Z   ignore-empty-workdir: false\n2026-11-27T18:54:04.1303701Z   download-from-astral-mirror: true\n2026-11-27T18:54:04.1303902Z   add-problem-matchers: true\n2026-11-27T18:54:04.1304084Z   quiet: false\n2026-11-27T18:54:04.1304257Z   resolution-strategy: highest\n2026-11-27T18:54:04.1304446Z ##[endgroup]\n2026-11-27T18:54:04.2166293Z Fetching manifest data from https://releases.astral.sh/github/versions/main/v1/uv.ndjson ...\n2026-11-27T18:54:04.2614950Z Downloading uv from \"https://releases.astral.sh/github/uv/releases/download/0.13.9/uv-x86_64-unknown-linux-gnu.tar.gz\" ...\n2026-11-27T18:54:04.3538438Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/68285982-02af-43d4-bbe2-c9e1c69e4930 -f /home/runner/work/_temp/7d3e8871-e76f-4499-9d68-1dc8357f0292\n2026-11-27T18:54:04.5745811Z Added /home/runner/.local/bin to the path\n2026-11-27T18:54:04.5747078Z Added /opt/hostedtoolcache/uv/0.13.9/x86_64 to the path\n2026-11-27T18:54:04.5748154Z Set UV_PYTHON_INSTALL_DIR to /home/runner/.local/share/uv/python\n2026-11-27T18:54:04.5748452Z Added /home/runner/.local/share/uv/python to the path\n2026-11-27T18:54:04.5748669Z Set UV_PYTHON to 3.15\n2026-11-27T18:54:04.5762612Z Successfully installed uv version 0.13.9\n2026-11-27T18:54:04.6836739Z ##[group]Run uv run --no-project --python 3.15 proof/ci-tools/spira47-r41-recovery/recover.py \\\n2026-11-27T18:54:04.6837724Z \u001b[36;1muv run --no-project --python 3.15 proof/ci-tools/spira47-r41-recovery/recover.py \\\u001b[0m\n2026-11-27T18:54:04.6838850Z \u001b[36;1m  \"$RUNNER_TEMP/spira47-r41-recovered\"\u001b[0m\n2026-11-27T18:54:04.6853634Z shell: /usr/bin/bash --noprofile --norc -euo pipefail {0}\n2026-11-27T18:54:04.6853990Z env:\n2026-11-27T18:54:04.6854199Z   UV_PYTHON_INSTALL_DIR: /home/runner/.local/share/uv/python\n2026-11-27T18:54:04.6854454Z   UV_PYTHON: 3.15\n2026-11-27T18:54:04.6855861Z   SPIRA_ARTIFACT_TOKEN: ***\n2026-11-27T18:54:04.6856117Z ##[endgroup]\n2026-11-27T18:54:04.7991307Z Downloading cpython-3.15.2-linux-x86_64-gnu (download) (36.6MiB)\n2026-11-27T18:54:05.2991124Z  Downloaded cpython-3.15.2-linux-x86_64-gnu (download)\n2026-11-27T18:54:06.7025789Z SPIRA_R41_RECOVERY_MEMBERS [{\"name\": \"build-unchanged-plugin.log\", \"bytes\": 0}, {\"name\": \"catalog-unchanged-red.log\", \"bytes\": 2771}, {\"name\": \"go-cache-disabled.log\", \"bytes\": 1}, {\"name\": \"cte-unchanged-red.log\", \"bytes\": 7286}, {\"name\": \"logos-version.log\", \"bytes\": 35}, {\"name\": \"original-ambiguous-folded-option.log\", \"bytes\": 40}, {\"name\": \"original-column-list-materialized-reference.log\", \"bytes\": 40}, {\"name\": \"original-cycle-sibling-omission.log\", \"bytes\": 41}, {\"name\": \"original-cycle-sibling-reference.log\", \"bytes\": 40}, {\"name\": \"original-exact-option-before-fold-collision.log\", \"bytes\": 40}, {\"name\": \"original-exact-option-rejects-quoted-sibling.log\", \"bytes\": 40}, {\"name\": \"original-explicit-cycle-mark-sibling-omission.log\", \"bytes\": 41}, {\"name\": \"original-explicit-cycle-mark-sibling-reference.log\", \"bytes\": 40}, {\"name\": \"original-lower-option-lower-column.log\", \"bytes\": 38}, {\"name\": \"original-main-alias-list-after-with.log\", \"bytes\": 39}, {\"name\": \"original-main-alias-list-without-with.log\", \"bytes\": 39}, {\"name\": \"original-main-cast-after-with.log\", \"bytes\": 39}, {\"name\": \"original-materialized-cte-omission.log\", \"bytes\": 41}, {\"name\": \"original-materialized-cte-output-alias.log\", \"bytes\": 41}, {\"name\": \"original-materialized-cte-reference.log\", \"bytes\": 40}, {\"name\": \"original-missing-configured-column.log\", \"bytes\": 40}, {\"name\": \"original-mixed-option-alias-refusal.log\", \"bytes\": 47}, {\"name\": \"original-mixed-case-materialized-reference.log\", \"bytes\": 40}, {\"name\": \"original-mixed-option-lower-column.log\", \"bytes\": 38}, {\"name\": \"original-nested-materialized-cte-reference.log\", \"bytes\": 39}, {\"name\": \"original-not-materialized-cte-omission.log\", \"bytes\": 41}, {\"name\": \"original-not-materialized-cte-reference.log\", \"bytes\": 40}, {\"name\": \"original-ordinality-alias-list-omission.log\", \"bytes\": 41}, {\"name\": \"original-plain-cte-omission.log\", \"bytes\": 41}, {\"name\": \"original-ordinality-cte-reference.log\", \"bytes\": 40}, {\"name\": \"original-plain-cte-reference.log\", \"bytes\": 40}, {\"name\": \"original-quoted-column-alias-refusal.log\", \"bytes\": 47}, {\"name\": \"original-quoted-column-exact-option.log\", \"bytes\": 38}, {\"name\": \"original-quoted-column-folded-option.log\", \"bytes\": 38}, {\"name\": \"original-quoted-cte-name-reference.log\", \"bytes\": 40}, {\"name\": \"original-recursive-materialized-reference.log\", \"bytes\": 40}, {\"name\": \"original-search-cycle-sibling-omission.log\", \"bytes\": 41}, {\"name\": \"original-search-cycle-sibling-reference.log\", \"bytes\": 40}, {\"name\": \"original-search-sibling-omission.log\", \"bytes\": 41}, {\"name\": \"original-second-materialized-reference.log\", \"bytes\": 40}, {\"name\": \"original-search-sibling-reference.log\", \"bytes\": 40}, {\"name\": \"original-upper-option-lower-column.log\", \"bytes\": 38}, {\"name\": \"pipeline.json\", \"bytes\": 66433972}, {\"name\": \"postgres-cleanup.log\", \"bytes\": 27}, {\"name\": \"postgres-image-identity.log\", \"bytes\": 3616}, {\"name\": \"postgres-image.log\", \"bytes\": 1802}, {\"name\": \"postgres-schema.log\", \"bytes\": 0}, {\"name\": \"postgres-start.log\", \"bytes\": 65}, {\"name\": \"postgres-version.log\", \"bytes\": 7}, {\"name\": \"proof-head.log\", \"bytes\": 41}, {\"name\": \"report.json\", \"bytes\": 70404886}, {\"name\": \"source-head.log\", \"bytes\": 41}, {\"name\": \"restore-original-source.log\", \"bytes\": 0}, {\"name\": \"source-restoration.log\", \"bytes\": 0}, {\"name\": \"sqlc-module.log\", \"bytes\": 512}, {\"name\": \"sqlc-modules.log\", \"bytes\": 0}, {\"name\": \"unchanged-ambiguous-folded-option-request.json\", \"bytes\": 996136}, {\"name\": \"stage-test-only-source.log\", \"bytes\": 0}, {\"name\": \"unchanged-column-list-materialized-reference-request.json\", \"bytes\": 996233}, {\"name\": \"unchanged-exact-option-before-fold-collision-request.json\", \"bytes\": 996147}, {\"name\": \"unchanged-exact-option-rejects-quoted-sibling-request.json\", \"bytes\": 996148}, {\"name\": \"unchanged-lower-option-lower-column-request.json\", \"bytes\": 995764}, {\"name\": \"unchanged-main-alias-list-after-with-request.json\", \"bytes\": 995836}, {\"name\": \"unchanged-main-alias-list-without-with-request.json\", \"bytes\": 995805}, {\"name\": \"unchanged-main-cast-after-with-request.json\", \"bytes\": 995804}, {\"name\": \"unchanged-materialized-cte-omission-request.json\", \"bytes\": 996187}, {\"name\": \"unchanged-materialized-cte-output-alias-request.json\", \"bytes\": 996207}, {\"name\": \"unchanged-materialized-cte-reference-request.json\", \"bytes\": 996193}, {\"name\": \"unchanged-missing-configured-column-request.json\", \"bytes\": 996108}, {\"name\": \"unchanged-mixed-case-materialized-reference-request.json\", \"bytes\": 996200}, {\"name\": \"unchanged-mixed-option-alias-refusal-request.json\", \"bytes\": 996145}, {\"name\": \"unchanged-mixed-option-lower-column-request.json\", \"bytes\": 995764}, {\"name\": \"unchanged-not-materialized-cte-omission-request.json\", \"bytes\": 996195}, {\"name\": \"unchanged-not-materialized-cte-reference-request.json\", \"bytes\": 996201}, {\"name\": \"unchanged-ordinality-alias-list-omission-request.json\", \"bytes\": 996218}, {\"name\": \"unchanged-ordinality-cte-reference-request.json\", \"bytes\": 996203}, {\"name\": \"unchanged-plain-cte-omission-request.json\", \"bytes\": 996167}, {\"name\": \"unchanged-plain-cte-reference-request.json\", \"bytes\": 996173}, {\"name\": \"unchanged-processed-ambiguous-folded-option.log\", \"bytes\": 40}, {\"name\": \"unchanged-processed-column-list-materialized-reference.log\", \"bytes\": 40}, {\"name\": \"unchanged-processed-exact-option-before-fold-collision.log\", \"bytes\": 40}, {\"name\": \"unchanged-processed-exact-option-rejects-quoted-sibling.log\", \"bytes\": 40}, {\"name\": \"unchanged-processed-lower-option-lower-column.log\", \"bytes\": 38}, {\"name\": \"unchanged-processed-main-alias-list-after-with.log\", \"bytes\": 39}, {\"name\": \"unchanged-processed-main-cast-after-with.log\", \"bytes\": 39}, {\"name\": \"unchanged-processed-main-alias-list-without-with.log\", \"bytes\": 39}, {\"name\": \"unchanged-processed-materialized-cte-omission.log\", \"bytes\": 41}, {\"name\": \"unchanged-processed-materialized-cte-output-alias.log\", \"bytes\": 41}, {\"name\": \"unchanged-processed-materialized-cte-reference.log\", \"bytes\": 40}, {\"name\": \"unchanged-processed-missing-configured-column.log\", \"bytes\": 40}, {\"name\": \"unchanged-processed-mixed-case-materialized-reference.log\", \"bytes\": 40}, {\"name\": \"unchanged-processed-mixed-option-lower-column.log\", \"bytes\": 38}, {\"name\": \"unchanged-processed-mixed-option-alias-refusal.log\", \"bytes\": 47}, {\"name\": \"unchanged-processed-not-materialized-cte-reference.log\", \"bytes\": 40}, {\"name\": \"unchanged-processed-ordinality-alias-list-omission.log\", \"bytes\": 41}, {\"name\": \"unchanged-processed-not-materialized-cte-omission.log\", \"bytes\": 41}, {\"name\": \"unchanged-processed-ordinality-cte-reference.log\", \"bytes\": 40}, {\"name\": \"unchanged-processed-plain-cte-omission.log\", \"bytes\": 41}, {\"name\": \"unchanged-processed-plain-cte-reference.log\", \"bytes\": 40}, {\"name\": \"unchanged-processed-quoted-column-alias-refusal.log\", \"bytes\": 47}, {\"name\": \"unchanged-processed-quoted-column-exact-option.log\", \"bytes\": 38}, {\"name\": \"unchanged-processed-quoted-column-folded-option.log\", \"bytes\": 38}, {\"name\": \"unchanged-processed-quoted-cte-name-reference.log\", \"bytes\": 40}, {\"name\": \"unchanged-processed-recursive-materialized-reference.log\", \"bytes\": 40}, {\"name\": \"unchanged-processed-second-materialized-reference.log\", \"bytes\": 40}, {\"name\": \"unchanged-processed-upper-option-lower-column.log\", \"bytes\": 38}, {\"name\": \"unchanged-quoted-column-alias-refusal-request.json\", \"bytes\": 996150}, {\"name\": \"unchanged-quoted-column-exact-option-request.json\", \"bytes\": 995773}, {\"name\": \"unchanged-quoted-column-folded-option-request.json\", \"bytes\": 995774}, {\"name\": \"unchanged-quoted-cte-name-reference-request.json\", \"bytes\": 996205}, {\"name\": \"unchanged-recursive-materialized-reference-request.json\", \"bytes\": 996209}, {\"name\": \"unchanged-second-materialized-reference-request.json\", \"bytes\": 996225}, {\"name\": \"unchanged-sqlc-ambiguous-folded-option.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-column-list-materialized-reference.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-exact-option-before-fold-collision.log\", \"bytes\": 0}, {\"name\": \"unchanged-sqlc-exact-option-rejects-quoted-sibling.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-lower-option-lower-column.log\", \"bytes\": 0}, {\"name\": \"unchanged-sqlc-main-alias-list-after-with.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-main-alias-list-without-with.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-main-cast-after-with.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-materialized-cte-omission.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-materialized-cte-output-alias.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-materialized-cte-reference.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-missing-configured-column.log\", \"bytes\": 0}, {\"name\": \"unchanged-sqlc-mixed-case-materialized-reference.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-mixed-option-alias-refusal.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-mixed-option-lower-column.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-nested-materialized-cte-reference.log\", \"bytes\": 61}, {\"name\": \"unchanged-sqlc-not-materialized-cte-omission.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-not-materialized-cte-reference.log\", \"bytes\": 0}, {\"name\": \"unchanged-sqlc-ordinality-alias-list-omission.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-ordinality-cte-reference.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-plain-cte-omission.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-plain-cte-reference.log\", \"bytes\": 0}, {\"name\": \"unchanged-sqlc-quoted-column-alias-refusal.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-quoted-column-exact-option.log\", \"bytes\": 0}, {\"name\": \"unchanged-sqlc-quoted-column-folded-option.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-quoted-cte-name-reference.log\", \"bytes\": 0}, {\"name\": \"unchanged-sqlc-recursive-materialized-reference.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-second-materialized-reference.log\", \"bytes\": 146}, {\"name\": \"unchanged-sqlc-upper-option-lower-column.log\", \"bytes\": 146}, {\"name\": \"unchanged-test-compile.log\", \"bytes\": 73}, {\"name\": \"unchanged-upper-option-lower-column-request.json\", \"bytes\": 995764}, {\"name\": \"untracked-restoration.log\", \"bytes\": 0}]\n2026-11-27T18:54:06.7225478Z Traceback (most recent call last):\n2026-11-27T18:54:06.7231810Z   File \"/home/runner/work/sloplint/sloplint/proof/ci-tools/spira47-r41-recovery/recover.py\", line 170, in <module>\n2026-11-27T18:54:06.7232446Z     main()\n2026-11-27T18:54:06.7232615Z     ~~~~^^\n2026-11-27T18:54:06.7232941Z   File \"/home/runner/work/sloplint/sloplint/proof/ci-tools/spira47-r41-recovery/recover.py\", line 63, in main\n2026-11-27T18:54:06.7233386Z     report_bytes = read_member(archive, \"report.json\", 64 * 1024 * 1024)\n2026-11-27T18:54:06.7233819Z   File \"/home/runner/work/sloplint/sloplint/proof/ci-tools/spira47-r41-recovery/recover.py\", line 25, in read_member\n2026-11-27T18:54:06.7234270Z     raise ValueError(\"selected archive member exceeds its bound: \" + name)\n2026-11-27T18:54:06.7234606Z ValueError: selected archive member exceeds its bound: report.json\n2026-11-27T18:54:06.7330284Z ##[error]Process completed with exit code 1.\n2026-11-27T18:54:06.7406595Z ##[group]Run actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f\n2026-11-27T18:54:06.7407048Z with:\n2026-11-27T18:54:06.7407348Z   name: spira47-r41-recovered-46051338072\n2026-11-27T18:54:06.7407580Z   path: /home/runner/work/_temp/spira47-r41-recovered\n2026-11-27T18:54:06.7407837Z   if-no-files-found: error\n2026-11-27T18:54:06.7408014Z   retention-days: 14\n2026-11-27T18:54:06.7408181Z   compression-level: 6\n2026-11-27T18:54:06.7408345Z   overwrite: false\n2026-11-27T18:54:06.7408508Z   include-hidden-files: false\n2026-11-27T18:54:06.7408689Z   archive: true\n2026-11-27T18:54:06.7408839Z env:\n2026-11-27T18:54:06.7409032Z   UV_PYTHON_INSTALL_DIR: /home/runner/.local/share/uv/python\n2026-11-27T18:54:06.7409252Z   UV_PYTHON: 3.15\n2026-11-27T18:54:06.7409420Z ##[endgroup]\n2026-11-27T18:54:06.8212050Z With the provided path, there will be 1 file uploaded\n2026-11-27T18:54:06.8214245Z Artifact name is valid!\n2026-11-27T18:54:06.8214492Z Root directory input is valid!\n2026-11-27T18:54:06.9971761Z Uploading artifact: spira47-r41-recovered-46051338072.zip\n2026-11-27T18:54:06.9983778Z Beginning upload of artifact content to blob storage\n2026-11-27T18:54:07.0487808Z Uploaded bytes 1326\n2026-11-27T18:54:07.0623633Z Finished uploading artifact content to blob storage!\n2026-11-27T18:54:07.0624530Z SHA256 digest of uploaded artifact is d1855434b473e0872f1a1a5ae888e64b733c5d1a596a96107802029525b40322\n2026-11-27T18:54:07.0625109Z Finalizing artifact upload\n2026-11-27T18:54:07.3885791Z Artifact spira47-r41-recovered-46051338072 successfully finalized. Artifact ID 15224443645\n2026-11-27T18:54:07.3891091Z Artifact spira47-r41-recovered-46051338072 has been successfully uploaded! Final size is 1326 bytes. Artifact ID is 15224443645\n2026-11-27T18:54:07.3891634Z Artifact download URL: https://github.com/gosuda/sloplint/actions/runs/46052685691/artifacts/15224443645\n2026-11-27T18:54:07.3988953Z Post job cleanup.\n2026-11-27T18:54:07.4448306Z [command]/usr/bin/git version\n2026-11-27T18:54:07.4469631Z git version 2.56.1\n2026-11-27T18:54:07.4488120Z Temporarily overriding HOME='/home/runner/work/_temp/c704834f-ff6d-4c96-b524-bdfba3fef9d6' before making global git config changes\n2026-11-27T18:54:07.4488639Z Adding repository directory to the temporary git global config as a safe directory\n2026-11-27T18:54:07.4491612Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/sloplint/sloplint/proof\n2026-11-27T18:54:07.4506036Z Removing SSH command configuration\n2026-11-27T18:54:07.4509206Z [command]/usr/bin/git config --local --name-only --get-regexp core\\.sshCommand\n2026-11-27T18:54:07.4524193Z [command]/usr/bin/git submodule foreach --recursive sh -c \"git config --local --name-only --get-regexp 'core\\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\"\n2026-11-27T18:54:07.4623966Z Removing HTTP extra header\n2026-11-27T18:54:07.4626717Z [command]/usr/bin/git config --local --name-only --get-regexp http\\.https\\:\\/\\/github\\.com\\/\\.extraheader\n2026-11-27T18:54:07.4640812Z [command]/usr/bin/git submodule foreach --recursive sh -c \"git config --local --name-only --get-regexp 'http\\.https\\:\\/\\/github\\.com\\/\\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\"\n2026-11-27T18:54:07.4736535Z Removing includeIf entries pointing to credentials config files\n2026-11-27T18:54:07.4737208Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\\.gitdir:\n2026-11-27T18:54:07.4749704Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url\n2026-11-27T18:54:07.4958415Z Cleaning up orphan processes\n"
+}

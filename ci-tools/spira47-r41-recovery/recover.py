@@ -60,7 +60,9 @@ def main() -> None:
         (output / "archive-members.json").write_text(json.dumps(member_rows, indent=2) + "\n",
                                                      encoding="utf-8")
         print("SPIRA_R41_RECOVERY_MEMBERS " + json.dumps(member_rows), flush=True)
-        report_bytes = read_member(archive, "report.json", 64 * 1024 * 1024)
+        if archive.getinfo("report.json").file_size != 70_404_886:
+            raise RuntimeError("frozen report size differs")
+        report_bytes = read_member(archive, "report.json", 70_404_886)
         report = object_value(json.loads(report_bytes))
         if (report["producer"] != specification["producer"]
                 or str(report["run"]) != str(specification["run"])

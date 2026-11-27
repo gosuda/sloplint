@@ -14,24 +14,639 @@
   },
   "proof_sha256": {
     "artifact_support.py": "b3f27ccd5d75efea94530f1294d7e0d23d89b46d7d9e5771cc0b3d32a56d1b28",
-    "recover.py": "a7f2f7f30ee2d7d43908f85b7f70f67d43865115d650bce01e831b12e35867cf"
+    "recover.py": "c915c932434c907049968915336eff9ef1f5449e429a9b2751ac14fcad56c197"
   },
   "workflow_sha256": "a0ff1be23a2af4db994d2cf1776036fcfa7034fda571d90120cca275d37e0704",
   "publication_eligible": false,
-  "previous_recovery_failure": {
-    "schema": 1,
-    "producer": "189323446f62747441afc09968a51eb919b5af6b",
-    "run": 46052304585,
-    "job": 140686361415,
-    "conclusion": "failure",
-    "raw_log_sha256": "e3957f1fd2fd9cb2af61690c6f228e695b0c00018035793eff3bbc12ea4798c0",
-    "phase": "bounded report read",
-    "diagnostic": "ValueError: selected archive member exceeds its bound: report.json",
-    "source_executed": false,
-    "source_outcome_claim": false,
-    "artifact_uploaded": false,
-    "scope": "The reader authenticated the fixed artifact before the selected report exceeded its former 4 MiB bound. This failed observer is retained; it is not baseline or candidate success."
-  },
-  "report_read_limit_bytes": 67108864,
-  "projection_scope": "Do not print repeated catalogs or generated contents; retain their canonical hashes/lengths and the full original report in the recovery artifact."
+  "report_read_limit_bytes": 70404886,
+  "projection_scope": "Do not print repeated catalogs or generated contents; retain their canonical hashes/lengths and the full original report in the recovery artifact.",
+  "previous_recovery_failures": [
+    {
+      "schema": 1,
+      "producer": "189323446f62747441afc09968a51eb919b5af6b",
+      "run": 46052304585,
+      "job": 140686361415,
+      "conclusion": "failure",
+      "raw_log_sha256": "e3957f1fd2fd9cb2af61690c6f228e695b0c00018035793eff3bbc12ea4798c0",
+      "phase": "bounded report read",
+      "diagnostic": "ValueError: selected archive member exceeds its bound: report.json",
+      "source_executed": false,
+      "source_outcome_claim": false,
+      "artifact_uploaded": false,
+      "scope": "The reader authenticated the fixed artifact before the selected report exceeded its former 4 MiB bound. This failed observer is retained; it is not baseline or candidate success."
+    },
+    {
+      "schema": 1,
+      "producer": "32e9fdb0f678a274d05e26f0774e685f549580d4",
+      "run": 46052685691,
+      "job": 140687626050,
+      "conclusion": "failure",
+      "raw_log_sha256": "9763292821a88a84529ed9cdc1ec1a37b98fcb9a5c91e8c35bccfa9183bb1f4c",
+      "phase": "bounded report read",
+      "diagnostic": "ValueError: selected archive member exceeds its bound: report.json",
+      "report_bytes": 70404886,
+      "old_read_limit_bytes": 67108864,
+      "artifact": {
+        "id": 15224443645,
+        "name": "spira47-r41-recovered-46051338072",
+        "size_in_bytes": 1326,
+        "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15224443645",
+        "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15224443645/zip",
+        "expired": false,
+        "created_at": "2026-11-27T18:54:07Z",
+        "expires_at": "2026-12-11T18:54:06Z",
+        "updated_at": "2026-11-27T18:54:07Z",
+        "digest": "sha256:d1855434b473e0872f1a1a5ae888e64b733c5d1a596a96107802029525b40322",
+        "workflow_run": {
+          "id": 46052685691,
+          "repository_id": 1424164147,
+          "head_repository_id": 1424164147,
+          "head_branch": "ci/spira47-catalog-cte-20261127-r41",
+          "head_sha": "32e9fdb0f678a274d05e26f0774e685f549580d4"
+        }
+      },
+      "members": [
+        {
+          "name": "build-unchanged-plugin.log",
+          "bytes": 0
+        },
+        {
+          "name": "catalog-unchanged-red.log",
+          "bytes": 2771
+        },
+        {
+          "name": "go-cache-disabled.log",
+          "bytes": 1
+        },
+        {
+          "name": "cte-unchanged-red.log",
+          "bytes": 7286
+        },
+        {
+          "name": "logos-version.log",
+          "bytes": 35
+        },
+        {
+          "name": "original-ambiguous-folded-option.log",
+          "bytes": 40
+        },
+        {
+          "name": "original-column-list-materialized-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "original-cycle-sibling-omission.log",
+          "bytes": 41
+        },
+        {
+          "name": "original-cycle-sibling-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "original-exact-option-before-fold-collision.log",
+          "bytes": 40
+        },
+        {
+          "name": "original-exact-option-rejects-quoted-sibling.log",
+          "bytes": 40
+        },
+        {
+          "name": "original-explicit-cycle-mark-sibling-omission.log",
+          "bytes": 41
+        },
+        {
+          "name": "original-explicit-cycle-mark-sibling-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "original-lower-option-lower-column.log",
+          "bytes": 38
+        },
+        {
+          "name": "original-main-alias-list-after-with.log",
+          "bytes": 39
+        },
+        {
+          "name": "original-main-alias-list-without-with.log",
+          "bytes": 39
+        },
+        {
+          "name": "original-main-cast-after-with.log",
+          "bytes": 39
+        },
+        {
+          "name": "original-materialized-cte-omission.log",
+          "bytes": 41
+        },
+        {
+          "name": "original-materialized-cte-output-alias.log",
+          "bytes": 41
+        },
+        {
+          "name": "original-materialized-cte-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "original-missing-configured-column.log",
+          "bytes": 40
+        },
+        {
+          "name": "original-mixed-option-alias-refusal.log",
+          "bytes": 47
+        },
+        {
+          "name": "original-mixed-case-materialized-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "original-mixed-option-lower-column.log",
+          "bytes": 38
+        },
+        {
+          "name": "original-nested-materialized-cte-reference.log",
+          "bytes": 39
+        },
+        {
+          "name": "original-not-materialized-cte-omission.log",
+          "bytes": 41
+        },
+        {
+          "name": "original-not-materialized-cte-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "original-ordinality-alias-list-omission.log",
+          "bytes": 41
+        },
+        {
+          "name": "original-plain-cte-omission.log",
+          "bytes": 41
+        },
+        {
+          "name": "original-ordinality-cte-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "original-plain-cte-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "original-quoted-column-alias-refusal.log",
+          "bytes": 47
+        },
+        {
+          "name": "original-quoted-column-exact-option.log",
+          "bytes": 38
+        },
+        {
+          "name": "original-quoted-column-folded-option.log",
+          "bytes": 38
+        },
+        {
+          "name": "original-quoted-cte-name-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "original-recursive-materialized-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "original-search-cycle-sibling-omission.log",
+          "bytes": 41
+        },
+        {
+          "name": "original-search-cycle-sibling-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "original-search-sibling-omission.log",
+          "bytes": 41
+        },
+        {
+          "name": "original-second-materialized-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "original-search-sibling-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "original-upper-option-lower-column.log",
+          "bytes": 38
+        },
+        {
+          "name": "pipeline.json",
+          "bytes": 66433972
+        },
+        {
+          "name": "postgres-cleanup.log",
+          "bytes": 27
+        },
+        {
+          "name": "postgres-image-identity.log",
+          "bytes": 3616
+        },
+        {
+          "name": "postgres-image.log",
+          "bytes": 1802
+        },
+        {
+          "name": "postgres-schema.log",
+          "bytes": 0
+        },
+        {
+          "name": "postgres-start.log",
+          "bytes": 65
+        },
+        {
+          "name": "postgres-version.log",
+          "bytes": 7
+        },
+        {
+          "name": "proof-head.log",
+          "bytes": 41
+        },
+        {
+          "name": "report.json",
+          "bytes": 70404886
+        },
+        {
+          "name": "source-head.log",
+          "bytes": 41
+        },
+        {
+          "name": "restore-original-source.log",
+          "bytes": 0
+        },
+        {
+          "name": "source-restoration.log",
+          "bytes": 0
+        },
+        {
+          "name": "sqlc-module.log",
+          "bytes": 512
+        },
+        {
+          "name": "sqlc-modules.log",
+          "bytes": 0
+        },
+        {
+          "name": "unchanged-ambiguous-folded-option-request.json",
+          "bytes": 996136
+        },
+        {
+          "name": "stage-test-only-source.log",
+          "bytes": 0
+        },
+        {
+          "name": "unchanged-column-list-materialized-reference-request.json",
+          "bytes": 996233
+        },
+        {
+          "name": "unchanged-exact-option-before-fold-collision-request.json",
+          "bytes": 996147
+        },
+        {
+          "name": "unchanged-exact-option-rejects-quoted-sibling-request.json",
+          "bytes": 996148
+        },
+        {
+          "name": "unchanged-lower-option-lower-column-request.json",
+          "bytes": 995764
+        },
+        {
+          "name": "unchanged-main-alias-list-after-with-request.json",
+          "bytes": 995836
+        },
+        {
+          "name": "unchanged-main-alias-list-without-with-request.json",
+          "bytes": 995805
+        },
+        {
+          "name": "unchanged-main-cast-after-with-request.json",
+          "bytes": 995804
+        },
+        {
+          "name": "unchanged-materialized-cte-omission-request.json",
+          "bytes": 996187
+        },
+        {
+          "name": "unchanged-materialized-cte-output-alias-request.json",
+          "bytes": 996207
+        },
+        {
+          "name": "unchanged-materialized-cte-reference-request.json",
+          "bytes": 996193
+        },
+        {
+          "name": "unchanged-missing-configured-column-request.json",
+          "bytes": 996108
+        },
+        {
+          "name": "unchanged-mixed-case-materialized-reference-request.json",
+          "bytes": 996200
+        },
+        {
+          "name": "unchanged-mixed-option-alias-refusal-request.json",
+          "bytes": 996145
+        },
+        {
+          "name": "unchanged-mixed-option-lower-column-request.json",
+          "bytes": 995764
+        },
+        {
+          "name": "unchanged-not-materialized-cte-omission-request.json",
+          "bytes": 996195
+        },
+        {
+          "name": "unchanged-not-materialized-cte-reference-request.json",
+          "bytes": 996201
+        },
+        {
+          "name": "unchanged-ordinality-alias-list-omission-request.json",
+          "bytes": 996218
+        },
+        {
+          "name": "unchanged-ordinality-cte-reference-request.json",
+          "bytes": 996203
+        },
+        {
+          "name": "unchanged-plain-cte-omission-request.json",
+          "bytes": 996167
+        },
+        {
+          "name": "unchanged-plain-cte-reference-request.json",
+          "bytes": 996173
+        },
+        {
+          "name": "unchanged-processed-ambiguous-folded-option.log",
+          "bytes": 40
+        },
+        {
+          "name": "unchanged-processed-column-list-materialized-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "unchanged-processed-exact-option-before-fold-collision.log",
+          "bytes": 40
+        },
+        {
+          "name": "unchanged-processed-exact-option-rejects-quoted-sibling.log",
+          "bytes": 40
+        },
+        {
+          "name": "unchanged-processed-lower-option-lower-column.log",
+          "bytes": 38
+        },
+        {
+          "name": "unchanged-processed-main-alias-list-after-with.log",
+          "bytes": 39
+        },
+        {
+          "name": "unchanged-processed-main-cast-after-with.log",
+          "bytes": 39
+        },
+        {
+          "name": "unchanged-processed-main-alias-list-without-with.log",
+          "bytes": 39
+        },
+        {
+          "name": "unchanged-processed-materialized-cte-omission.log",
+          "bytes": 41
+        },
+        {
+          "name": "unchanged-processed-materialized-cte-output-alias.log",
+          "bytes": 41
+        },
+        {
+          "name": "unchanged-processed-materialized-cte-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "unchanged-processed-missing-configured-column.log",
+          "bytes": 40
+        },
+        {
+          "name": "unchanged-processed-mixed-case-materialized-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "unchanged-processed-mixed-option-lower-column.log",
+          "bytes": 38
+        },
+        {
+          "name": "unchanged-processed-mixed-option-alias-refusal.log",
+          "bytes": 47
+        },
+        {
+          "name": "unchanged-processed-not-materialized-cte-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "unchanged-processed-ordinality-alias-list-omission.log",
+          "bytes": 41
+        },
+        {
+          "name": "unchanged-processed-not-materialized-cte-omission.log",
+          "bytes": 41
+        },
+        {
+          "name": "unchanged-processed-ordinality-cte-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "unchanged-processed-plain-cte-omission.log",
+          "bytes": 41
+        },
+        {
+          "name": "unchanged-processed-plain-cte-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "unchanged-processed-quoted-column-alias-refusal.log",
+          "bytes": 47
+        },
+        {
+          "name": "unchanged-processed-quoted-column-exact-option.log",
+          "bytes": 38
+        },
+        {
+          "name": "unchanged-processed-quoted-column-folded-option.log",
+          "bytes": 38
+        },
+        {
+          "name": "unchanged-processed-quoted-cte-name-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "unchanged-processed-recursive-materialized-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "unchanged-processed-second-materialized-reference.log",
+          "bytes": 40
+        },
+        {
+          "name": "unchanged-processed-upper-option-lower-column.log",
+          "bytes": 38
+        },
+        {
+          "name": "unchanged-quoted-column-alias-refusal-request.json",
+          "bytes": 996150
+        },
+        {
+          "name": "unchanged-quoted-column-exact-option-request.json",
+          "bytes": 995773
+        },
+        {
+          "name": "unchanged-quoted-column-folded-option-request.json",
+          "bytes": 995774
+        },
+        {
+          "name": "unchanged-quoted-cte-name-reference-request.json",
+          "bytes": 996205
+        },
+        {
+          "name": "unchanged-recursive-materialized-reference-request.json",
+          "bytes": 996209
+        },
+        {
+          "name": "unchanged-second-materialized-reference-request.json",
+          "bytes": 996225
+        },
+        {
+          "name": "unchanged-sqlc-ambiguous-folded-option.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-column-list-materialized-reference.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-exact-option-before-fold-collision.log",
+          "bytes": 0
+        },
+        {
+          "name": "unchanged-sqlc-exact-option-rejects-quoted-sibling.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-lower-option-lower-column.log",
+          "bytes": 0
+        },
+        {
+          "name": "unchanged-sqlc-main-alias-list-after-with.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-main-alias-list-without-with.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-main-cast-after-with.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-materialized-cte-omission.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-materialized-cte-output-alias.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-materialized-cte-reference.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-missing-configured-column.log",
+          "bytes": 0
+        },
+        {
+          "name": "unchanged-sqlc-mixed-case-materialized-reference.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-mixed-option-alias-refusal.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-mixed-option-lower-column.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-nested-materialized-cte-reference.log",
+          "bytes": 61
+        },
+        {
+          "name": "unchanged-sqlc-not-materialized-cte-omission.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-not-materialized-cte-reference.log",
+          "bytes": 0
+        },
+        {
+          "name": "unchanged-sqlc-ordinality-alias-list-omission.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-ordinality-cte-reference.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-plain-cte-omission.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-plain-cte-reference.log",
+          "bytes": 0
+        },
+        {
+          "name": "unchanged-sqlc-quoted-column-alias-refusal.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-quoted-column-exact-option.log",
+          "bytes": 0
+        },
+        {
+          "name": "unchanged-sqlc-quoted-column-folded-option.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-quoted-cte-name-reference.log",
+          "bytes": 0
+        },
+        {
+          "name": "unchanged-sqlc-recursive-materialized-reference.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-second-materialized-reference.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-sqlc-upper-option-lower-column.log",
+          "bytes": 146
+        },
+        {
+          "name": "unchanged-test-compile.log",
+          "bytes": 73
+        },
+        {
+          "name": "unchanged-upper-option-lower-column-request.json",
+          "bytes": 995764
+        },
+        {
+          "name": "untracked-restoration.log",
+          "bytes": 0
+        }
+      ],
+      "source_executed": false,
+      "source_outcome_claim": false,
+      "scope": "Central-directory sizes are observed from the authenticated exact archive. The report body and original source results were not recovered in this failed reader."
+    }
+  ],
+  "report_expected_bytes": 70404886
 }
