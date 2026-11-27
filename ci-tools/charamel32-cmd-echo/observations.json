@@ -9,249 +9,50 @@
   },
   "cases": [
     {
-      "id": "echo_blank",
-      "command": "echo(",
+      "id": "trailing_plain",
+      "command": "cmd /d /c echo key=value  ",
       "required": {
-        "stdout": "\r\n",
-        "actual_exit": 0
+        "actual_exit": 0,
+        "stdout": "key=value  \r\n"
       }
     },
     {
-      "id": "echo_at_blank",
-      "command": "@echo(",
-      "required": {
-        "stdout": "\r\n",
-        "actual_exit": 0
-      }
-    },
-    {
-      "id": "echo_case_blank",
-      "command": "EcHo(",
-      "required": {
-        "stdout": "\r\n",
-        "actual_exit": 0
-      }
-    },
-    {
-      "id": "echo_text",
-      "command": "echo(ready",
-      "required": {}
-    },
-    {
-      "id": "echo_nested_open",
-      "command": "echo((ready",
-      "required": {}
-    },
-    {
-      "id": "echo_close_data",
-      "command": "echo(ready)",
-      "required": {}
-    },
-    {
-      "id": "echo_space_open",
-      "command": "echo (ready",
-      "required": {}
-    },
-    {
-      "id": "echo_quoted_open",
-      "command": "echo \"(\"",
-      "required": {}
-    },
-    {
-      "id": "echo_escaped_open",
-      "command": "echo ^(",
-      "required": {}
-    },
-    {
-      "id": "echo_two_commands",
-      "command": "echo(ready & echo(after",
-      "required": {}
-    },
-    {
-      "id": "echo_literal_parens",
-      "command": "echo literal(for)",
-      "required": {}
-    },
-    {
-      "id": "group_blank",
-      "command": "(echo( & echo ready)",
-      "required": {}
-    },
-    {
-      "id": "group_text",
-      "command": "(echo(ready)",
-      "required": {}
-    },
-    {
-      "id": "group_text_parens",
-      "command": "(echo foo(bar))",
-      "required": {}
-    },
-    {
-      "id": "group_text_escaped_close",
-      "command": "(echo foo(bar^))",
-      "required": {}
-    },
-    {
-      "id": "loop_blank",
-      "command": "for %i in (alpha beta) do @echo(",
-      "required": {}
-    },
-    {
-      "id": "loop_group_blank",
-      "command": "for %i in (alpha) do (echo( & echo %i)",
-      "required": {}
-    },
-    {
-      "id": "group_regular",
-      "command": "(echo ready)",
-      "required": {}
-    },
-    {
-      "id": "loop_regular",
-      "command": "for %i in (alpha) do @echo %i",
-      "required": {}
-    },
-    {
-      "id": "group_loop",
-      "command": "(for %i in (alpha) do @echo %i)",
-      "required": {}
-    },
-    {
-      "id": "loop_bodyless",
-      "command": "for %i in (alpha)",
-      "required": {}
-    },
-    {
-      "id": "group_unclosed",
-      "command": "(echo ready",
-      "required": {}
-    },
-    {
-      "id": "nested_blank",
-      "command": "cmd /d /c echo(",
-      "required": {
-        "stdout": "\r\n",
-        "actual_exit": 0
-      }
-    },
-    {
-      "id": "nested_quoted_blank",
-      "command": "cmd /d /c \"echo(\"",
-      "required": {}
-    },
-    {
-      "id": "nested_double_blank",
-      "command": "cmd /d /c cmd /d /c echo(",
-      "required": {}
-    },
-    {
-      "id": "nested_equal",
+      "id": "trailing_trimmed_control",
       "command": "cmd /d /c echo key=value",
       "required": {
-        "stdout": "key=value\r\n",
-        "actual_exit": 0
+        "actual_exit": 0,
+        "stdout": "key=value\r\n"
       }
     },
     {
-      "id": "nested_equal_spaced",
-      "command": "cmd /d /c echo key value",
+      "id": "leading_plain",
+      "command": "cmd /d /c   echo key=value",
       "required": {
-        "stdout": "key value\r\n",
-        "actual_exit": 0
+        "actual_exit": 0,
+        "stdout": "key=value\r\n"
       }
     },
     {
-      "id": "nested_punctuation",
-      "command": "cmd /d /c echo first,,second;;third=last",
-      "required": {
-        "stdout": "first,,second;;third=last\r\n",
-        "actual_exit": 0
-      }
-    },
-    {
-      "id": "nested_punctuation_spaced",
-      "command": "cmd /d /c echo first second third last",
-      "required": {
-        "stdout": "first second third last\r\n",
-        "actual_exit": 0
-      }
-    },
-    {
-      "id": "nested_tab",
-      "command": "cmd /d /c echo key\tvalue",
-      "required": {
-        "stdout": "key\tvalue\r\n",
-        "actual_exit": 0
-      }
-    },
-    {
-      "id": "nested_tab_spaced",
-      "command": "cmd /d /c echo key value",
-      "required": {
-        "stdout": "key value\r\n",
-        "actual_exit": 0
-      }
-    },
-    {
-      "id": "nested_quoted_equal",
-      "command": "cmd /d /c \"echo key=value\"",
+      "id": "quoted_trailing_outside",
+      "command": "cmd /d /c \"echo key=value\"  ",
       "required": {}
     },
     {
-      "id": "nested_double_equal",
-      "command": "cmd /d /c cmd /d /c echo key=value",
+      "id": "quoted_trailing_inside",
+      "command": "cmd /d /c \"echo key=value  \"",
       "required": {}
     },
     {
-      "id": "nested_for_equal",
-      "command": "cmd /d /c for /f \"delims==\" %i in (\"key=value\") do @echo %i",
-      "required": {}
-    },
-    {
-      "id": "nested_redirect_equal",
-      "command": "cmd /d /c echo key=value>capture.txt",
-      "required": {}
-    },
-    {
-      "id": "nested_redirect_prefix",
-      "command": "cmd /d /c 2>capture.txt echo key=value",
-      "required": {}
-    },
-    {
-      "id": "nested_prefix_separators",
-      "command": "cmd /d /c =,;echo key=value",
-      "required": {}
-    },
-    {
-      "id": "nested_loop_blank",
-      "command": "cmd /d /c for %i in (alpha) do @echo(",
-      "required": {}
-    },
-    {
-      "id": "echo_operator_escape",
-      "command": "echo(^&",
-      "required": {}
-    },
-    {
-      "id": "echo_following_group",
-      "command": "echo(ready & (echo after)",
+      "id": "prefix_trailing",
+      "command": "cmd /d /c =,;echo key=value  ",
       "required": {}
     }
   ],
   "distinguishing_pairs": [
     [
-      "nested_equal",
-      "nested_equal_spaced"
-    ],
-    [
-      "nested_punctuation",
-      "nested_punctuation_spaced"
-    ],
-    [
-      "nested_tab",
-      "nested_tab_spaced"
+      "trailing_plain",
+      "trailing_trimmed_control"
     ]
   ],
-  "purpose": "Freeze harmless actual Cmd echo/group and nested-separator observations before source edits. Empty required objects are observations, not assumed-valid contracts."
+  "purpose": "Bounded completion of the same exact-payload witness: retain original terminal spaces and observe outer-quote boundaries before replacing normalization. Earlier 40 records remain immutable."
 }
