@@ -1,0 +1,216 @@
+{
+  "head": "d19fcb385bf404c2fbc1628d8c090c63a63cdcd1",
+  "original_tree": "0893090a2132c707279c64879a31694075d60e1b",
+  "candidate_tree": "4a6a0cea4a41bc86db7fe8c6a513bdaa86561025",
+  "prepared_tree": "4a6a0cea4a41bc86db7fe8c6a513bdaa86561025",
+  "source_sha256": {
+    "bin/crush/lib/shell_screen.ml": "66af36577313918be01ded984ee3115da9a33e2828e555a9301c9b5a1d732cdc",
+    "bin/crush/lib/shell_screen.mli": "341412aafaebbc354197001bd9373086ee9681ee69cac012df2cf08637212ee9",
+    "test/crush/test_tools_shell.ml": "33b748ca0a7744d0b29270e98b0c776ef0d498770cdc3b6d268e5ba1fb95c749"
+  },
+  "native_observed_sha256": "1db8a4202cc9f0d7e3da4b037bd035f2618c24a445ee1ce88390fb2c433f535d",
+  "native_options_sha256": "4828864f66e1c3b3b861d1fe2be1b9fd9571c6e92dccbfb4b751114e3c65d638",
+  "echo_native_sha256": {
+    "6": "e461e1ead713c8b4425eae968ab84a257f1bec90b795b4d95fb00afccb054c58",
+    "40": "ad4b16c059929119f0a55649696c3eb7308fbe0304d3fb6bf7ecb4dfddfd27d7"
+  },
+  "preparation": {
+    "id": 15197693858,
+    "sha256": "c34917e8bb51d26d86dc8bc4ad96d786a20d15c2fc3155363f5b3c64fbfd9e8a",
+    "producer": "f08ee19bc31ba462135dd1668434684f4a1dedc5",
+    "run": 46000723787,
+    "job": 140511369678,
+    "report": "prepare-result.json"
+  },
+  "native_redirection_sha256": {
+    "primary": "075155d1107509b3c5ab23833b58851780480c9c6814e46d0ed8b1a18f72f99e",
+    "adjacent": "b10ece2c3a30a7ba9f99998da49eac6557f2c9b332d0b89cba8b531d3c2b30fc",
+    "descriptor": "a320dc11f07c5a008ad583b7da158447c7e230f0d9965302617e3ea2bb1f2fbe"
+  },
+  "observer_driver_sha256": "1719172f7052e657ed3ec57917b719fdad0d23e1e52844cbdb844f8b34d17b8e",
+  "observer_sha256": "042679e664738b3fc8ac05a5c2d02593e7fc268b4355334c05761d24853094ef",
+  "posix_prefix": {
+    "bytes": 50402,
+    "sha256": "7273be9ed98c7635de1e5d64e044abfeb47bef9dcbd4dbf49be6115c027d043e",
+    "marker": "(* A word retains"
+  },
+  "source_changes": "Only shell_screen.ml, its documented observation interface, and test_tools_shell.ml. Production/interface bytes match previously verified ecea. All d19f external assertions are preserved. All other 1,091 tracked entries/modes, POSIX prefix, tools_shell.ml, permission policy, dependencies and maintained workflows remain exact.",
+  "required_linux": [
+    "dune build @fmt",
+    "dune build --profile release",
+    "dune runtest --profile release"
+  ],
+  "windows_scope": "Fresh formatting and full release build; all shell/permission cases including exact quoted-filename source and owned-file permission tests; 101 retained Cmd comparisons, 51 redirection comparisons, and 20 quoted-filename comparisons (16 native exits 0, four expected exits 1). No full Windows suite or universal Cmd grammar parity claim.",
+  "trace_scope": "For_test.screen_cmd records actual recursive screening input strings, including the root. It is not a claim that every traced spelling equals the native child command line; native caret processing and screening recursion remain separate.",
+  "historical_preparation_failure": {
+    "producer": "9a4b67b46de5cab9846808126ec05dff0694766f",
+    "run": 45985935070,
+    "job": 140461437585,
+    "artifact": 15192260402,
+    "sha256": "2035da62e03b6e47ba30ecdd8ccce94d38601900896636a1cc0f819b591f557d",
+    "conclusion": "failure",
+    "reason": "Historical f879 observation adapter omitted trace argument through its older mutually recursive cmd_char path. Candidate was not applied; original source restored. Retry corrects only that harness adapter."
+  },
+  "driver_sha256": "1bc80c998f55e71a7be21b962073b9e3c988605fcfbc45942e7e2bd4ef26949d",
+  "patch_source": "The exact candidate.patch and its byte count/SHA256 receipt inside the digest-pinned native preparation archive; verify both before git apply --index and exact precomputed tree comparison.",
+  "classifier_count": 214,
+  "trace_count": 57,
+  "quotes_observer_sha256": "f74463d72e5b7e78bec3be5351ce37ff779485e282bce16bd105feaa47e749fa",
+  "quotes_input_sha256": {
+    "native-quoted.json": "77280fbf5198ec31ba140a54602864f3953716a1aff5511bc61bf04287c2b6ec",
+    "quoted-observations.json": "5fe35a7ea3b0df260a49949d4429bda6107cf79f7f846e6d00a65410bdaa30a0"
+  },
+  "older_gaps": "Unmatched-parenthesis quoted filenames remain conservative Review on current/prior/candidate parser observations; native-invalid grouped/ampersand cases remain explicitly recorded.",
+  "historical_observation_failures": [
+    {
+      "producer": "ac41b319a38637d779f45cccd7630d1c6c6a90a2",
+      "run": 45998772563,
+      "job": 140504783855,
+      "conclusion": "failure",
+      "artifact": {
+        "id": 15197675855,
+        "node_id": "MDg6QXJ0aWZhY3QxNTE5NzY3NTg1NQ==",
+        "name": "charamel32-quote-parser-observations",
+        "size_in_bytes": 401,
+        "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15197675855",
+        "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15197675855/zip",
+        "expired": false,
+        "digest": "sha256:d005f58ba38170897d43103c35e60e0d57481c6693e5607deb53d1622e3a289b",
+        "created_at": "2026-11-27T12:29:49Z",
+        "updated_at": "2026-11-27T12:29:49Z",
+        "expires_at": "2026-12-27T12:29:48Z",
+        "workflow_run": {
+          "id": 45998772563,
+          "repository_id": 1424164147,
+          "head_repository_id": 1424164147,
+          "head_branch": "ci/charamel32-cmd-gates-20261127",
+          "head_sha": "ac41b319a38637d779f45cccd7630d1c6c6a90a2"
+        }
+      },
+      "log_sha256": "d5fe5b97a0371f683d0bc4d4bd43d2a73fea30d6b810798173520fe8aa93f34f",
+      "scope": "Harness identity assertion compared native git ls-files -s serialization with NUL-separated git ls-files --stage -z. Head, tree and all three source hashes had already passed. No parser compilation or checked-out source edit occurred. Retry aligns the index serialization exactly; all native records, source hashes and intended controls remain unchanged."
+    },
+    {
+      "producer": "7d7f0ea7364c6022eaaa9636241a4fa56ba432f7",
+      "run": 45999359960,
+      "job": 140506744078,
+      "conclusion": "failure",
+      "artifact": {
+        "id": 15197197930,
+        "node_id": "MDg6QXJ0aWZhY3QxNTE5NzE5NzkzMA==",
+        "name": "charamel32-quote-parser-observations",
+        "size_in_bytes": 6254,
+        "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15197197930",
+        "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15197197930/zip",
+        "expired": false,
+        "digest": "sha256:f8d768e56a99aae427b1c229f0b95f0763d41a4907ffaea60511370ffdc3d279",
+        "created_at": "2026-11-27T12:34:04Z",
+        "updated_at": "2026-11-27T12:34:04Z",
+        "expires_at": "2026-12-27T12:34:03Z",
+        "workflow_run": {
+          "id": 45999359960,
+          "repository_id": 1424164147,
+          "head_repository_id": 1424164147,
+          "head_branch": "ci/charamel32-cmd-gates-20261127",
+          "head_sha": "7d7f0ea7364c6022eaaa9636241a4fa56ba432f7"
+        }
+      },
+      "log_sha256": "7721f0acb82f1a37597ddc329f4392304dbf1f3e65e851f59ad547e562a043b2",
+      "result": {
+        "producer": "7d7f0ea7364c6022eaaa9636241a4fa56ba432f7",
+        "run": "45999359960",
+        "before": {
+          "head": "d19fcb385bf404c2fbc1628d8c090c63a63cdcd1",
+          "tree": "0893090a2132c707279c64879a31694075d60e1b",
+          "source_sha256": {
+            "bin/crush/lib/shell_screen.ml": "397a083c017f5d0fea5ada540b4ffbeea4e2da766b0b990f4aa140ba1c5415bc",
+            "bin/crush/lib/shell_screen.mli": "75804126730fb966e6ea4490ed8d650e2966799975518c8492fb0da3a50c93de",
+            "test/crush/test_tools_shell.ml": "489d3012655e8fcdd311ed2a294c9a078f9599691d6dfb5830fd6e81834b3e51"
+          },
+          "index_sha256": "25d5b49f4c069d8a8ec28e7efcf470155b47cd120c3ee9f31623cba4a40f6ebf",
+          "source_clean": true
+        },
+        "after": {
+          "head": "d19fcb385bf404c2fbc1628d8c090c63a63cdcd1",
+          "tree": "0893090a2132c707279c64879a31694075d60e1b",
+          "source_sha256": {
+            "bin/crush/lib/shell_screen.ml": "397a083c017f5d0fea5ada540b4ffbeea4e2da766b0b990f4aa140ba1c5415bc",
+            "bin/crush/lib/shell_screen.mli": "75804126730fb966e6ea4490ed8d650e2966799975518c8492fb0da3a50c93de",
+            "test/crush/test_tools_shell.ml": "489d3012655e8fcdd311ed2a294c9a078f9599691d6dfb5830fd6e81834b3e51"
+          },
+          "index_sha256": "25d5b49f4c069d8a8ec28e7efcf470155b47cd120c3ee9f31623cba4a40f6ebf",
+          "source_clean": true
+        },
+        "accepted": false,
+        "native_artifact": {
+          "id": 15196541931,
+          "sha256": "e69cd62041b5cae5b29fb21101f98c7abb16cb70e3ab617f61451f4421005218",
+          "producer": "2c9cf4db2df1c85ccba3c6e7dcea482d803bf5d8",
+          "run": 45997335988
+        },
+        "prior_preparation": {
+          "id": 15193595379,
+          "sha256": "68f0cfffab6120faa2a8f39c0e6dcda6290cbe64310538bb62d70748aff5502a",
+          "producer": "caa3a43fa5fc409e962d3ac805fd0afece65e434",
+          "run": 45987706404
+        },
+        "retained": {},
+        "observations": {},
+        "commands": [
+          {
+            "label": "compiler-version",
+            "argv": [
+              "opam",
+              "exec",
+              "--",
+              "ocamlc",
+              "-version"
+            ],
+            "actual_exit": 0,
+            "seconds": 0.011666844000018273,
+            "log_sha256": "db74d0caf81f43029fa28ce9888695d0b54d0a99003e6042823c9bc914897865"
+          },
+          {
+            "label": "fetch-prior-source",
+            "argv": [
+              "git",
+              "fetch",
+              "--no-tags",
+              "--depth=1",
+              "origin",
+              "c00962f26db32a41cfc1c487027a8b6316cb8bf1"
+            ],
+            "actual_exit": 0,
+            "seconds": 0.38783087300001284,
+            "log_sha256": "e37d7f3ee1482d53b1cc5607e2a578ea7c1f54edcc4e20ab1e75ea743a06942d"
+          },
+          {
+            "label": "current_d19f-compile",
+            "argv": [
+              "opam",
+              "exec",
+              "--",
+              "ocamlc",
+              "-strict-sequence",
+              "-strict-formats",
+              "-short-paths",
+              "-principal",
+              "-warn-error",
+              "+a",
+              "-o",
+              "/tmp/charamel32-quoted-parser-fan47s9u/current_d19f-plain/screen-probe",
+              "shell_screen.mli",
+              "shell_screen.ml",
+              "probe.ml"
+            ],
+            "actual_exit": 50,
+            "seconds": 0.008251048000005312,
+            "log_sha256": "50a726485f4c36942b403ae2d3be8f0c7a255ef7e6ed1b3fec30807fe38976a5"
+          }
+        ],
+        "scope": "Read-only standalone source observation at exact maintained d19f, prior c009 and previously verified unpublished ecea. All 20 native commands are observed, including four native-invalid controls and native-valid conservative parser gaps; no new policy expectation is inferred solely from native success. Original classifiers are compared before and after the trace adapter. All 203 classifiers and 48 traces remain required on exact ecea. The checked-out maintained source is never edited; this compiler-only observation does not replace final AGENTS gates."
+      },
+      "scope": "Artifact/source authentication and compiler version passed. The scratch-directory compiler command returned 50 because opam's workspace-local switch was not found from /tmp. No parser compiled or source changed. Retry explicitly selects the authenticated workspace switch; no source, native fixture, or expected parser contract changes."
+    }
+  ]
+}

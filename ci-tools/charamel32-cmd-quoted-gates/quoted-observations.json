@@ -1,0 +1,220 @@
+{
+  "head": "d19fcb385bf404c2fbc1628d8c090c63a63cdcd1",
+  "tree": "0893090a2132c707279c64879a31694075d60e1b",
+  "source_sha256": {
+    "bin/crush/lib/shell_screen.ml": "397a083c017f5d0fea5ada540b4ffbeea4e2da766b0b990f4aa140ba1c5415bc",
+    "bin/crush/lib/shell_screen.mli": "75804126730fb966e6ea4490ed8d650e2966799975518c8492fb0da3a50c93de",
+    "test/crush/test_tools_shell.ml": "489d3012655e8fcdd311ed2a294c9a078f9599691d6dfb5830fd6e81834b3e51"
+  },
+  "observer_sha256": "042679e664738b3fc8ac05a5c2d02593e7fc268b4355334c05761d24853094ef",
+  "driver_sha256": "c2ec4e4e6172940477f049416fec77e5e5ca3faa7cd0eee0618651b4d642f17e",
+  "cases": [
+    {
+      "id": "type_reported",
+      "kind": "read",
+      "command": "cmd /d /s /c \"type \"draft (for review).txt\"\"",
+      "require_exit": 0,
+      "required_stdout": "owned quoted filename fixture\r\n",
+      "input_files": {
+        "draft (for review).txt": "owned quoted filename fixture\r\n"
+      },
+      "assertion_scope": "Native exit zero and the stated output/owned child are required."
+    },
+    {
+      "id": "type_without_s",
+      "kind": "read",
+      "command": "cmd /d /c \"type \"draft (for review).txt\"\"",
+      "require_exit": null,
+      "required_stdout": null,
+      "input_files": {
+        "draft (for review).txt": "owned quoted filename fixture\r\n"
+      },
+      "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+    },
+    {
+      "id": "type_plain_control",
+      "kind": "read",
+      "command": "cmd /d /s /c \"type plain.txt\"",
+      "require_exit": 0,
+      "required_stdout": "owned quoted filename fixture\r\n",
+      "input_files": {
+        "plain.txt": "owned quoted filename fixture\r\n"
+      },
+      "assertion_scope": "Native exit zero and the stated output/owned child are required."
+    },
+    {
+      "id": "type_unwrapped_control",
+      "kind": "read",
+      "command": "cmd /d /s /c type \"draft (for review).txt\"",
+      "require_exit": null,
+      "required_stdout": null,
+      "input_files": {
+        "draft (for review).txt": "owned quoted filename fixture\r\n"
+      },
+      "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+    },
+    {
+      "id": "type_spaces",
+      "kind": "read",
+      "command": "cmd /d /s /c \"type \"draft review.txt\"\"",
+      "require_exit": null,
+      "required_stdout": null,
+      "input_files": {
+        "draft review.txt": "owned quoted filename fixture\r\n"
+      },
+      "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+    },
+    {
+      "id": "type_ampersand",
+      "kind": "read",
+      "command": "cmd /d /s /c \"type \"draft (sales & support).txt\"\"",
+      "require_exit": null,
+      "required_stdout": null,
+      "input_files": {
+        "draft (sales & support).txt": "owned quoted filename fixture\r\n"
+      },
+      "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+    },
+    {
+      "id": "type_open_parenthesis",
+      "kind": "read",
+      "command": "cmd /d /s /c \"type \"draft (for review.txt\"\"",
+      "require_exit": null,
+      "required_stdout": null,
+      "input_files": {
+        "draft (for review.txt": "owned quoted filename fixture\r\n"
+      },
+      "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+    },
+    {
+      "id": "type_close_parenthesis",
+      "kind": "read",
+      "command": "cmd /d /s /c \"type \"draft for review).txt\"\"",
+      "require_exit": null,
+      "required_stdout": null,
+      "input_files": {
+        "draft for review).txt": "owned quoted filename fixture\r\n"
+      },
+      "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+    },
+    {
+      "id": "type_outer_redirect",
+      "kind": "read",
+      "command": "cmd /d /s /c \"type \"draft (for review).txt\"\" > \"capture (sales & support).txt\"",
+      "require_exit": null,
+      "required_stdout": null,
+      "input_files": {
+        "draft (for review).txt": "owned quoted filename fixture\r\n"
+      },
+      "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+    },
+    {
+      "id": "type_prefix_redirect",
+      "kind": "read",
+      "command": "cmd > \"capture (sales & support).txt\" /d /s /c \"type \"draft (for review).txt\"\"",
+      "require_exit": null,
+      "required_stdout": null,
+      "input_files": {
+        "draft (for review).txt": "owned quoted filename fixture\r\n"
+      },
+      "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+    },
+    {
+      "id": "type_inner_redirect",
+      "kind": "read",
+      "command": "cmd /d /s /c \"type \"draft (for review).txt\">capture.txt\"",
+      "require_exit": null,
+      "required_stdout": null,
+      "input_files": {
+        "draft (for review).txt": "owned quoted filename fixture\r\n"
+      },
+      "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+    },
+    {
+      "id": "type_grouped",
+      "kind": "read",
+      "command": "(cmd /d /s /c \"type \"draft (for review).txt\"\")",
+      "require_exit": null,
+      "required_stdout": null,
+      "input_files": {
+        "draft (for review).txt": "owned quoted filename fixture\r\n"
+      },
+      "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+    },
+    {
+      "id": "type_for_body",
+      "kind": "read",
+      "command": "for %I in (1) do cmd /d /s /c \"type \"draft (for review).txt\"\"",
+      "require_exit": null,
+      "required_stdout": null,
+      "input_files": {
+        "draft (for review).txt": "owned quoted filename fixture\r\n"
+      },
+      "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+    },
+    {
+      "id": "child_reported",
+      "kind": "child",
+      "command": "cmd /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (for review).txt\"\"",
+      "require_exit": 0,
+      "required_stdout": null,
+      "input_files": {},
+      "assertion_scope": "Native exit zero and the stated output/owned child are required."
+    },
+    {
+      "id": "child_spaces",
+      "kind": "child",
+      "command": "cmd /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft review.txt\"\"",
+      "require_exit": null,
+      "required_stdout": null,
+      "input_files": {},
+      "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+    },
+    {
+      "id": "child_ampersand",
+      "kind": "child",
+      "command": "cmd /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (sales & support).txt\"\"",
+      "require_exit": null,
+      "required_stdout": null,
+      "input_files": {},
+      "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+    },
+    {
+      "id": "child_outer_redirect",
+      "kind": "child",
+      "command": "cmd /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (for review).txt\"\" > \"capture (sales & support).txt\"",
+      "require_exit": null,
+      "required_stdout": null,
+      "input_files": {},
+      "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+    },
+    {
+      "id": "child_prefix_redirect",
+      "kind": "child",
+      "command": "cmd > \"capture (sales & support).txt\" /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (for review).txt\"\"",
+      "require_exit": null,
+      "required_stdout": null,
+      "input_files": {},
+      "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+    },
+    {
+      "id": "child_inner_redirect",
+      "kind": "child",
+      "command": "cmd /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (for review).txt\">capture.txt\"",
+      "require_exit": null,
+      "required_stdout": null,
+      "input_files": {},
+      "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+    },
+    {
+      "id": "child_grouped",
+      "kind": "child",
+      "command": "(cmd /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (for review).txt\"\")",
+      "require_exit": null,
+      "required_stdout": null,
+      "input_files": {},
+      "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+    }
+  ],
+  "scope": "Twenty harmless native observations of quoted filenames under nested Cmd. Only type_reported, type_plain_control and child_reported have predeclared required validity/output or owned-child assertions; the other seventeen cases are observational, with raw exits/output/files retained. No Charamel source is built or modified. Inputs and outputs live only in owned temporary directories; the helper observes only its own process and immediate Cmd parent."
+}
