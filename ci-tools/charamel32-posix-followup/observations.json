@@ -1,0 +1,130 @@
+{
+  "head": "38d586ae3b2bce634e854990844f1db0b7642618",
+  "tree": "10a647a31d2e9cca96d31be7189bce76c3017f80",
+  "main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
+  "source_sha256": {
+    "bin/crush/lib/shell_screen.ml": "2c584b27c6f0868d6aef016028817bee66a7e1ea1662729ad131ac143bc746dc"
+  },
+  "arity": [
+    {
+      "id": "literal_braced_at",
+      "expression": "\"${pattern:-{@*.txt}\"",
+      "lines": [
+        "1",
+        "<{@*.txt>"
+      ]
+    },
+    {
+      "id": "literal_indirect_at",
+      "expression": "\"${pattern:-{!CHAR32_PREFIX@*.txt}\"",
+      "lines": [
+        "1",
+        "<{!CHAR32_PREFIX@*.txt>"
+      ]
+    },
+    {
+      "id": "literal_at",
+      "expression": "\"${pattern:-literal@text}\"",
+      "lines": [
+        "1",
+        "<literal@text>"
+      ]
+    },
+    {
+      "id": "real_braced_at",
+      "expression": "\"${@}\"",
+      "lines": [
+        "2",
+        "<alpha>",
+        "<beta>"
+      ]
+    }
+  ],
+  "env": [
+    {
+      "id": "assignment_then_dash",
+      "args": [
+        "GROUP=value",
+        "-",
+        "./brew.exe",
+        "install",
+        "fixture"
+      ],
+      "lines": [
+        "EXEC:DASH",
+        "<./brew.exe>",
+        "<install>",
+        "<fixture>"
+      ]
+    },
+    {
+      "id": "option_assignment_then_dash",
+      "args": [
+        "-u",
+        "UNUSED",
+        "GROUP=value",
+        "-",
+        "./brew.exe",
+        "install",
+        "fixture"
+      ],
+      "lines": [
+        "EXEC:DASH",
+        "<./brew.exe>",
+        "<install>",
+        "<fixture>"
+      ]
+    },
+    {
+      "id": "option_then_dash",
+      "args": [
+        "-u",
+        "UNUSED",
+        "-",
+        "./brew.exe",
+        "install",
+        "fixture"
+      ],
+      "lines": [
+        "EXEC:BREW",
+        "<install>",
+        "<fixture>"
+      ]
+    },
+    {
+      "id": "dash_then_assignment",
+      "args": [
+        "-",
+        "GROUP=value",
+        "./brew.exe",
+        "install",
+        "fixture"
+      ],
+      "lines": [
+        "EXEC:BREW",
+        "<install>",
+        "<fixture>"
+      ]
+    },
+    {
+      "id": "assignment_then_option_spelling",
+      "args": [
+        "GROUP=value",
+        "-i",
+        "./brew.exe",
+        "install",
+        "fixture"
+      ],
+      "lines": [
+        "EXEC:DASH_I",
+        "<./brew.exe>",
+        "<install>",
+        "<fixture>"
+      ]
+    }
+  ],
+  "notes": [
+    "The files named -, -i and brew.exe are owned temporary fixtures that only print their identity and arguments. No real package manager or network tool runs.",
+    "This observation makes no source change and does not declare a new candidate verified."
+  ]
+}

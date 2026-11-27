@@ -1,0 +1,41 @@
+name: Charamel 32 current POSIX observations
+
+on:
+  push:
+    branches: [ci/charamel32-cmd-gates-20261127]
+    paths:
+      - .github/workflows/charamel32-posix-followup.yml
+      - ci-tools/charamel32-posix-followup/**
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    runs-on: depot-ubuntu-24.04-4
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          path: proof
+          sparse-checkout: ci-tools/charamel32-posix-followup
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: gosuda/Charamel
+          ref: 38d586ae3b2bce634e854990844f1db0b7642618
+          persist-credentials: false
+          path: source
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          enable-cache: false
+      - name: Freeze native fallback and executable boundaries
+        run: uv run --no-project --python 3.13 proof/ci-tools/charamel32-posix-followup/observe.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: charamel32-current-posix-observations
+          path: evidence
+          if-no-files-found: error
+          retention-days: 30
