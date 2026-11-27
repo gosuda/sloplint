@@ -1,0 +1,633 @@
+{
+  "schema": 1,
+  "status": "Published and verified; four addressed threads resolved; two later findings remain open for separate follow-up.",
+  "observed_at": "2026-11-27T11:41:29Z",
+  "repository": "gosuda/spira",
+  "pr": 47,
+  "publication": {
+    "head": "82ce092dd0799ee6f644262d3c724c587350633a",
+    "tree": "d34e094ffcd7ec2f63727bae30b8bf83582a6767",
+    "parent": "e422d148ee77e78abad83b993cd4b255c34504bf",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "blobs": 611,
+    "mergeable": true,
+    "mergeable_state": "clean",
+    "body_sha256": "280652630387185f774b30de74c02be36154ee9f92de95d4466f8c38ac13a6e1",
+    "body_readback_exact": true
+  },
+  "native": {
+    "schema": 1,
+    "status": "success",
+    "producer": "c720b2d4c1638713f93edaf59182209c6e8f2399",
+    "run": 45988490445,
+    "job": 140470048835,
+    "artifact": {
+      "id": 15193481627,
+      "node_id": "MDg6QXJ0aWZhY3QxNTE5MzQ4MTYyNw==",
+      "name": "spira47-candidate-r36",
+      "size_in_bytes": 143529,
+      "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15193481627",
+      "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15193481627/zip",
+      "expired": false,
+      "digest": "sha256:d7be0c75ace426c426bec5ad99d0df2e5063082955e47b8148eceb4c072e93ab",
+      "created_at": "2026-11-27T11:19:06Z",
+      "updated_at": "2026-11-27T11:19:06Z",
+      "expires_at": "2026-12-11T11:19:06Z",
+      "workflow_run": {
+        "id": 45988490445,
+        "repository_id": 1424164147,
+        "head_repository_id": 1424164147,
+        "head_branch": "ci/spira47-review-20261127-r36",
+        "head_sha": "c720b2d4c1638713f93edaf59182209c6e8f2399"
+      }
+    },
+    "raw_job_log_sha256": "fc56f98d22f4899ce4d2d20daedae83c425aac7af3c8253820ac3b7987d15f6d",
+    "report": {
+      "schema": 1,
+      "manifest": {
+        "schema": 1,
+        "purpose": "Exact Spira47 continuation and migration review repair with all required gates",
+        "source": {
+          "repository": "gosuda/Spira",
+          "head": "e422d148ee77e78abad83b993cd4b255c34504bf",
+          "tree": "9ca31a701e9d51fb857c969328c0c7f43f656cb1",
+          "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+          "blobs": 609
+        },
+        "candidate": {
+          "tree": "d34e094ffcd7ec2f63727bae30b8bf83582a6767",
+          "blobs": 611,
+          "changed_paths": [
+            "cmd/sqlc-gen-spira/model.lgo",
+            "db/db.lgo",
+            "migrate/serial_test.lgo",
+            "docs/specs/migrate.md",
+            "docs/specs/sqlc-gen-spira.md",
+            "cmd/sqlc-gen-spira/continued_escape_test.lgo",
+            "cmd/sqlc-gen-spira/testdata/continued-strings.json"
+          ],
+          "authored_sha256": "7b85d6e062d8059e2eac853a15380064f67560d1466edf297e8e3ff35cea6e4c",
+          "index_sha256": "03b61679c1b341b74acce34d37348444e80caa8b3f8ea3238a4ca63cf9b28777",
+          "production_commit_created": false
+        },
+        "proof_sha256": {
+          "baseline_support.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
+          "artifact_support.py": "8e9b1dc135988293262eb373358637b47c0a390672bd5628753a9caf8a68ee29",
+          "verify_candidate.py": "ce246daad380488a6a64babf0ac5f4b9f50eb023c2ad7ae7a880356b30af177b",
+          "source-index.json": "6543e3d7b335754d5c99a31666fc35f1d872949d15beebfd10d6b0ef8717a717",
+          "candidate-index.json": "03b61679c1b341b74acce34d37348444e80caa8b3f8ea3238a4ca63cf9b28777",
+          "authored-candidate.json": "7b85d6e062d8059e2eac853a15380064f67560d1466edf297e8e3ff35cea6e4c",
+          "baseline-manifest.json": "591e6bfae160fe70b8735cd56a459274994afb9573ceab958ef9458ec5d3f435",
+          "baseline-report.json": "8b9f91bd02dafda3a736ddaa85ebe7d9bb07cd4588eef2d04ce9ab421167106d",
+          "continued-strings.json": "5bdccdcb30ee68ac6d9ffd3f32a31324cb44ac51ccc12a356894f8e3218a028e",
+          "continued_escape_test.lgo": "6c4b73100f578fcb4bc8a5b0d22b2a1e1ca710893a617df60bfeab57d53dadf8"
+        },
+        "workflow_sha256": "f61e7c5d8d34df228ebaf43f3f6d3dff9c511e5fac84325beb44ea7db371d907",
+        "toolchain": {
+          "repository": "gosuda/LoGOs",
+          "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+          "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+          "bootstrap_go": "1.27.4",
+          "fresh_build": true
+        },
+        "baseline_artifact": {
+          "producer": "f6c6b396f0ca8143a6dead92fc41470fce4d2c57",
+          "run": 45980151731,
+          "job": 140441701012,
+          "artifact": 15189556101,
+          "name": "spira47-review-r36",
+          "zip_bytes": 11775,
+          "zip_sha256": "502862af3201a32661e16b71ef56d0643100b01ff461c9ce88ba3e24018a9204"
+        },
+        "linter_artifact": {
+          "producer": "bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+          "run": 45765398446,
+          "job": 139724970737,
+          "artifact": 15091303567,
+          "name": "lean-rust-and-cli-bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+          "zip_bytes": 17472007,
+          "zip_sha256": "e362f672d39498374a637a68ded7f57205b415e68006a4dc4a4a882405f5af33",
+          "binary_sha256": "a04c9c3e53c8aae18e2d5f89faaf3ad68b89980218ca9d1fc4af5ce487401024"
+        },
+        "tools": {
+          "bootstrap_go": "1.27.4",
+          "node": "26.13.1",
+          "pnpm": "12.21.0",
+          "just": "1.59.0",
+          "uv": "0.13.9",
+          "python": "3.15"
+        },
+        "required_source_gates": [
+          "just gate",
+          "just slop",
+          "just eject"
+        ],
+        "frozen_generator_case_count": 14,
+        "reused_native_evidence": "Only the identical fourteen-query PostgreSQL180007 observations and the authentic unchanged-source RED/control receipt are reused after ZIP, source and command-log verification.",
+        "mutation": "Compile the temporary Apply acquisition-context mutation, require the watchdog-specific failure, restore exact bytes before the full source gates.",
+        "publication_eligible": false,
+        "prior_candidate_failure": {
+          "producer": "0a801443782c9c56c8a35bbf2b117256cf1f3805",
+          "run": 45985649688,
+          "job": 140460458731,
+          "tree": "eb9547a9b5a884bfaf5b29cc968859906399ec8d",
+          "artifact": 15191802000,
+          "zip_sha256": "4c921def54f00f3e2487017451f6aebabaacb4353b354616748adefa641f2b17",
+          "result": "failure",
+          "gate": "candidate-compile",
+          "raw_exit": 1,
+          "expected": 0,
+          "reason": "TestQueuedApplyHonorsContext line count 64 exceeds unchanged 60.",
+          "source_restored": true,
+          "evidence_commit": "0627ea217a90682206b9cd35110379537ee2703b",
+          "followup_delta": "Only the unchanged watchdog timer/select block is extracted into a helper called by the same structured group child. All assertions and timing limits remain unchanged.",
+          "gate_reuse": false
+        }
+      },
+      "source_restored": true,
+      "source_gates_passed": true,
+      "publication_eligible": true,
+      "original_index_sha256": "de0d1874c4feff1f38a9ee6d7ef6155480bfd49a7cbf44cd4b9fb155547f34e5",
+      "baseline_evidence": {
+        "producer": "f6c6b396f0ca8143a6dead92fc41470fce4d2c57",
+        "run": 45980151731,
+        "job": 140441701012,
+        "artifact": 15189556101,
+        "name": "spira47-review-r36",
+        "zip_bytes": 11775,
+        "zip_sha256": "502862af3201a32661e16b71ef56d0643100b01ff461c9ce88ba3e24018a9204",
+        "producer_conclusion": "success",
+        "download_digest_verified": true,
+        "source": {
+          "repository": "gosuda/Spira",
+          "head": "e422d148ee77e78abad83b993cd4b255c34504bf",
+          "tree": "9ca31a701e9d51fb857c969328c0c7f43f656cb1",
+          "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+          "blobs": 609
+        },
+        "native_cases": 14,
+        "generator_raw_exit": 1,
+        "command_logs_verified": 29,
+        "source_restored": true,
+        "native_reexecuted_in_this_job": false
+      },
+      "linter": {
+        "producer": "bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+        "run": 45765398446,
+        "job": 139724970737,
+        "artifact": 15091303567,
+        "name": "lean-rust-and-cli-bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+        "zip_bytes": 17472007,
+        "zip_sha256": "e362f672d39498374a637a68ded7f57205b415e68006a4dc4a4a882405f5af33",
+        "producer_conclusion": "success",
+        "download_digest_verified": true,
+        "binary_sha256": "a04c9c3e53c8aae18e2d5f89faaf3ad68b89980218ca9d1fc4af5ce487401024",
+        "binary_bytes": 191012744,
+        "version": "sloplint 0.1.0",
+        "source": "bc2067d1ec888789e6584dc6a24e8c67d1b0b506"
+      },
+      "candidate_before": {
+        "label": "before",
+        "tree": "d34e094ffcd7ec2f63727bae30b8bf83582a6767",
+        "blobs": 611,
+        "index_sha256": "83bdd56e301e0af66ae28bface94f2b81ff484d77cd79124224e84605bb453a6"
+      },
+      "watchdog_mutation": {
+        "original_sha256": "6aa1d4ba859d3ae2b6ad673561ae96f050c007a572806be8e513f997159c0238",
+        "mutant_sha256": "2f1c8b18dcaa318193457922cf280d506a686f732190dd7c1ffde828d30ad24f",
+        "restored": true,
+        "raw_exit": 1
+      },
+      "after_mutation": {
+        "label": "after-mutation",
+        "tree": "d34e094ffcd7ec2f63727bae30b8bf83582a6767",
+        "blobs": 611,
+        "index_sha256": "83bdd56e301e0af66ae28bface94f2b81ff484d77cd79124224e84605bb453a6"
+      },
+      "candidate_after": {
+        "label": "after",
+        "tree": "d34e094ffcd7ec2f63727bae30b8bf83582a6767",
+        "blobs": 611,
+        "index_sha256": "83bdd56e301e0af66ae28bface94f2b81ff484d77cd79124224e84605bb453a6"
+      },
+      "restored_index_sha256": "de0d1874c4feff1f38a9ee6d7ef6155480bfd49a7cbf44cd4b9fb155547f34e5",
+      "commands": [
+        {
+          "name": "source-head",
+          "command": [
+            "git",
+            "rev-parse",
+            "HEAD"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "47550141840589a5cc08916acba07e11f8156d57f5cca2af4fb7b77f2b799f98"
+        },
+        {
+          "name": "source-tree",
+          "command": [
+            "git",
+            "rev-parse",
+            "HEAD^{tree}"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "3330c3b3ece97093635b6d0fa242a2d04e87d6ad59f2fbca042f0d8c8fc449a2"
+        },
+        {
+          "name": "logos-version",
+          "command": [
+            "logos",
+            "version"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "3a7b14cf792a79c78a9e42aab8906e0774b54ecddbbbc520ce94651a34aec2f9"
+        },
+        {
+          "name": "node-version",
+          "command": [
+            "node",
+            "--version"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "417336d0f30f0481a3e337b10abf4da8263d1a181c639c757a2a68401935bdb6"
+        },
+        {
+          "name": "pnpm-version",
+          "command": [
+            "pnpm",
+            "--version"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "6ee1d7e9e7a434fa5d1f756e268596cff8e9d03d453fd81462507b1d7ba22e6f"
+        },
+        {
+          "name": "just-version",
+          "command": [
+            "just",
+            "--version"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "9b7567d90fbce31fba37284f79c4d38cbbe20b42fa01cfa5504d27838a5e11ce"
+        },
+        {
+          "name": "go-cache-disabled",
+          "command": [
+            "go",
+            "env",
+            "GOCACHEPROG"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+        },
+        {
+          "name": "sloplint-version",
+          "command": [
+            "sloplint",
+            "--version"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "234fbe737d28020f20bf97b03b9a7414b7029b6949961325f555d79562413a1f"
+        },
+        {
+          "name": "stage-exact-candidate",
+          "command": [
+            "git",
+            "add",
+            "--",
+            "cmd/sqlc-gen-spira/model.lgo",
+            "db/db.lgo",
+            "migrate/serial_test.lgo",
+            "docs/specs/migrate.md",
+            "docs/specs/sqlc-gen-spira.md",
+            "cmd/sqlc-gen-spira/continued_escape_test.lgo",
+            "cmd/sqlc-gen-spira/testdata/continued-strings.json"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "name": "candidate-compile",
+          "command": [
+            "logos",
+            "test",
+            "-run",
+            "^$",
+            "-count=1",
+            "./cmd/sqlc-gen-spira",
+            "./migrate"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "e6c2aedcd17c58292540025b0abc06d259fbcd06bcc1bb0f3fa90f575218bb0e"
+        },
+        {
+          "name": "continued-generator-green",
+          "command": [
+            "logos",
+            "test",
+            "-race",
+            "-count=1",
+            "-v",
+            "-run",
+            "^TestPostgresContinuedEscapeStrings$",
+            "./cmd/sqlc-gen-spira"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "827d6089d3fe2e0bea341af8d95dd0738e82de9949e05d09de25ae22b47fa77b"
+        },
+        {
+          "name": "migration-controls-green",
+          "command": [
+            "logos",
+            "test",
+            "-race",
+            "-count=1",
+            "-v",
+            "-run",
+            "^(TestApplyPartialPrefixLeavesSchema|TestMigrationTurnRejectsEndedContextOnFreePool|TestQueuedApplyHonorsContext|TestReleaseFreesTheTurnOnlyOnce)$",
+            "./migrate"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "5b12d1ffeb11fe67c0ee44b319e5bcc44397732fbdb564220d46e87b1d358d1f"
+        },
+        {
+          "name": "watchdog-mutant-compile",
+          "command": [
+            "logos",
+            "test",
+            "-run",
+            "^$",
+            "-count=1",
+            "./migrate"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "808c1c4affbd11e5cfbd60e4760c692c332617ab6703f5adc4c1521e50c41992"
+        },
+        {
+          "name": "watchdog-mutant-red",
+          "command": [
+            "logos",
+            "test",
+            "-race",
+            "-count=1",
+            "-v",
+            "-run",
+            "^TestQueuedApplyHonorsContext$",
+            "./migrate"
+          ],
+          "raw_exit": 1,
+          "expected": 1,
+          "timed_out": false,
+          "log_sha256": "0984392053169d14641d1984941f8d35b18f26c972213c16325ccb4dd347cc45"
+        },
+        {
+          "name": "just-gate",
+          "command": [
+            "just",
+            "gate"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "d95f58c0f85df6ee3f31bc78862190068f3e3beabb865a78ac984c3acb7bfb38"
+        },
+        {
+          "name": "just-slop",
+          "command": [
+            "just",
+            "slop"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "e06555ca7aca2785844382e30066d79287dcfb00c8a75a332ba106acf0bd2a02"
+        },
+        {
+          "name": "just-eject",
+          "command": [
+            "just",
+            "eject"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "7f535b9042c565e88f455a977099dc3de09af7c03e34109dd3c15ea660e9dc94"
+        },
+        {
+          "name": "whitespace",
+          "command": [
+            "git",
+            "diff",
+            "--cached",
+            "--check",
+            "HEAD"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "name": "tracked-source-unchanged",
+          "command": [
+            "git",
+            "diff",
+            "--exit-code"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "name": "untracked-source",
+          "command": [
+            "git",
+            "ls-files",
+            "--others",
+            "--exclude-standard"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "name": "restore-original-source",
+          "command": [
+            "git",
+            "restore",
+            "--source",
+            "e422d148ee77e78abad83b993cd4b255c34504bf",
+            "--staged",
+            "--worktree",
+            "--",
+            "."
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "name": "source-restoration",
+          "command": [
+            "git",
+            "diff",
+            "--exit-code",
+            "HEAD"
+          ],
+          "raw_exit": 0,
+          "expected": 0,
+          "timed_out": false,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ]
+    },
+    "review": {
+      "source_proposal": "d6dcc841176b606f33279a7147eca05959f0ab4d",
+      "test_extraction": "0627ea217a90682206b9cd35110379537ee2703b",
+      "reviewer": "/root/bitcoin_round7",
+      "verdict": "No blocking introduced source defect; actual native gates subsequently passed."
+    },
+    "prior_failure": {
+      "run": 45985649688,
+      "result": "failure",
+      "evidence_commit": "0627ea217a90682206b9cd35110379537ee2703b",
+      "path": "reviews/spira47-review-r36/failed-run-45985649688.json",
+      "reason": "First candidate exceeded the unchanged test-function line limit; the second candidate extracts only that test's existing watchdog wait block."
+    },
+    "native_scope": "All 14 PostgreSQL 180007 native observations and unchanged-source generator RED were reused only after exact ZIP/producer/source/log verification. The candidate generator race tests and required source gates executed in this run. No just engines execution is claimed.",
+    "source_commit_created": true,
+    "published_head": "82ce092dd0799ee6f644262d3c724c587350633a"
+  },
+  "review_state": {
+    "threads": 16,
+    "unresolved": 2,
+    "previously_addressed": [
+      {
+        "thread": "PRRT_kwDOVpFduc68syVH",
+        "reply": 4718871405
+      },
+      {
+        "thread": "PRRT_kwDOVpFduc68syWh",
+        "reply": 4718871894
+      },
+      {
+        "thread": "PRRT_kwDOVpFduc68syX_",
+        "reply": 4718872319
+      },
+      {
+        "thread": "PRRT_kwDOVpFduc68syZi",
+        "reply": 4718872903
+      }
+    ],
+    "new_findings": [
+      {
+        "id": "PRRT_kwDOVpFduc68wxcA",
+        "is_resolved": false,
+        "is_outdated": false,
+        "head_sha": "82ce092dd0799ee6f644262d3c724c587350633a",
+        "path": "cmd/sqlc-gen-spira/model.lgo",
+        "line": 939,
+        "diff_side": "RIGHT",
+        "start_line": 936,
+        "start_diff_side": "RIGHT",
+        "original_line": 939,
+        "original_start_line": 936,
+        "resolved_by": null,
+        "comments": [
+          {
+            "id": "PRRC_kwDOVpFduc8AAAABGUSGRA",
+            "database_id": 4718888516,
+            "body": "<!-- devin-review-comment {\"id\": \"BUG_pr-review-job-1be65645956d480f8767b3dabc07b228_0001\", \"file_path\": \"cmd/sqlc-gen-spira/model.lgo\", \"start_line\": 936, \"end_line\": 939, \"side\": \"RIGHT\", \"based_on_repo_rules\": false, \"kind\": \"bug\"} -->\n\n🟡 **Valid updates rejected after typed literals**\n\nWith `name'…'` followed by a continuation ending in one backslash, `maskStringFor` skips the closing quote. [backslashEscapes](https://github.com/gosuda/spira/blob/82ce092dd0799ee6f644262d3c724c587350633a/cmd/sqlc-gen-spira/model.lgo#L981-L989 \"cmd/sqlc-gen-spira/model.lgo:981-989\") mistakes the type name’s final `e` for an escape prefix. An update that names `version` only in the following assignment then fails generation.\n\n<details>\n<summary>Learn more</summary>\n\nPostgreSQL permits a type name immediately before a string literal and parses `name'…'` as a typed literal, not an escape string. [backslashEscapes](https://github.com/gosuda/spira/blob/82ce092dd0799ee6f644262d3c724c587350633a/cmd/sqlc-gen-spira/model.lgo#L981-L989 \"cmd/sqlc-gen-spira/model.lgo:981-989\") checks only the byte before the opening quote. Propagating that result to a continuation makes [maskQuotedFor](https://github.com/gosuda/spira/blob/82ce092dd0799ee6f644262d3c724c587350633a/cmd/sqlc-gen-spira/model.lgo#L991-L1009 \"cmd/sqlc-gen-spira/model.lgo:991-1009\") skip a real closing quote and blank the following assignment. [refuseVersionedWrite](https://github.com/gosuda/spira/blob/82ce092dd0799ee6f644262d3c724c587350633a/cmd/sqlc-gen-spira/model.lgo#L894-L905 \"cmd/sqlc-gen-spira/model.lgo:894-905\") then reports that the statement writes the table without `version`.\n\n**Example:** Use `UPDATE items SET name = name'first '` followed on the next line by `'last\\', version = version + 1 WHERE id = 1;`. The PostgreSQL parser returns a cast to `name` and a separate assignment to `version`. A focused scanner trace gives `FAIL: writes versioned table items without version` with the current prefix check and `PASS: version visible` with a token-boundary check.\n\n**Recommended fix:** Identify a standalone PostgreSQL `E` prefix before inheriting its escape mode across continuation segments. Add the compact typed-literal example to [TestPostgresContinuedEscapeStrings](https://github.com/gosuda/spira/blob/82ce092dd0799ee6f644262d3c724c587350633a/cmd/sqlc-gen-spira/continued_escape_test.lgo#L18-L38 \"cmd/sqlc-gen-spira/continued_escape_test.lgo:18-38\") alongside the existing genuine `E'…'` cases, and run the same generator test before and after the repair with the LoGOs toolchain.\n\n</details>\n\n<!-- devin-review-badge-begin -->\n<a href=\"https://app.devin.ai/review/gosuda/spira/pull/47\" target=\"_blank\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://static.devin.ai/assets/gh-devin-review-dark.svg?v=4\"><img src=\"https://static.devin.ai/assets/gh-devin-review-light.svg?v=4\" alt=\"Devin Review\"></picture></a>\n<!-- devin-review-badge-end -->\n\n---\n*Was this helpful? React with 👍 or 👎 to provide feedback.*",
+            "created_at": "2026-11-27T11:36:51Z",
+            "updated_at": "2026-11-27T11:36:53Z",
+            "author": {
+              "login": "devin-ai-integration",
+              "name": "devin-ai-integration",
+              "email": null,
+              "avatar_url": "https://avatars.githubusercontent.com/in/811515?v=4",
+              "id": null
+            },
+            "viewer_did_author": false
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOVpFduc68wxdV",
+        "is_resolved": false,
+        "is_outdated": false,
+        "head_sha": "82ce092dd0799ee6f644262d3c724c587350633a",
+        "path": "cmd/sqlc-gen-spira/continued_escape_test.lgo",
+        "line": 51,
+        "diff_side": "RIGHT",
+        "start_line": 48,
+        "start_diff_side": "RIGHT",
+        "original_line": 51,
+        "original_start_line": 48,
+        "resolved_by": null,
+        "comments": [
+          {
+            "id": "PRRC_kwDOVpFduc8AAAABGUSGzw",
+            "database_id": 4718888655,
+            "body": "<!-- devin-review-comment {\"id\": \"ANALYSIS_pr-review-job-1be65645956d480f8767b3dabc07b228_0001\", \"file_path\": \"cmd/sqlc-gen-spira/continued_escape_test.lgo\", \"start_line\": 48, \"end_line\": 51, \"side\": \"RIGHT\", \"kind\": \"analysis\"} -->\n\n🔍 **Continuation tests bypass sqlc preprocessing**\n\n`checkContinuedString` sends fixture SQL straight to the plugin. The test does not exercise the comment and newline handling that precedes plugin execution in `sqlc generate`.\n\n<!-- devin-review-badge-begin -->\n<a href=\"https://app.devin.ai/review/gosuda/spira/pull/47\" target=\"_blank\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://static.devin.ai/assets/gh-devin-review-dark.svg?v=4\"><img src=\"https://static.devin.ai/assets/gh-devin-review-light.svg?v=4\" alt=\"Devin Review\"></picture></a>\n<!-- devin-review-badge-end -->\n\n---\n*Was this helpful? React with 👍 or 👎 to provide feedback.*",
+            "created_at": "2026-11-27T11:36:52Z",
+            "updated_at": "2026-11-27T11:36:53Z",
+            "author": {
+              "login": "devin-ai-integration",
+              "name": "devin-ai-integration",
+              "email": null,
+              "avatar_url": "https://avatars.githubusercontent.com/in/811515?v=4",
+              "id": null
+            },
+            "viewer_did_author": false
+          }
+        ]
+      }
+    ]
+  },
+  "ordinary_checks": {
+    "head": "82ce092dd0799ee6f644262d3c724c587350633a",
+    "check_runs": 0,
+    "actions_runs": 0,
+    "note": "The maintained source has no GitHub or Depot workflow definitions. No ordinary workflow success is claimed."
+  },
+  "qualifications": [
+    "Sloplint passed its unchanged major threshold with one minor generic-name finding for Handle in unchanged web/web.lgo.",
+    "The unchanged-source PostgreSQL180007 baseline and its 14 observations are authenticated and reused; no engines-suite run is claimed.",
+    "The initial candidate compile failure remains an actual failure; the accepted helper extraction was fully rerun."
+  ],
+  "retirement": {
+    "owned_workflow": ".github/workflows/spira47-review-r36.yml",
+    "branch": "ci/spira47-review-20261127-r36",
+    "parent": "464bf410a22b7f33cf484adce556e9570314c5dc",
+    "action": "Delete only the owned temporary workflow in this additive evidence commit.",
+    "new_source_or_job": false
+  },
+  "next": "Investigate the two new comments against immutable published source; retain them open until authentic evidence and any required repair are complete."
+}
