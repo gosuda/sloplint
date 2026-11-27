@@ -1482,7 +1482,7 @@
   {
     "path": "cmd/sqlc-gen-spira/testdata/version-reference-boundaries.json",
     "mode": "100644",
-    "sha": "8aa068ca0495d35f04be9286281e7cece9e4fe0f"
+    "sha": "8f1b5c3de5cb8f44fe12e6f9bbd0690eaf2bb05a"
   },
   {
     "path": "cmd/sqlc-gen-spira/testdata/version-references.json",

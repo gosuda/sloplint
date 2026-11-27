@@ -28,6 +28,21 @@ def observe_native(container: str, case: dict[str, object], sql: str, lane: str)
     script = ("BEGIN; SET LOCAL standard_conforming_strings = on;\n"
               "TRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\n"
               + sql + "\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;")
+    if case.get("native_error") == "42601":
+        output = base.run(lane + "-" + name,
+            ["docker", "exec", container, "psql", "-XAtq", "-v", "ON_ERROR_STOP=1",
+             "-v", "VERBOSITY=verbose", "-U", "postgres", "-d", "postgres", "-c", script], expected=1)
+        found = re.search(r"^ERROR:\s+([0-9A-Z]{5}):", output, re.MULTILINE)
+        if found is None or found.group(1) != "42601" or 'syntax error at or near ")"' not in output:
+            raise RuntimeError("native syntax control rejected for a different reason: " + name)
+        row: dict[str, object] = {
+            "name": name, "lane": lane, "sql": sql, "sql_sha256": base.digest(sql.encode()),
+            "raw_output": output, "raw_exit": base.RECEIPTS[-1].raw_exit,
+            "observed": {"sqlstate": found.group(1)}, "expected": {"sqlstate": "42601"},
+            "native_valid": False, "matches": True,
+        }
+        print("VERSION_REFERENCE_NATIVE " + json.dumps(row), flush=True)
+        return row
     output = native.psql(container, lane + "-" + name, script)
     lines = output.strip().splitlines()
     if not lines:
@@ -51,6 +66,7 @@ def observe_pipeline(container: str, case: dict[str, object], plugin: Path,
     messages = {
         "version-refusal": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
         "unnamed-column": "sqlc-gen-spira: ContinueItem: column 0 needs an alias",
+        "upstream-syntax": 'syntax error at or near ")"',
     }
     if contract != "generated" and contract not in messages:
         raise ValueError("unknown frozen pipeline contract")
@@ -81,6 +97,19 @@ def observe_pipeline(container: str, case: dict[str, object], plugin: Path,
         raise RuntimeError("actual generated file set differs: " + name)
     if expected_exit != 0 and messages[contract] not in output:
         raise RuntimeError("pipeline rejected for a different reason: " + name)
+    if contract == "upstream-syntax":
+        if request.exists():
+            raise RuntimeError("upstream syntax control unexpectedly reached the plugin: " + name)
+        row: dict[str, object] = {
+            "name": name, "lane": lane, "sql": sql, "sql_sha256": base.digest(sql.encode()),
+            "raw_exit": base.RECEIPTS[-1].raw_exit, "reference_contract_allows": case["allow"],
+            "pipeline_contract": contract, "observed_generator_accepts": False,
+            "request_present": False, "request_sha256": None, "processed_sql": None,
+            "processed_sql_sha256": None, "query_metadata": None,
+            "log_sha256": base.digest(output.encode()), "files": [], "processed_native": None,
+        }
+        print("VERSION_REFERENCE_PIPELINE " + json.dumps(row), flush=True)
+        return row
     captured = base.object_value(json.loads(request.read_bytes()))
     queries = captured["queries"]
     if not isinstance(queries, list) or len(queries) != 1:

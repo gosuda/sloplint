@@ -71,6 +71,8 @@ def compare_query_metadata(previous: dict[str, object], current: dict[str, objec
 
 
 def pipeline_contract(case: dict[str, object], unchanged: bool) -> str:
+    if case["name"] == "unqualified-function-alias":
+        return "upstream-syntax"
     if case["name"] == "qualified-operator-operand":
         return "unnamed-column"
     if unchanged or case["allow"] is True:
@@ -146,9 +148,10 @@ def main() -> None:
             raise RuntimeError("unchanged-production test set differs")
         with native.postgres(manifest) as (container, version):
             report["postgres_version_num"] = version
-            report["native_original"] = [
-                observer.observe_native(container, case, base.text(case["sql"]), "original") for case in cases
-            ]
+            native_original: list[dict[str, object]] = []
+            report["native_original"] = native_original
+            for case in cases:
+                native_original.append(observer.observe_native(container, case, base.text(case["sql"]), "original"))
             apply(tests, created, "unchanged-tests")
             report["tests_before"] = proof.source_snapshot(manifest, "tests")
             base.run("unchanged-test-compile", ["logos", "test", "-race", "-count=1", "-run", "^$",
@@ -198,9 +201,9 @@ def main() -> None:
                     json.dumps(candidate_pipeline, indent=2) + "\n", encoding="utf-8")
             actual_partition = {
                 kind: sum(row["pipeline_contract"] == kind for row in candidate_pipeline)
-                for kind in ("generated", "version-refusal", "unnamed-column")
+                for kind in ("generated", "version-refusal", "unnamed-column", "upstream-syntax")
             }
-            if actual_partition != {"generated": 10, "version-refusal": 17, "unnamed-column": 1}:
+            if actual_partition != {"generated": 10, "version-refusal": 16, "unnamed-column": 1, "upstream-syntax": 1}:
                 raise RuntimeError("final actual pipeline partition differs")
             report["pipeline_partition"] = actual_partition
         verify_runtime_suites(report)

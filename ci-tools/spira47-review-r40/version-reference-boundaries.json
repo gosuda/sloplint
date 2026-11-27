@@ -52,7 +52,6 @@
     "name": "unqualified-function-alias",
     "sql": "UPDATE items SET name = 'changed' RETURNING operator(name) version;",
     "allow": false,
-    "native_name": "changed",
-    "native_version": 0
+    "native_error": "42601"
   }
 ]
