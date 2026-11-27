@@ -2,8 +2,8 @@
   "schema_version": 1,
   "repository": "gosuda/sloplint",
   "pull_request": 137,
-  "recorded_at": "2026-11-27 01:18:16 UTC",
-  "status": "Test-only follow-up published after isolated native x64 proof; temporary r24 workflow retired in this commit; ordinary required CI is running.",
+  "recorded_at": "2026-11-27 01:29:59 UTC",
+  "status": "Test-only follow-up published; isolated native proof and ordinary required CI passed. The owned r24 temporary workflow remains retired.",
   "publication": {
     "commit": "530519c0040c109173710fb7f0f84bf87fbd750c",
     "parent": "d972b52788bbdf88265e50df1a2502663e597df7",
@@ -521,48 +521,79 @@
     "comment": 4714600338,
     "reply": 4714745149,
     "is_resolved": true,
-    "head": "530519c0040c109173710fb7f0f84bf87fbd750c"
+    "head": "530519c0040c109173710fb7f0f84bf87fbd750c",
+    "observed_at": "2026-11-27 01:29:59 UTC"
   },
   "ordinary_ci": {
     "run": 45921682807,
     "head": "530519c0040c109173710fb7f0f84bf87fbd750c",
-    "status": "in_progress",
-    "conclusion": null,
+    "status": "completed",
+    "conclusion": "success",
     "merge_commit": "7e35f3345202bae8e5cb4cf43c616934f60fe5cd",
     "merge_tree": "912390b51d8a4908a85dd6969b2c5561a933885b",
     "jobs": [
       {
         "id": 140253629185,
         "name": "test (depot-ubuntu-24.04, x86_64-unknown-linux-gnu, 1)",
-        "status": "in_progress",
-        "conclusion": null
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-11-27T01:17:07Z",
+        "completed_at": "2026-11-27T01:22:13Z",
+        "runner_labels": [
+          "depot-ubuntu-24.04"
+        ]
       },
       {
         "id": 140253629541,
         "name": "test (depot-ubuntu-24.04-arm, aarch64-unknown-linux-gnu, 1)",
-        "status": "in_progress",
-        "conclusion": null
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-11-27T01:17:07Z",
+        "completed_at": "2026-11-27T01:28:44Z",
+        "runner_labels": [
+          "depot-ubuntu-24.04-arm"
+        ]
       },
       {
         "id": 140253629720,
         "name": "lint",
         "status": "completed",
-        "conclusion": "success"
+        "conclusion": "success",
+        "started_at": "2026-11-27T01:17:07Z",
+        "completed_at": "2026-11-27T01:18:31Z",
+        "runner_labels": [
+          "depot-ubuntu-24.04"
+        ]
       },
       {
         "id": 140253631133,
         "name": "test-native",
         "status": "completed",
-        "conclusion": "skipped"
+        "conclusion": "skipped",
+        "started_at": "2026-11-27T01:17:06Z",
+        "completed_at": "2026-11-27T01:17:05Z",
+        "runner_labels": []
       }
     ],
-    "scheduled_native_matrix": "The extended platform matrix is skipped for ordinary PR events by the maintained CI policy."
+    "scheduled_native_matrix": "The extended platform matrix is skipped for ordinary PR events by the maintained CI policy.",
+    "updated_at": "2026-11-27T01:28:45Z"
   },
   "retirement": {
     "branch": "ci/powershell-redirect-test-20261127-r24",
     "parent": "253d54ce7f0ff7b697d0f13c7f44d663f65b65b3",
     "removed_workflow": ".github/workflows/redirect-ownership-test-r24.yml",
-    "scope": "Remove only this owned temporary workflow; retain its proof files, baseline failure and immutable producer history. r20/r21/r22/r23 remain retired."
+    "scope": "Remove only this owned temporary workflow; retain its proof files, baseline failure and immutable producer history. r20/r21/r22/r23 remain retired.",
+    "commit": "859dae164bf600f00ce4591760badb1d9935fff4",
+    "tree": "7e1f2364777bc2ac88aa5f16e629c7f0f2553633",
+    "workflow_absence_verified": true,
+    "triggered_workflow_runs": 0,
+    "verified_at": "2026-11-27 01:29:59 UTC"
   },
-  "prior_pr_description_path": "ci-tools/redirect-ownership-test-r24/previous-pr-description.md"
+  "prior_pr_description_path": "ci-tools/redirect-ownership-test-r24/previous-pr-description.md",
+  "final_refs": {
+    "maintained_head": "530519c0040c109173710fb7f0f84bf87fbd750c",
+    "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+    "merge_commit": "7e35f3345202bae8e5cb4cf43c616934f60fe5cd",
+    "merge_tree": "912390b51d8a4908a85dd6969b2c5561a933885b"
+  }
 }
