@@ -1,0 +1,3122 @@
+[
+  {
+    "path": ".gitignore",
+    "mode": "100644",
+    "sha": "4f7382e398b860367ed335cd0cca9de419da66c1"
+  },
+  {
+    "path": "admin/admin_test.lgo",
+    "mode": "100644",
+    "sha": "620842fc083f1e206ded89a2574bd1a9bdaf3042"
+  },
+  {
+    "path": "admin/admin.lgo",
+    "mode": "100644",
+    "sha": "5db2c028a55f60ecc39b575384430e663121d305"
+  },
+  {
+    "path": "admin/export_test.lgo",
+    "mode": "100644",
+    "sha": "f81f452d32ae9b3965046f4b32112f9db9cf1032"
+  },
+  {
+    "path": "admin/fault_test.lgo",
+    "mode": "100644",
+    "sha": "2cd31497f3cf708797249d576b0b7f18fa7ff79f"
+  },
+  {
+    "path": "admin/faults.lgo",
+    "mode": "100644",
+    "sha": "3a8377026bbea4a2146c7297c2e6c1ba840ecf80"
+  },
+  {
+    "path": "AGENTS.md",
+    "mode": "100644",
+    "sha": "2e863efa86374c2e22a9819dcdb23bcc3e9639e0"
+  },
+  {
+    "path": "ai/ai_test.lgo",
+    "mode": "100644",
+    "sha": "18c1db7c4936ce3a98e2ecfab4eb2f09535d5630"
+  },
+  {
+    "path": "ai/ai.lgo",
+    "mode": "100644",
+    "sha": "90a3082a845c5cd032051da3f360e4b004287f39"
+  },
+  {
+    "path": "ai/anthropic/anthropic_test.lgo",
+    "mode": "100644",
+    "sha": "da5ca9f02d1d6020ddbf87e662c6f3c6998e4c67"
+  },
+  {
+    "path": "ai/anthropic/anthropic.lgo",
+    "mode": "100644",
+    "sha": "3630aa801824b1a07287f944ad95a2497a8c7c13"
+  },
+  {
+    "path": "ai/anthropic/export_test.lgo",
+    "mode": "100644",
+    "sha": "8e1df98003184024d0c380d8b57f598c2e2a5ce6"
+  },
+  {
+    "path": "ai/anthropic/faults_test.lgo",
+    "mode": "100644",
+    "sha": "86f76d95feedc44e849706ebe69a9eb03add27cb"
+  },
+  {
+    "path": "ai/anthropic/faults.lgo",
+    "mode": "100644",
+    "sha": "4f070e863733dad1f56edff6469f2377bdb9f63f"
+  },
+  {
+    "path": "ai/anthropic/testdata/message-error.json",
+    "mode": "100644",
+    "sha": "c675b96d643067c9aae5d2c42c2510276853fadc"
+  },
+  {
+    "path": "ai/anthropic/testdata/message-response.json",
+    "mode": "100644",
+    "sha": "381f3850393a10fb166af0a4f7c379a7f216c219"
+  },
+  {
+    "path": "ai/anthropic/testdata/SOURCES",
+    "mode": "100644",
+    "sha": "5e9e7dad480ec482165be7aad5964ca1aab375e4"
+  },
+  {
+    "path": "ai/anthropic/testdata/stream-plain.txt",
+    "mode": "100644",
+    "sha": "d64e0a843387c1c84c76698d36f4cb2f1d285d00"
+  },
+  {
+    "path": "ai/anthropic/testdata/stream-tool.txt",
+    "mode": "100644",
+    "sha": "cfd3bbc873dca4cacb3d3fbfe725a2d2be2d5c50"
+  },
+  {
+    "path": "ai/anthropic/wire.lgo",
+    "mode": "100644",
+    "sha": "65f66e94bbf880bd76b3cc911df583500f1dbf6c"
+  },
+  {
+    "path": "ai/collect_test.lgo",
+    "mode": "100644",
+    "sha": "193ad61345fe963215983fd94179e2a841d544d6"
+  },
+  {
+    "path": "ai/collect.lgo",
+    "mode": "100644",
+    "sha": "2d944711e526fc891524630e82083723dacd0e32"
+  },
+  {
+    "path": "ai/faults_test.lgo",
+    "mode": "100644",
+    "sha": "fefe3b5faf7433be12e05b83a338614843cd5072"
+  },
+  {
+    "path": "ai/faults.lgo",
+    "mode": "100644",
+    "sha": "cae647f000fbe5f7bbfb20eda6b064ad63a3a928"
+  },
+  {
+    "path": "ai/internal/bounded/bounded_test.lgo",
+    "mode": "100644",
+    "sha": "a26dda133efff9d944c16c670c97352880d494d6"
+  },
+  {
+    "path": "ai/internal/bounded/bounded.lgo",
+    "mode": "100644",
+    "sha": "8fd18d70f519f5c199197dbdc603ccd57bf6fd08"
+  },
+  {
+    "path": "ai/mcp/client.lgo",
+    "mode": "100644",
+    "sha": "bf8573958e6b71333ded51fe9622457e2302b84b"
+  },
+  {
+    "path": "ai/mcp/faults_test.lgo",
+    "mode": "100644",
+    "sha": "08ba31f694d9d1bc0bc8d40c58b882b475af357b"
+  },
+  {
+    "path": "ai/mcp/faults.lgo",
+    "mode": "100644",
+    "sha": "5b4174ec5226115465595e816b19c23ff227d23a"
+  },
+  {
+    "path": "ai/mcp/http_test.lgo",
+    "mode": "100644",
+    "sha": "c39537fc10b7ca7403e11b014a73624d14dac0e8"
+  },
+  {
+    "path": "ai/mcp/http.lgo",
+    "mode": "100644",
+    "sha": "111e3a9534851155ce7b831bf8c6c30312d21abf"
+  },
+  {
+    "path": "ai/mcp/jsonrpc_boundary_test.lgo",
+    "mode": "100644",
+    "sha": "3cc7452b16fe2b7d5ec52c8b10279f11ae505e87"
+  },
+  {
+    "path": "ai/mcp/mcp_test.lgo",
+    "mode": "100644",
+    "sha": "4ed4d4dc70634b08c920f9a82af9be38efb4a0d3"
+  },
+  {
+    "path": "ai/mcp/rpc.lgo",
+    "mode": "100644",
+    "sha": "6d17afee84ffbe3783b93325c3fc9863d69a2241"
+  },
+  {
+    "path": "ai/mcp/server_test.lgo",
+    "mode": "100644",
+    "sha": "5826fd8b4af55853b664b32450c58d37dc4b7545"
+  },
+  {
+    "path": "ai/mcp/server.lgo",
+    "mode": "100644",
+    "sha": "6aaefffe040ef135748e3e692b2dac8ef1881dee"
+  },
+  {
+    "path": "ai/mcp/shapes.lgo",
+    "mode": "100644",
+    "sha": "a9c1727f3e05abf1bc856995df0e562989da2fcb"
+  },
+  {
+    "path": "ai/mcp/stdio_test.lgo",
+    "mode": "100644",
+    "sha": "c4fa6b88ec2569a6d754e295b18d6ee5dc09cdda"
+  },
+  {
+    "path": "ai/mcp/stdio.lgo",
+    "mode": "100644",
+    "sha": "fbe7c6cb99bfaffb7caf6bb78d1d30341fbd7622"
+  },
+  {
+    "path": "ai/mcp/testdata/lifecycle/initialize-error.json",
+    "mode": "100644",
+    "sha": "4af5b75b63cedf71f12219b8d450cd1c4ae1e445"
+  },
+  {
+    "path": "ai/mcp/testdata/lifecycle/initialize-request.json",
+    "mode": "100644",
+    "sha": "c3bc72bb9474981cd6cb9864ea32ecace4a27eb8"
+  },
+  {
+    "path": "ai/mcp/testdata/lifecycle/initialize-response.json",
+    "mode": "100644",
+    "sha": "4bbdf682b267c6abce7c30cb8464c03d1af03be2"
+  },
+  {
+    "path": "ai/mcp/testdata/lifecycle/initialized-notification.json",
+    "mode": "100644",
+    "sha": "a7169d84fb6b40647965529bf78a53e5357c9040"
+  },
+  {
+    "path": "ai/mcp/testdata/SOURCES",
+    "mode": "100644",
+    "sha": "47251ca21bd90c173ae00e656f5b1a1667a83c5a"
+  },
+  {
+    "path": "ai/mcp/testdata/tools/content-audio.json",
+    "mode": "100644",
+    "sha": "975b08d5ea4999536add1f60866ff81e2c842dd2"
+  },
+  {
+    "path": "ai/mcp/testdata/tools/content-embedded-resource.json",
+    "mode": "100644",
+    "sha": "01a8f2eb9fbc18a7370b49f0c9e551be037c54ef"
+  },
+  {
+    "path": "ai/mcp/testdata/tools/content-image.json",
+    "mode": "100644",
+    "sha": "aef90cde04c3a213348e936d4c8f462ac4792865"
+  },
+  {
+    "path": "ai/mcp/testdata/tools/content-resource-link.json",
+    "mode": "100644",
+    "sha": "d35682596fb7ce62b7b3fe4fe9b289039a7bab1c"
+  },
+  {
+    "path": "ai/mcp/testdata/tools/content-text.json",
+    "mode": "100644",
+    "sha": "13df577040ba6f3e3d7c1b512e764a1138c8232d"
+  },
+  {
+    "path": "ai/mcp/testdata/tools/tools-call-execution-error.json",
+    "mode": "100644",
+    "sha": "308503a0b5e11319d18d8d8172337caaffd20b98"
+  },
+  {
+    "path": "ai/mcp/testdata/tools/tools-call-protocol-error.json",
+    "mode": "100644",
+    "sha": "cbad6e4ae95f339bc659f9e918daaf6d79a3b888"
+  },
+  {
+    "path": "ai/mcp/testdata/tools/tools-call-request.json",
+    "mode": "100644",
+    "sha": "22cbb3115bd896f30c43f3389c184e16c7ad93b2"
+  },
+  {
+    "path": "ai/mcp/testdata/tools/tools-call-response.json",
+    "mode": "100644",
+    "sha": "f9654cef1e593a686bd9c59ed76f83feee1abbfc"
+  },
+  {
+    "path": "ai/mcp/testdata/tools/tools-call-structured-response.json",
+    "mode": "100644",
+    "sha": "8516c1c94bb282df5285ec71d6a0bc0f6977193a"
+  },
+  {
+    "path": "ai/mcp/testdata/tools/tools-capability.json",
+    "mode": "100644",
+    "sha": "75c96ce2136aebb3135d86b5b7b864f9c4502e63"
+  },
+  {
+    "path": "ai/mcp/testdata/tools/tools-list-changed-notification.json",
+    "mode": "100644",
+    "sha": "a28e846763ea3c2d5350573727a432c5e2906909"
+  },
+  {
+    "path": "ai/mcp/testdata/tools/tools-list-request.json",
+    "mode": "100644",
+    "sha": "f8f6d5885688d320467ae92962570d815658bbfc"
+  },
+  {
+    "path": "ai/mcp/testdata/tools/tools-list-response-page2.json",
+    "mode": "100644",
+    "sha": "86241b6653814c5bd4c875931e8888a9fa652dac"
+  },
+  {
+    "path": "ai/mcp/testdata/tools/tools-list-response.json",
+    "mode": "100644",
+    "sha": "6ff48f82322f8ae7dfc8b787bf61c59b97890596"
+  },
+  {
+    "path": "ai/mcp/transport.lgo",
+    "mode": "100644",
+    "sha": "8ed39e3fd2cbd2d10fd550682258752d5dc5576a"
+  },
+  {
+    "path": "ai/ollama/export_test.lgo",
+    "mode": "100644",
+    "sha": "52810e7775ee292f2fa81b316e3a73b37e90ad3a"
+  },
+  {
+    "path": "ai/ollama/faults_test.lgo",
+    "mode": "100644",
+    "sha": "59249983e620fd7df28ca9d235c6866c1c9d9e89"
+  },
+  {
+    "path": "ai/ollama/faults.lgo",
+    "mode": "100644",
+    "sha": "3f010cb482930f3d3edb05c8b41b00a74d3fba8e"
+  },
+  {
+    "path": "ai/ollama/ollama_test.lgo",
+    "mode": "100644",
+    "sha": "a1d5d8caee75faa93fb53b1e4dd56e72e207b1e6"
+  },
+  {
+    "path": "ai/ollama/ollama.lgo",
+    "mode": "100644",
+    "sha": "26882f5efbbcf9e8703fe85bc372d113959d4b16"
+  },
+  {
+    "path": "ai/ollama/wire.lgo",
+    "mode": "100644",
+    "sha": "e580d300cee0eafb47e690639a6ef919f488f6c2"
+  },
+  {
+    "path": "ai/openai/export_test.lgo",
+    "mode": "100644",
+    "sha": "69cb74a91dcfe47ca14b4ec212b9bbead21c85cb"
+  },
+  {
+    "path": "ai/openai/faults_test.lgo",
+    "mode": "100644",
+    "sha": "b432d8a8004e6c64ac10b76361976f45fe1cf921"
+  },
+  {
+    "path": "ai/openai/faults.lgo",
+    "mode": "100644",
+    "sha": "7820c7588f34081424c685e78115a08ec144473a"
+  },
+  {
+    "path": "ai/openai/openai_test.lgo",
+    "mode": "100644",
+    "sha": "a1f376931c32a033a02576b09eb41c44f7edf2a8"
+  },
+  {
+    "path": "ai/openai/openai.lgo",
+    "mode": "100644",
+    "sha": "8b14104aaf467eea52121c085f7349c225f46b89"
+  },
+  {
+    "path": "ai/openai/testdata/SOURCES",
+    "mode": "100644",
+    "sha": "414ac5e6e18304f8054aff96a799847b4f1de77a"
+  },
+  {
+    "path": "ai/openai/wire.lgo",
+    "mode": "100644",
+    "sha": "591c3990d958cd9a34991d5cee4ecb4244c4f2de"
+  },
+  {
+    "path": "ai/rag/augment_test.lgo",
+    "mode": "100644",
+    "sha": "7df0b78b982ada4b0d72c75347775382e1daa355"
+  },
+  {
+    "path": "ai/rag/augment.lgo",
+    "mode": "100644",
+    "sha": "9c658a830b05f7e69cf8eb093da260763ea40a98"
+  },
+  {
+    "path": "ai/rag/bpe.lgo",
+    "mode": "100644",
+    "sha": "e2af9b6be1214621bb0511021ff134f59810ef9a"
+  },
+  {
+    "path": "ai/rag/cl100k_base.tiktoken",
+    "mode": "100644",
+    "sha": "f1f50811175d9446bcd26399db7108ef2969ad94"
+  },
+  {
+    "path": "ai/rag/drop_test.lgo",
+    "mode": "100644",
+    "sha": "c396ed8cb63c2c7970051b4daff34aa0772d21e3"
+  },
+  {
+    "path": "ai/rag/engines_test.lgo",
+    "mode": "100644",
+    "sha": "b81a3541d8e633ba71e350e3795ea6614bc17492"
+  },
+  {
+    "path": "ai/rag/export_test.lgo",
+    "mode": "100644",
+    "sha": "f5e8dc0d02d48b10978afc2975745861ba7f082b"
+  },
+  {
+    "path": "ai/rag/faults_test.lgo",
+    "mode": "100644",
+    "sha": "41cd853d3dc3035d1ce370dbfee46e2fe6e7a42b"
+  },
+  {
+    "path": "ai/rag/faults.lgo",
+    "mode": "100644",
+    "sha": "1a7f28ebf8a9804aaad9640225b1c726f2385d39"
+  },
+  {
+    "path": "ai/rag/filter_test.lgo",
+    "mode": "100644",
+    "sha": "b21ab3581dfff9f3a4f4b4cadcccc85e93d97cba"
+  },
+  {
+    "path": "ai/rag/filter.lgo",
+    "mode": "100644",
+    "sha": "daf7597ac953d2d6019b3d33964c941ca505b6c4"
+  },
+  {
+    "path": "ai/rag/memory_test.lgo",
+    "mode": "100644",
+    "sha": "cde306c487e05b1862742fc86a3a29978087f23d"
+  },
+  {
+    "path": "ai/rag/memory.lgo",
+    "mode": "100644",
+    "sha": "ba1ab21b445f4dd529336654a3e563aab83173c5"
+  },
+  {
+    "path": "ai/rag/pgvector_export_test.lgo",
+    "mode": "100644",
+    "sha": "67d54b7931ca2c940705b305cf2e50f2f093b7c0"
+  },
+  {
+    "path": "ai/rag/pgvector_test.lgo",
+    "mode": "100644",
+    "sha": "b9bbe77ae6b39a19a79e575c8071464a5e3a39a8"
+  },
+  {
+    "path": "ai/rag/pgvector.lgo",
+    "mode": "100644",
+    "sha": "1494d2d9369a56a69ccc41cb5ce729448c1340af"
+  },
+  {
+    "path": "ai/rag/query_test.lgo",
+    "mode": "100644",
+    "sha": "cfe6ec3d50fbb7a70bb5c11814ff121d89ed4d06"
+  },
+  {
+    "path": "ai/rag/query.lgo",
+    "mode": "100644",
+    "sha": "4db320cc49af38cb5f2f837ad6ce9b7fb2494c3d"
+  },
+  {
+    "path": "ai/rag/read_test.lgo",
+    "mode": "100644",
+    "sha": "4cb100f26e68a2807f27e08a05cc512b7f2bd234"
+  },
+  {
+    "path": "ai/rag/read.lgo",
+    "mode": "100644",
+    "sha": "f5e81521665d772cd842ecf370670d772aa4ae47"
+  },
+  {
+    "path": "ai/rag/split_test.lgo",
+    "mode": "100644",
+    "sha": "6f836a7b03855295141184b97e592f0edf0775c3"
+  },
+  {
+    "path": "ai/rag/split.lgo",
+    "mode": "100644",
+    "sha": "9c0d3467d11ab0ea78ce235f376729918de0d8b3"
+  },
+  {
+    "path": "ai/rag/testdata/SOURCES",
+    "mode": "100644",
+    "sha": "71bdf1fce5e65aa2671cd099d52cb8261231a163"
+  },
+  {
+    "path": "ai/run_test.lgo",
+    "mode": "100644",
+    "sha": "1c2781279f8bd4a561864ba12011d7c140807586"
+  },
+  {
+    "path": "ai/run.lgo",
+    "mode": "100644",
+    "sha": "a8ab44944b8f5431aac90039dbd006a947fb93fe"
+  },
+  {
+    "path": "ai/search_reserved_name_test.lgo",
+    "mode": "100644",
+    "sha": "7566055c9778def587886dac229d84f91fb3fc93"
+  },
+  {
+    "path": "ai/search_test.lgo",
+    "mode": "100644",
+    "sha": "937d3ce9f9489769e6ba08313746e26d8f2801a3"
+  },
+  {
+    "path": "ai/search.lgo",
+    "mode": "100644",
+    "sha": "ae569ff491c744c6aca542001a46bc112e161711"
+  },
+  {
+    "path": "ai/session/engines_test.lgo",
+    "mode": "100644",
+    "sha": "6e50063480978e636765f52173f1b931450c31a1"
+  },
+  {
+    "path": "ai/session/export_test.lgo",
+    "mode": "100644",
+    "sha": "8a334a999f8e8fef79d6d777f44613cd354a25a3"
+  },
+  {
+    "path": "ai/session/faults_test.lgo",
+    "mode": "100644",
+    "sha": "d154785a59c7dcea0ca9f765fcd41418d8c867d9"
+  },
+  {
+    "path": "ai/session/faults.lgo",
+    "mode": "100644",
+    "sha": "5ff9cf4fd8e679f80d8ec795a0bef669fbaad5f7"
+  },
+  {
+    "path": "ai/session/remember.lgo",
+    "mode": "100644",
+    "sha": "7a2b86ad4ffd19cee6d366d5c2c47d1e04b5cd6f"
+  },
+  {
+    "path": "ai/session/session_memory_test.lgo",
+    "mode": "100644",
+    "sha": "dea10e96c9e039336ed0eaab6d3303ef0d75d524"
+  },
+  {
+    "path": "ai/session/session_test.lgo",
+    "mode": "100644",
+    "sha": "d2571c82db9507e42e05c65b0a58b42f254c31ff"
+  },
+  {
+    "path": "ai/session/session.lgo",
+    "mode": "100644",
+    "sha": "41bf6c9ca1cabd32d543471d6ba634afafc6a890"
+  },
+  {
+    "path": "ai/session/sql_test.lgo",
+    "mode": "100644",
+    "sha": "0b01b980b288ed6e30bb68e465ec3809cb0308d4"
+  },
+  {
+    "path": "ai/session/sql.lgo",
+    "mode": "100644",
+    "sha": "5a93ca9012611b09544561f72b5dd47791cb4e08"
+  },
+  {
+    "path": "ai/structured_test.lgo",
+    "mode": "100644",
+    "sha": "7b46ab0a3d359a2c543fe7b1f9289bb9c386c606"
+  },
+  {
+    "path": "ai/structured.lgo",
+    "mode": "100644",
+    "sha": "698c696bbe92f24f6761bb6caa5b8be38bb02627"
+  },
+  {
+    "path": "ai/toolof_test.lgo",
+    "mode": "100644",
+    "sha": "94d8a72397141f39e84dad89829a673885f5e14f"
+  },
+  {
+    "path": "ai/toolof.lgo",
+    "mode": "100644",
+    "sha": "2476d1ff965b42a3a37f0818591b2c2bcb922f2f"
+  },
+  {
+    "path": "ai/wrap_test.lgo",
+    "mode": "100644",
+    "sha": "a4cd1dd3a58b453e69feb89c26bbf020095b107b"
+  },
+  {
+    "path": "ai/wrap.lgo",
+    "mode": "100644",
+    "sha": "6f57d5016cbc7c93bcd38b4c94066aa493d26224"
+  },
+  {
+    "path": "app/app_test.lgo",
+    "mode": "100644",
+    "sha": "b4dbfbd6443e1ccfeb45ed5057bbb91495051266"
+  },
+  {
+    "path": "app/app.lgo",
+    "mode": "100644",
+    "sha": "21ec3266f83d605bbec32f2f55baa491d694a8fe"
+  },
+  {
+    "path": "asset/asset_test.lgo",
+    "mode": "100644",
+    "sha": "56debab2efe16949e67fa946fc267e7338277f6f"
+  },
+  {
+    "path": "asset/asset.lgo",
+    "mode": "100644",
+    "sha": "0c8bcfe31248caa250c6cf3cef1bcc64ef15a6c3"
+  },
+  {
+    "path": "auth/auth_test.lgo",
+    "mode": "100644",
+    "sha": "dede2f7783e0600258a47c241cb21f017849976e"
+  },
+  {
+    "path": "auth/export_test.lgo",
+    "mode": "100644",
+    "sha": "c7f79d018e69db98d5bde99fe3416a399a154ee2"
+  },
+  {
+    "path": "auth/fault_test.lgo",
+    "mode": "100644",
+    "sha": "db2b6ef143cc43dcde275af42b8563692fbd659d"
+  },
+  {
+    "path": "auth/faults.lgo",
+    "mode": "100644",
+    "sha": "e27927129ce8bedb231dbd54dc4c62bb69e7aa74"
+  },
+  {
+    "path": "auth/headers_test.lgo",
+    "mode": "100644",
+    "sha": "995985054c877f96ed5fca8d65e4bd75d6eaf1d0"
+  },
+  {
+    "path": "auth/headers.lgo",
+    "mode": "100644",
+    "sha": "84e233a31a910c83be049c03cb32dcfbb628b7db"
+  },
+  {
+    "path": "auth/password_test.lgo",
+    "mode": "100644",
+    "sha": "25888a1fd942cbb1ab0e4804bfeff27c03749d26"
+  },
+  {
+    "path": "auth/password.lgo",
+    "mode": "100644",
+    "sha": "491c39d5e9e9a7776a098f10e67da83f95a78a57"
+  },
+  {
+    "path": "auth/principal.lgo",
+    "mode": "100644",
+    "sha": "53803d2595a75411d0b46fb5cc54333b098b28f2"
+  },
+  {
+    "path": "auth/session_test.lgo",
+    "mode": "100644",
+    "sha": "f6946faf00a2155d632af67fbcd83305314d022f"
+  },
+  {
+    "path": "auth/session.lgo",
+    "mode": "100644",
+    "sha": "8a9e075c472adcf97ebc2b284116aa003c908330"
+  },
+  {
+    "path": "bus/bus_test.lgo",
+    "mode": "100644",
+    "sha": "02f81f64461102ed4cd422b20cdb81058d9e3681"
+  },
+  {
+    "path": "bus/bus.lgo",
+    "mode": "100644",
+    "sha": "69cdf04b7f899922a4722253b1de877d67fe23c2"
+  },
+  {
+    "path": "bus/faults_test.lgo",
+    "mode": "100644",
+    "sha": "ffef0cfda161355383c20d636cb919d65ab7fa2f"
+  },
+  {
+    "path": "bus/faults.lgo",
+    "mode": "100644",
+    "sha": "9031cf0efcd6b1ea16283ec03322cdefbb251723"
+  },
+  {
+    "path": "cache/cache_test.lgo",
+    "mode": "100644",
+    "sha": "d8e68969268b974356c978be5f84b69632b6f238"
+  },
+  {
+    "path": "cache/cache.lgo",
+    "mode": "100644",
+    "sha": "9e5d3a089b0d2e1c4741716310791b7cca20a33b"
+  },
+  {
+    "path": "cache/export_test.lgo",
+    "mode": "100644",
+    "sha": "876d7606e3c8f344fc8a79e0267d7bb058403c0d"
+  },
+  {
+    "path": "cache/faults_test.lgo",
+    "mode": "100644",
+    "sha": "fdaa792fabb9e71e7a792a0e2dfc0032ee15ed49"
+  },
+  {
+    "path": "cache/faults.lgo",
+    "mode": "100644",
+    "sha": "5764856365addc9d37cdf26150646acc931bd003"
+  },
+  {
+    "path": "client/client_test.lgo",
+    "mode": "100644",
+    "sha": "fdcc88014635e46a8430fc0b252e0c8989714b35"
+  },
+  {
+    "path": "client/client.lgo",
+    "mode": "100644",
+    "sha": "0a84db2a0dc7a81c0fae3aa72e5935b79db67942"
+  },
+  {
+    "path": "client/faults.lgo",
+    "mode": "100644",
+    "sha": "7181c2790ce883d9ef0864071cbf6b8195cbf3ee"
+  },
+  {
+    "path": "cmd/spira/dev_test.lgo",
+    "mode": "100644",
+    "sha": "e05c2f448f6cb303b0d00700dd0961ef4a917866"
+  },
+  {
+    "path": "cmd/spira/dev.lgo",
+    "mode": "100644",
+    "sha": "530f5949fcfadc04f5eaab45b4a5df73a1973ee9"
+  },
+  {
+    "path": "cmd/spira/export_test.lgo",
+    "mode": "100644",
+    "sha": "bae10c932de67f5c3d221fd7694505053296dee9"
+  },
+  {
+    "path": "cmd/spira/generated_sql_gate_test.lgo",
+    "mode": "100644",
+    "sha": "c9a8be8c042f4789f87d39c7ecbfb715fb89c1b1"
+  },
+  {
+    "path": "cmd/spira/main.lgo",
+    "mode": "100644",
+    "sha": "8eb12d43f6b5769fc6c62158809bcbb9ea294c0d"
+  },
+  {
+    "path": "cmd/spira/new_pins_test.lgo",
+    "mode": "100644",
+    "sha": "3e2dd5e6c6c122f9704c18c61033b2777098873c"
+  },
+  {
+    "path": "cmd/spira/new_runs_engines_test.lgo",
+    "mode": "100644",
+    "sha": "5b6abd80c5ff98ade151bb79929657e22569cf96"
+  },
+  {
+    "path": "cmd/spira/new_runs_test.lgo",
+    "mode": "100644",
+    "sha": "87ddc17e6ac217472573524917bbd5e42f56db2a"
+  },
+  {
+    "path": "cmd/spira/new_test.lgo",
+    "mode": "100644",
+    "sha": "2e53ce0cf7ae4cea6f8144a5088570d11d18f6b1"
+  },
+  {
+    "path": "cmd/spira/new.lgo",
+    "mode": "100644",
+    "sha": "d8f086e42c9be115e2126d234711c9b465025ad5"
+  },
+  {
+    "path": "cmd/spira/templates/account-account.lgo.tmpl",
+    "mode": "100644",
+    "sha": "42ec975ba28095d79b5a97b77e2529aeb65c0b16"
+  },
+  {
+    "path": "cmd/spira/templates/account-faults.lgo.tmpl",
+    "mode": "100644",
+    "sha": "6a90e3117cd7b2c08a474dfa37e6e67e7dcf5707"
+  },
+  {
+    "path": "cmd/spira/templates/account-store.lgo.tmpl",
+    "mode": "100644",
+    "sha": "b76c221a45ac4f1ec6f69e7a1294689318cab044"
+  },
+  {
+    "path": "cmd/spira/templates/account-views.lgo.tmpl",
+    "mode": "100644",
+    "sha": "a693b132896ee312a885bb0ce6df6eb8417b2113"
+  },
+  {
+    "path": "cmd/spira/templates/db-migrations.lgo.tmpl",
+    "mode": "100644",
+    "sha": "5aa46cc0d6f3a4c8d94983da102eaeb3488de812"
+  },
+  {
+    "path": "cmd/spira/templates/engines/mssql/db/check_engines_test.lgo.tmpl",
+    "mode": "100644",
+    "sha": "aa30b1a1541c7e1120d54dec68874695fc10f876"
+  },
+  {
+    "path": "cmd/spira/templates/engines/mssql/db/check_test.lgo.tmpl",
+    "mode": "100644",
+    "sha": "a6d19729f4228b7368f9b2618180949c36b42700"
+  },
+  {
+    "path": "cmd/spira/templates/engines/mssql/db/migrations/0001_create_users.down.sql.tmpl",
+    "mode": "100644",
+    "sha": "cc1f647d21e96d2fc12bc0f7fcb089ffb362139f"
+  },
+  {
+    "path": "cmd/spira/templates/engines/mssql/db/migrations/0001_create_users.up.sql.tmpl",
+    "mode": "100644",
+    "sha": "2c2456e5d25c6538ff6c0b68a3b1a405abe35068"
+  },
+  {
+    "path": "cmd/spira/templates/engines/mssql/db/migrations/0002_create_sessions.down.sql.tmpl",
+    "mode": "100644",
+    "sha": "180974db46eff0329fa36b8ed717f1ee5a392da0"
+  },
+  {
+    "path": "cmd/spira/templates/engines/mssql/db/migrations/0002_create_sessions.up.sql.tmpl",
+    "mode": "100644",
+    "sha": "9358757c6c87dd00c863f80a3e443858cb5910a5"
+  },
+  {
+    "path": "cmd/spira/templates/engines/mssql/db/queries/sessions.sql.tmpl",
+    "mode": "100644",
+    "sha": "5253e53cb9ddb63e1f19371176b220fe8bcd9aae"
+  },
+  {
+    "path": "cmd/spira/templates/engines/mssql/db/queries/users.sql.tmpl",
+    "mode": "100644",
+    "sha": "4f353af478bfb58797381acb9ab812179aa3fc64"
+  },
+  {
+    "path": "cmd/spira/templates/engines/mssql/features/account/createuser.lgo.tmpl",
+    "mode": "100644",
+    "sha": "5fe7d67048ed0dbdd4f400e5e0f872864609ccc4"
+  },
+  {
+    "path": "cmd/spira/templates/engines/mysql/db/check_engines_test.lgo.tmpl",
+    "mode": "100644",
+    "sha": "7212cc0806d7976337e7d05e2b5e908d66133972"
+  },
+  {
+    "path": "cmd/spira/templates/engines/mysql/db/check_test.lgo.tmpl",
+    "mode": "100644",
+    "sha": "a6d19729f4228b7368f9b2618180949c36b42700"
+  },
+  {
+    "path": "cmd/spira/templates/engines/mysql/db/migrations/0001_create_users.down.sql.tmpl",
+    "mode": "100644",
+    "sha": "cc1f647d21e96d2fc12bc0f7fcb089ffb362139f"
+  },
+  {
+    "path": "cmd/spira/templates/engines/mysql/db/migrations/0001_create_users.up.sql.tmpl",
+    "mode": "100644",
+    "sha": "7fd421f649204e2a6a92c7f110e62b9cb990f753"
+  },
+  {
+    "path": "cmd/spira/templates/engines/mysql/db/migrations/0002_create_sessions.down.sql.tmpl",
+    "mode": "100644",
+    "sha": "180974db46eff0329fa36b8ed717f1ee5a392da0"
+  },
+  {
+    "path": "cmd/spira/templates/engines/mysql/db/migrations/0002_create_sessions.up.sql.tmpl",
+    "mode": "100644",
+    "sha": "e7d32422f026b9b93e32ffff0367bedb20496f91"
+  },
+  {
+    "path": "cmd/spira/templates/engines/mysql/db/queries/sessions.sql.tmpl",
+    "mode": "100644",
+    "sha": "500234843775f79f0c4f0b468578a228b56b9f11"
+  },
+  {
+    "path": "cmd/spira/templates/engines/mysql/db/queries/users.sql.tmpl",
+    "mode": "100644",
+    "sha": "554b1f59f0135f9f58bb188d51899bc3b9a1f502"
+  },
+  {
+    "path": "cmd/spira/templates/engines/mysql/features/account/createuser.lgo.tmpl",
+    "mode": "100644",
+    "sha": "d599bc01ef4ce694bc19f94119d56b17fa08f2f8"
+  },
+  {
+    "path": "cmd/spira/templates/engines/postgresql/db/check_engines_test.lgo.tmpl",
+    "mode": "100644",
+    "sha": "e2695bbf86b00542f809e3b3f77025d2bbede5cf"
+  },
+  {
+    "path": "cmd/spira/templates/engines/postgresql/db/check_test.lgo.tmpl",
+    "mode": "100644",
+    "sha": "a6d19729f4228b7368f9b2618180949c36b42700"
+  },
+  {
+    "path": "cmd/spira/templates/engines/postgresql/db/migrations/0001_create_users.down.sql.tmpl",
+    "mode": "100644",
+    "sha": "cc1f647d21e96d2fc12bc0f7fcb089ffb362139f"
+  },
+  {
+    "path": "cmd/spira/templates/engines/postgresql/db/migrations/0001_create_users.up.sql.tmpl",
+    "mode": "100644",
+    "sha": "715e00ab6ef3632728645f7100371e34e1cb4f57"
+  },
+  {
+    "path": "cmd/spira/templates/engines/postgresql/db/migrations/0002_create_sessions.down.sql.tmpl",
+    "mode": "100644",
+    "sha": "180974db46eff0329fa36b8ed717f1ee5a392da0"
+  },
+  {
+    "path": "cmd/spira/templates/engines/postgresql/db/migrations/0002_create_sessions.up.sql.tmpl",
+    "mode": "100644",
+    "sha": "8aa1f28cbc8997a2f6885c9d7e12f2d84f0d2cd9"
+  },
+  {
+    "path": "cmd/spira/templates/engines/postgresql/db/queries/sessions.sql.tmpl",
+    "mode": "100644",
+    "sha": "decceb9ef310c1954be25f32eea3d039000075a0"
+  },
+  {
+    "path": "cmd/spira/templates/engines/postgresql/db/queries/users.sql.tmpl",
+    "mode": "100644",
+    "sha": "e3e975367c61ba33d8042e5eb79791c0b919e5b4"
+  },
+  {
+    "path": "cmd/spira/templates/engines/postgresql/features/account/createuser.lgo.tmpl",
+    "mode": "100644",
+    "sha": "5fe7d67048ed0dbdd4f400e5e0f872864609ccc4"
+  },
+  {
+    "path": "cmd/spira/templates/engines/sqlite/db/check_test.lgo.tmpl",
+    "mode": "100644",
+    "sha": "96732e8395b98b2b2a5ef521befff72116be11d7"
+  },
+  {
+    "path": "cmd/spira/templates/engines/sqlite/db/migrations/0001_create_users.down.sql.tmpl",
+    "mode": "100644",
+    "sha": "cc1f647d21e96d2fc12bc0f7fcb089ffb362139f"
+  },
+  {
+    "path": "cmd/spira/templates/engines/sqlite/db/migrations/0001_create_users.up.sql.tmpl",
+    "mode": "100644",
+    "sha": "3acf62f4ff57ab4a00193b39744c69eb569697d9"
+  },
+  {
+    "path": "cmd/spira/templates/engines/sqlite/db/migrations/0002_create_sessions.down.sql.tmpl",
+    "mode": "100644",
+    "sha": "180974db46eff0329fa36b8ed717f1ee5a392da0"
+  },
+  {
+    "path": "cmd/spira/templates/engines/sqlite/db/migrations/0002_create_sessions.up.sql.tmpl",
+    "mode": "100644",
+    "sha": "c7979a6b1205c9821219ee684a64ba3c7d47869d"
+  },
+  {
+    "path": "cmd/spira/templates/engines/sqlite/db/queries/sessions.sql.tmpl",
+    "mode": "100644",
+    "sha": "500234843775f79f0c4f0b468578a228b56b9f11"
+  },
+  {
+    "path": "cmd/spira/templates/engines/sqlite/db/queries/users.sql.tmpl",
+    "mode": "100644",
+    "sha": "7ee134bbb3930d311e3b9ab3ae732d3330faf442"
+  },
+  {
+    "path": "cmd/spira/templates/engines/sqlite/export_test.lgo.tmpl",
+    "mode": "100644",
+    "sha": "48295c4375f4f2c26869d4814eb69ce921664575"
+  },
+  {
+    "path": "cmd/spira/templates/engines/sqlite/features/account/createuser.lgo.tmpl",
+    "mode": "100644",
+    "sha": "5fe7d67048ed0dbdd4f400e5e0f872864609ccc4"
+  },
+  {
+    "path": "cmd/spira/templates/engines/sqlite/main_test.lgo.tmpl",
+    "mode": "100644",
+    "sha": "ee46c2cb397b38c2916dc5ef4bc762b1a4705629"
+  },
+  {
+    "path": "cmd/spira/templates/frontend-biome.json.tmpl",
+    "mode": "100644",
+    "sha": "42a6afd7708fdbeab585ff52adc4d11c44db69e8"
+  },
+  {
+    "path": "cmd/spira/templates/frontend-package.json.tmpl",
+    "mode": "100644",
+    "sha": "8da797a0c932ecc39075c107f499e4d06d11d1d6"
+  },
+  {
+    "path": "cmd/spira/templates/frontend-src-adapters-react.ts.tmpl",
+    "mode": "100644",
+    "sha": "ee07877387f15752d0dd98fafc53cb4898ebc196"
+  },
+  {
+    "path": "cmd/spira/templates/frontend-src-adapters-solid.ts.tmpl",
+    "mode": "100644",
+    "sha": "72d3bb665c9a4700a8abad3d9f9e2c2778eb4247"
+  },
+  {
+    "path": "cmd/spira/templates/frontend-src-adapters-svelte.ts.tmpl",
+    "mode": "100644",
+    "sha": "68ba046b70406e3f6b8a3dee2389ff7e46141d44"
+  },
+  {
+    "path": "cmd/spira/templates/frontend-src-adapters-wasm.ts.tmpl",
+    "mode": "100644",
+    "sha": "39a0d3a8441364c14870cd5f61afad32a9771435"
+  },
+  {
+    "path": "cmd/spira/templates/frontend-src-entry.ts.tmpl",
+    "mode": "100644",
+    "sha": "b817e444dcc360158c0a1c589d0ecebb6f56c956"
+  },
+  {
+    "path": "cmd/spira/templates/frontend-src-island.ts.tmpl",
+    "mode": "100644",
+    "sha": "32dd5583133a4ce4f50581957acfdc03b38943a1"
+  },
+  {
+    "path": "cmd/spira/templates/frontend-src-slots.ts.tmpl",
+    "mode": "100644",
+    "sha": "41bb957771bb3868c3309bbdbf402d12e0264dc5"
+  },
+  {
+    "path": "cmd/spira/templates/frontend-tsconfig.json.tmpl",
+    "mode": "100644",
+    "sha": "e24ecef42453de7ba8ba6053e5a98b21a9199d7d"
+  },
+  {
+    "path": "cmd/spira/templates/frontend-vite.config.ts.tmpl",
+    "mode": "100644",
+    "sha": "e0b08f03683e90ae25f241c7056ee1824f3a1398"
+  },
+  {
+    "path": "cmd/spira/templates/go.mod.tmpl",
+    "mode": "100644",
+    "sha": "a8cdee4e4cbdd7e8356276fbe3e0ae7498eb0336"
+  },
+  {
+    "path": "cmd/spira/templates/go.sum.tmpl",
+    "mode": "100644",
+    "sha": "394e67f163f28377add022869b8979dba4821d9e"
+  },
+  {
+    "path": "cmd/spira/templates/greet.svelte.tmpl",
+    "mode": "100644",
+    "sha": "a50388728c04dcef1247ee1ea7de4da8ef8b418a"
+  },
+  {
+    "path": "cmd/spira/templates/home-home.lgo.tmpl",
+    "mode": "100644",
+    "sha": "d3b67a3af01780022352690d7acf4bcbb207077c"
+  },
+  {
+    "path": "cmd/spira/templates/home-test.lgo.tmpl",
+    "mode": "100644",
+    "sha": "51bf18a246aa9abbe80704cc4bb2911de5009470"
+  },
+  {
+    "path": "cmd/spira/templates/home-views.lgo.tmpl",
+    "mode": "100644",
+    "sha": "ac952879b879ffe5035a3a59fb40d6920c17fbe4"
+  },
+  {
+    "path": "cmd/spira/templates/justfile.tmpl",
+    "mode": "100644",
+    "sha": "2049bac51754fb473e38c32227a46ed192fe2936"
+  },
+  {
+    "path": "cmd/spira/templates/logos.toml.tmpl",
+    "mode": "100644",
+    "sha": "59122e36e0094cc3f5c8f97e336fc60686f7baef"
+  },
+  {
+    "path": "cmd/spira/templates/main.lgo.tmpl",
+    "mode": "100644",
+    "sha": "96129359008a6ad3dcba11b798779f2bdee83459"
+  },
+  {
+    "path": "cmd/spira/templates/sqlc.yaml.tmpl",
+    "mode": "100644",
+    "sha": "d82c76ca5e308ca035f0f65109484b75a0d024dd"
+  },
+  {
+    "path": "cmd/spira/templates/tools-go.mod.tmpl",
+    "mode": "100644",
+    "sha": "977ad960257d5fdec8c981c0d4b246a5b5c89d58"
+  },
+  {
+    "path": "cmd/spira/templates/tools-go.sum.tmpl",
+    "mode": "100644",
+    "sha": "2083f381d5fa80c0ac795778c1d1e00d056f9cbe"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/continued_escape_test.lgo",
+    "mode": "100644",
+    "sha": "4e44963247f527362a0fdc9b0366db723d312a64"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/dollar_literal_test.lgo",
+    "mode": "100644",
+    "sha": "e6c311ff218b614622f4ee74747c9d031189d447"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/export_test.lgo",
+    "mode": "100644",
+    "sha": "e2d18baf7bd948b1205c4f75778d8293382a4e3d"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/gen.lgo",
+    "mode": "100644",
+    "sha": "f4afbff7a211d3f126b63f5b1f313bedba88314f"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/main_test.lgo",
+    "mode": "100644",
+    "sha": "879667a498717a4e3f02c050d3e411532146ed7b"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/main.lgo",
+    "mode": "100644",
+    "sha": "8fd1a48a614fa2d0c367c4ebf62d215a124777d3"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/model.lgo",
+    "mode": "100644",
+    "sha": "0f170412a191b644ed7081f00ab06f30564b2fb4"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/mssql_runtime_engines_test.lgo",
+    "mode": "100644",
+    "sha": "720b0bd7e873ddfd4fb09f066553139f0c480b15"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/mysql_runtime_engines_test.lgo",
+    "mode": "100644",
+    "sha": "66549746ff6effb03e91bc68f1eeca682af188a8"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/names.lgo",
+    "mode": "100644",
+    "sha": "72602418cea06c672eb035fa59a51f08174545b2"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/postgres_runtime_engines_test.lgo",
+    "mode": "100644",
+    "sha": "1ec68a6e8afcab40c3e84766626e56750b709404"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/query_constants_test.lgo",
+    "mode": "100644",
+    "sha": "663a599b8290d17d3e70f6f637787885d7f9e557"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/sqlc_integration_test.lgo",
+    "mode": "100644",
+    "sha": "b5c907197492d7490d417ee52440f5d59cbdb5c3"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo",
+    "mode": "100644",
+    "sha": "5c2a1a0e6ba5dd4a31aced8750946ef1d745c706"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/continued-strings.json",
+    "mode": "100644",
+    "sha": "83202bb861476d83de6caf51637e3406d8caca25"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/dollar-strings.json",
+    "mode": "100644",
+    "sha": "1f2af327b48884a1c2da50d5066a3ad083a2a388"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/embed/request.json",
+    "mode": "100644",
+    "sha": "54ee22d2221ba367176fc7a52a1ac78870947ba8"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/literal-schema.sql",
+    "mode": "100644",
+    "sha": "a333e8d4548cde918d997e793977d17b0cab2c4e"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/mssql/db/migrations/0001_create_items.down.sql",
+    "mode": "100644",
+    "sha": "7d571c305361dff3568d3abaedaa5f3b58902bc8"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/mssql/db/migrations/0001_create_items.up.sql",
+    "mode": "100644",
+    "sha": "610217c753dfee1443aab4c6fab25cb755e08ab9"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/mssql/db/queries/items.sql",
+    "mode": "100644",
+    "sha": "a404260f8bda9f84cdcdd3b74849c8186edb89fc"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/mssql/plugin-stub.sh",
+    "mode": "100755",
+    "sha": "69cd827ace503895324c6f2609399e036e7bf5d2"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/mssql/request.json",
+    "mode": "100644",
+    "sha": "d6fb462b4d8e6f041b49bce6aa0b908f06cc30d2"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/mssql/sqlc.yaml",
+    "mode": "100644",
+    "sha": "9f2ab8216eb8613fa96eb1cf65d90530580e5257"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/mysql/db/migrations/0001_create_items.down.sql",
+    "mode": "100644",
+    "sha": "7d571c305361dff3568d3abaedaa5f3b58902bc8"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/mysql/db/migrations/0001_create_items.up.sql",
+    "mode": "100644",
+    "sha": "9d41458c4ec1b47d5fdd7d7479c04ce7bd7a6259"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/mysql/db/queries/items.sql",
+    "mode": "100644",
+    "sha": "bc65d7c99483bb7f7b0302d68e20b255ecd3cb58"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/mysql/plugin-stub.sh",
+    "mode": "100755",
+    "sha": "69cd827ace503895324c6f2609399e036e7bf5d2"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/mysql/request.json",
+    "mode": "100644",
+    "sha": "64e21bec041ffd4fad04e35057a524a5635286df"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/mysql/sqlc.yaml",
+    "mode": "100644",
+    "sha": "0857ff0d3f13aaacd0d2434a37370f4a627bf969"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/postgresql/db/migrations/0001_create_items.down.sql",
+    "mode": "100644",
+    "sha": "7d571c305361dff3568d3abaedaa5f3b58902bc8"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/postgresql/db/migrations/0001_create_items.up.sql",
+    "mode": "100644",
+    "sha": "99699608e10043e372bd64f565313e813e87829f"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/postgresql/db/queries/items.sql",
+    "mode": "100644",
+    "sha": "acf3bcaad9dd4f2f8dcc037ace8a870e15d6d8a4"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/postgresql/plugin-stub.sh",
+    "mode": "100755",
+    "sha": "69cd827ace503895324c6f2609399e036e7bf5d2"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/postgresql/request.json",
+    "mode": "100644",
+    "sha": "9393297d1015aa0b9ea218707871375313740b88"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/postgresql/sqlc.yaml",
+    "mode": "100644",
+    "sha": "e18b5a331c1425155376896042c28cd527267404"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/query_constants_test.lgo.tmpl",
+    "mode": "100644",
+    "sha": "d0c94977a5cc21883143aa68f481ccdbf289588d"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/query-constant-values.json",
+    "mode": "100644",
+    "sha": "21c52f821a31be96a94a456f9f26b66475a22e3b"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_mssql/db/migrations/0001_create_items.down.sql",
+    "mode": "100644",
+    "sha": "341f8e2083fee506d83dbff3c0de2b9374c860f8"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_mssql/db/migrations/0001_create_items.up.sql",
+    "mode": "100644",
+    "sha": "2bd64364e076527b053607b50daae4eb40388a77"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_mssql/db/queries/items.sql",
+    "mode": "100644",
+    "sha": "50ecd454246195b0db17fee7dcfa562f4385b71b"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_mssql/main.lgo.tmpl",
+    "mode": "100644",
+    "sha": "b1b84240409d83afa788cf1cce5e39c6eb721e66"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_mssql/sqlc.yaml",
+    "mode": "100644",
+    "sha": "cb404b9fbd59d0e6d57774bd001c5d9dd74d6129"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_mysql/main.lgo.tmpl",
+    "mode": "100644",
+    "sha": "c7be8b166147bb322e4807781a5a69b9aa82a6ae"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_mysql/migrations/0001_create_items.down.sql",
+    "mode": "100644",
+    "sha": "3662ae9ee6a640c243b12c20c31cd482deb7430a"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_mysql/migrations/0001_create_items.up.sql",
+    "mode": "100644",
+    "sha": "a95812a376e5db06893f73fdca3f15b47f460689"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_mysql/queries/items.sql",
+    "mode": "100644",
+    "sha": "1fc8de5e4077c6aea572b17410209a1d782b10f8"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_mysql/sqlc.yaml",
+    "mode": "100644",
+    "sha": "e691cfa497c345317a3d3fe2de85baee7e44ad16"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_postgres/main.lgo.tmpl",
+    "mode": "100644",
+    "sha": "ac15b85cb24c5b6cdfe727ca10171348f1095ac6"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_postgres/migrations/0001_create_items.down.sql",
+    "mode": "100644",
+    "sha": "7d571c305361dff3568d3abaedaa5f3b58902bc8"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_postgres/migrations/0001_create_items.up.sql",
+    "mode": "100644",
+    "sha": "2fd75daf170c18ac4cc61e7d9806851a914d1f72"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_postgres/queries/items.sql",
+    "mode": "100644",
+    "sha": "8cf0e728f682fb259b256954321cf570eb7d7ddb"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_postgres/sqlc.yaml",
+    "mode": "100644",
+    "sha": "f0a5933db537ccb529a7219ad77abe2036fb3f9c"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_sqlite/main.lgo.tmpl",
+    "mode": "100644",
+    "sha": "826c44a687600a2e7cc6c1f9b7146f0f9212077e"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_sqlite/migrations/0001_create_items.down.sql",
+    "mode": "100644",
+    "sha": "7d571c305361dff3568d3abaedaa5f3b58902bc8"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_sqlite/migrations/0001_create_items.up.sql",
+    "mode": "100644",
+    "sha": "4b717bafee78e53ded86f429e5bb496c509671b8"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_sqlite/queries/items.sql",
+    "mode": "100644",
+    "sha": "dee383633910657233345f4417cc9825bf92e6ad"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/runtime_sqlite/sqlc.yaml",
+    "mode": "100644",
+    "sha": "a3340b912f87bd25530bf77be0a3e1d7c1332bb4"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/sqlc-literal-pipeline.json",
+    "mode": "100644",
+    "sha": "211d22e91affb7fda7baf64cef20fa01978d0371"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/sqlite/db/migrations/0001_create_items.down.sql",
+    "mode": "100644",
+    "sha": "7d571c305361dff3568d3abaedaa5f3b58902bc8"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/sqlite/db/migrations/0001_create_items.up.sql",
+    "mode": "100644",
+    "sha": "7b7c88e013ac6fa8fca5608c6efc57be0786e7b2"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/sqlite/db/queries/items.sql",
+    "mode": "100644",
+    "sha": "bc65d7c99483bb7f7b0302d68e20b255ecd3cb58"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/sqlite/plugin-stub.sh",
+    "mode": "100755",
+    "sha": "69cd827ace503895324c6f2609399e036e7bf5d2"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/sqlite/request.json",
+    "mode": "100644",
+    "sha": "9befed980ee4b3321917358ddb87c9d7b6df9514"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/sqlite/sqlc.yaml",
+    "mode": "100644",
+    "sha": "8263c6c13419b2b260b10507def0910444e45c2d"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/typed-literals.json",
+    "mode": "100644",
+    "sha": "e1a5108b9a6c837c61a5128722e99dd5641f5645"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/types-postgresql/db/migrations/0001_create_things.down.sql",
+    "mode": "100644",
+    "sha": "0baaeab778a5e5bacce168d13fb32bf52976bb21"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/types-postgresql/db/migrations/0001_create_things.up.sql",
+    "mode": "100644",
+    "sha": "bc9d9a02d6d218332aa2fec13f81436b1b346ce8"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/types-postgresql/db/queries/things.sql",
+    "mode": "100644",
+    "sha": "0df895b799db6e6706a5b04bd570d8767b067726"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/types-postgresql/plugin-stub.sh",
+    "mode": "100755",
+    "sha": "69cd827ace503895324c6f2609399e036e7bf5d2"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/types-postgresql/request.json",
+    "mode": "100644",
+    "sha": "ee6facffcc1dfa1c2e655deef44345f58d70beb6"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/types-postgresql/sqlc.yaml",
+    "mode": "100644",
+    "sha": "912b5997394c62acf03cbc76463e4b05e4e4efbc"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/version-reference-boundaries.json",
+    "mode": "100644",
+    "sha": "971dacb39f081bbafcc3a0c69c401b0a5634636a"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/version-references.json",
+    "mode": "100644",
+    "sha": "96d11f4054ecfcb299cdc0c07738313c013e5299"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/typed_literal_test.lgo",
+    "mode": "100644",
+    "sha": "94b1d49d9dd2cba227853e7d491a678d2c976b21"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/version_bypass_test.lgo",
+    "mode": "100644",
+    "sha": "78392edb2cc9ef7faff061a4272228d0ea5c71f6"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/version_reference_test.lgo",
+    "mode": "100644",
+    "sha": "878ac564cc74d4cbad397bb75efcb47b6a352347"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/wire.lgo",
+    "mode": "100644",
+    "sha": "4800e5ddfbe5fa118d3182d4503a4e77e83460a0"
+  },
+  {
+    "path": "config/comptime_contract_test.lgo",
+    "mode": "100644",
+    "sha": "0c14a4b40bc76001263c51f68f9be3d7066ea3b7"
+  },
+  {
+    "path": "config/config_test.lgo",
+    "mode": "100644",
+    "sha": "b1308aa249a6577e27856311b47c01858242463c"
+  },
+  {
+    "path": "config/config.lgo",
+    "mode": "100644",
+    "sha": "5d12517a7892ffea5c1b0e363be2e46996997569"
+  },
+  {
+    "path": "config/keys.lgo",
+    "mode": "100644",
+    "sha": "280c38bd6851fea2e9adf5cf3175c641a64e92e4"
+  },
+  {
+    "path": "config/load.lgo",
+    "mode": "100644",
+    "sha": "76e322b944cde9c5e77275c82255559946afd859"
+  },
+  {
+    "path": "config/named_type_contract_test.lgo",
+    "mode": "100644",
+    "sha": "2809a0074b80b4bfde0333a5b1ce3a579b645283"
+  },
+  {
+    "path": "CONTRIBUTE.md",
+    "mode": "100644",
+    "sha": "d477ca0fdf458a75656476ca4ea16ca5fe2d3dde"
+  },
+  {
+    "path": "db/cache.lgo",
+    "mode": "100644",
+    "sha": "65d5dd7056bd6e983881ec1269045b40e4ca2709"
+  },
+  {
+    "path": "db/db_test.lgo",
+    "mode": "100644",
+    "sha": "43613e297b8de649117b59077955de44bb7d52c6"
+  },
+  {
+    "path": "db/db.lgo",
+    "mode": "100644",
+    "sha": "7cc77f0538455e040c6c27fd7f9cf30f3e91632c"
+  },
+  {
+    "path": "db/engines_test.lgo",
+    "mode": "100644",
+    "sha": "fd95c21bf6d56b49dca23c4b7e8ab526a6de48c8"
+  },
+  {
+    "path": "db/export_test.lgo",
+    "mode": "100644",
+    "sha": "7078c07d37de8bee92d4deb60912176005e45336"
+  },
+  {
+    "path": "db/faults_test.lgo",
+    "mode": "100644",
+    "sha": "de82f3387bb951e6532b84b15ca6e8aefb54c0e9"
+  },
+  {
+    "path": "db/faults.lgo",
+    "mode": "100644",
+    "sha": "d00ba8ca08a77ad933ae6d7f4359148e855ae0a4"
+  },
+  {
+    "path": "db/inmemory_test.lgo",
+    "mode": "100644",
+    "sha": "4097600a6859c8d65a8c3f1fb59cd8541d72613b"
+  },
+  {
+    "path": "db/pool_limits_test.lgo",
+    "mode": "100644",
+    "sha": "eac7b77a7b9112c13285194f33311119868eeef8"
+  },
+  {
+    "path": "db/prepare_test.lgo",
+    "mode": "100644",
+    "sha": "31a2be8a74b73f790621071753213f9f62110560"
+  },
+  {
+    "path": "db/scan.lgo",
+    "mode": "100644",
+    "sha": "5175cec36def839fae21c0e75cc3dc79b9d58a6a"
+  },
+  {
+    "path": "db/tx_deadline_test.lgo",
+    "mode": "100644",
+    "sha": "212823de9befa2cc47649b1f0039baf47add3154"
+  },
+  {
+    "path": "db/tx_test.lgo",
+    "mode": "100644",
+    "sha": "617a3be33b9dd759f551fcafc3ed0ac2d76ab9ad"
+  },
+  {
+    "path": "docs/specs/admin.md",
+    "mode": "100644",
+    "sha": "4985bb5dfc92d87cae0cefd01f35e23c17ee2d05"
+  },
+  {
+    "path": "docs/specs/ai-anthropic.md",
+    "mode": "100644",
+    "sha": "e620746f80bf974ce9ffd6d01af80819fca4a86d"
+  },
+  {
+    "path": "docs/specs/ai-mcp.md",
+    "mode": "100644",
+    "sha": "bbf14b1fe3257c4f08601f8164ab228564bbdf44"
+  },
+  {
+    "path": "docs/specs/ai-ollama.md",
+    "mode": "100644",
+    "sha": "0c2b9fc55a6ce27afde849fc97cc25b1dd72d64c"
+  },
+  {
+    "path": "docs/specs/ai-openai.md",
+    "mode": "100644",
+    "sha": "aa94decf78c98449f5d26e0be7f03c1e811ecb09"
+  },
+  {
+    "path": "docs/specs/ai-rag.md",
+    "mode": "100644",
+    "sha": "ac4f0291d92870c70c2df3268d171527a92a99ec"
+  },
+  {
+    "path": "docs/specs/ai-session.md",
+    "mode": "100644",
+    "sha": "84e9a9fdc18263f9aea7c1011071ebf865d97ffe"
+  },
+  {
+    "path": "docs/specs/ai.md",
+    "mode": "100644",
+    "sha": "9ebb8d53c3521f6b2e1c8ee096d87e8021da80a3"
+  },
+  {
+    "path": "docs/specs/app.md",
+    "mode": "100644",
+    "sha": "9a5c7888aefc63aa2bd8c45c3abf3212a91dfd20"
+  },
+  {
+    "path": "docs/specs/asset.md",
+    "mode": "100644",
+    "sha": "696258eb431941e1afabb4ad3dcf40f149beb330"
+  },
+  {
+    "path": "docs/specs/auth.md",
+    "mode": "100644",
+    "sha": "7fa2fc2a0ba62f64d2bf9035065f9874e584c0e1"
+  },
+  {
+    "path": "docs/specs/bus.md",
+    "mode": "100644",
+    "sha": "25ec986d727c699dc5ba9834e96dabfdee83c106"
+  },
+  {
+    "path": "docs/specs/cache.md",
+    "mode": "100644",
+    "sha": "c6d920c279694ba28a3ee00f8945fe011945ca83"
+  },
+  {
+    "path": "docs/specs/client.md",
+    "mode": "100644",
+    "sha": "42349a9732c16b9ed57da9310bb749d9c0595ae2"
+  },
+  {
+    "path": "docs/specs/config.md",
+    "mode": "100644",
+    "sha": "2e8a5ff89fc410dfc5e430a4fad94dd8aa4e5b87"
+  },
+  {
+    "path": "docs/specs/db.md",
+    "mode": "100644",
+    "sha": "a5a66b26d6d36c57ee1dcaa672eb11577985a921"
+  },
+  {
+    "path": "docs/specs/example-shop.md",
+    "mode": "100644",
+    "sha": "85d01255eec481df03a6b09032ca4b0007cbd7d0"
+  },
+  {
+    "path": "docs/specs/fault.md",
+    "mode": "100644",
+    "sha": "a0969ef574efc0827b26658cd7064cf4b623adbd"
+  },
+  {
+    "path": "docs/specs/frontend.md",
+    "mode": "100644",
+    "sha": "04c16dc191fcbc817bd78e5ac1854551a98653bb"
+  },
+  {
+    "path": "docs/specs/gateway.md",
+    "mode": "100644",
+    "sha": "4dd8b48febf78161bd4ef04ee450ea273579e3ee"
+  },
+  {
+    "path": "docs/specs/http3.md",
+    "mode": "100644",
+    "sha": "5a4ff9eea4d1a025630cdda5027d314821a08bd9"
+  },
+  {
+    "path": "docs/specs/job.md",
+    "mode": "100644",
+    "sha": "74c0a605cea0ddf79e58f22727311d86a498ed72"
+  },
+  {
+    "path": "docs/specs/live.md",
+    "mode": "100644",
+    "sha": "59a5e897167cc39b3bfc475948ffcad0d635ae1d"
+  },
+  {
+    "path": "docs/specs/meter.md",
+    "mode": "100644",
+    "sha": "988ab14a34c92644bb5ef461b373963a7c2d4977"
+  },
+  {
+    "path": "docs/specs/migrate.md",
+    "mode": "100644",
+    "sha": "7f72757548ff3ec4a89336f27de4c60c0e68b1f1"
+  },
+  {
+    "path": "docs/specs/openapi.md",
+    "mode": "100644",
+    "sha": "b00f3b57793d99c2b3a224551c231b5d37c52585"
+  },
+  {
+    "path": "docs/specs/ops.md",
+    "mode": "100644",
+    "sha": "af87e72ce8ef30618ca4b63f448ecda415a51d72"
+  },
+  {
+    "path": "docs/specs/orm.md",
+    "mode": "100644",
+    "sha": "746c2c9e20ac57dd1687d2b81559fa9d8a2db20f"
+  },
+  {
+    "path": "docs/specs/README.md",
+    "mode": "100644",
+    "sha": "cfc6b4d7fb795f608595f150f510bc1077d88fe0"
+  },
+  {
+    "path": "docs/specs/resilience.md",
+    "mode": "100644",
+    "sha": "2bb1d2b319689c21a33f6b4ebaf6fddcbc6d2ad3"
+  },
+  {
+    "path": "docs/specs/schema.md",
+    "mode": "100644",
+    "sha": "f33175c426d649bc080afbd9cbeefe5649f01439"
+  },
+  {
+    "path": "docs/specs/scope-and-lexicon.md",
+    "mode": "100644",
+    "sha": "aa00d6a0705cd5d16a5951ddf5ba487078a118d6"
+  },
+  {
+    "path": "docs/specs/spira-command.md",
+    "mode": "100644",
+    "sha": "5b7dd384317c887109aea0bbae6eaaed6291291b"
+  },
+  {
+    "path": "docs/specs/sqlc-gen-spira.md",
+    "mode": "100644",
+    "sha": "4a57ea5483b9508962033e7e37bb19d1b1353d32"
+  },
+  {
+    "path": "docs/specs/validate.md",
+    "mode": "100644",
+    "sha": "a97cff5d593611cc36b8d4166057f68f178eeff5"
+  },
+  {
+    "path": "docs/specs/view.md",
+    "mode": "100644",
+    "sha": "09ffeadf9a80cf4b0427c9a01efa8241bb169df3"
+  },
+  {
+    "path": "docs/specs/web.md",
+    "mode": "100644",
+    "sha": "bd75d2f3d0d525cfc493e72b2b4d483bbd05b24d"
+  },
+  {
+    "path": "docs/specs/websocket.md",
+    "mode": "100644",
+    "sha": "0b12c28182b648e158cb406dfd0ca40f03803ec9"
+  },
+  {
+    "path": "docs/specs/wire-contract.md",
+    "mode": "100644",
+    "sha": "6054f067cf9b5010b116d51841804eef1f4cc735"
+  },
+  {
+    "path": "example/edge/main_test.lgo",
+    "mode": "100644",
+    "sha": "78f8e5dd5b7fcba7c56b0d1f4c0854f0453fac17"
+  },
+  {
+    "path": "example/edge/main.lgo",
+    "mode": "100644",
+    "sha": "41ee1d71bb295f979b2b9ef8be513f5a07b58b59"
+  },
+  {
+    "path": "example/shop/account/account_test.lgo",
+    "mode": "100644",
+    "sha": "54d68b4b5b61577aa84212da838e6d902c3b010a"
+  },
+  {
+    "path": "example/shop/account/fault_test.lgo",
+    "mode": "100644",
+    "sha": "0d9c9e295f0ccdf2a859e33283f82f9e12301240"
+  },
+  {
+    "path": "example/shop/account/faults.lgo",
+    "mode": "100644",
+    "sha": "6a90e3117cd7b2c08a474dfa37e6e67e7dcf5707"
+  },
+  {
+    "path": "example/shop/account/routes.lgo",
+    "mode": "100644",
+    "sha": "dce6457455244fb6665761c05e2f8f95afada91e"
+  },
+  {
+    "path": "example/shop/account/views.lgo",
+    "mode": "100644",
+    "sha": "868c3f4857bb902008f2207afb6ac7e049e6cf08"
+  },
+  {
+    "path": "example/shop/assembled_account_test.lgo",
+    "mode": "100644",
+    "sha": "61ae98529e9500569823f1ecdcdda911b0e8e38f"
+  },
+  {
+    "path": "example/shop/assembled_routes_test.lgo",
+    "mode": "100644",
+    "sha": "48f11057d63ecc7bed11b53d0445f5f325ec80f4"
+  },
+  {
+    "path": "example/shop/assist/assist_test.lgo",
+    "mode": "100644",
+    "sha": "7c63bd7c813a13f0ac04ef61affdb83764718ae7"
+  },
+  {
+    "path": "example/shop/assist/faults.lgo",
+    "mode": "100644",
+    "sha": "f1152b4463759a4cabe57c3516564b3ea70be3ef"
+  },
+  {
+    "path": "example/shop/assist/routes.lgo",
+    "mode": "100644",
+    "sha": "49e7d6f73ab219e723727679f64dacccaacde9d5"
+  },
+  {
+    "path": "example/shop/assist/views.lgo",
+    "mode": "100644",
+    "sha": "b612de95f77ccc54b111a6eed335c80c0d221112"
+  },
+  {
+    "path": "example/shop/cart/cart_test.lgo",
+    "mode": "100644",
+    "sha": "9009bc394125a6c9acd49abe7328e9a40ff6e28b"
+  },
+  {
+    "path": "example/shop/cart/fault_test.lgo",
+    "mode": "100644",
+    "sha": "62a7e75177835c7ea9e67e4ec873bb91942a9ceb"
+  },
+  {
+    "path": "example/shop/cart/faults.lgo",
+    "mode": "100644",
+    "sha": "943bbd9a0052029dbca5278b6e766a508ccfc9d1"
+  },
+  {
+    "path": "example/shop/cart/islands/badge.svelte",
+    "mode": "100644",
+    "sha": "bbe2ecb541bf3af60112c84533f0b9f56f3f454f"
+  },
+  {
+    "path": "example/shop/cart/routes.lgo",
+    "mode": "100644",
+    "sha": "df37f74b80997837f29a14cf83a8e86abd4347f7"
+  },
+  {
+    "path": "example/shop/cart/views.lgo",
+    "mode": "100644",
+    "sha": "84a51d76b36c6b00977ee58ee26741f40122a583"
+  },
+  {
+    "path": "example/shop/catalog/catalog_test.lgo",
+    "mode": "100644",
+    "sha": "faa0e92e649dd606f02d5d041f86012f6af7d817"
+  },
+  {
+    "path": "example/shop/catalog/fault_test.lgo",
+    "mode": "100644",
+    "sha": "3494f953ede7eed32e35ef66a45726792db95ace"
+  },
+  {
+    "path": "example/shop/catalog/faults.lgo",
+    "mode": "100644",
+    "sha": "cba451f7da52e5860fe0a0fdbdc8d85d0c0f771b"
+  },
+  {
+    "path": "example/shop/catalog/islands/filter.solid.tsx",
+    "mode": "100644",
+    "sha": "18d5bd8a86f5769b62f2d6f6112f0211b4ad5011"
+  },
+  {
+    "path": "example/shop/catalog/islands/gallery.react.tsx",
+    "mode": "100644",
+    "sha": "44cd931fe756f62b736bbc8c5892b348eb4d1283"
+  },
+  {
+    "path": "example/shop/catalog/like_escape_test.lgo",
+    "mode": "100644",
+    "sha": "03d81be363d7f02ddb06ef747d735fd698532fa4"
+  },
+  {
+    "path": "example/shop/catalog/routes.lgo",
+    "mode": "100644",
+    "sha": "377b0d21fa54b79fde9f7077a4f0ded2dd7fa314"
+  },
+  {
+    "path": "example/shop/catalog/views.lgo",
+    "mode": "100644",
+    "sha": "8e61df459da4d7ed9bec2f55612603aa06ef08b0"
+  },
+  {
+    "path": "example/shop/db/migrations_test.lgo",
+    "mode": "100644",
+    "sha": "176cb8f384053b1bc68c672cf020e4a75075d1a3"
+  },
+  {
+    "path": "example/shop/db/migrations.lgo",
+    "mode": "100644",
+    "sha": "9c8113ef1e4d4c55564b8ecdfdb5256aa8990b34"
+  },
+  {
+    "path": "example/shop/db/migrations/0001_create_products.down.sql",
+    "mode": "100644",
+    "sha": "17a2ba03c2e9033d6545cbcefc04fb7d9ecfa50e"
+  },
+  {
+    "path": "example/shop/db/migrations/0001_create_products.up.sql",
+    "mode": "100644",
+    "sha": "aff6a7fb6e8a6fb6891f8b5d281f7b5ae9e61a06"
+  },
+  {
+    "path": "example/shop/db/migrations/0002_create_users.down.sql",
+    "mode": "100644",
+    "sha": "cc1f647d21e96d2fc12bc0f7fcb089ffb362139f"
+  },
+  {
+    "path": "example/shop/db/migrations/0002_create_users.up.sql",
+    "mode": "100644",
+    "sha": "3acf62f4ff57ab4a00193b39744c69eb569697d9"
+  },
+  {
+    "path": "example/shop/db/migrations/0003_create_sessions.down.sql",
+    "mode": "100644",
+    "sha": "180974db46eff0329fa36b8ed717f1ee5a392da0"
+  },
+  {
+    "path": "example/shop/db/migrations/0003_create_sessions.up.sql",
+    "mode": "100644",
+    "sha": "c7979a6b1205c9821219ee684a64ba3c7d47869d"
+  },
+  {
+    "path": "example/shop/db/migrations/0004_create_cart_items.down.sql",
+    "mode": "100644",
+    "sha": "0bcc1806ac72b8108927a1bd7a0edca53a6cf70b"
+  },
+  {
+    "path": "example/shop/db/migrations/0004_create_cart_items.up.sql",
+    "mode": "100644",
+    "sha": "dc72c2b25b7b4dc47f841666f7f000de4bbd9184"
+  },
+  {
+    "path": "example/shop/db/migrations/0005_create_orders.down.sql",
+    "mode": "100644",
+    "sha": "1ba41c18518566e8c1995551d197d82fbb482177"
+  },
+  {
+    "path": "example/shop/db/migrations/0005_create_orders.up.sql",
+    "mode": "100644",
+    "sha": "f93bf5883628d270c719df4a50c7d5bf1fd95d18"
+  },
+  {
+    "path": "example/shop/db/migrations/0006_create_order_lines.down.sql",
+    "mode": "100644",
+    "sha": "a306ec002ed9d5bb5407e74f151a45cbecba5d10"
+  },
+  {
+    "path": "example/shop/db/migrations/0006_create_order_lines.up.sql",
+    "mode": "100644",
+    "sha": "9d6d82348c3e1c29b3b4efc71e1c1d273caf67be"
+  },
+  {
+    "path": "example/shop/db/queries/account.sql",
+    "mode": "100644",
+    "sha": "92e4f8dbdb8b025c8d4d0d738323b74a22b7c543"
+  },
+  {
+    "path": "example/shop/db/queries/cart.sql",
+    "mode": "100644",
+    "sha": "31263906f730f3e2ef1bcfdb8bc8c13aecbfffb2"
+  },
+  {
+    "path": "example/shop/db/queries/catalog.sql",
+    "mode": "100644",
+    "sha": "7296c362d9377f5c056d0978b935df7c4e9077b3"
+  },
+  {
+    "path": "example/shop/db/queries/orders.sql",
+    "mode": "100644",
+    "sha": "11a9340554f53c2a3c3faf8bbd8e64241f883aed"
+  },
+  {
+    "path": "example/shop/db/queries/sessions.sql",
+    "mode": "100644",
+    "sha": "c587d0bb8007cc507680a28b9202530d5b5c230c"
+  },
+  {
+    "path": "example/shop/db/queries/stock.sql",
+    "mode": "100644",
+    "sha": "5c85191fed770cd5391305433f9ae595fd45419e"
+  },
+  {
+    "path": "example/shop/db/store/account.sql.lgo",
+    "mode": "100644",
+    "sha": "55ee9ab5fee75385b0f63d2e325f2f5df78930f2"
+  },
+  {
+    "path": "example/shop/db/store/cart.sql.lgo",
+    "mode": "100644",
+    "sha": "c4171fb236be0c051a2271523621abc9df27871a"
+  },
+  {
+    "path": "example/shop/db/store/catalog.sql.lgo",
+    "mode": "100644",
+    "sha": "278e229152bf7c0c5ff5a11f8cae8bb77abed084"
+  },
+  {
+    "path": "example/shop/db/store/models.sql.lgo",
+    "mode": "100644",
+    "sha": "af6dcc61be82427d7557be2208b31b56de8a750b"
+  },
+  {
+    "path": "example/shop/db/store/orders.sql.lgo",
+    "mode": "100644",
+    "sha": "7277af4873c69f465b9735b415276b23c5108628"
+  },
+  {
+    "path": "example/shop/db/store/sessions.sql.lgo",
+    "mode": "100644",
+    "sha": "ae61f93c0bbc0debc576d22ee2748d5283d1c443"
+  },
+  {
+    "path": "example/shop/db/store/stock.sql.lgo",
+    "mode": "100644",
+    "sha": "2302b0273f3edfcfeaa9473f990cde0994439fa1"
+  },
+  {
+    "path": "example/shop/export_test.lgo",
+    "mode": "100644",
+    "sha": "60602e26a3efbcad30117104b9af6d622d94647e"
+  },
+  {
+    "path": "example/shop/layout/layout.lgo",
+    "mode": "100644",
+    "sha": "2629b0a22b4e3da24f5c4aa1b290ed13814c3c8d"
+  },
+  {
+    "path": "example/shop/main.lgo",
+    "mode": "100644",
+    "sha": "7dc377ee37c307978a089e7b6b65bb0181bbfea4"
+  },
+  {
+    "path": "example/shop/mounts_test.lgo",
+    "mode": "100644",
+    "sha": "b6ce1d0f34b74b11872f115d209e57b1aa8a7f24"
+  },
+  {
+    "path": "example/shop/mounts.lgo",
+    "mode": "100644",
+    "sha": "be15991e49fb8ea4d0e2f4cb3408e18f7cd145d8"
+  },
+  {
+    "path": "example/shop/orders/export_test.lgo",
+    "mode": "100644",
+    "sha": "72b79cb443830881463f95000d86de2214c9c33f"
+  },
+  {
+    "path": "example/shop/orders/fault_test.lgo",
+    "mode": "100644",
+    "sha": "e447b04999a5ae112a29e93cae1e96dc445ca9e8"
+  },
+  {
+    "path": "example/shop/orders/faults.lgo",
+    "mode": "100644",
+    "sha": "728a5589098e45f7cfbfc0d3ccf83d17cab0ba38"
+  },
+  {
+    "path": "example/shop/orders/orders_test.lgo",
+    "mode": "100644",
+    "sha": "a706ae282bcbc4c7578a7194c83c8f85adfac669"
+  },
+  {
+    "path": "example/shop/orders/routes.lgo",
+    "mode": "100644",
+    "sha": "e87480f0742ffc093ed9292441a059e1942efbd9"
+  },
+  {
+    "path": "example/shop/orders/views.lgo",
+    "mode": "100644",
+    "sha": "681c5f69a7fb23ef299c5f1d54edb89325d4b371"
+  },
+  {
+    "path": "example/shop/registry_test.lgo",
+    "mode": "100644",
+    "sha": "8d49d18dbc3c915c78687edab45f0fe8c8c9b8e9"
+  },
+  {
+    "path": "example/shop/scheduler_test.lgo",
+    "mode": "100644",
+    "sha": "6392428e732314aab4d53ad33b05b7ee93be55bd"
+  },
+  {
+    "path": "example/shop/shop_test.lgo",
+    "mode": "100644",
+    "sha": "530473bd410092378b54cdeff1db9c122bd6c297"
+  },
+  {
+    "path": "example/shop/sqlc.yaml",
+    "mode": "100644",
+    "sha": "604f0efafaf30700015ea3556e15363f33976edc"
+  },
+  {
+    "path": "example/shop/startup_test.lgo",
+    "mode": "100644",
+    "sha": "a7151e438394e0a80dcc96cafe6108a487eb4f8b"
+  },
+  {
+    "path": "example/shop/stock/routes.lgo",
+    "mode": "100644",
+    "sha": "050e3f463c9f3d49dbf18bd9d06c374f460254ca"
+  },
+  {
+    "path": "example/shop/stock/stock_test.lgo",
+    "mode": "100644",
+    "sha": "54b2f88562bc3cd48bc93a5fabfac3b554ada4c6"
+  },
+  {
+    "path": "example/shop/stock/views.lgo",
+    "mode": "100644",
+    "sha": "1b1a6b53b1201cd55f44b0e2cc8048d8fbb1459e"
+  },
+  {
+    "path": "fault/fault_test.lgo",
+    "mode": "100644",
+    "sha": "a2c8927a171284baf7e7fda61c08dbd994f55a3f"
+  },
+  {
+    "path": "fault/fault.lgo",
+    "mode": "100644",
+    "sha": "eec3c6db44e1c1de721d2f4475bfa93d49d939a7"
+  },
+  {
+    "path": "fault/faulttest/export_test.lgo",
+    "mode": "100644",
+    "sha": "d3314eb802fc9aded714807ac490ce5005eb258b"
+  },
+  {
+    "path": "fault/faulttest/faulttest_test.lgo",
+    "mode": "100644",
+    "sha": "faa091f7af8afee10fda5e5f36aadde32393f624"
+  },
+  {
+    "path": "fault/faulttest/faulttest.lgo",
+    "mode": "100644",
+    "sha": "3f548e40da76df49a5151f17ffb18763d87a5bf4"
+  },
+  {
+    "path": "frontend/biome.json",
+    "mode": "100644",
+    "sha": "5128c48dcf95dc690744432cbf3b12b7320bc2bf"
+  },
+  {
+    "path": "frontend/package.json",
+    "mode": "100644",
+    "sha": "b1ffcba266eb08e25409f17faa8cd1d7593700b9"
+  },
+  {
+    "path": "frontend/pnpm-lock.yaml",
+    "mode": "100644",
+    "sha": "b71e24719700240a5c9080694fd814d42723499a"
+  },
+  {
+    "path": "frontend/src/adapters/react.ts",
+    "mode": "100644",
+    "sha": "ee07877387f15752d0dd98fafc53cb4898ebc196"
+  },
+  {
+    "path": "frontend/src/adapters/solid.ts",
+    "mode": "100644",
+    "sha": "d218ee6dea7eed3d1746ae27171eb92769ef8e90"
+  },
+  {
+    "path": "frontend/src/adapters/svelte.ts",
+    "mode": "100644",
+    "sha": "68ba046b70406e3f6b8a3dee2389ff7e46141d44"
+  },
+  {
+    "path": "frontend/src/adapters/wasm.ts",
+    "mode": "100644",
+    "sha": "651267973279864a434ddc9d1952ebd1214981f1"
+  },
+  {
+    "path": "frontend/src/entry.ts",
+    "mode": "100644",
+    "sha": "61611ef52515abb96c86cf24b134d4f6ab18606d"
+  },
+  {
+    "path": "frontend/src/island.ts",
+    "mode": "100644",
+    "sha": "7e41a4174a8308fcebfce7959976e5da93f36919"
+  },
+  {
+    "path": "frontend/src/live.ts",
+    "mode": "100644",
+    "sha": "c52b7d381f56a7dd610fa0c4f970a8da3787c97d"
+  },
+  {
+    "path": "frontend/src/slots.ts",
+    "mode": "100644",
+    "sha": "41bb957771bb3868c3309bbdbf402d12e0264dc5"
+  },
+  {
+    "path": "frontend/test/corpus.test.ts",
+    "mode": "100644",
+    "sha": "0aa391b29ccd8d4bd163289bc2891b8ad432ae17"
+  },
+  {
+    "path": "frontend/test/dom-stubs.ts",
+    "mode": "100644",
+    "sha": "5c9ebd090a7c611983f21849a1eeb0093eba2e21"
+  },
+  {
+    "path": "frontend/test/entry.test.ts",
+    "mode": "100644",
+    "sha": "2071bb2bb8c93a8b3dfc2eff79422471ee4616e7"
+  },
+  {
+    "path": "frontend/test/fixtures/build-entry.react.ts",
+    "mode": "100644",
+    "sha": "a92d4e9895228df27b3604b9d22aa89615e5902e"
+  },
+  {
+    "path": "frontend/test/fixtures/build-entry.solid.ts",
+    "mode": "100644",
+    "sha": "b80336a8d6c12064cd3846c2db606ae4d611e205"
+  },
+  {
+    "path": "frontend/test/fixtures/build-entry.svelte.ts",
+    "mode": "100644",
+    "sha": "60a5efd2a1d6b318991b11a0ee5d7426fd6ad867"
+  },
+  {
+    "path": "frontend/test/fixtures/Counter.react.tsx",
+    "mode": "100644",
+    "sha": "0843166fefdd5d4b08959358dcfddc84379dbf50"
+  },
+  {
+    "path": "frontend/test/fixtures/Counter.solid.tsx",
+    "mode": "100644",
+    "sha": "3f81ae165b0dfbe01656744de423d688081183ee"
+  },
+  {
+    "path": "frontend/test/fixtures/Counter.svelte",
+    "mode": "100644",
+    "sha": "f8e8cabae04cfa3359e208b5be9658a570ea97cf"
+  },
+  {
+    "path": "frontend/test/fixtures/disposable-svelte.ts",
+    "mode": "100644",
+    "sha": "57ba5716a4023ca85ce88f3437c963e5260cfe74"
+  },
+  {
+    "path": "frontend/test/fixtures/Disposable.react.tsx",
+    "mode": "100644",
+    "sha": "9516df9bffdfb8a16e76232514e04ebb852d0d79"
+  },
+  {
+    "path": "frontend/test/fixtures/Disposable.solid.tsx",
+    "mode": "100644",
+    "sha": "15324b8fc1fb21c84d0d2cf1dd988eec75ce116f"
+  },
+  {
+    "path": "frontend/test/fixtures/Disposable.svelte",
+    "mode": "100644",
+    "sha": "11998bba98922506a99e1242d02aac305f016821"
+  },
+  {
+    "path": "frontend/test/fixtures/wasm/.gitignore",
+    "mode": "100644",
+    "sha": "1ee357df28949eec4d94c003200a480c8511d6d4"
+  },
+  {
+    "path": "frontend/test/fixtures/wasm/ticker/go.mod",
+    "mode": "100644",
+    "sha": "214cff3b511b777cb76548ccf5d03195271e090e"
+  },
+  {
+    "path": "frontend/test/fixtures/wasm/ticker/main.lgo",
+    "mode": "100644",
+    "sha": "4c7ce48bf9165c9375c4385d533b1ec4bab869ae"
+  },
+  {
+    "path": "frontend/test/island-dispose.test.ts",
+    "mode": "100644",
+    "sha": "c39e8a4a1d297d6b61924123b32b67ed1ab50622"
+  },
+  {
+    "path": "frontend/test/island-glob.test.ts",
+    "mode": "100644",
+    "sha": "cc49603f9ed3666c130a8443547f8e267ea7c6c9"
+  },
+  {
+    "path": "frontend/test/island-move.test.ts",
+    "mode": "100644",
+    "sha": "803ff15eebfacef90ccdf1841127f9e1cd3fcfa3"
+  },
+  {
+    "path": "frontend/test/island.test.ts",
+    "mode": "100644",
+    "sha": "5c70fa4c3671da91e12c3534c7de9dd70fc26199"
+  },
+  {
+    "path": "frontend/test/live.test.ts",
+    "mode": "100644",
+    "sha": "1b06c34d894127d937c79dbc3b86c053a693d3a5"
+  },
+  {
+    "path": "frontend/test/production-build.test.ts",
+    "mode": "100644",
+    "sha": "04fc0be9f85f88874f23e8d551b63307ef23ba69"
+  },
+  {
+    "path": "frontend/test/wasm-retry.test.ts",
+    "mode": "100644",
+    "sha": "56f836c054a5c5cb9d7c66fa23db4601cc879450"
+  },
+  {
+    "path": "frontend/test/wasm-runtime.test.ts",
+    "mode": "100644",
+    "sha": "5fc0158a13ba1f2f0af55c629b89e5a574e91f53"
+  },
+  {
+    "path": "frontend/test/wasm.test.ts",
+    "mode": "100644",
+    "sha": "a5fa0b75d3f54815354a6cfb58c141fa9f64549c"
+  },
+  {
+    "path": "frontend/tsconfig.json",
+    "mode": "100644",
+    "sha": "61dae4152ce8953f2f3d7b19e3d3de9860e233ea"
+  },
+  {
+    "path": "frontend/vite.config.ts",
+    "mode": "100644",
+    "sha": "de6b036afd8076e8f842111694442bb4f4062199"
+  },
+  {
+    "path": "frontend/vitest.config.ts",
+    "mode": "100644",
+    "sha": "fed2ee3d8816ca6c7e35ac32ee009460cdf8c131"
+  },
+  {
+    "path": "gateway/export_test.lgo",
+    "mode": "100644",
+    "sha": "6799482eebcfc65ddd3d3926288679f5f74f0038"
+  },
+  {
+    "path": "gateway/faults_test.lgo",
+    "mode": "100644",
+    "sha": "014ff6f05e06fe5ca9595fb596471ab6d598bf81"
+  },
+  {
+    "path": "gateway/faults.lgo",
+    "mode": "100644",
+    "sha": "27854b96d6ecd6f753762d42db64032468f496f5"
+  },
+  {
+    "path": "gateway/gateway_peek_test.lgo",
+    "mode": "100644",
+    "sha": "4a28fca82c7c4731efecf8ba4f4ed6f24e55cb4c"
+  },
+  {
+    "path": "gateway/gateway_replay_test.lgo",
+    "mode": "100644",
+    "sha": "f80aa79e3b32ca7b7ccb66e2d9d918ea3fe22f32"
+  },
+  {
+    "path": "gateway/gateway_test.lgo",
+    "mode": "100644",
+    "sha": "0b4fff53a5b3f1a8dbce4582522f2cbf435bba7e"
+  },
+  {
+    "path": "gateway/gateway_upstream_test.lgo",
+    "mode": "100644",
+    "sha": "9c9ae0abb208b41bf7208720e81711c3cc44cff7"
+  },
+  {
+    "path": "gateway/gateway.lgo",
+    "mode": "100644",
+    "sha": "cae3d5838c85a0ff64b5423656b356152c03218a"
+  },
+  {
+    "path": "go.mod",
+    "mode": "100644",
+    "sha": "3a60edac377aee5b42b2bad855769b08e0b88807"
+  },
+  {
+    "path": "go.sum",
+    "mode": "100644",
+    "sha": "394e67f163f28377add022869b8979dba4821d9e"
+  },
+  {
+    "path": "http3/control_stream_test.lgo",
+    "mode": "100644",
+    "sha": "dd7cf1ecef09454a980af1126a53a9391d69e1e7"
+  },
+  {
+    "path": "http3/control_stream.lgo",
+    "mode": "100644",
+    "sha": "bd4c81456d7f251ea04405bc307178bc69a90c08"
+  },
+  {
+    "path": "http3/datagrams_test.lgo",
+    "mode": "100644",
+    "sha": "1210c54eeef02a7f8a3f5c705d1716cf63de0227"
+  },
+  {
+    "path": "http3/export_test.lgo",
+    "mode": "100644",
+    "sha": "d6a9ad31efd7f2c05e4fcc04410e55ce1ee8f90c"
+  },
+  {
+    "path": "http3/faults_mapping_test.lgo",
+    "mode": "100644",
+    "sha": "20b94179e5e84ad58ba34ecfb888d852807f0972"
+  },
+  {
+    "path": "http3/faults.lgo",
+    "mode": "100644",
+    "sha": "3f4396e5fd886d0aa8985b7538e9bc6d2054bdaa"
+  },
+  {
+    "path": "http3/frame_codec_test.lgo",
+    "mode": "100644",
+    "sha": "898eb481dcd39241cb640bf80ea750fbf3cd04c5"
+  },
+  {
+    "path": "http3/frame_codec.lgo",
+    "mode": "100644",
+    "sha": "82b5388448a9fe64815c14226f282a055ee35b1b"
+  },
+  {
+    "path": "http3/goaway_test.lgo",
+    "mode": "100644",
+    "sha": "3eae523b5833a495adfa29dce56ebd2c45af57e8"
+  },
+  {
+    "path": "http3/http3_shutdown_cleanup_test.lgo",
+    "mode": "100644",
+    "sha": "24a33088e6ee537268a7a187de9760db5d24aa5c"
+  },
+  {
+    "path": "http3/http3_stop_test.lgo",
+    "mode": "100644",
+    "sha": "23f1302365283fa357d8038017dd483652420cf3"
+  },
+  {
+    "path": "http3/http3_test.lgo",
+    "mode": "100644",
+    "sha": "14a7da654dbf66bd859a292b0645802ef4e6ed7b"
+  },
+  {
+    "path": "http3/owned_server_test.lgo",
+    "mode": "100644",
+    "sha": "9d5b70e1cf2d10e5aea4890b5433ad2a9522a849"
+  },
+  {
+    "path": "http3/owned_server.lgo",
+    "mode": "100644",
+    "sha": "4c7ff01048a54b3a15d93403929e43da95cf7842"
+  },
+  {
+    "path": "http3/request_body_test.lgo",
+    "mode": "100644",
+    "sha": "bd0da94d5e014d899791e70b5baa03fc41f538b8"
+  },
+  {
+    "path": "http3/request_body.lgo",
+    "mode": "100644",
+    "sha": "636dad4d94d80e912eee167718833eabc6cfa52d"
+  },
+  {
+    "path": "http3/request_headers_test.lgo",
+    "mode": "100644",
+    "sha": "d329fd6435f04f6c8df51400ef62cb5bb303a0a2"
+  },
+  {
+    "path": "http3/request_headers.lgo",
+    "mode": "100644",
+    "sha": "ebd9665546296932fffe7bbee160938a1740de76"
+  },
+  {
+    "path": "http3/request_stream_test.lgo",
+    "mode": "100644",
+    "sha": "8f582c60321b930b422e1d78a5364dca76f34a2b"
+  },
+  {
+    "path": "http3/request_stream.lgo",
+    "mode": "100644",
+    "sha": "aeb1236bf88fb3b5605ce977fe47c01f98d2404b"
+  },
+  {
+    "path": "http3/response_writer_test.lgo",
+    "mode": "100644",
+    "sha": "f9b1a820b4a42868c953ea9edd5edfa1e329463d"
+  },
+  {
+    "path": "http3/response_writer.lgo",
+    "mode": "100644",
+    "sha": "1c74cb47c9ec886f3dbbbd6a1de45de2bae7ba16"
+  },
+  {
+    "path": "http3/serve_port_test.lgo",
+    "mode": "100644",
+    "sha": "b7069ad43c94ebab9c1cd97b04c75f14b09fa987"
+  },
+  {
+    "path": "http3/server.lgo",
+    "mode": "100644",
+    "sha": "02ab4a141d82245271b671feb94a9c0f27f89b33"
+  },
+  {
+    "path": "http3/timeouts_test.lgo",
+    "mode": "100644",
+    "sha": "5f6e7d67a437aa3db96ea444cc7daee7c6279dff"
+  },
+  {
+    "path": "internal/http3peer/peer.lgo",
+    "mode": "100644",
+    "sha": "c2f0bb8b2003c52d4e7ec120674947edf61446ce"
+  },
+  {
+    "path": "job/chunk.lgo",
+    "mode": "100644",
+    "sha": "49fc797bfa5217eaa28b176377792ac770f24e60"
+  },
+  {
+    "path": "job/export_test.lgo",
+    "mode": "100644",
+    "sha": "24ce3e45de549454d08dbad4ea521a02e6163ae3"
+  },
+  {
+    "path": "job/faults_test.lgo",
+    "mode": "100644",
+    "sha": "d539588b9c020ba2e7ef8fe8a0436b7975b7b32a"
+  },
+  {
+    "path": "job/faults.lgo",
+    "mode": "100644",
+    "sha": "4df740c1d0c6e77c151dfab4fce636a0a10e0b81"
+  },
+  {
+    "path": "job/job_test.lgo",
+    "mode": "100644",
+    "sha": "e083dddc0cefbb2f6f85e472bd0abe302862c4d7"
+  },
+  {
+    "path": "job/queue.lgo",
+    "mode": "100644",
+    "sha": "75ba5d2880f2361ac72420c02d9f327306811962"
+  },
+  {
+    "path": "job/scheduler.lgo",
+    "mode": "100644",
+    "sha": "2807aa2ef9882e6a329ba69c4522cf6bcdb6d0eb"
+  },
+  {
+    "path": "justfile",
+    "mode": "100644",
+    "sha": "992b303e0da9a626fdcb7ee320f8b47107087a66"
+  },
+  {
+    "path": "LICENSE",
+    "mode": "100644",
+    "sha": "d645695673349e3947e8e5ae42332d0ac3164cd7"
+  },
+  {
+    "path": "live/corpus_test.lgo",
+    "mode": "100644",
+    "sha": "2481202637b1a6c728814859733f75f1b51d043f"
+  },
+  {
+    "path": "live/faults_test.lgo",
+    "mode": "100644",
+    "sha": "55a6ed1cb7327815bb641aa1131775f9a29ccfb4"
+  },
+  {
+    "path": "live/faults.lgo",
+    "mode": "100644",
+    "sha": "3b041d9a7a5d18cdb26b90a35e09666c4146ed35"
+  },
+  {
+    "path": "live/live_test.lgo",
+    "mode": "100644",
+    "sha": "131c02bd2363b5c6810caa017d23cb39a01b2e0a"
+  },
+  {
+    "path": "live/live.lgo",
+    "mode": "100644",
+    "sha": "d95b12a0a3e4e7648ac8f9a8dfd3d4126db60010"
+  },
+  {
+    "path": "logos.toml",
+    "mode": "100644",
+    "sha": "72c9813404f32177e453440bbb0827c584af72a0"
+  },
+  {
+    "path": "meter/http_test.lgo",
+    "mode": "100644",
+    "sha": "28693f9201e1506713858cba239d70b21a893728"
+  },
+  {
+    "path": "meter/http.lgo",
+    "mode": "100644",
+    "sha": "891d357f6884a4888091e0ce0025b65c3a70c196"
+  },
+  {
+    "path": "meter/meter_test.lgo",
+    "mode": "100644",
+    "sha": "dc421c15325da97b67d6409f4f9380e8b999603c"
+  },
+  {
+    "path": "meter/meter.lgo",
+    "mode": "100644",
+    "sha": "81bb99e7af3651c5ce7d1297b88dda49078f364f"
+  },
+  {
+    "path": "migrate/bookkeeping_engines_test.lgo",
+    "mode": "100644",
+    "sha": "ac81e416fd84c6d49763c3ec59d473bab43c8b7e"
+  },
+  {
+    "path": "migrate/concurrent_test.lgo",
+    "mode": "100644",
+    "sha": "6b307cfb40ea34af2e6050f4988a36e80d536c5a"
+  },
+  {
+    "path": "migrate/engines_test.lgo",
+    "mode": "100644",
+    "sha": "68f0a6bdf6ddc6ffa715816771c1b0d026292e59"
+  },
+  {
+    "path": "migrate/faults_test.lgo",
+    "mode": "100644",
+    "sha": "835888ecea6834fa04f9923675fd29e1d38e95e5"
+  },
+  {
+    "path": "migrate/faults.lgo",
+    "mode": "100644",
+    "sha": "487dd12aa7f62b613ed17f53472446e73d9cb8e9"
+  },
+  {
+    "path": "migrate/fingerprint.lgo",
+    "mode": "100644",
+    "sha": "7d255d7d1b8dd3f97e601edd9b85ba5d020e8ed9"
+  },
+  {
+    "path": "migrate/migrate_test.lgo",
+    "mode": "100644",
+    "sha": "537d4d2ae1863ae86f8a59ee5b2ee5bdaae6e996"
+  },
+  {
+    "path": "migrate/migrate.lgo",
+    "mode": "100644",
+    "sha": "c0352b42d872566b830c4b2c98b57ff6693ff5d6"
+  },
+  {
+    "path": "migrate/serial_test.lgo",
+    "mode": "100644",
+    "sha": "76294b2748b8566899191683e544ffa778b1d8f0"
+  },
+  {
+    "path": "migrate/sqlite_boundary_test.lgo",
+    "mode": "100644",
+    "sha": "91dd1c984865a040c2f39bed0f0c865f5b6d2609"
+  },
+  {
+    "path": "migrate/testdata/bad/0001_broken.down.sql",
+    "mode": "100644",
+    "sha": "cc394c05345b0625556c90402bc77219616e2e6b"
+  },
+  {
+    "path": "migrate/testdata/bad/0001_broken.up.sql",
+    "mode": "100644",
+    "sha": "5013018ba38ef961bcf40663fca619364ebe2e81"
+  },
+  {
+    "path": "migrate/testdata/badpair/0001_thing.down.sql",
+    "mode": "100644",
+    "sha": "900e73d886a8f79355773bf0cee955d6a69d0c47"
+  },
+  {
+    "path": "migrate/testdata/badpair/0001_thing.up.sql",
+    "mode": "100644",
+    "sha": "c39bb0c7c1bd04346836598275b97aaadb922037"
+  },
+  {
+    "path": "migrate/testdata/downonly/0001_orphan.down.sql",
+    "mode": "100644",
+    "sha": "fa02bdb9326b6bf7ae8feda14dc07b22baf29281"
+  },
+  {
+    "path": "migrate/testdata/good/0001_create_users.down.sql",
+    "mode": "100644",
+    "sha": "5df33d7f972a31910edb05165b3f286fd56ffdc2"
+  },
+  {
+    "path": "migrate/testdata/good/0001_create_users.up.sql",
+    "mode": "100644",
+    "sha": "3915af21411249908db6fbe86834f1c8b4bb150e"
+  },
+  {
+    "path": "migrate/testdata/good/0002_add_email.down.sql",
+    "mode": "100644",
+    "sha": "cc835c9ff9334e7d33b57ad735c93d1482df99c1"
+  },
+  {
+    "path": "migrate/testdata/good/0002_add_email.up.sql",
+    "mode": "100644",
+    "sha": "bf0f8c91b32a3220a621781e9b0fc7dda157adcb"
+  },
+  {
+    "path": "NOTICE",
+    "mode": "100644",
+    "sha": "9fe62e0b4c1cea3d0041eca48a1d47b4fe59a638"
+  },
+  {
+    "path": "openapi/jschema.lgo",
+    "mode": "100644",
+    "sha": "ede32860f6388ab662efe580d0d3bfbbcb5c9653"
+  },
+  {
+    "path": "openapi/openapi_options_test.lgo",
+    "mode": "100644",
+    "sha": "a70403b627012e710764069e165e2c23a3ff7a78"
+  },
+  {
+    "path": "openapi/openapi_test.lgo",
+    "mode": "100644",
+    "sha": "dc51845d0973d03e8ef3a4d282875efff5870e0a"
+  },
+  {
+    "path": "openapi/openapi.lgo",
+    "mode": "100644",
+    "sha": "c2b075a0d5653b9e27e53913db012ab6642058a6"
+  },
+  {
+    "path": "ops/faults_test.lgo",
+    "mode": "100644",
+    "sha": "79849e03d5cc5eba343f32f447e1fe3fcbe3fb79"
+  },
+  {
+    "path": "ops/faults.lgo",
+    "mode": "100644",
+    "sha": "8f28bd221977b2b97c8f5434404cf38e30fc12c9"
+  },
+  {
+    "path": "ops/ops_test.lgo",
+    "mode": "100644",
+    "sha": "8a445b61bc2aa2a3b90bbf0ffe336c9798791095"
+  },
+  {
+    "path": "ops/ops.lgo",
+    "mode": "100644",
+    "sha": "e4429bf556dda3e6b8f8a8fcc40457a7bad3a90d"
+  },
+  {
+    "path": "orm/blob_test.lgo",
+    "mode": "100644",
+    "sha": "39aaef40e468c7bbbc7b195f6caa0ecb012d87fe"
+  },
+  {
+    "path": "orm/contract_test.lgo",
+    "mode": "100644",
+    "sha": "73f77f9cb801c436945d1f86a0b1127ae4424477"
+  },
+  {
+    "path": "orm/edges_test.lgo",
+    "mode": "100644",
+    "sha": "27575d522a1ef62a3db821f2a207e2706d03957a"
+  },
+  {
+    "path": "orm/engines_test.lgo",
+    "mode": "100644",
+    "sha": "56a18d53c873d607a77517e10bde82dd09e2952c"
+  },
+  {
+    "path": "orm/order_test.lgo",
+    "mode": "100644",
+    "sha": "c9c4b14732a0e3af729f0a06e464e418d27f7a6b"
+  },
+  {
+    "path": "orm/session_test.lgo",
+    "mode": "100644",
+    "sha": "b5248a7c17e4b9c9e9ce01f190f56d5427b10d62"
+  },
+  {
+    "path": "orm/session.lgo",
+    "mode": "100644",
+    "sha": "3dbbdc4f7b0d756dff138fe0b67d6c1b7d5ce92e"
+  },
+  {
+    "path": "orm/stale_key_test.lgo",
+    "mode": "100644",
+    "sha": "f07fcf2902bbf7adaef19ca38a666b39f97ba596"
+  },
+  {
+    "path": "orm/table.lgo",
+    "mode": "100644",
+    "sha": "96cca15bc115389aabd4e5fe203b507f9ff1122d"
+  },
+  {
+    "path": "orm/write.lgo",
+    "mode": "100644",
+    "sha": "e3d4aba7f056b0d73aa9851521336189a21d99df"
+  },
+  {
+    "path": "README.md",
+    "mode": "100644",
+    "sha": "208706cd617dc57bb8b6c1acb8a802267406e0c5"
+  },
+  {
+    "path": "resilience/breaker.lgo",
+    "mode": "100644",
+    "sha": "65ef94a3631bb0b8e91dd3d34ca51f7d58346029"
+  },
+  {
+    "path": "resilience/faults.lgo",
+    "mode": "100644",
+    "sha": "d5139e49133bd1c54a8cb5ace9e76773edda89db"
+  },
+  {
+    "path": "resilience/resilience_test.lgo",
+    "mode": "100644",
+    "sha": "c19e68c109cddf78d2358abec0f5fac711874f85"
+  },
+  {
+    "path": "resilience/resilience.lgo",
+    "mode": "100644",
+    "sha": "e4fabcbbde1c1c1b995dd5f26d714c60a4eedffc"
+  },
+  {
+    "path": "REVIEW.md",
+    "mode": "100644",
+    "sha": "ef5f2d0c4f68a924e8630557fe2ecd9a79ac97cd"
+  },
+  {
+    "path": "schema/schema_test.lgo",
+    "mode": "100644",
+    "sha": "8650299763c526a6c79be3a2193b33eabcf02133"
+  },
+  {
+    "path": "schema/schema.lgo",
+    "mode": "100644",
+    "sha": "7f8360086cfb23ba96ddb83154c1c101ec045500"
+  },
+  {
+    "path": "scripts/engines_test.sh",
+    "mode": "100755",
+    "sha": "b015ec3e9a07de9b57aaf6b35d40b763a705738b"
+  },
+  {
+    "path": "scripts/engines.sh",
+    "mode": "100755",
+    "sha": "815cd60a5d8d800ec7c34e03fadfd6b3b6b339de"
+  },
+  {
+    "path": "scripts/slop_test.sh",
+    "mode": "100755",
+    "sha": "90327f1bb60cb6e28150329adaf406cd9c8a18fb"
+  },
+  {
+    "path": "tools/go.mod",
+    "mode": "100644",
+    "sha": "da9f7de2ecb84a20cd97c2d4bf25210588e37aeb"
+  },
+  {
+    "path": "tools/go.sum",
+    "mode": "100644",
+    "sha": "2083f381d5fa80c0ac795778c1d1e00d056f9cbe"
+  },
+  {
+    "path": "validate/validate_test.lgo",
+    "mode": "100644",
+    "sha": "7667d9b93fe8c3102347bb1e442045683256f176"
+  },
+  {
+    "path": "validate/validate.lgo",
+    "mode": "100644",
+    "sha": "cc42db8d4036d32e59936872648b901fa3800245"
+  },
+  {
+    "path": "view/render.lgo",
+    "mode": "100644",
+    "sha": "bbbf10783a8226020cf71a4405a73f882d312767"
+  },
+  {
+    "path": "view/view_test.lgo",
+    "mode": "100644",
+    "sha": "64d96732585785135b98118e6dc213afff2f1f10"
+  },
+  {
+    "path": "view/view.lgo",
+    "mode": "100644",
+    "sha": "25f2d0938109e53de32d61033543aa2332843e67"
+  },
+  {
+    "path": "web/bind_edge_test.lgo",
+    "mode": "100644",
+    "sha": "3a6a31f17c4f72d4ac30d4574f8d2aa867c7d648"
+  },
+  {
+    "path": "web/bind_test.lgo",
+    "mode": "100644",
+    "sha": "dbd366526f21156b3a4a6cb37a8dd66df1e64cf8"
+  },
+  {
+    "path": "web/bind.lgo",
+    "mode": "100644",
+    "sha": "904ca8b72cd4b149d3cd17b60a646e2509de0b9d"
+  },
+  {
+    "path": "web/export_test.lgo",
+    "mode": "100644",
+    "sha": "0cc0ac7e15274ddcc03f5f3c3af3fe595e6c2ff0"
+  },
+  {
+    "path": "web/fault_test.lgo",
+    "mode": "100644",
+    "sha": "468c5fa572bc1bbbba3bd66095db74dd174329c9"
+  },
+  {
+    "path": "web/faults.lgo",
+    "mode": "100644",
+    "sha": "557350ba8f601b1469641ca5bce507fbb540ea69"
+  },
+  {
+    "path": "web/reply.lgo",
+    "mode": "100644",
+    "sha": "4135e84b341133f6fbb1e911b06180b84e57ae45"
+  },
+  {
+    "path": "web/route.lgo",
+    "mode": "100644",
+    "sha": "b44c3e375b277c0d8e600fafd7a4483cba772042"
+  },
+  {
+    "path": "web/server_test.lgo",
+    "mode": "100644",
+    "sha": "c431be9227e49c9e8b0df0929757112726be25d2"
+  },
+  {
+    "path": "web/server.lgo",
+    "mode": "100644",
+    "sha": "ce12c63ee116afe0b0d032b353442d1996ca2524"
+  },
+  {
+    "path": "web/stage.lgo",
+    "mode": "100644",
+    "sha": "13e8ef1ea36fe71b5eda41fab091e1f5df9ad644"
+  },
+  {
+    "path": "web/web_test.lgo",
+    "mode": "100644",
+    "sha": "8802f54f3cec5d2773e03ca53078d913b256db10"
+  },
+  {
+    "path": "web/web.lgo",
+    "mode": "100644",
+    "sha": "e1e9a3f57e568cfeacda839142591191677cc6ea"
+  },
+  {
+    "path": "web/ws_h2_test.lgo",
+    "mode": "100644",
+    "sha": "deb89e3454d50e263d368a7ba268fd0aff671817"
+  },
+  {
+    "path": "web/ws_h2.lgo",
+    "mode": "100644",
+    "sha": "9e3fbbc8e9cd0236b25c5e23f8ebc2a57d08e24c"
+  },
+  {
+    "path": "websocket/close_export_test.lgo",
+    "mode": "100644",
+    "sha": "da71e32dd0216c87cb53f2d6fb8074ff70b2256a"
+  },
+  {
+    "path": "websocket/close_test.lgo",
+    "mode": "100644",
+    "sha": "471afa0e119ed425b7de654ecc1997ede21842d8"
+  },
+  {
+    "path": "websocket/close.lgo",
+    "mode": "100644",
+    "sha": "c297f49ad2fb70d18f0a255e8e3976a5dbfd9092"
+  },
+  {
+    "path": "websocket/conn_test.lgo",
+    "mode": "100644",
+    "sha": "d9fb9ea69938cc4e240ef3c5fca34a4c9a5fe667"
+  },
+  {
+    "path": "websocket/conn.lgo",
+    "mode": "100644",
+    "sha": "011093f0aae0df13667a7d50b10d5475409b8d3b"
+  },
+  {
+    "path": "websocket/echo_bench_test.lgo",
+    "mode": "100644",
+    "sha": "64eb0dfeb63d924a03bbb9084eb8f0301ecc4f19"
+  },
+  {
+    "path": "websocket/engine_test.lgo",
+    "mode": "100644",
+    "sha": "b18142940d9757a157671fd4cc2bbb6232014d63"
+  },
+  {
+    "path": "websocket/engine.lgo",
+    "mode": "100644",
+    "sha": "3a65a8a50c17377ddfadbc68d8c36a4ba2a7471d"
+  },
+  {
+    "path": "websocket/export_test.lgo",
+    "mode": "100644",
+    "sha": "9a8d153563da8f876f1df7714a3b53645800423c"
+  },
+  {
+    "path": "websocket/fault_test.lgo",
+    "mode": "100644",
+    "sha": "835cb144e85c94080909d251ca8a432c5ea4f3aa"
+  },
+  {
+    "path": "websocket/faults.lgo",
+    "mode": "100644",
+    "sha": "bfb2c7f70b20678e2c8411b21bca62097ff8ec67"
+  },
+  {
+    "path": "websocket/frame_bench_test.lgo",
+    "mode": "100644",
+    "sha": "840e8d2ac825d872a99ef13adc357fe771854d8e"
+  },
+  {
+    "path": "websocket/frame_fuzz_test.lgo",
+    "mode": "100644",
+    "sha": "a358836333231586de8096b88e9db3d13ef0ae1a"
+  },
+  {
+    "path": "websocket/frame_test.lgo",
+    "mode": "100644",
+    "sha": "d7fce50503a07cf26d1f23569878b683b0f9d280"
+  },
+  {
+    "path": "websocket/frame.lgo",
+    "mode": "100644",
+    "sha": "2931d6ec3465effcc8e17b56065236c196c4be87"
+  },
+  {
+    "path": "websocket/h2_connect_test.lgo",
+    "mode": "100644",
+    "sha": "b179cd7ae81dd5036d129515cb7168cf81cbd5f5"
+  },
+  {
+    "path": "websocket/h2_tls_shutdown_test.lgo",
+    "mode": "100644",
+    "sha": "b570ae3145159e4626ec461c2bd78358c269f104"
+  },
+  {
+    "path": "websocket/h3_connect_test.lgo",
+    "mode": "100644",
+    "sha": "ce02e1e7b956d217792989e9908220fb67539fc4"
+  },
+  {
+    "path": "websocket/handshake_export_test.lgo",
+    "mode": "100644",
+    "sha": "1f031d80cf3ba6809718f133aa4db6211aa56a1d"
+  },
+  {
+    "path": "websocket/handshake_test.lgo",
+    "mode": "100644",
+    "sha": "40c08d92f4bb4237debe58518926378af1b5191c"
+  },
+  {
+    "path": "websocket/handshake.lgo",
+    "mode": "100644",
+    "sha": "e71e2ceda71ed7261aa446e987fc481d7653be66"
+  },
+  {
+    "path": "websocket/origin.lgo",
+    "mode": "100644",
+    "sha": "c9660d38d049efe30354607f77e349f5ef86a0ab"
+  },
+  {
+    "path": "websocket/stream_test.lgo",
+    "mode": "100644",
+    "sha": "524da9c91255bebdb8ffc466d8ece5fa930f4be8"
+  },
+  {
+    "path": "websocket/stream.lgo",
+    "mode": "100644",
+    "sha": "73099f78bb29f1e29fd5ebf2223e396999a0f2f2"
+  },
+  {
+    "path": "wire/corpus.jsonl",
+    "mode": "100644",
+    "sha": "c0dd6def98547039a55db7241430bd03bdfc9375"
+  }
+]

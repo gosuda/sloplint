@@ -1,0 +1,3401 @@
+{
+  "schema": 1,
+  "producer": "3b189a37b7af1c4890af414c61aa1e628b01c058",
+  "run": "46031066075",
+  "manifest": {
+    "schema": 1,
+    "purpose": "Freeze actual PostgreSQL and unchanged public-generator reference roles, plus both actual nested generated-test argument vectors. No production repair is applied.",
+    "source": {
+      "repository": "gosuda/spira",
+      "head": "4bde2ec5e8bf23ffbeca0b4b54e8c9c7c005e33f",
+      "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+      "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+      "blobs": 621,
+      "index_file": "source-index.json"
+    },
+    "tests": {
+      "tree": "0d6a92efd9b8d24e58cdcadad0253c2565759994",
+      "blobs": 623,
+      "index_file": "test-index.json",
+      "changed_paths": [
+        "cmd/sqlc-gen-spira/version_reference_test.lgo",
+        "cmd/sqlc-gen-spira/testdata/version-references.json",
+        "cmd/sqlc-gen-spira/continued_escape_test.lgo"
+      ],
+      "production_unchanged": true
+    },
+    "toolchain": {
+      "repository": "gosuda/LoGOs",
+      "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+      "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+      "bootstrap_go": "1.27.4",
+      "fresh_build": true
+    },
+    "postgres_image": "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782",
+    "postgres_version_num": "180007",
+    "sqlc_version": "v1.31.2-0.20261023030206-3ad8b20fb02b",
+    "proof_sha256": {
+      "baseline_support.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
+      "proof_support.py": "6cc72c815508ccb1c501420c049d7c188ca4577d2ae6b8853eb5228d0c655569",
+      "native_support.py": "eb17dd6d33bcb3256a037de831ce95825c149c7287cad234e6dd438fe7af2953",
+      "capture_logos.py": "e00e719e8eb63b0c3c21889398799c0c0751a54a679a247c8b74d26e1bd77f32",
+      "verify_baseline.py": "5183f60e7e06b197118f7233ba9fb6df4f648255220254b5d2b1cb5bea429f38",
+      "version-references.json": "dd4ce8e234ddd6f4fd668608944dc5bd3b15ce23f3ff9de463d48b9706d8332a",
+      "authored-tests.json": "2910ca457f0cf0e50e7c30530f6944a015390f309b80ef20c8ab4da23e6f495e",
+      "source-index.json": "628d91c699ed64ab99c4dd00f936fc2187aa5d7daa53377e306daae80177b9fc",
+      "test-index.json": "985d70dae339c92251a5a1b4f76f5fc93416b180dff9be9c63f580a4ff92ab75",
+      "schema.sql": "8d16f5318bc6ce7490f44cbb53a02fb65fe335c2747e237cba3fa60ba27b862b",
+      "artifact_support.py": "b3f27ccd5d75efea94530f1294d7e0d23d89b46d7d9e5771cc0b3d32a56d1b28",
+      "prior-report.json": "0581c8331a8463cc5ac6a63e1c752926c7d3b2c12ca7b2b9af73377ee32919e7",
+      "recover_failure.py": "3001d995c493906bc527692a8fb88c170e4920705e8e28c6c0669eb932b255b3",
+      "launch_test.py": "31d90542191330a6be39b61ce5d5dc447dedbbb0b557706ef0a00c9d93a7c733"
+    },
+    "workflow_sha256": "391ea1a534ebcf27ccd10e3063297b27766efcc41ad1b13a17cbb9bc0c24ddcf",
+    "contracts": {
+      "cases": 20,
+      "expected_red": [
+        "reported-alias",
+        "alias-exact",
+        "alias-quoted",
+        "alias-bare",
+        "alias-bare-quoted",
+        "qualifier-only",
+        "function-name",
+        "cast-type",
+        "postfix-type",
+        "typed-literal",
+        "collation-name",
+        "longer-identifier"
+      ],
+      "expected_controls": [
+        "quoted-assignment",
+        "unquoted-assignment",
+        "predicate-only",
+        "qualified-predicate",
+        "returned-reference",
+        "function-argument",
+        "delete-reference",
+        "qualified-returned"
+      ],
+      "native": "Each original and exact captured request executes against PostgreSQL 18.7 and must retain the frozen final row values. RETURNING output is preserved; only the final JSON state is parsed.",
+      "pipeline": "Each current-source call is predicted to generate; actual exits, full request metadata and both generated files are recorded. Any unexpected outcome fails the baseline rather than being relabeled.",
+      "nested_race": "Unmodified shared helper must launch two distinct generated-module test processes with exactly ['test','-count=1','-v','.']; this records the missing -race flag without substituting a fake compiler.",
+      "source_identity": "Complete 621/623 tracked path/blob/mode/tree identities before/after; all original bytes restored. Permanent tests compile before expected RED.",
+      "preserved": "Published14 dollar,12 typed,14 continued,8 direct runtime and40 pipeline cases remain unchanged. Existing version controls run too."
+    },
+    "review": {
+      "parent": "Original baseline reviewed at4884; bounded observer correction pending independent review."
+    },
+    "publication_eligible": false,
+    "prior_failure": {
+      "producer": "5889c641b120ea325e1ff9a04769739db461f039",
+      "run": 46027118627,
+      "job": 140601265244,
+      "artifact": 15213535172,
+      "name": "spira47-version-reference-baseline-r40",
+      "zip_bytes": 503117,
+      "zip_sha256": "586b6123b6a0a7a829aa89ce9bfd2c9ed5de86c4f30a61b8d6366b2ef63a3c0f",
+      "conclusion": "failure"
+    },
+    "observer_correction": "The pinned test runner prepends GOROOT/bin to PATH. Its documented -exec hook now invokes the real test binary through a launcher that restores only the observer's PATH priority. Actual test/production bytes, compiler, nested argv expectation and all SQL oracles stay unchanged. The failed archive's complete argv records are authenticated and emitted first. The artifact token is removed from os.environ before the first child command and passed explicitly only to the artifact downloader; it is never restored into the process environment.",
+    "archive_read_correction": "The immutable ZIP contains full SQLc request payloads that this observer does not consume. Recovery validates every central-directory path and the member-count bound, emits each declared size, and reads only report.json (4 MiB) and logos-argv.jsonl (128 KiB) through bounded streams. ZIP digest/size, run/job identity and exact report equality remain mandatory. The preceding combined archive-bound rejection remains a failed run; no source tests ran there.",
+    "prior_archive_bound_failure": {
+      "producer": "7b166f72cb191b33d710389dccceb4f1cc3577a5",
+      "run": 46029336371,
+      "job": 140608831290,
+      "artifact": 15213971655,
+      "zip_sha256": "93ad4f28096354547558679da6ac5f5ee8c29efd06bd05472604dabbd8d8d916",
+      "raw_job_log_sha256": "bbfa45a5b75374c5442c485a79075da7f6977799b7ac85dd56d4cb4a056b2894",
+      "source_restored": true,
+      "phase": "combined central-directory member-count/aggregate-size check",
+      "source_tests_reached": false,
+      "conclusion": "failure"
+    }
+  },
+  "baseline_verified": true,
+  "observations_complete": true,
+  "source_restored": true,
+  "publication_eligible": false,
+  "before": {
+    "label": "source",
+    "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+    "blobs": 621,
+    "index_sha256": "3ac9074f7cdce055c9d99c656ea683e5323921dc8beee595debf175b6f80e7a1"
+  },
+  "prior_failed_observer": {
+    "producer": "5889c641b120ea325e1ff9a04769739db461f039",
+    "run": 46027118627,
+    "job": 140601265244,
+    "artifact": 15213535172,
+    "name": "spira47-version-reference-baseline-r40",
+    "zip_bytes": 503117,
+    "zip_sha256": "586b6123b6a0a7a829aa89ce9bfd2c9ed5de86c4f30a61b8d6366b2ef63a3c0f",
+    "producer_conclusion": "failure",
+    "download_digest_verified": true,
+    "report_sha256": "c9237929776157009d241506b7fdfe02dc39954c79dab5b450a9c3eeab988cb1",
+    "argv_sha256": "e0a8bf6b672638ff6a1764c4da410962bef5872ebf69105870c776dd2661ec73",
+    "raw_argv": [
+      {
+        "argv": [
+          "test",
+          "-race",
+          "-count=1",
+          "-v",
+          "-run",
+          "^TestGeneratedQueryConstants$",
+          "./cmd/sqlc-gen-spira"
+        ],
+        "cwd": "/home/runner/work/sloplint/sloplint/source",
+        "module": "module github.com/gosuda/spira",
+        "pid": 31007
+      },
+      {
+        "argv": [
+          "test",
+          "-race",
+          "-count=1",
+          "-v",
+          "-run",
+          "^TestSQLcPostgresLiteralPipeline$",
+          "./cmd/sqlc-gen-spira"
+        ],
+        "cwd": "/home/runner/work/sloplint/sloplint/source",
+        "module": "module github.com/gosuda/spira",
+        "pid": 32438
+      }
+    ],
+    "outer_calls": 2,
+    "nested_calls": 0,
+    "prior_outcome_preserved": "failure",
+    "source_restored": true,
+    "gate_results_reused_as_new_success": false
+  },
+  "postgres_version_num": "180007",
+  "native_original": [
+    {
+      "name": "reported-alias",
+      "lane": "original",
+      "sql": "UPDATE items SET name = 'changed' RETURNING name AS \"item's version\";",
+      "sql_sha256": "043ce7ff50b2f902f6da9055f3cc80ce3ae32136bd2466a461107318d8b52b9e",
+      "raw_output": "changed\n{\"name\" : \"changed\", \"version\" : 0}\n",
+      "observed": {
+        "name": "changed",
+        "version": 0
+      },
+      "expected": {
+        "name": "changed",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "alias-exact",
+      "lane": "original",
+      "sql": "UPDATE items SET name = 'changed' RETURNING name AS version;",
+      "sql_sha256": "464fda2a8a52698419ac73c585e2a434e4992f40d3cf657b4f9d24b4cc40a97d",
+      "raw_output": "changed\n{\"name\" : \"changed\", \"version\" : 0}\n",
+      "observed": {
+        "name": "changed",
+        "version": 0
+      },
+      "expected": {
+        "name": "changed",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "alias-quoted",
+      "lane": "original",
+      "sql": "UPDATE items SET name = 'changed' RETURNING name AS \"version\";",
+      "sql_sha256": "53ce355e08625df6b64b020cfedf718ef8532af975bed71e0d71bfc2e4c902bf",
+      "raw_output": "changed\n{\"name\" : \"changed\", \"version\" : 0}\n",
+      "observed": {
+        "name": "changed",
+        "version": 0
+      },
+      "expected": {
+        "name": "changed",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "alias-bare",
+      "lane": "original",
+      "sql": "UPDATE items SET name = 'changed' RETURNING name version;",
+      "sql_sha256": "d700ed54f99d7c267b6158a24b094c81ca1d57f0231240975e3bcd0d6d7243de",
+      "raw_output": "changed\n{\"name\" : \"changed\", \"version\" : 0}\n",
+      "observed": {
+        "name": "changed",
+        "version": 0
+      },
+      "expected": {
+        "name": "changed",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "alias-bare-quoted",
+      "lane": "original",
+      "sql": "UPDATE items SET name = 'changed' RETURNING name \"version\";",
+      "sql_sha256": "ccbf8a1ac0dafdbe09314beb39876080319cc6ccc8748384934aa89582e3b61f",
+      "raw_output": "changed\n{\"name\" : \"changed\", \"version\" : 0}\n",
+      "observed": {
+        "name": "changed",
+        "version": 0
+      },
+      "expected": {
+        "name": "changed",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "qualifier-only",
+      "lane": "original",
+      "sql": "UPDATE items AS version SET name = 'changed' RETURNING version.name;",
+      "sql_sha256": "956d54e8de7fd0f35d92621bf37ae2dc4bf0026a1e4113f623ecdc97319c603b",
+      "raw_output": "changed\n{\"name\" : \"changed\", \"version\" : 0}\n",
+      "observed": {
+        "name": "changed",
+        "version": 0
+      },
+      "expected": {
+        "name": "changed",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "function-name",
+      "lane": "original",
+      "sql": "UPDATE items SET name = left(version(), 0) || 'changed';",
+      "sql_sha256": "96f5e42200072a318303a7b75f923e526dcbe56c5d3a752ba6257b2ab06595b2",
+      "raw_output": "{\"name\" : \"changed\", \"version\" : 0}\n",
+      "observed": {
+        "name": "changed",
+        "version": 0
+      },
+      "expected": {
+        "name": "changed",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "cast-type",
+      "lane": "original",
+      "sql": "UPDATE items SET name = CAST('changed' AS version);",
+      "sql_sha256": "4d27a33a48daf0e2dbf48cf3e36b9192f5c974cba8d751fdf32aa1493d9e8e8b",
+      "raw_output": "{\"name\" : \"changed\", \"version\" : 0}\n",
+      "observed": {
+        "name": "changed",
+        "version": 0
+      },
+      "expected": {
+        "name": "changed",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "postfix-type",
+      "lane": "original",
+      "sql": "UPDATE items SET name = 'changed'::version;",
+      "sql_sha256": "b3ad45058cff0e72c30bcbc01c3ac76de88dc722d3fd678cb6f28ec35397ea9c",
+      "raw_output": "{\"name\" : \"changed\", \"version\" : 0}\n",
+      "observed": {
+        "name": "changed",
+        "version": 0
+      },
+      "expected": {
+        "name": "changed",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "typed-literal",
+      "lane": "original",
+      "sql": "UPDATE items SET name = version 'changed';",
+      "sql_sha256": "b94501f918e4317fd6b53debc48c0754c60d34f8a690d99cdcd78ec26c60cb0a",
+      "raw_output": "{\"name\" : \"changed\", \"version\" : 0}\n",
+      "observed": {
+        "name": "changed",
+        "version": 0
+      },
+      "expected": {
+        "name": "changed",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "collation-name",
+      "lane": "original",
+      "sql": "UPDATE items SET name = 'changed' COLLATE version;",
+      "sql_sha256": "6d232b50e3f05c48b56bcacdf3ac9792a0a503ccd78a59dd083a9146876bc410",
+      "raw_output": "{\"name\" : \"changed\", \"version\" : 0}\n",
+      "observed": {
+        "name": "changed",
+        "version": 0
+      },
+      "expected": {
+        "name": "changed",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "longer-identifier",
+      "lane": "original",
+      "sql": "UPDATE items AS conversion SET name = 'changed';",
+      "sql_sha256": "0d798101bc536812765bdd6f1c21f894c99f55dbcd69508d4b237fdd57012238",
+      "raw_output": "{\"name\" : \"changed\", \"version\" : 0}\n",
+      "observed": {
+        "name": "changed",
+        "version": 0
+      },
+      "expected": {
+        "name": "changed",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "quoted-assignment",
+      "lane": "original",
+      "sql": "UPDATE items SET \"version\" = \"version\" + 1;",
+      "sql_sha256": "5b3b04f6fa7d521251e899a010013306981385c221f8c1017eff050b861e03bd",
+      "raw_output": "{\"name\" : \"before\", \"version\" : 1}\n",
+      "observed": {
+        "name": "before",
+        "version": 1
+      },
+      "expected": {
+        "name": "before",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "name": "unquoted-assignment",
+      "lane": "original",
+      "sql": "UPDATE items SET version = version + 1;",
+      "sql_sha256": "39cfeb26a6f437dd3f7dff7825ec070fdd4f919e7f13a075aa26dec672eabeef",
+      "raw_output": "{\"name\" : \"before\", \"version\" : 1}\n",
+      "observed": {
+        "name": "before",
+        "version": 1
+      },
+      "expected": {
+        "name": "before",
+        "version": 1
+      },
+      "matches": true
+    },
+    {
+      "name": "predicate-only",
+      "lane": "original",
+      "sql": "UPDATE items SET name = 'changed' WHERE version = 0;",
+      "sql_sha256": "a4ef676fbfd19a9be71c27eac64a422916aef749a7e33d7d98e21d7adc8d3316",
+      "raw_output": "{\"name\" : \"changed\", \"version\" : 0}\n",
+      "observed": {
+        "name": "changed",
+        "version": 0
+      },
+      "expected": {
+        "name": "changed",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "qualified-predicate",
+      "lane": "original",
+      "sql": "UPDATE items AS i SET name = 'changed' WHERE i.\"version\" = 0;",
+      "sql_sha256": "ed9450ce81763bf0f190750a91564c4937de3db6d3b844d3a7d6e32b08e44586",
+      "raw_output": "{\"name\" : \"changed\", \"version\" : 0}\n",
+      "observed": {
+        "name": "changed",
+        "version": 0
+      },
+      "expected": {
+        "name": "changed",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "returned-reference",
+      "lane": "original",
+      "sql": "UPDATE items SET name = 'changed' RETURNING \"version\" AS v;",
+      "sql_sha256": "a1815b07c687e1a908aed19526c5e46f8c8095b212c5e179540ccbaffe3ba23f",
+      "raw_output": "0\n{\"name\" : \"changed\", \"version\" : 0}\n",
+      "observed": {
+        "name": "changed",
+        "version": 0
+      },
+      "expected": {
+        "name": "changed",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "function-argument",
+      "lane": "original",
+      "sql": "UPDATE items SET name = 'changed' RETURNING abs(version);",
+      "sql_sha256": "11eebf5de58fd3c433a91b856297fcaf8a9f5c4b116f949591c96df16fbb9fa6",
+      "raw_output": "0\n{\"name\" : \"changed\", \"version\" : 0}\n",
+      "observed": {
+        "name": "changed",
+        "version": 0
+      },
+      "expected": {
+        "name": "changed",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "delete-reference",
+      "lane": "original",
+      "sql": "DELETE FROM items WHERE \"version\" = -1;",
+      "sql_sha256": "9fa26758f2417c7299b18a12578a72f3f2650a064d890c3db5daa43ece9cc4bc",
+      "raw_output": "{\"name\" : \"before\", \"version\" : 0}\n",
+      "observed": {
+        "name": "before",
+        "version": 0
+      },
+      "expected": {
+        "name": "before",
+        "version": 0
+      },
+      "matches": true
+    },
+    {
+      "name": "qualified-returned",
+      "lane": "original",
+      "sql": "UPDATE items SET name = 'changed' RETURNING items.\"version\";",
+      "sql_sha256": "cdf11d0d2f7172000eea8032ba8ab130ecac1ca2f3d2fd8585d88afdc0a807bd",
+      "raw_output": "0\n{\"name\" : \"changed\", \"version\" : 0}\n",
+      "observed": {
+        "name": "changed",
+        "version": 0
+      },
+      "expected": {
+        "name": "changed",
+        "version": 0
+      },
+      "matches": true
+    }
+  ],
+  "tests_before": {
+    "label": "tests",
+    "tree": "0d6a92efd9b8d24e58cdcadad0253c2565759994",
+    "blobs": 623,
+    "index_sha256": "b26469360f5f4e4a178a21179a178a51f75f3ef3cfaf2f7b23b0a0dd8cdfcbc2"
+  },
+  "generator": {
+    "passed": [
+      "delete-reference",
+      "function-argument",
+      "predicate-only",
+      "qualified-predicate",
+      "qualified-returned",
+      "quoted-assignment",
+      "returned-reference",
+      "unquoted-assignment"
+    ],
+    "failed": [
+      "alias-bare",
+      "alias-bare-quoted",
+      "alias-exact",
+      "alias-quoted",
+      "cast-type",
+      "collation-name",
+      "function-name",
+      "longer-identifier",
+      "postfix-type",
+      "qualifier-only",
+      "reported-alias",
+      "typed-literal"
+    ]
+  },
+  "pipeline": [
+    {
+      "name": "reported-alias",
+      "sql": "UPDATE items SET name = 'changed' RETURNING name AS \"item's version\";",
+      "sql_sha256": "043ce7ff50b2f902f6da9055f3cc80ce3ae32136bd2466a461107318d8b52b9e",
+      "raw_exit": 0,
+      "expected_generator_accepts": false,
+      "observed_generator_accepts": true,
+      "correct": false,
+      "request_sha256": "968c9cc7d2df111f8a5116fe717d406685acbaf3766aa780d3169438fd9d5e53",
+      "processed_sql": "UPDATE items SET name = 'changed' RETURNING name AS \"item's version\"",
+      "processed_sql_sha256": "29b98b35a42c260c448824a29a6527607b57dbbfbac39e5458fd9e77c9c81505",
+      "query_metadata": {
+        "text": "UPDATE items SET name = 'changed' RETURNING name AS \"item's version\"",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [
+          {
+            "name": "item's version",
+            "not_null": true,
+            "is_array": false,
+            "comment": "",
+            "length": -1,
+            "is_named_param": false,
+            "is_func_call": false,
+            "scope": "",
+            "table": {
+              "catalog": "",
+              "schema": "",
+              "name": "items"
+            },
+            "table_alias": "",
+            "type": {
+              "catalog": "",
+              "schema": "",
+              "name": "text"
+            },
+            "is_sqlc_slice": false,
+            "embed_table": null,
+            "original_name": "name",
+            "unsigned": false,
+            "array_dims": 0,
+            "type_expr": null
+          }
+        ],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "d8b27a43339d8c0cd8f99747a218aa4f2807990bfd777a38e4974f49c9e683fb",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET name = 'changed' RETURNING name AS \"item's version\"`\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "reported-alias",
+        "lane": "processed",
+        "sql": "UPDATE items SET name = 'changed' RETURNING name AS \"item's version\"",
+        "sql_sha256": "29b98b35a42c260c448824a29a6527607b57dbbfbac39e5458fd9e77c9c81505",
+        "raw_output": "changed\n{\"name\" : \"changed\", \"version\" : 0}\n",
+        "observed": {
+          "name": "changed",
+          "version": 0
+        },
+        "expected": {
+          "name": "changed",
+          "version": 0
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "alias-exact",
+      "sql": "UPDATE items SET name = 'changed' RETURNING name AS version;",
+      "sql_sha256": "464fda2a8a52698419ac73c585e2a434e4992f40d3cf657b4f9d24b4cc40a97d",
+      "raw_exit": 0,
+      "expected_generator_accepts": false,
+      "observed_generator_accepts": true,
+      "correct": false,
+      "request_sha256": "b4c0796a2bf025e73790437d8a757bdcb27786085a62b53edc72bc9c157eb370",
+      "processed_sql": "UPDATE items SET name = 'changed' RETURNING name AS version",
+      "processed_sql_sha256": "748403930ab3079fe6d86bcc89bb80dadbc4da9d46d7ae1ff3bfac4e5aa2cb65",
+      "query_metadata": {
+        "text": "UPDATE items SET name = 'changed' RETURNING name AS version",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [
+          {
+            "name": "version",
+            "not_null": true,
+            "is_array": false,
+            "comment": "",
+            "length": -1,
+            "is_named_param": false,
+            "is_func_call": false,
+            "scope": "",
+            "table": {
+              "catalog": "",
+              "schema": "",
+              "name": "items"
+            },
+            "table_alias": "",
+            "type": {
+              "catalog": "",
+              "schema": "",
+              "name": "text"
+            },
+            "is_sqlc_slice": false,
+            "embed_table": null,
+            "original_name": "name",
+            "unsigned": false,
+            "array_dims": 0,
+            "type_expr": null
+          }
+        ],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "0057f3db0c2d1e38b416872f7e9298d2d7b6013ad73e08d717c96ab233fa5a13",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET name = 'changed' RETURNING name AS version`\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "alias-exact",
+        "lane": "processed",
+        "sql": "UPDATE items SET name = 'changed' RETURNING name AS version",
+        "sql_sha256": "748403930ab3079fe6d86bcc89bb80dadbc4da9d46d7ae1ff3bfac4e5aa2cb65",
+        "raw_output": "changed\n{\"name\" : \"changed\", \"version\" : 0}\n",
+        "observed": {
+          "name": "changed",
+          "version": 0
+        },
+        "expected": {
+          "name": "changed",
+          "version": 0
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "alias-quoted",
+      "sql": "UPDATE items SET name = 'changed' RETURNING name AS \"version\";",
+      "sql_sha256": "53ce355e08625df6b64b020cfedf718ef8532af975bed71e0d71bfc2e4c902bf",
+      "raw_exit": 0,
+      "expected_generator_accepts": false,
+      "observed_generator_accepts": true,
+      "correct": false,
+      "request_sha256": "d1e77c1ccfb9fe8177cc5fe09e14737302c5918ced82ac7dedf8270cb3f36e54",
+      "processed_sql": "UPDATE items SET name = 'changed' RETURNING name AS \"version\"",
+      "processed_sql_sha256": "f6893f75179897d74a718780f54019230e6d2cb149942b136286dbf88bb094d2",
+      "query_metadata": {
+        "text": "UPDATE items SET name = 'changed' RETURNING name AS \"version\"",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [
+          {
+            "name": "version",
+            "not_null": true,
+            "is_array": false,
+            "comment": "",
+            "length": -1,
+            "is_named_param": false,
+            "is_func_call": false,
+            "scope": "",
+            "table": {
+              "catalog": "",
+              "schema": "",
+              "name": "items"
+            },
+            "table_alias": "",
+            "type": {
+              "catalog": "",
+              "schema": "",
+              "name": "text"
+            },
+            "is_sqlc_slice": false,
+            "embed_table": null,
+            "original_name": "name",
+            "unsigned": false,
+            "array_dims": 0,
+            "type_expr": null
+          }
+        ],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "f29d08f6ff8a4ebb96cb7bce46b539839593cf8e3386c8177db918f755a7000d",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET name = 'changed' RETURNING name AS \"version\"`\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "alias-quoted",
+        "lane": "processed",
+        "sql": "UPDATE items SET name = 'changed' RETURNING name AS \"version\"",
+        "sql_sha256": "f6893f75179897d74a718780f54019230e6d2cb149942b136286dbf88bb094d2",
+        "raw_output": "changed\n{\"name\" : \"changed\", \"version\" : 0}\n",
+        "observed": {
+          "name": "changed",
+          "version": 0
+        },
+        "expected": {
+          "name": "changed",
+          "version": 0
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "alias-bare",
+      "sql": "UPDATE items SET name = 'changed' RETURNING name version;",
+      "sql_sha256": "d700ed54f99d7c267b6158a24b094c81ca1d57f0231240975e3bcd0d6d7243de",
+      "raw_exit": 0,
+      "expected_generator_accepts": false,
+      "observed_generator_accepts": true,
+      "correct": false,
+      "request_sha256": "8525f116bf3092dd1b22bb9738e07e4620c59cae30061fe5a926fdbd03faaa96",
+      "processed_sql": "UPDATE items SET name = 'changed' RETURNING name version",
+      "processed_sql_sha256": "eff15bc6f58546a7d39523b4443d0dcfeec9ae29fd2a0ade31fabc556149422e",
+      "query_metadata": {
+        "text": "UPDATE items SET name = 'changed' RETURNING name version",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [
+          {
+            "name": "version",
+            "not_null": true,
+            "is_array": false,
+            "comment": "",
+            "length": -1,
+            "is_named_param": false,
+            "is_func_call": false,
+            "scope": "",
+            "table": {
+              "catalog": "",
+              "schema": "",
+              "name": "items"
+            },
+            "table_alias": "",
+            "type": {
+              "catalog": "",
+              "schema": "",
+              "name": "text"
+            },
+            "is_sqlc_slice": false,
+            "embed_table": null,
+            "original_name": "name",
+            "unsigned": false,
+            "array_dims": 0,
+            "type_expr": null
+          }
+        ],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "b18b25b9598dd6335bb1b938aa09e360a2926cf05a938ad44b6aa31e6826b248",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET name = 'changed' RETURNING name version`\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "alias-bare",
+        "lane": "processed",
+        "sql": "UPDATE items SET name = 'changed' RETURNING name version",
+        "sql_sha256": "eff15bc6f58546a7d39523b4443d0dcfeec9ae29fd2a0ade31fabc556149422e",
+        "raw_output": "changed\n{\"name\" : \"changed\", \"version\" : 0}\n",
+        "observed": {
+          "name": "changed",
+          "version": 0
+        },
+        "expected": {
+          "name": "changed",
+          "version": 0
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "alias-bare-quoted",
+      "sql": "UPDATE items SET name = 'changed' RETURNING name \"version\";",
+      "sql_sha256": "ccbf8a1ac0dafdbe09314beb39876080319cc6ccc8748384934aa89582e3b61f",
+      "raw_exit": 0,
+      "expected_generator_accepts": false,
+      "observed_generator_accepts": true,
+      "correct": false,
+      "request_sha256": "089fc2af34ce6ba8c347410ae791265fdef4d2f31ea2b508fb16e48ce1215604",
+      "processed_sql": "UPDATE items SET name = 'changed' RETURNING name \"version\"",
+      "processed_sql_sha256": "dce9e55afb3a0e2da94fddba5ea9b63a9f60ebc8c0c52b9fc06d322c9ace6656",
+      "query_metadata": {
+        "text": "UPDATE items SET name = 'changed' RETURNING name \"version\"",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [
+          {
+            "name": "version",
+            "not_null": true,
+            "is_array": false,
+            "comment": "",
+            "length": -1,
+            "is_named_param": false,
+            "is_func_call": false,
+            "scope": "",
+            "table": {
+              "catalog": "",
+              "schema": "",
+              "name": "items"
+            },
+            "table_alias": "",
+            "type": {
+              "catalog": "",
+              "schema": "",
+              "name": "text"
+            },
+            "is_sqlc_slice": false,
+            "embed_table": null,
+            "original_name": "name",
+            "unsigned": false,
+            "array_dims": 0,
+            "type_expr": null
+          }
+        ],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "9b1a0ed40c0881339aa0c46164fcad2b9b9aca15c9122084827af5b71a146de0",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET name = 'changed' RETURNING name \"version\"`\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "alias-bare-quoted",
+        "lane": "processed",
+        "sql": "UPDATE items SET name = 'changed' RETURNING name \"version\"",
+        "sql_sha256": "dce9e55afb3a0e2da94fddba5ea9b63a9f60ebc8c0c52b9fc06d322c9ace6656",
+        "raw_output": "changed\n{\"name\" : \"changed\", \"version\" : 0}\n",
+        "observed": {
+          "name": "changed",
+          "version": 0
+        },
+        "expected": {
+          "name": "changed",
+          "version": 0
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "qualifier-only",
+      "sql": "UPDATE items AS version SET name = 'changed' RETURNING version.name;",
+      "sql_sha256": "956d54e8de7fd0f35d92621bf37ae2dc4bf0026a1e4113f623ecdc97319c603b",
+      "raw_exit": 0,
+      "expected_generator_accepts": false,
+      "observed_generator_accepts": true,
+      "correct": false,
+      "request_sha256": "f9713f66c4a2581851cb57e77698eb82ff58aaf5821887c45c62f8835e2417cc",
+      "processed_sql": "UPDATE items AS version SET name = 'changed' RETURNING version.name",
+      "processed_sql_sha256": "2a1ad73174d4e8f65fc1d6850c912f135696f586487d2f7fae090684fe40949f",
+      "query_metadata": {
+        "text": "UPDATE items AS version SET name = 'changed' RETURNING version.name",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [
+          {
+            "name": "name",
+            "not_null": true,
+            "is_array": false,
+            "comment": "",
+            "length": -1,
+            "is_named_param": false,
+            "is_func_call": false,
+            "scope": "",
+            "table": {
+              "catalog": "",
+              "schema": "",
+              "name": "items"
+            },
+            "table_alias": "",
+            "type": {
+              "catalog": "",
+              "schema": "",
+              "name": "text"
+            },
+            "is_sqlc_slice": false,
+            "embed_table": null,
+            "original_name": "name",
+            "unsigned": false,
+            "array_dims": 0,
+            "type_expr": null
+          }
+        ],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "d9ac89feab1433a8fd345a604cd435ca972b04c0217bccf6fc31e3b265b66027",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items AS version SET name = 'changed' RETURNING version.name`\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "qualifier-only",
+        "lane": "processed",
+        "sql": "UPDATE items AS version SET name = 'changed' RETURNING version.name",
+        "sql_sha256": "2a1ad73174d4e8f65fc1d6850c912f135696f586487d2f7fae090684fe40949f",
+        "raw_output": "changed\n{\"name\" : \"changed\", \"version\" : 0}\n",
+        "observed": {
+          "name": "changed",
+          "version": 0
+        },
+        "expected": {
+          "name": "changed",
+          "version": 0
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "function-name",
+      "sql": "UPDATE items SET name = left(version(), 0) || 'changed';",
+      "sql_sha256": "96f5e42200072a318303a7b75f923e526dcbe56c5d3a752ba6257b2ab06595b2",
+      "raw_exit": 0,
+      "expected_generator_accepts": false,
+      "observed_generator_accepts": true,
+      "correct": false,
+      "request_sha256": "85d13bcc13062856324ad0afe4e899e76cb84b5e994ba3e6f831eed6b8448ccd",
+      "processed_sql": "UPDATE items SET name = left(version(), 0) || 'changed'",
+      "processed_sql_sha256": "5a3a09dd9e47dc8656991b73350f634d796708c79162d89efd6eea1210adb5b3",
+      "query_metadata": {
+        "text": "UPDATE items SET name = left(version(), 0) || 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "8d5b92e45845f272632a87c00c5d59b6030f76a8c74d3e662646a853a7238fa2",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET name = left(version(), 0) || 'changed'`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "function-name",
+        "lane": "processed",
+        "sql": "UPDATE items SET name = left(version(), 0) || 'changed'",
+        "sql_sha256": "5a3a09dd9e47dc8656991b73350f634d796708c79162d89efd6eea1210adb5b3",
+        "raw_output": "{\"name\" : \"changed\", \"version\" : 0}\n",
+        "observed": {
+          "name": "changed",
+          "version": 0
+        },
+        "expected": {
+          "name": "changed",
+          "version": 0
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "cast-type",
+      "sql": "UPDATE items SET name = CAST('changed' AS version);",
+      "sql_sha256": "4d27a33a48daf0e2dbf48cf3e36b9192f5c974cba8d751fdf32aa1493d9e8e8b",
+      "raw_exit": 0,
+      "expected_generator_accepts": false,
+      "observed_generator_accepts": true,
+      "correct": false,
+      "request_sha256": "2200f1852a75874d434c635dca91135857d1f89ca874555ff152d5d61c721205",
+      "processed_sql": "UPDATE items SET name = CAST('changed' AS version)",
+      "processed_sql_sha256": "f499f51458399783a12f8d544cd358066c8571150065c1ad1552f9896ca23bbd",
+      "query_metadata": {
+        "text": "UPDATE items SET name = CAST('changed' AS version)",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "2ebe0648618c50b397e9a0672e2ddc13d8d8771056cb7ab3c3380cc4224981f4",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET name = CAST('changed' AS version)`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "cast-type",
+        "lane": "processed",
+        "sql": "UPDATE items SET name = CAST('changed' AS version)",
+        "sql_sha256": "f499f51458399783a12f8d544cd358066c8571150065c1ad1552f9896ca23bbd",
+        "raw_output": "{\"name\" : \"changed\", \"version\" : 0}\n",
+        "observed": {
+          "name": "changed",
+          "version": 0
+        },
+        "expected": {
+          "name": "changed",
+          "version": 0
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "postfix-type",
+      "sql": "UPDATE items SET name = 'changed'::version;",
+      "sql_sha256": "b3ad45058cff0e72c30bcbc01c3ac76de88dc722d3fd678cb6f28ec35397ea9c",
+      "raw_exit": 0,
+      "expected_generator_accepts": false,
+      "observed_generator_accepts": true,
+      "correct": false,
+      "request_sha256": "724e960c29cf5641ec671a06ab83c3b11acc96301ffdf767b7b6c2216a8428fc",
+      "processed_sql": "UPDATE items SET name = 'changed'::version",
+      "processed_sql_sha256": "436c40f2ba5edc638d6a4fa47de9bbce9c36f3e2db173ef4e74ba91ae002132b",
+      "query_metadata": {
+        "text": "UPDATE items SET name = 'changed'::version",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "587fadce801ab8dce1c2eab5264302863dce76c6140caf59e4f73cd58654dee0",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET name = 'changed'::version`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "postfix-type",
+        "lane": "processed",
+        "sql": "UPDATE items SET name = 'changed'::version",
+        "sql_sha256": "436c40f2ba5edc638d6a4fa47de9bbce9c36f3e2db173ef4e74ba91ae002132b",
+        "raw_output": "{\"name\" : \"changed\", \"version\" : 0}\n",
+        "observed": {
+          "name": "changed",
+          "version": 0
+        },
+        "expected": {
+          "name": "changed",
+          "version": 0
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "typed-literal",
+      "sql": "UPDATE items SET name = version 'changed';",
+      "sql_sha256": "b94501f918e4317fd6b53debc48c0754c60d34f8a690d99cdcd78ec26c60cb0a",
+      "raw_exit": 0,
+      "expected_generator_accepts": false,
+      "observed_generator_accepts": true,
+      "correct": false,
+      "request_sha256": "c9746174dbd05442b77de5e0612ab31c50373195433dbc2a0eaf8dad880e290b",
+      "processed_sql": "UPDATE items SET name = version 'changed'",
+      "processed_sql_sha256": "ea0705357e62336509efd05609d2cc824057b1e13c4342f3d72fe99e60c06e5b",
+      "query_metadata": {
+        "text": "UPDATE items SET name = version 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "671fe9177db0942a6181c011b6e3bd6e01b3ea1924d9d92e90559c6cbed4aaaf",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET name = version 'changed'`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "typed-literal",
+        "lane": "processed",
+        "sql": "UPDATE items SET name = version 'changed'",
+        "sql_sha256": "ea0705357e62336509efd05609d2cc824057b1e13c4342f3d72fe99e60c06e5b",
+        "raw_output": "{\"name\" : \"changed\", \"version\" : 0}\n",
+        "observed": {
+          "name": "changed",
+          "version": 0
+        },
+        "expected": {
+          "name": "changed",
+          "version": 0
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "collation-name",
+      "sql": "UPDATE items SET name = 'changed' COLLATE version;",
+      "sql_sha256": "6d232b50e3f05c48b56bcacdf3ac9792a0a503ccd78a59dd083a9146876bc410",
+      "raw_exit": 0,
+      "expected_generator_accepts": false,
+      "observed_generator_accepts": true,
+      "correct": false,
+      "request_sha256": "17afaa4eb5bba96535ef3065a938e075d2ebb748f8b31a8faed279d1713105b3",
+      "processed_sql": "UPDATE items SET name = 'changed' COLLATE version",
+      "processed_sql_sha256": "779b48f2f66d34540db4744992591cb67c042f8e158bd94ca784a2e57472ed60",
+      "query_metadata": {
+        "text": "UPDATE items SET name = 'changed' COLLATE version",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "b009127036a27050ab84386008b5a96f6b4fc0afa11abc627dbf67863b981ff5",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET name = 'changed' COLLATE version`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "collation-name",
+        "lane": "processed",
+        "sql": "UPDATE items SET name = 'changed' COLLATE version",
+        "sql_sha256": "779b48f2f66d34540db4744992591cb67c042f8e158bd94ca784a2e57472ed60",
+        "raw_output": "{\"name\" : \"changed\", \"version\" : 0}\n",
+        "observed": {
+          "name": "changed",
+          "version": 0
+        },
+        "expected": {
+          "name": "changed",
+          "version": 0
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "longer-identifier",
+      "sql": "UPDATE items AS conversion SET name = 'changed';",
+      "sql_sha256": "0d798101bc536812765bdd6f1c21f894c99f55dbcd69508d4b237fdd57012238",
+      "raw_exit": 0,
+      "expected_generator_accepts": false,
+      "observed_generator_accepts": true,
+      "correct": false,
+      "request_sha256": "4a203c3ee8a3c055a1502950d0e2c56fb49d16e68fe994fd0ca3736e352089b9",
+      "processed_sql": "UPDATE items AS conversion SET name = 'changed'",
+      "processed_sql_sha256": "aca7e9f89980cce552cc70079135916bed11ed758ba8540e2c06ab2fd4178f2d",
+      "query_metadata": {
+        "text": "UPDATE items AS conversion SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "f85c8f7fdb6b0ff4085176be24b57f47a73563c8123a5f315606b43f0b9a1998",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items AS conversion SET name = 'changed'`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "longer-identifier",
+        "lane": "processed",
+        "sql": "UPDATE items AS conversion SET name = 'changed'",
+        "sql_sha256": "aca7e9f89980cce552cc70079135916bed11ed758ba8540e2c06ab2fd4178f2d",
+        "raw_output": "{\"name\" : \"changed\", \"version\" : 0}\n",
+        "observed": {
+          "name": "changed",
+          "version": 0
+        },
+        "expected": {
+          "name": "changed",
+          "version": 0
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "quoted-assignment",
+      "sql": "UPDATE items SET \"version\" = \"version\" + 1;",
+      "sql_sha256": "5b3b04f6fa7d521251e899a010013306981385c221f8c1017eff050b861e03bd",
+      "raw_exit": 0,
+      "expected_generator_accepts": true,
+      "observed_generator_accepts": true,
+      "correct": true,
+      "request_sha256": "7901ddbc67f5148b1b4135602fcf1b67c82a2ac6479021b6add9d83eac33dab0",
+      "processed_sql": "UPDATE items SET \"version\" = \"version\" + 1",
+      "processed_sql_sha256": "cc156b63fc94770fdf7fb0547d30d9970bf45da48fa54a216663d5948a9fca3c",
+      "query_metadata": {
+        "text": "UPDATE items SET \"version\" = \"version\" + 1",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "e7ac264a2ad4f1685539726c76d6da1159778ff2d27ace81331ddea6df56ead2",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET \"version\" = \"version\" + 1`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "quoted-assignment",
+        "lane": "processed",
+        "sql": "UPDATE items SET \"version\" = \"version\" + 1",
+        "sql_sha256": "cc156b63fc94770fdf7fb0547d30d9970bf45da48fa54a216663d5948a9fca3c",
+        "raw_output": "{\"name\" : \"before\", \"version\" : 1}\n",
+        "observed": {
+          "name": "before",
+          "version": 1
+        },
+        "expected": {
+          "name": "before",
+          "version": 1
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "unquoted-assignment",
+      "sql": "UPDATE items SET version = version + 1;",
+      "sql_sha256": "39cfeb26a6f437dd3f7dff7825ec070fdd4f919e7f13a075aa26dec672eabeef",
+      "raw_exit": 0,
+      "expected_generator_accepts": true,
+      "observed_generator_accepts": true,
+      "correct": true,
+      "request_sha256": "f3750dbc9281fe2263dd21e0ca72d251ff1b013453af6053c866e334fd9ab54f",
+      "processed_sql": "UPDATE items SET version = version + 1",
+      "processed_sql_sha256": "fffe7f6b1de31b190027496e70e99b89d18fe7611abbedfe4469ee229463a73e",
+      "query_metadata": {
+        "text": "UPDATE items SET version = version + 1",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "0260972437ecefbcdb183251de59d3f36e21c2c98814d4eb2985232b4879becc",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET version = version + 1`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "unquoted-assignment",
+        "lane": "processed",
+        "sql": "UPDATE items SET version = version + 1",
+        "sql_sha256": "fffe7f6b1de31b190027496e70e99b89d18fe7611abbedfe4469ee229463a73e",
+        "raw_output": "{\"name\" : \"before\", \"version\" : 1}\n",
+        "observed": {
+          "name": "before",
+          "version": 1
+        },
+        "expected": {
+          "name": "before",
+          "version": 1
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "predicate-only",
+      "sql": "UPDATE items SET name = 'changed' WHERE version = 0;",
+      "sql_sha256": "a4ef676fbfd19a9be71c27eac64a422916aef749a7e33d7d98e21d7adc8d3316",
+      "raw_exit": 0,
+      "expected_generator_accepts": true,
+      "observed_generator_accepts": true,
+      "correct": true,
+      "request_sha256": "f0726bebcdcb69f8d527a080f548519ffdc68317186882ae8d360acd3616a8c4",
+      "processed_sql": "UPDATE items SET name = 'changed' WHERE version = 0",
+      "processed_sql_sha256": "b328387b75fbcd94035a1aa41306b51a4945fc8584c43caf6f54299fe10643f6",
+      "query_metadata": {
+        "text": "UPDATE items SET name = 'changed' WHERE version = 0",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "c9d05acb00e870e474100a4b37e7338e705783adfd58b4112b9f9c77c0e7e8f8",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET name = 'changed' WHERE version = 0`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "predicate-only",
+        "lane": "processed",
+        "sql": "UPDATE items SET name = 'changed' WHERE version = 0",
+        "sql_sha256": "b328387b75fbcd94035a1aa41306b51a4945fc8584c43caf6f54299fe10643f6",
+        "raw_output": "{\"name\" : \"changed\", \"version\" : 0}\n",
+        "observed": {
+          "name": "changed",
+          "version": 0
+        },
+        "expected": {
+          "name": "changed",
+          "version": 0
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "qualified-predicate",
+      "sql": "UPDATE items AS i SET name = 'changed' WHERE i.\"version\" = 0;",
+      "sql_sha256": "ed9450ce81763bf0f190750a91564c4937de3db6d3b844d3a7d6e32b08e44586",
+      "raw_exit": 0,
+      "expected_generator_accepts": true,
+      "observed_generator_accepts": true,
+      "correct": true,
+      "request_sha256": "f23d264e4c37fc2ba2ae6a03ac96afddc9649f1e68e838a5bfd73776fc8a0cf9",
+      "processed_sql": "UPDATE items AS i SET name = 'changed' WHERE i.\"version\" = 0",
+      "processed_sql_sha256": "e862eb5c8bae3a32839d813d89963f107bd00ce665f80398c18bd0557294066f",
+      "query_metadata": {
+        "text": "UPDATE items AS i SET name = 'changed' WHERE i.\"version\" = 0",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "fcf909e16caf570be3c336a6a6d7de8d9a6f86b17155180c8254ec970eeabd35",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items AS i SET name = 'changed' WHERE i.\"version\" = 0`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "qualified-predicate",
+        "lane": "processed",
+        "sql": "UPDATE items AS i SET name = 'changed' WHERE i.\"version\" = 0",
+        "sql_sha256": "e862eb5c8bae3a32839d813d89963f107bd00ce665f80398c18bd0557294066f",
+        "raw_output": "{\"name\" : \"changed\", \"version\" : 0}\n",
+        "observed": {
+          "name": "changed",
+          "version": 0
+        },
+        "expected": {
+          "name": "changed",
+          "version": 0
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "returned-reference",
+      "sql": "UPDATE items SET name = 'changed' RETURNING \"version\" AS v;",
+      "sql_sha256": "a1815b07c687e1a908aed19526c5e46f8c8095b212c5e179540ccbaffe3ba23f",
+      "raw_exit": 0,
+      "expected_generator_accepts": true,
+      "observed_generator_accepts": true,
+      "correct": true,
+      "request_sha256": "1510097f7c5e83b222e883f709d17609b30003e833b343382b70a64f8909ef87",
+      "processed_sql": "UPDATE items SET name = 'changed' RETURNING \"version\" AS v",
+      "processed_sql_sha256": "44938f6d4a286bf16d1f1d472812e8857b3afcfd58a510f4b96a663c49eb1edd",
+      "query_metadata": {
+        "text": "UPDATE items SET name = 'changed' RETURNING \"version\" AS v",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [
+          {
+            "name": "v",
+            "not_null": true,
+            "is_array": false,
+            "comment": "",
+            "length": -1,
+            "is_named_param": false,
+            "is_func_call": false,
+            "scope": "",
+            "table": {
+              "catalog": "",
+              "schema": "",
+              "name": "items"
+            },
+            "table_alias": "",
+            "type": {
+              "catalog": "",
+              "schema": "pg_catalog",
+              "name": "int4"
+            },
+            "is_sqlc_slice": false,
+            "embed_table": null,
+            "original_name": "version",
+            "unsigned": false,
+            "array_dims": 0,
+            "type_expr": null
+          }
+        ],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "d65359f3915abe8001bbd33334eca618a74c05c774ce6740b7e346490f5e3edb",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET name = 'changed' RETURNING \"version\" AS v`\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "returned-reference",
+        "lane": "processed",
+        "sql": "UPDATE items SET name = 'changed' RETURNING \"version\" AS v",
+        "sql_sha256": "44938f6d4a286bf16d1f1d472812e8857b3afcfd58a510f4b96a663c49eb1edd",
+        "raw_output": "0\n{\"name\" : \"changed\", \"version\" : 0}\n",
+        "observed": {
+          "name": "changed",
+          "version": 0
+        },
+        "expected": {
+          "name": "changed",
+          "version": 0
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "function-argument",
+      "sql": "UPDATE items SET name = 'changed' RETURNING abs(version);",
+      "sql_sha256": "11eebf5de58fd3c433a91b856297fcaf8a9f5c4b116f949591c96df16fbb9fa6",
+      "raw_exit": 0,
+      "expected_generator_accepts": true,
+      "observed_generator_accepts": true,
+      "correct": true,
+      "request_sha256": "ecdf4c934d418234048c1f0a8d1cc6b78c1b1391c25b30ba38a58021738814f3",
+      "processed_sql": "UPDATE items SET name = 'changed' RETURNING abs(version)",
+      "processed_sql_sha256": "2137794844c36d73c6676d6c1a271523bda1f992bf5c3482d78772e9077ea1dd",
+      "query_metadata": {
+        "text": "UPDATE items SET name = 'changed' RETURNING abs(version)",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [
+          {
+            "name": "abs",
+            "not_null": true,
+            "is_array": false,
+            "comment": "",
+            "length": -1,
+            "is_named_param": false,
+            "is_func_call": true,
+            "scope": "",
+            "table": null,
+            "table_alias": "",
+            "type": {
+              "catalog": "",
+              "schema": "",
+              "name": "bigint"
+            },
+            "is_sqlc_slice": false,
+            "embed_table": null,
+            "original_name": "",
+            "unsigned": false,
+            "array_dims": 0,
+            "type_expr": null
+          }
+        ],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "e07bdf281844cf40abf0fccb1569d7456d59b4360f2c6568fc0182ee061fc1fc",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET name = 'changed' RETURNING abs(version)`\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "function-argument",
+        "lane": "processed",
+        "sql": "UPDATE items SET name = 'changed' RETURNING abs(version)",
+        "sql_sha256": "2137794844c36d73c6676d6c1a271523bda1f992bf5c3482d78772e9077ea1dd",
+        "raw_output": "0\n{\"name\" : \"changed\", \"version\" : 0}\n",
+        "observed": {
+          "name": "changed",
+          "version": 0
+        },
+        "expected": {
+          "name": "changed",
+          "version": 0
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "delete-reference",
+      "sql": "DELETE FROM items WHERE \"version\" = -1;",
+      "sql_sha256": "9fa26758f2417c7299b18a12578a72f3f2650a064d890c3db5daa43ece9cc4bc",
+      "raw_exit": 0,
+      "expected_generator_accepts": true,
+      "observed_generator_accepts": true,
+      "correct": true,
+      "request_sha256": "2bf1ff78de3b64a576f73736c318cb26ab93546ffc34428376cf157a4aebdd5c",
+      "processed_sql": "DELETE FROM items WHERE \"version\" = -1",
+      "processed_sql_sha256": "3b1036cb7f970b6cf8eb4dd33bd71bda87226e03af8dd04f7896a3ece9eaf003",
+      "query_metadata": {
+        "text": "DELETE FROM items WHERE \"version\" = -1",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "0a23d5affaeb9023ed4e9d49b1d0caee87952eba092a1cdcd937fe9641ba9b6c",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `DELETE FROM items WHERE \"version\" = -1`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "delete-reference",
+        "lane": "processed",
+        "sql": "DELETE FROM items WHERE \"version\" = -1",
+        "sql_sha256": "3b1036cb7f970b6cf8eb4dd33bd71bda87226e03af8dd04f7896a3ece9eaf003",
+        "raw_output": "{\"name\" : \"before\", \"version\" : 0}\n",
+        "observed": {
+          "name": "before",
+          "version": 0
+        },
+        "expected": {
+          "name": "before",
+          "version": 0
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "qualified-returned",
+      "sql": "UPDATE items SET name = 'changed' RETURNING items.\"version\";",
+      "sql_sha256": "cdf11d0d2f7172000eea8032ba8ab130ecac1ca2f3d2fd8585d88afdc0a807bd",
+      "raw_exit": 0,
+      "expected_generator_accepts": true,
+      "observed_generator_accepts": true,
+      "correct": true,
+      "request_sha256": "caa6bb1dbd923c54546b97940b8dff22ca79e2e53fd9de6b3f44887aa53df4cc",
+      "processed_sql": "UPDATE items SET name = 'changed' RETURNING items.\"version\"",
+      "processed_sql_sha256": "ad98183df417cc0b4512303203503bcc377bd2ed62c0167b5869715f362cf25f",
+      "query_metadata": {
+        "text": "UPDATE items SET name = 'changed' RETURNING items.\"version\"",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [
+          {
+            "name": "version",
+            "not_null": true,
+            "is_array": false,
+            "comment": "",
+            "length": -1,
+            "is_named_param": false,
+            "is_func_call": false,
+            "scope": "",
+            "table": {
+              "catalog": "",
+              "schema": "",
+              "name": "items"
+            },
+            "table_alias": "",
+            "type": {
+              "catalog": "",
+              "schema": "pg_catalog",
+              "name": "int4"
+            },
+            "is_sqlc_slice": false,
+            "embed_table": null,
+            "original_name": "version",
+            "unsigned": false,
+            "array_dims": 0,
+            "type_expr": null
+          }
+        ],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "70aab2950dd754ddb8aa4544cca2487a2f641ebf307aea951859dd01a87367c9",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `UPDATE items SET name = 'changed' RETURNING items.\"version\"`\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "qualified-returned",
+        "lane": "processed",
+        "sql": "UPDATE items SET name = 'changed' RETURNING items.\"version\"",
+        "sql_sha256": "ad98183df417cc0b4512303203503bcc377bd2ed62c0167b5869715f362cf25f",
+        "raw_output": "0\n{\"name\" : \"changed\", \"version\" : 0}\n",
+        "observed": {
+          "name": "changed",
+          "version": 0
+        },
+        "expected": {
+          "name": "changed",
+          "version": 0
+        },
+        "matches": true
+      }
+    }
+  ],
+  "real_logos": {
+    "path": "/home/runner/work/sloplint/sloplint/compiler/bin/logos",
+    "sha256": "5a439b6663e758d857480083379be9fac5bff7f28a7d831bf1f3f4449512a378"
+  },
+  "nested_test_argv": [
+    {
+      "argv": [
+        "test",
+        "-count=1",
+        "-v",
+        "."
+      ],
+      "cwd": "/tmp/TestGeneratedQueryConstants4179815765/001",
+      "module": "module example.com/spira-sqlc-runtime",
+      "pid": 31256
+    },
+    {
+      "argv": [
+        "test",
+        "-count=1",
+        "-v",
+        "."
+      ],
+      "cwd": "/tmp/TestSQLcPostgresLiteralPipeline1689720715/001",
+      "module": "module example.com/spira-sqlc-runtime",
+      "pid": 38600
+    }
+  ],
+  "tests_after": {
+    "label": "tests",
+    "tree": "0d6a92efd9b8d24e58cdcadad0253c2565759994",
+    "blobs": 623,
+    "index_sha256": "b26469360f5f4e4a178a21179a178a51f75f3ef3cfaf2f7b23b0a0dd8cdfcbc2"
+  },
+  "restored": {
+    "label": "source",
+    "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+    "blobs": 621,
+    "index_sha256": "3ac9074f7cdce055c9d99c656ea683e5323921dc8beee595debf175b6f80e7a1"
+  },
+  "commands": [
+    {
+      "name": "proof-head",
+      "command": [
+        "git",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/proof",
+        "rev-parse",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "9b2660175826fcb42b7c6ba77e49c826e8def0f650d32e7150b333c8928a9545"
+    },
+    {
+      "name": "source-head",
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "5937e4680750159d4f488aa186a50c69c3af9fcd31fb1ddd24e874892adc56d5"
+    },
+    {
+      "name": "logos-version",
+      "command": [
+        "logos",
+        "version"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "3a7b14cf792a79c78a9e42aab8906e0774b54ecddbbbc520ce94651a34aec2f9"
+    },
+    {
+      "name": "go-cache-disabled",
+      "command": [
+        "go",
+        "env",
+        "GOCACHEPROG"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "name": "sqlc-modules",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "mod",
+        "download"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "sqlc-module",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "list",
+        "-m",
+        "-json",
+        "github.com/sqlc-dev/sqlc"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "78fe4571c2a0ec0aca3a70bff3218c5a6e5d56ddc513732f01ecd45fd9717dc6"
+    },
+    {
+      "name": "postgres-image",
+      "command": [
+        "docker",
+        "pull",
+        "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "49ff0652148910899573651156addee4f3fbfe5303018d7610983b9b03ecbc52"
+    },
+    {
+      "name": "postgres-image-identity",
+      "command": [
+        "docker",
+        "image",
+        "inspect",
+        "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "884e3d2ffe7b3682e5962767bd4f7b6855d3b18f66f9d953001220c0dab6f404"
+    },
+    {
+      "name": "postgres-start",
+      "command": [
+        "docker",
+        "run",
+        "--detach",
+        "--network",
+        "none",
+        "--name",
+        "spira47-refs-46031066075-1",
+        "--env",
+        "POSTGRES_HOST_AUTH_METHOD=trust",
+        "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "3910c88ac162bf80ac279a5c4c3bfd14a39b62992d2f31875700dcbb6a7e8946"
+    },
+    {
+      "name": "postgres-version",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "SHOW server_version_num;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "23115ea6bcfc1e8cf9bf3b7e201ecf38f5a9c76d337eea137c01265e768d7c31"
+    },
+    {
+      "name": "postgres-schema",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "CREATE DOMAIN name1e AS text;\nCREATE DOMAIN name_e AS text;\nCREATE DOMAIN name$e AS text;\nCREATE DOMAIN namée AS text;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, version integer NOT NULL DEFAULT 0);\nCREATE DOMAIN version AS text;\nCREATE COLLATION version FROM \"C\";\n"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "original-reported-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING name AS \"item's version\";\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "053a8e0ad50cd2a47ef3eb44aab71d40d89cf8378cf35358c6446f14382ad95a"
+    },
+    {
+      "name": "original-alias-exact",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING name AS version;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "053a8e0ad50cd2a47ef3eb44aab71d40d89cf8378cf35358c6446f14382ad95a"
+    },
+    {
+      "name": "original-alias-quoted",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING name AS \"version\";\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "053a8e0ad50cd2a47ef3eb44aab71d40d89cf8378cf35358c6446f14382ad95a"
+    },
+    {
+      "name": "original-alias-bare",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING name version;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "053a8e0ad50cd2a47ef3eb44aab71d40d89cf8378cf35358c6446f14382ad95a"
+    },
+    {
+      "name": "original-alias-bare-quoted",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING name \"version\";\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "053a8e0ad50cd2a47ef3eb44aab71d40d89cf8378cf35358c6446f14382ad95a"
+    },
+    {
+      "name": "original-qualifier-only",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items AS version SET name = 'changed' RETURNING version.name;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "053a8e0ad50cd2a47ef3eb44aab71d40d89cf8378cf35358c6446f14382ad95a"
+    },
+    {
+      "name": "original-function-name",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = left(version(), 0) || 'changed';\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "bc75c022f065359895e19470651156473a13ad710fccbe58bead9fd5d9136298"
+    },
+    {
+      "name": "original-cast-type",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = CAST('changed' AS version);\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "bc75c022f065359895e19470651156473a13ad710fccbe58bead9fd5d9136298"
+    },
+    {
+      "name": "original-postfix-type",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed'::version;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "bc75c022f065359895e19470651156473a13ad710fccbe58bead9fd5d9136298"
+    },
+    {
+      "name": "original-typed-literal",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = version 'changed';\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "bc75c022f065359895e19470651156473a13ad710fccbe58bead9fd5d9136298"
+    },
+    {
+      "name": "original-collation-name",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' COLLATE version;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "bc75c022f065359895e19470651156473a13ad710fccbe58bead9fd5d9136298"
+    },
+    {
+      "name": "original-longer-identifier",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items AS conversion SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "bc75c022f065359895e19470651156473a13ad710fccbe58bead9fd5d9136298"
+    },
+    {
+      "name": "original-quoted-assignment",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET \"version\" = \"version\" + 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "24b305bbe809ad4b1f291d7c1621f7925e8c369baafb057ec0879adf0cb5ecb2"
+    },
+    {
+      "name": "original-unquoted-assignment",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET version = version + 1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "24b305bbe809ad4b1f291d7c1621f7925e8c369baafb057ec0879adf0cb5ecb2"
+    },
+    {
+      "name": "original-predicate-only",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' WHERE version = 0;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "bc75c022f065359895e19470651156473a13ad710fccbe58bead9fd5d9136298"
+    },
+    {
+      "name": "original-qualified-predicate",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items AS i SET name = 'changed' WHERE i.\"version\" = 0;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "bc75c022f065359895e19470651156473a13ad710fccbe58bead9fd5d9136298"
+    },
+    {
+      "name": "original-returned-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING \"version\" AS v;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "61fa77aee29075c18a3faadea65643052387711e1a41aee6afa03f81d209e60b"
+    },
+    {
+      "name": "original-function-argument",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING abs(version);\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "61fa77aee29075c18a3faadea65643052387711e1a41aee6afa03f81d209e60b"
+    },
+    {
+      "name": "original-delete-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nDELETE FROM items WHERE \"version\" = -1;\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "4be799d32fb88be554f1d3ff95ff0e521662ecd825b37eb522663ea4e444c42b"
+    },
+    {
+      "name": "original-qualified-returned",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING items.\"version\";\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "61fa77aee29075c18a3faadea65643052387711e1a41aee6afa03f81d209e60b"
+    },
+    {
+      "name": "stage-frozen-tests",
+      "command": [
+        "git",
+        "add",
+        "--",
+        "cmd/sqlc-gen-spira/version_reference_test.lgo",
+        "cmd/sqlc-gen-spira/testdata/version-references.json",
+        "cmd/sqlc-gen-spira/continued_escape_test.lgo"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "reference-test-compile",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-run",
+        "^$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "3d6f43d30e00ced2022c6b162e0d78574894f28a6bc994b4fff77f8bc9b1e026"
+    },
+    {
+      "name": "version-reference-unchanged-red",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "-run",
+        "^TestPostgresVersionReferenceRoles$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "79f8bbf2171febb6c3a008b8b865de039081517113f3b6c311be50dcfcdad116"
+    },
+    {
+      "name": "build-unchanged-plugin",
+      "command": [
+        "logos",
+        "build",
+        "-o",
+        "/home/runner/work/_temp/spira47-baseline-build/unchanged-plugin",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "reference-sqlc-reported-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/reported-alias/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-reported-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING name AS \"item's version\"\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "053a8e0ad50cd2a47ef3eb44aab71d40d89cf8378cf35358c6446f14382ad95a"
+    },
+    {
+      "name": "reference-sqlc-alias-exact",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/alias-exact/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-alias-exact",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING name AS version\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "053a8e0ad50cd2a47ef3eb44aab71d40d89cf8378cf35358c6446f14382ad95a"
+    },
+    {
+      "name": "reference-sqlc-alias-quoted",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/alias-quoted/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-alias-quoted",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING name AS \"version\"\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "053a8e0ad50cd2a47ef3eb44aab71d40d89cf8378cf35358c6446f14382ad95a"
+    },
+    {
+      "name": "reference-sqlc-alias-bare",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/alias-bare/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-alias-bare",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING name version\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "053a8e0ad50cd2a47ef3eb44aab71d40d89cf8378cf35358c6446f14382ad95a"
+    },
+    {
+      "name": "reference-sqlc-alias-bare-quoted",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/alias-bare-quoted/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-alias-bare-quoted",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING name \"version\"\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "053a8e0ad50cd2a47ef3eb44aab71d40d89cf8378cf35358c6446f14382ad95a"
+    },
+    {
+      "name": "reference-sqlc-qualifier-only",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/qualifier-only/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-qualifier-only",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items AS version SET name = 'changed' RETURNING version.name\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "053a8e0ad50cd2a47ef3eb44aab71d40d89cf8378cf35358c6446f14382ad95a"
+    },
+    {
+      "name": "reference-sqlc-function-name",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/function-name/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-function-name",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = left(version(), 0) || 'changed'\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "bc75c022f065359895e19470651156473a13ad710fccbe58bead9fd5d9136298"
+    },
+    {
+      "name": "reference-sqlc-cast-type",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/cast-type/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-cast-type",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = CAST('changed' AS version)\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "bc75c022f065359895e19470651156473a13ad710fccbe58bead9fd5d9136298"
+    },
+    {
+      "name": "reference-sqlc-postfix-type",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/postfix-type/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-postfix-type",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed'::version\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "bc75c022f065359895e19470651156473a13ad710fccbe58bead9fd5d9136298"
+    },
+    {
+      "name": "reference-sqlc-typed-literal",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/typed-literal/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-typed-literal",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = version 'changed'\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "bc75c022f065359895e19470651156473a13ad710fccbe58bead9fd5d9136298"
+    },
+    {
+      "name": "reference-sqlc-collation-name",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/collation-name/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-collation-name",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' COLLATE version\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "bc75c022f065359895e19470651156473a13ad710fccbe58bead9fd5d9136298"
+    },
+    {
+      "name": "reference-sqlc-longer-identifier",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/longer-identifier/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-longer-identifier",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items AS conversion SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "bc75c022f065359895e19470651156473a13ad710fccbe58bead9fd5d9136298"
+    },
+    {
+      "name": "reference-sqlc-quoted-assignment",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/quoted-assignment/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-quoted-assignment",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET \"version\" = \"version\" + 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "24b305bbe809ad4b1f291d7c1621f7925e8c369baafb057ec0879adf0cb5ecb2"
+    },
+    {
+      "name": "reference-sqlc-unquoted-assignment",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/unquoted-assignment/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-unquoted-assignment",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET version = version + 1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "24b305bbe809ad4b1f291d7c1621f7925e8c369baafb057ec0879adf0cb5ecb2"
+    },
+    {
+      "name": "reference-sqlc-predicate-only",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/predicate-only/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-predicate-only",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' WHERE version = 0\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "bc75c022f065359895e19470651156473a13ad710fccbe58bead9fd5d9136298"
+    },
+    {
+      "name": "reference-sqlc-qualified-predicate",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/qualified-predicate/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-qualified-predicate",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items AS i SET name = 'changed' WHERE i.\"version\" = 0\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "bc75c022f065359895e19470651156473a13ad710fccbe58bead9fd5d9136298"
+    },
+    {
+      "name": "reference-sqlc-returned-reference",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/returned-reference/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-returned-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING \"version\" AS v\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "61fa77aee29075c18a3faadea65643052387711e1a41aee6afa03f81d209e60b"
+    },
+    {
+      "name": "reference-sqlc-function-argument",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/function-argument/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-function-argument",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING abs(version)\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "61fa77aee29075c18a3faadea65643052387711e1a41aee6afa03f81d209e60b"
+    },
+    {
+      "name": "reference-sqlc-delete-reference",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/delete-reference/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-delete-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nDELETE FROM items WHERE \"version\" = -1\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "4be799d32fb88be554f1d3ff95ff0e521662ecd825b37eb522663ea4e444c42b"
+    },
+    {
+      "name": "reference-sqlc-qualified-returned",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/reference-pipeline/qualified-returned/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "processed-qualified-returned",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46031066075-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nTRUNCATE items; INSERT INTO items (id, name, version) VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING items.\"version\"\n;\nSELECT json_build_object('name', name, 'version', version) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "61fa77aee29075c18a3faadea65643052387711e1a41aee6afa03f81d209e60b"
+    },
+    {
+      "name": "postgres-cleanup",
+      "command": [
+        "docker",
+        "rm",
+        "-f",
+        "-v",
+        "spira47-refs-46031066075-1"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "9b07ea9a54bc51557b5ff2f63401953a73c861fd7ce2d52eefd0cb7c0b6cacca"
+    },
+    {
+      "name": "retained-direct-runtime",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-exec",
+        "/home/runner/work/_temp/spira47-baseline-build/argv-observer/launch-test",
+        "-count=1",
+        "-v",
+        "-run",
+        "^TestGeneratedQueryConstants$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c0bef0a3afc45d69256dd7b81df61760308ff534b7ac2df8550fb3fbcf2bb2c4"
+    },
+    {
+      "name": "retained-pipeline-runtime",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-exec",
+        "/home/runner/work/_temp/spira47-baseline-build/argv-observer/launch-test",
+        "-count=1",
+        "-v",
+        "-run",
+        "^TestSQLcPostgresLiteralPipeline$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "860ded4fff7296d5bdc5793e75339df7f1d96db9516e8cdc6717aca78111c271"
+    },
+    {
+      "name": "retained-generator-controls",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "-run",
+        "^(TestPostgresDollarQuotedBoundaries|TestPostgresTypedLiteralBoundaries|TestPostgresContinuedEscapeStrings|TestVersionedWrite)",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ca4250ed3b9f6b05e2a6007403428dbf31f8827f471b695c7f29c2168791797f"
+    },
+    {
+      "name": "restore-original-source",
+      "command": [
+        "git",
+        "restore",
+        "--source",
+        "4bde2ec5e8bf23ffbeca0b4b54e8c9c7c005e33f",
+        "--staged",
+        "--worktree",
+        "--",
+        "."
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "source-restoration",
+      "command": [
+        "git",
+        "diff",
+        "--exit-code",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "untracked-restoration",
+      "command": [
+        "git",
+        "ls-files",
+        "--others",
+        "--exclude-standard"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}
