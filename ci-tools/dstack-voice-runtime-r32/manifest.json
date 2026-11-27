@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "repository": "gosuda/dstack-skills",
+  "pull_request": 34,
+  "source": {
+    "head": "3fd028e709641b72b75afe7bdb7785bedca2a959",
+    "tree": "f465cbf542b6899d9aacbbab8d7f595ec582f074",
+    "actual_base": "8c544c514101d99e5fc52f5fc3d06e970c09ae29"
+  },
+  "source_guards": {
+    "scripts/check-voice.py": "bdd07df74c5a215332d91d199cff24da310ceb3c5be41742dec60b18dc5b6a33",
+    ".pre-commit-config.yaml": "05157d536b225153d970ad478050379f7c96785966c2b2177cf31ce1bae5e3f3",
+    "plugins/dstack-core/skills/let-fate-decide/scripts/draw.py": "befa40cc7f14a27ac594e200f55db7634d6fcd971e3ceb634f4a0b3ddb89de9d"
+  },
+  "proof_sha256": {
+    "authored.json": "19b608ca6d3be61844bed158118d412d9230c8163ef4180317b56aebca41edaf",
+    "prove.py": "c4d314d2b32f4d11d09b8261ccd39ca8d3deeb6e542d7f13e72089f833fa4138"
+  },
+  "workflow_sha256": "b015d1b83fdf95e4dbdbd40e918424c9085830b0d52377aff1c9f779f325df2d",
+  "review_thread": "PRRT_kwDOVZ-5j868pIEa",
+  "comment": 4715613284,
+  "contract": "The existing voice self-test hook executes gate and transitive draw startup on Python3.9, regardless of the modern invoking host. Eliminate the source-text annotation assertion. No new permanent CI job or test hook.",
+  "required_gates": [
+    "original hook succeeds on Python3.10 with complete source",
+    "original hook still succeeds after removal of draw's future import, reproducing blind spot",
+    "candidate hook fails with the same mutation under managed Python3.9",
+    "restored candidate hook succeeds",
+    "unmodified just check command",
+    "exact candidate identity and complete original source restoration"
+  ]
+}
