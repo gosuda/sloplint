@@ -1,0 +1,45 @@
+{
+  "source_producer": "673f0c39445d4b583c4d3371609ce585c39be87b",
+  "source_driver": "ci-tools/spira47-review-r42/verify_candidate.py",
+  "source_writer": "(base.OUTPUT / \"report.json\").write_text(json.dumps(report, indent=2) + \"\\n\", encoding=\"utf-8\")",
+  "projection_sha256": "8337d9925f35c55aac6130e07be6803bda972fa5625cbda0354fccce2d64b822",
+  "reconstructed_python_file_sha256": "ca1bc0848dc98e7541f3d223159112fad80f03fb1b36970e8a8a4bbdbf4a96f5",
+  "projection_bytes": 494516,
+  "reconstructed_python_file_bytes": 494540,
+  "changes": [
+    {
+      "projection_offset": 14372,
+      "code_point": "U+00E9",
+      "escaped": "\\u00e9"
+    },
+    {
+      "projection_offset": 14394,
+      "code_point": "U+00E9",
+      "escaped": "\\u00e9"
+    },
+    {
+      "projection_offset": 16101,
+      "code_point": "U+00E9",
+      "escaped": "\\u00e9"
+    },
+    {
+      "projection_offset": 314859,
+      "code_point": "U+00E9",
+      "escaped": "\\u00e9"
+    },
+    {
+      "projection_offset": 316557,
+      "code_point": "U+00E9",
+      "escaped": "\\u00e9"
+    },
+    {
+      "projection_offset": 316579,
+      "code_point": "U+00E9",
+      "escaped": "\\u00e9"
+    }
+  ],
+  "complete_default_python_terminal_serialization_matches": true,
+  "parsed_data_unchanged": true,
+  "independent_zip_download": false,
+  "status": "Source-bound serialization reconstruction; next native read must verify actual artifact bytes exactly."
+}

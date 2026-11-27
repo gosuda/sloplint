@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "round": 43,
-  "status": "native proof in progress; no source publication",
+  "status": "First proof failed before native/test phases; exact source restored; serialization correction frozen for review.",
   "repository": "gosuda/spira",
   "pull_request": 47,
   "thread": "PRRT_kwDOVpFduc688xES",
@@ -84,26 +84,188 @@
   },
   "source_gates_passed": false,
   "publication_eligible": false,
-  "observed_at": "2026-11-27 22:53:48 UTC",
-  "raw_ref_guards": [
-    {
-      "ref": "refs/heads/ci/spira47-fixture-metadata-20261127-r43",
-      "sha": "1694350a47292b483f9a4314d46b43996b843985"
+  "native_status": "Run 46079109930 failed at previous report byte authentication. No new native/test results reached.",
+  "failed_attempt": {
+    "schema": 1,
+    "status": "FAILURE",
+    "producer": "1694350a47292b483f9a4314d46b43996b843985",
+    "run": 46079109930,
+    "job": 140773675515,
+    "artifact": {
+      "id": 15236980208,
+      "name": "spira47-fixture-metadata-candidate-r43",
+      "bytes": 6641,
+      "sha256": "f06e8b3c01f17006fa4c89c20fc0a5341a9ef42523575023d9d8dbd3d499535c",
+      "api_upload_digest_match": true,
+      "independent_zip_download": false
     },
-    {
-      "ref": "refs/heads/main",
-      "sha": "dc99ed955cf78862a6f8811289f606de1fb50dfa"
+    "raw_log_sha256": "26d5fa624dc154bf63bb4be9ddddbf8212d625b5da9c0e6afaf51390aa4390c0",
+    "report_projection_sha256": "3831e58c0f156dd37c737bf008eb5b998cdb83b91da386c370d00a5bf7b90c8c",
+    "command_receipts": [
+      {
+        "name": "proof-head",
+        "command": [
+          "git",
+          "-C",
+          "/home/runner/work/sloplint/sloplint/proof",
+          "rev-parse",
+          "HEAD"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "234356dbef09f1a833de037659cf9e3357dd549d0464d537c872f41723afa78a"
+      },
+      {
+        "name": "source-head",
+        "command": [
+          "git",
+          "rev-parse",
+          "HEAD"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "34bbedf77e97c7551a4dde3ea9e11f7319735d1892a0937730544cdf5e6e3b28"
+      },
+      {
+        "name": "restore-original-source",
+        "command": [
+          "git",
+          "restore",
+          "--source",
+          "6d4f84fc8a1a50603fbdf5c024bdc1966436ea31",
+          "--staged",
+          "--worktree",
+          "--",
+          "."
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "source-restoration",
+        "command": [
+          "git",
+          "diff",
+          "--exit-code",
+          "HEAD"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "untracked-restoration",
+        "command": [
+          "git",
+          "ls-files",
+          "--others",
+          "--exclude-standard"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "stdout_receipts": [
+      {
+        "name": "proof-head",
+        "sha256": "234356dbef09f1a833de037659cf9e3357dd549d0464d537c872f41723afa78a",
+        "bytes": 41
+      },
+      {
+        "name": "source-head",
+        "sha256": "34bbedf77e97c7551a4dde3ea9e11f7319735d1892a0937730544cdf5e6e3b28",
+        "bytes": 41
+      },
+      {
+        "name": "restore-original-source",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "source-restoration",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "name": "untracked-restoration",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    ],
+    "unexpected_command_exits": [],
+    "failed_phase": "archive_support.frozen_report: frozen complete report differs: previous",
+    "source_gate_exit": 1,
+    "native_cases_reached": false,
+    "counterfactual_reached": false,
+    "candidate_applied": false,
+    "source_gates_passed": false,
+    "publication_eligible": false,
+    "source_restored": true,
+    "source_before": {
+      "label": "source",
+      "tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0",
+      "blobs": 638,
+      "index_sha256": "a8f431d2319f13259dba66403a2971d30443d26a0c73ab8a2fbc1947c637642c"
     },
-    {
-      "ref": "refs/heads/followup/merged-threads-1127",
-      "sha": "6d4f84fc8a1a50603fbdf5c024bdc1966436ea31"
+    "source_after": {
+      "label": "source",
+      "tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0",
+      "blobs": 638,
+      "index_sha256": "a8f431d2319f13259dba66403a2971d30443d26a0c73ab8a2fbc1947c637642c"
     },
-    {
-      "ref": "refs/heads/main",
-      "sha": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332"
+    "gate_reuse": false,
+    "serialization_receipt": {
+      "source_producer": "673f0c39445d4b583c4d3371609ce585c39be87b",
+      "source_driver": "ci-tools/spira47-review-r42/verify_candidate.py",
+      "source_writer": "(base.OUTPUT / \"report.json\").write_text(json.dumps(report, indent=2) + \"\\n\", encoding=\"utf-8\")",
+      "projection_sha256": "8337d9925f35c55aac6130e07be6803bda972fa5625cbda0354fccce2d64b822",
+      "reconstructed_python_file_sha256": "ca1bc0848dc98e7541f3d223159112fad80f03fb1b36970e8a8a4bbdbf4a96f5",
+      "projection_bytes": 494516,
+      "reconstructed_python_file_bytes": 494540,
+      "changes": [
+        {
+          "projection_offset": 14372,
+          "code_point": "U+00E9",
+          "escaped": "\\u00e9"
+        },
+        {
+          "projection_offset": 14394,
+          "code_point": "U+00E9",
+          "escaped": "\\u00e9"
+        },
+        {
+          "projection_offset": 16101,
+          "code_point": "U+00E9",
+          "escaped": "\\u00e9"
+        },
+        {
+          "projection_offset": 314859,
+          "code_point": "U+00E9",
+          "escaped": "\\u00e9"
+        },
+        {
+          "projection_offset": 316557,
+          "code_point": "U+00E9",
+          "escaped": "\\u00e9"
+        },
+        {
+          "projection_offset": 316579,
+          "code_point": "U+00E9",
+          "escaped": "\\u00e9"
+        }
+      ],
+      "complete_default_python_terminal_serialization_matches": true,
+      "parsed_data_unchanged": true,
+      "independent_zip_download": false,
+      "status": "Source-bound serialization reconstruction; next native read must verify actual artifact bytes exactly."
     }
-  ],
-  "native_status": "In progress: checkouts and setup passed, immutable compiler build running. No R43 test results claimed.",
-  "manifest_sha256": "f67d48ee4093ac63b46f0493a075e01fe5508ac9a1e131416850b3f5098947d2",
-  "reviewed_active_files": 23
+  },
+  "observed_at": "2026-11-27 22:58:05 UTC"
 }

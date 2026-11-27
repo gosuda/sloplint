@@ -41,10 +41,19 @@ def frozen_report(archive: zipfile.ZipFile, manifest: dict[str, object],
     spec = base.object_value(manifest[prefix + "_verification"])
     data = read_member(archive, "report.json", 16 * 1024 * 1024)
     report = base.object_value(json.loads(data))
-    frozen = base.object_value(json.loads((base.PROOF / (prefix + "-report.json")).read_bytes()))
-    if (report != frozen or base.digest(data) != spec["report_sha256"]
+    projection = (base.PROOF / (prefix + "-report.json")).read_bytes()
+    frozen = base.object_value(json.loads(projection))
+    if base.digest(projection) != spec["projection_sha256"]:
+        raise RuntimeError("frozen report projection differs: " + prefix)
+    expected_bytes = (json.dumps(frozen, indent=2) + "\n").encode()
+    if (report != frozen or data != expected_bytes or base.digest(data) != spec["report_sha256"]
             or report["manifest_sha256"] != spec["manifest_sha256"]):
         raise RuntimeError("frozen complete report differs: " + prefix)
+    print("R43_PREVIOUS_REPORT_BYTES " + json.dumps({
+        "artifact_report_sha256": base.digest(data), "artifact_report_bytes": len(data),
+        "projection_sha256": base.digest(projection), "projection_bytes": len(projection),
+        "parsed_data_equal": report == frozen, "native_serialization_equal": data == expected_bytes,
+    }), flush=True)
     artifact = base.object_value(manifest[prefix + "_artifact"])
     if (report["producer"] != artifact["producer"]
             or int(base.text(report["run"])) != artifact["run"]):
@@ -171,6 +180,7 @@ def authenticate_previous(manifest: dict[str, object], token: str) -> dict[str, 
         raise RuntimeError("previous published tree or restoration differs")
     receipt = {**artifact.receipt,
                "report_sha256": base.object_value(manifest["previous_verification"])["report_sha256"],
+               "report_projection_sha256": base.object_value(manifest["previous_verification"])["projection_sha256"],
                "unique_command_logs_verified": logs, "native_cases": 67, "pipeline_cases": 67,
                "scope": "Prior production and original fixtures only. New metadata controls and all required source gates execute in this run.",
                "full_source_gates_reused": False}
