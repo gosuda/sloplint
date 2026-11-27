@@ -1,0 +1,86 @@
+{
+  "producer": "ffd2f79a815f57891ab179706b80e93bee114c97",
+  "run": 45915194176,
+  "job": 140232592996,
+  "artifact": 15161473684,
+  "zip_sha256": "c24d32fea2dd704c5988b04355d142b7ae9a9be77f2c7adde7b9a4950bf31798",
+  "focused_log_sha256": "f663fc0df173ca9b24ac96e43bfa493ef3e568699b55971b159a02d375928cc3",
+  "exact_count_records": [
+    [
+      "comment-guard-zwsp-1-array",
+      2
+    ],
+    [
+      "comment-guard-zwsp-1-quoted",
+      2
+    ],
+    [
+      "comment-guard-zwsp-1-escaped",
+      2
+    ],
+    [
+      "comment-guard-zwsp-2-array",
+      2
+    ],
+    [
+      "comment-guard-zwsp-2-quoted",
+      2
+    ],
+    [
+      "comment-guard-zwsp-2-escaped",
+      2
+    ],
+    [
+      "comment-guard-bom-1-array",
+      2
+    ],
+    [
+      "comment-guard-bom-1-quoted",
+      2
+    ],
+    [
+      "comment-guard-bom-1-escaped",
+      2
+    ],
+    [
+      "comment-guard-bom-2-array",
+      2
+    ],
+    [
+      "comment-guard-bom-2-quoted",
+      2
+    ],
+    [
+      "comment-guard-bom-2-escaped",
+      2
+    ],
+    [
+      "comment-guard-wj-1-array",
+      2
+    ],
+    [
+      "comment-guard-wj-1-quoted",
+      2
+    ],
+    [
+      "comment-guard-wj-1-escaped",
+      2
+    ],
+    [
+      "comment-guard-wj-2-array",
+      2
+    ],
+    [
+      "comment-guard-wj-2-quoted",
+      2
+    ],
+    [
+      "comment-guard-wj-2-escaped",
+      2
+    ]
+  ],
+  "old_line_prefix_count": 17,
+  "failed_word_boundary_count": 17,
+  "missing_line": "test powershell_syntax::an_else_on_the_line_after_an_if_in_an_assignment_is_part_of_the_if ... okGUARD_NATIVE_ARG_CASE comment-guard-zwsp-1-escaped 2",
+  "reason": "libtest success text is directly adjacent to the complete marker: okGUARD. Both line-prefix and word-boundary predicates drop that intact record."
+}

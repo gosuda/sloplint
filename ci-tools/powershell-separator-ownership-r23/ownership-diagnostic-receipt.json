@@ -1,0 +1,12 @@
+{
+  "producer": "519e18f939cb8a9796f81ac399096083dbb7995c",
+  "run": 45913796869,
+  "job": 140228090775,
+  "artifact": 15160844099,
+  "zip_sha256": "e9321f407ec0417aba597885bbdfa6e5eb2508d37fdc7157f7aa1052958861bd",
+  "payload_sha256": "db94e0276d22a8ec1cb27f5c73acece3366b6d8d607c368c4794f27edfa6442c",
+  "gzip_sha256": "4f9b7c390dd938ce2391163284911a8d961a47c218813d56887c355cd71ce4f1",
+  "payload_bytes": 5980125,
+  "gzip_bytes": 316495,
+  "base64_bytes": 421996
+}

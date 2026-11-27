@@ -1,0 +1,1822 @@
+[
+  {
+    "id": "branch-lf-one-else-standalone",
+    "kind": "conditional",
+    "source": "if ($true) { 1 }\n`\nelse { 0 }\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "75ae1760ca4642486a8e34d2846a6612b798f197d27f64a250f2c3cdcb176fb3"
+  },
+  {
+    "id": "branch-lf-one-else-assignment",
+    "kind": "conditional",
+    "source": "$result = if ($true) { 1 }\n`\nelse { 0 }\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "53254ae9c546dba1ea2ff19ad10a4d8148d9de7ae3988ac74f99219b1995ad40"
+  },
+  {
+    "id": "branch-lf-one-else-parenthesized-assignment",
+    "kind": "conditional",
+    "source": "($result = if ($true) { 1 }\n`\nelse { 0 })\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "4cdf218408e581ce68ad434c1779c396140e38f8e66ef46ea567cd120140bb1c"
+  },
+  {
+    "id": "branch-lf-one-else-subexpression",
+    "kind": "conditional",
+    "source": "$(if ($true) { 1 }\n`\nelse { 0 })\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "7b3e67b5cd7989d850d115d729c7b7a0ab2c99dd590b18a5e7311d69346269e4"
+  },
+  {
+    "id": "branch-lf-one-else-hashtable-value",
+    "kind": "conditional",
+    "source": "@{ value = if ($true) { 1 }\n`\nelse { 0 }\n}\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "555666ff209d0a8473df0365c3f7a47ada7f8f54fe4db488adebee4d70bc714f"
+  },
+  {
+    "id": "branch-lf-one-else-script-block",
+    "kind": "conditional",
+    "source": "{ $result = if ($true) { 1 }\n`\nelse { 0 }\n}\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "10c7301ef5ffb4f770baa54001fc8021db2fc285c90d3974091a0436a1573520"
+  },
+  {
+    "id": "branch-lf-one-elseif-standalone",
+    "kind": "conditional",
+    "source": "if ($true) { 1 }\n`\nelseif ($false) { 2 } else { 0 }\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "9438db2845b184054d4f6a5285f09dca880e3afeb9e7d1c4997e48f1d3ac84ed"
+  },
+  {
+    "id": "branch-lf-one-elseif-assignment",
+    "kind": "conditional",
+    "source": "$result = if ($true) { 1 }\n`\nelseif ($false) { 2 } else { 0 }\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "d14c5d46d614843cc8a236711883741fcd3a8de77ef1999678eff65f066f9bdb"
+  },
+  {
+    "id": "branch-lf-one-elseif-parenthesized-assignment",
+    "kind": "conditional",
+    "source": "($result = if ($true) { 1 }\n`\nelseif ($false) { 2 } else { 0 })\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "db2e0b7e2b22e047d96d9a62a80329cba3297f9ae84281f5e3cc126b8fd1c7a7"
+  },
+  {
+    "id": "branch-lf-one-elseif-subexpression",
+    "kind": "conditional",
+    "source": "$(if ($true) { 1 }\n`\nelseif ($false) { 2 } else { 0 })\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "db2663f39c36e94e24f5714e933642510bfb62a9f17d3f3ae4615a85a513882b"
+  },
+  {
+    "id": "branch-lf-one-elseif-hashtable-value",
+    "kind": "conditional",
+    "source": "@{ value = if ($true) { 1 }\n`\nelseif ($false) { 2 } else { 0 }\n}\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "0c968ef4595e3c568ec9176388d77c179abeacfd652b301c43473a0c62c43da6"
+  },
+  {
+    "id": "branch-lf-one-elseif-script-block",
+    "kind": "conditional",
+    "source": "{ $result = if ($true) { 1 }\n`\nelseif ($false) { 2 } else { 0 }\n}\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "cd39f26560d5c062a249e385df25076d90f3ad109d82cc19233fd075e59168df"
+  },
+  {
+    "id": "branch-lf-comment-else-standalone",
+    "kind": "conditional",
+    "source": "if ($true) { 1 }\n# note\n`\nelse { 0 }\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "30e7ed8fc7a448ecb37b941e263f8ee451feab2decc2b28b47a2ce0f85841245"
+  },
+  {
+    "id": "branch-lf-comment-else-assignment",
+    "kind": "conditional",
+    "source": "$result = if ($true) { 1 }\n# note\n`\nelse { 0 }\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "fb67e370fc5052185c046dd7953a4089355755adc466bcd4e6b1733d5c57b771"
+  },
+  {
+    "id": "branch-lf-comment-else-parenthesized-assignment",
+    "kind": "conditional",
+    "source": "($result = if ($true) { 1 }\n# note\n`\nelse { 0 })\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "6e62d315082684a0183c83d5814fa7b22a81f5ec3ecb55539c4f6cdb14f2516f"
+  },
+  {
+    "id": "branch-lf-comment-else-subexpression",
+    "kind": "conditional",
+    "source": "$(if ($true) { 1 }\n# note\n`\nelse { 0 })\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "e1329bf4ed33f753bfa606602d15228c92359697a156f70e22f477a492d9906e"
+  },
+  {
+    "id": "branch-lf-comment-else-hashtable-value",
+    "kind": "conditional",
+    "source": "@{ value = if ($true) { 1 }\n# note\n`\nelse { 0 }\n}\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "6f850ddb5dbf38f5170a5a5450f62af12d3705bf6616830f026f6e376ad51566"
+  },
+  {
+    "id": "branch-lf-comment-else-script-block",
+    "kind": "conditional",
+    "source": "{ $result = if ($true) { 1 }\n# note\n`\nelse { 0 }\n}\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "c8d4ec47b2a7c04899e0fdbf63cf7b681447c5d9420db16b784ef5fa5aa429d6"
+  },
+  {
+    "id": "branch-lf-comment-elseif-standalone",
+    "kind": "conditional",
+    "source": "if ($true) { 1 }\n# note\n`\nelseif ($false) { 2 } else { 0 }\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "ffddf55b1913613b801ab2479cdfded2863338121ee964674a095a6865bf1d08"
+  },
+  {
+    "id": "branch-lf-comment-elseif-assignment",
+    "kind": "conditional",
+    "source": "$result = if ($true) { 1 }\n# note\n`\nelseif ($false) { 2 } else { 0 }\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "53e80b901f73863bbe82bea9251c39f4c7d74499c2df5ed727e4a761bbe46c83"
+  },
+  {
+    "id": "branch-lf-comment-elseif-parenthesized-assignment",
+    "kind": "conditional",
+    "source": "($result = if ($true) { 1 }\n# note\n`\nelseif ($false) { 2 } else { 0 })\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "2dac40ec496ebe1a8a1390b732282a5b73aa9fa1f194b692c5a917116551bf6d"
+  },
+  {
+    "id": "branch-lf-comment-elseif-subexpression",
+    "kind": "conditional",
+    "source": "$(if ($true) { 1 }\n# note\n`\nelseif ($false) { 2 } else { 0 })\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "71c0ca5889902d82bf71b15e411d320c0d0699eb54d3c606194f40eeeb537350"
+  },
+  {
+    "id": "branch-lf-comment-elseif-hashtable-value",
+    "kind": "conditional",
+    "source": "@{ value = if ($true) { 1 }\n# note\n`\nelseif ($false) { 2 } else { 0 }\n}\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "c62df891ad6bb7053f264c35cf4a1f6277259aaef5dde5b806ce26738280a05e"
+  },
+  {
+    "id": "branch-lf-comment-elseif-script-block",
+    "kind": "conditional",
+    "source": "{ $result = if ($true) { 1 }\n# note\n`\nelseif ($false) { 2 } else { 0 }\n}\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "9e7fac085fa879ea84e9f346166fb5ef94220e6bfc4f9f2a59bbc413d7deeb2d"
+  },
+  {
+    "id": "branch-lf-indented-else-standalone",
+    "kind": "conditional",
+    "source": "if ($true) { 1 }\n  `\nelse { 0 }\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "760cc434ac060b85322ebca93e0fe5d8e29cd560a734be91a3ab09e5c53cd9db"
+  },
+  {
+    "id": "branch-lf-indented-else-assignment",
+    "kind": "conditional",
+    "source": "$result = if ($true) { 1 }\n  `\nelse { 0 }\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "368a0ef3bee35e3abd94363e4adf99cba6b424209d9022d3d171690d6c2069eb"
+  },
+  {
+    "id": "branch-lf-indented-else-parenthesized-assignment",
+    "kind": "conditional",
+    "source": "($result = if ($true) { 1 }\n  `\nelse { 0 })\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "07c6550b1d53b391f41069d0fc975bfff88b1d275db32f2638c777d481286657"
+  },
+  {
+    "id": "branch-lf-indented-else-subexpression",
+    "kind": "conditional",
+    "source": "$(if ($true) { 1 }\n  `\nelse { 0 })\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "18a78b65ab8761eb08400eb769a4749ae458827e916eba73450255a68ed89b63"
+  },
+  {
+    "id": "branch-lf-indented-else-hashtable-value",
+    "kind": "conditional",
+    "source": "@{ value = if ($true) { 1 }\n  `\nelse { 0 }\n}\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "69e9bf15022b030dddfb15612352c1314f82249ad229e8a7ff0a4324662c4b22"
+  },
+  {
+    "id": "branch-lf-indented-else-script-block",
+    "kind": "conditional",
+    "source": "{ $result = if ($true) { 1 }\n  `\nelse { 0 }\n}\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "80aeb324913daca9d8a0560ff331629cd1b49c188c809e9785c76b52d69d1636"
+  },
+  {
+    "id": "branch-lf-indented-elseif-standalone",
+    "kind": "conditional",
+    "source": "if ($true) { 1 }\n  `\nelseif ($false) { 2 } else { 0 }\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "bf69119a199f4ec2c05640549c94f31a906589f3111b5d6d67a543d47e4810fa"
+  },
+  {
+    "id": "branch-lf-indented-elseif-assignment",
+    "kind": "conditional",
+    "source": "$result = if ($true) { 1 }\n  `\nelseif ($false) { 2 } else { 0 }\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "c72dc66d93c97bbc08ff62f6b7263bbf4e801e3ba6a6781971385618497ac55a"
+  },
+  {
+    "id": "branch-lf-indented-elseif-parenthesized-assignment",
+    "kind": "conditional",
+    "source": "($result = if ($true) { 1 }\n  `\nelseif ($false) { 2 } else { 0 })\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "907fb4422348fe4f20044273f559a30e16c783dcc637e5ae45034af34f11bcf8"
+  },
+  {
+    "id": "branch-lf-indented-elseif-subexpression",
+    "kind": "conditional",
+    "source": "$(if ($true) { 1 }\n  `\nelseif ($false) { 2 } else { 0 })\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "642da51a9201c3fd7d14688e123e9dcda98cc6b8802a5242d93f4ddaddcc13a9"
+  },
+  {
+    "id": "branch-lf-indented-elseif-hashtable-value",
+    "kind": "conditional",
+    "source": "@{ value = if ($true) { 1 }\n  `\nelseif ($false) { 2 } else { 0 }\n}\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "3d456ab1f6dd678b034f22e200fff06ae38fda1ccaf5c524d66d8b6304b85d77"
+  },
+  {
+    "id": "branch-lf-indented-elseif-script-block",
+    "kind": "conditional",
+    "source": "{ $result = if ($true) { 1 }\n  `\nelseif ($false) { 2 } else { 0 }\n}\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "656c80378d6f552b31dc798607147a8b0c0647461e458da87af34fb35acb1e0e"
+  },
+  {
+    "id": "branch-lf-two-else-standalone",
+    "kind": "conditional",
+    "source": "if ($true) { 1 }\n`\n`\nelse { 0 }\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "b041a88b78812fb773c2597479eff2f30fb211085d842a1458570cbc675ec720"
+  },
+  {
+    "id": "branch-lf-two-else-assignment",
+    "kind": "conditional",
+    "source": "$result = if ($true) { 1 }\n`\n`\nelse { 0 }\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "6509f078be7c56c9d17dd44c18f33985809f7ffee1587d2c08147c10e3db7423"
+  },
+  {
+    "id": "branch-lf-two-else-parenthesized-assignment",
+    "kind": "conditional",
+    "source": "($result = if ($true) { 1 }\n`\n`\nelse { 0 })\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "0ae98c5fd6d05b78a7d48d61a337ef82d25cad450ced2d4ef512a56813aa0ac4"
+  },
+  {
+    "id": "branch-lf-two-else-subexpression",
+    "kind": "conditional",
+    "source": "$(if ($true) { 1 }\n`\n`\nelse { 0 })\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "3d818e390a58de063ff8c4a7538e0f69c7f1dc84b7195c6d5fa28f60ca4a51a2"
+  },
+  {
+    "id": "branch-lf-two-else-hashtable-value",
+    "kind": "conditional",
+    "source": "@{ value = if ($true) { 1 }\n`\n`\nelse { 0 }\n}\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "72c068ae5331a026081eb24fcbd644dce36b0abb4387506141ed63451756b8fd"
+  },
+  {
+    "id": "branch-lf-two-else-script-block",
+    "kind": "conditional",
+    "source": "{ $result = if ($true) { 1 }\n`\n`\nelse { 0 }\n}\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "acdc3727f390eabcfb66fdeda81949adb70c25f49c926d384e44f27accf55885"
+  },
+  {
+    "id": "branch-lf-two-elseif-standalone",
+    "kind": "conditional",
+    "source": "if ($true) { 1 }\n`\n`\nelseif ($false) { 2 } else { 0 }\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "a474071c0ae5d1ba8c81b98097528ab168ec805c3f686d5bad8fb9c99a7cc5f1"
+  },
+  {
+    "id": "branch-lf-two-elseif-assignment",
+    "kind": "conditional",
+    "source": "$result = if ($true) { 1 }\n`\n`\nelseif ($false) { 2 } else { 0 }\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "d27b17ca0c1304aad09329066201dd568f8342d3ea2b7eedc1d090f3bbef329e"
+  },
+  {
+    "id": "branch-lf-two-elseif-parenthesized-assignment",
+    "kind": "conditional",
+    "source": "($result = if ($true) { 1 }\n`\n`\nelseif ($false) { 2 } else { 0 })\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "132e7c4381d972ead35d776e1d92de98f41cddb49b5d1b92c8204c1b23dc329a"
+  },
+  {
+    "id": "branch-lf-two-elseif-subexpression",
+    "kind": "conditional",
+    "source": "$(if ($true) { 1 }\n`\n`\nelseif ($false) { 2 } else { 0 })\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "c9fc7f6c9148b991a6069acb12f7738309b8787a12740b6e26c301cfe222af81"
+  },
+  {
+    "id": "branch-lf-two-elseif-hashtable-value",
+    "kind": "conditional",
+    "source": "@{ value = if ($true) { 1 }\n`\n`\nelseif ($false) { 2 } else { 0 }\n}\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "61766c116ab930cae05d1334b7bc291179a1ab971584aea5beb056ae9b9ce464"
+  },
+  {
+    "id": "branch-lf-two-elseif-script-block",
+    "kind": "conditional",
+    "source": "{ $result = if ($true) { 1 }\n`\n`\nelseif ($false) { 2 } else { 0 }\n}\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "11137e546db5f53ea297dbda8ebfbebc54f19118d5ea5324a2e797af7790c2ce"
+  },
+  {
+    "id": "branch-crlf-one-else-standalone",
+    "kind": "conditional",
+    "source": "if ($true) { 1 }\r\n`\r\nelse { 0 }\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "1f59f9ccd11fcb724897072bc812b00aebf62e56d00cf250148002d1463fdd7b"
+  },
+  {
+    "id": "branch-crlf-one-else-assignment",
+    "kind": "conditional",
+    "source": "$result = if ($true) { 1 }\r\n`\r\nelse { 0 }\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "60938ea0391ad5ce3d5e29feb8cb98a63b09143d0c00c9de18d66017794989b1"
+  },
+  {
+    "id": "branch-crlf-one-else-parenthesized-assignment",
+    "kind": "conditional",
+    "source": "($result = if ($true) { 1 }\r\n`\r\nelse { 0 })\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "09b91a9ad83072936136955267778abac7ccfec86fb26a6a8aa6a04ff825ad88"
+  },
+  {
+    "id": "branch-crlf-one-else-subexpression",
+    "kind": "conditional",
+    "source": "$(if ($true) { 1 }\r\n`\r\nelse { 0 })\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "d5946ba455648335df0a8f51a0b9b3ab9dfb02d6a372f09e3de195598a835389"
+  },
+  {
+    "id": "branch-crlf-one-else-hashtable-value",
+    "kind": "conditional",
+    "source": "@{ value = if ($true) { 1 }\r\n`\r\nelse { 0 }\r\n}\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "212b3578ff8e7c29ccc3b6d481929fffb9849e815e7deec0fa16ea7d52f93f59"
+  },
+  {
+    "id": "branch-crlf-one-else-script-block",
+    "kind": "conditional",
+    "source": "{ $result = if ($true) { 1 }\r\n`\r\nelse { 0 }\r\n}\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "f185e30c926244972aaa63a170a36ace2448a21ac8e43d74bb1f2e27c668608a"
+  },
+  {
+    "id": "branch-crlf-one-elseif-standalone",
+    "kind": "conditional",
+    "source": "if ($true) { 1 }\r\n`\r\nelseif ($false) { 2 } else { 0 }\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "72328ab93af2c1f9482a1df5711be74522e1b4889acf0b6b41c9c2fbacbc1a26"
+  },
+  {
+    "id": "branch-crlf-one-elseif-assignment",
+    "kind": "conditional",
+    "source": "$result = if ($true) { 1 }\r\n`\r\nelseif ($false) { 2 } else { 0 }\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "7d038a92db57fff20e977c41731f5f381ec73565e009ac48f5ba4bcaf6dadcc5"
+  },
+  {
+    "id": "branch-crlf-one-elseif-parenthesized-assignment",
+    "kind": "conditional",
+    "source": "($result = if ($true) { 1 }\r\n`\r\nelseif ($false) { 2 } else { 0 })\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "3cd2ef85401d89b1eca6b6be5d742b005d7887455cbcf4824ac60dbf32ca9426"
+  },
+  {
+    "id": "branch-crlf-one-elseif-subexpression",
+    "kind": "conditional",
+    "source": "$(if ($true) { 1 }\r\n`\r\nelseif ($false) { 2 } else { 0 })\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "fd36b034b0d5ff442c5044781f22870440b2b8638b8f246de1fb6bee9131eeb8"
+  },
+  {
+    "id": "branch-crlf-one-elseif-hashtable-value",
+    "kind": "conditional",
+    "source": "@{ value = if ($true) { 1 }\r\n`\r\nelseif ($false) { 2 } else { 0 }\r\n}\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "67e3e46b85854da9932d73575e756ab0e26a0aac1b59ca2c501c23909aab51fc"
+  },
+  {
+    "id": "branch-crlf-one-elseif-script-block",
+    "kind": "conditional",
+    "source": "{ $result = if ($true) { 1 }\r\n`\r\nelseif ($false) { 2 } else { 0 }\r\n}\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "6f7fb779b4cb8aa65da06043eef8ea9f04fc33af5eda31574aa22dbb39d4e193"
+  },
+  {
+    "id": "branch-crlf-comment-else-standalone",
+    "kind": "conditional",
+    "source": "if ($true) { 1 }\r\n# note\r\n`\r\nelse { 0 }\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "e5a4b1a78572debe8b393865cc468bb446ac87ae7388889c60db01e205d169d2"
+  },
+  {
+    "id": "branch-crlf-comment-else-assignment",
+    "kind": "conditional",
+    "source": "$result = if ($true) { 1 }\r\n# note\r\n`\r\nelse { 0 }\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "54f5200f51f220d9d28e395ee1216a3bee5e40f746d5ef6df3b58785954509d9"
+  },
+  {
+    "id": "branch-crlf-comment-else-parenthesized-assignment",
+    "kind": "conditional",
+    "source": "($result = if ($true) { 1 }\r\n# note\r\n`\r\nelse { 0 })\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "c3161465806f95d22dede73ea43f0cb76bedd4e0e1b18003dbdb80bb7be0fe80"
+  },
+  {
+    "id": "branch-crlf-comment-else-subexpression",
+    "kind": "conditional",
+    "source": "$(if ($true) { 1 }\r\n# note\r\n`\r\nelse { 0 })\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "a8ac134ab4d2fb6130628c2750f42782f1992ce72671612c008d904921228f10"
+  },
+  {
+    "id": "branch-crlf-comment-else-hashtable-value",
+    "kind": "conditional",
+    "source": "@{ value = if ($true) { 1 }\r\n# note\r\n`\r\nelse { 0 }\r\n}\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "04b4487061e6cada942aa4ab87176d11758d36b1d13ce5fd720a934fbdccbb73"
+  },
+  {
+    "id": "branch-crlf-comment-else-script-block",
+    "kind": "conditional",
+    "source": "{ $result = if ($true) { 1 }\r\n# note\r\n`\r\nelse { 0 }\r\n}\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "e4d44b10dd4f451e0285723c8c29ac9f74c2084758cc24bb1c8327f5da6fb5a5"
+  },
+  {
+    "id": "branch-crlf-comment-elseif-standalone",
+    "kind": "conditional",
+    "source": "if ($true) { 1 }\r\n# note\r\n`\r\nelseif ($false) { 2 } else { 0 }\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "aca3d613ad25ffc24a8e98afb461fc13abb67f694c643876c44730fb568a663d"
+  },
+  {
+    "id": "branch-crlf-comment-elseif-assignment",
+    "kind": "conditional",
+    "source": "$result = if ($true) { 1 }\r\n# note\r\n`\r\nelseif ($false) { 2 } else { 0 }\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "6bd96be55d7973b1addd81b2d95c43b7bdb9e21f03e233e4d94e960f93fdeb1c"
+  },
+  {
+    "id": "branch-crlf-comment-elseif-parenthesized-assignment",
+    "kind": "conditional",
+    "source": "($result = if ($true) { 1 }\r\n# note\r\n`\r\nelseif ($false) { 2 } else { 0 })\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "5d3b7ae3fb9a5d4b066d8eb9e6e25584574d1d4a85f11016e62862c5d568264b"
+  },
+  {
+    "id": "branch-crlf-comment-elseif-subexpression",
+    "kind": "conditional",
+    "source": "$(if ($true) { 1 }\r\n# note\r\n`\r\nelseif ($false) { 2 } else { 0 })\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "6e77fa8055151a96d303981b3dac931a33376990b2632b77546e9acfe33df6f7"
+  },
+  {
+    "id": "branch-crlf-comment-elseif-hashtable-value",
+    "kind": "conditional",
+    "source": "@{ value = if ($true) { 1 }\r\n# note\r\n`\r\nelseif ($false) { 2 } else { 0 }\r\n}\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "9c1ef3de552c0239e7ac83086e874a2d91759d772c6d9df97e0b1de2387da961"
+  },
+  {
+    "id": "branch-crlf-comment-elseif-script-block",
+    "kind": "conditional",
+    "source": "{ $result = if ($true) { 1 }\r\n# note\r\n`\r\nelseif ($false) { 2 } else { 0 }\r\n}\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "43b763f5961d4e8611fb33b055121bd41491e7394ca153caa3aca4407d037d58"
+  },
+  {
+    "id": "branch-crlf-indented-else-standalone",
+    "kind": "conditional",
+    "source": "if ($true) { 1 }\r\n  `\r\nelse { 0 }\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "479ebd2d33bd5d77ce1c581dd0d5f4ce52a64c5e4fe6832533fde19b4ca9e8d4"
+  },
+  {
+    "id": "branch-crlf-indented-else-assignment",
+    "kind": "conditional",
+    "source": "$result = if ($true) { 1 }\r\n  `\r\nelse { 0 }\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "6e7f2d3b3ce37b93ce963269aa1ec9a0706a53b6fe84f2360186d6affd4370a8"
+  },
+  {
+    "id": "branch-crlf-indented-else-parenthesized-assignment",
+    "kind": "conditional",
+    "source": "($result = if ($true) { 1 }\r\n  `\r\nelse { 0 })\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "56ef15897ab09aa86ef3c8ddb55264840fc99f67204ad2a82dee66c55c557169"
+  },
+  {
+    "id": "branch-crlf-indented-else-subexpression",
+    "kind": "conditional",
+    "source": "$(if ($true) { 1 }\r\n  `\r\nelse { 0 })\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "333f7f6e744d660e4bf44e845b50ee3b5160446d1adc8ffae87355908ae1d4bb"
+  },
+  {
+    "id": "branch-crlf-indented-else-hashtable-value",
+    "kind": "conditional",
+    "source": "@{ value = if ($true) { 1 }\r\n  `\r\nelse { 0 }\r\n}\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "19855a5c9a1863b651510b5296bdcf6b9817087639de2ed6d49966f0fd86ae28"
+  },
+  {
+    "id": "branch-crlf-indented-else-script-block",
+    "kind": "conditional",
+    "source": "{ $result = if ($true) { 1 }\r\n  `\r\nelse { 0 }\r\n}\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "c49cb397f31bd65957de6788e64dd2c1e3122fca8bc55bcbab2301524c837ea5"
+  },
+  {
+    "id": "branch-crlf-indented-elseif-standalone",
+    "kind": "conditional",
+    "source": "if ($true) { 1 }\r\n  `\r\nelseif ($false) { 2 } else { 0 }\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "85e71ebaa6a5ae9464fbbbc1dca83d30cd8be38ebdfb6512c80c70617efd93d7"
+  },
+  {
+    "id": "branch-crlf-indented-elseif-assignment",
+    "kind": "conditional",
+    "source": "$result = if ($true) { 1 }\r\n  `\r\nelseif ($false) { 2 } else { 0 }\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "6df683d432643b86fd283e9ffdbc50676f392a32b09c7b12ffcc6e61a1357c13"
+  },
+  {
+    "id": "branch-crlf-indented-elseif-parenthesized-assignment",
+    "kind": "conditional",
+    "source": "($result = if ($true) { 1 }\r\n  `\r\nelseif ($false) { 2 } else { 0 })\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "0c3fa12602f5939fe4e84d506df4197b0f08602b41ffc6ba334c655766f9f38c"
+  },
+  {
+    "id": "branch-crlf-indented-elseif-subexpression",
+    "kind": "conditional",
+    "source": "$(if ($true) { 1 }\r\n  `\r\nelseif ($false) { 2 } else { 0 })\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "fef1d03deefdd59e30b1a48ad535f37abec13ef7da3d027b49a7dc41ff17f0b3"
+  },
+  {
+    "id": "branch-crlf-indented-elseif-hashtable-value",
+    "kind": "conditional",
+    "source": "@{ value = if ($true) { 1 }\r\n  `\r\nelseif ($false) { 2 } else { 0 }\r\n}\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "89572333adcbcff3976b813d38f08b5fde49f5b4df2acfabebc547fa71ae0724"
+  },
+  {
+    "id": "branch-crlf-indented-elseif-script-block",
+    "kind": "conditional",
+    "source": "{ $result = if ($true) { 1 }\r\n  `\r\nelseif ($false) { 2 } else { 0 }\r\n}\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "f5dde8ee713b7d49cfea2080e058a78427408ae66ab716c855c025bc098eac8d"
+  },
+  {
+    "id": "branch-crlf-two-else-standalone",
+    "kind": "conditional",
+    "source": "if ($true) { 1 }\r\n`\r\n`\r\nelse { 0 }\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "000d10270ee3e407f553279aa639219363881441c3df6c21689c1871dee411a8"
+  },
+  {
+    "id": "branch-crlf-two-else-assignment",
+    "kind": "conditional",
+    "source": "$result = if ($true) { 1 }\r\n`\r\n`\r\nelse { 0 }\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "8ed9f9d1920b98cb51d965aa14cd82ef332f5699be35e58884173e44788b9e67"
+  },
+  {
+    "id": "branch-crlf-two-else-parenthesized-assignment",
+    "kind": "conditional",
+    "source": "($result = if ($true) { 1 }\r\n`\r\n`\r\nelse { 0 })\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "efb0d83db9ad60798389f45e0c301d7ad2784c77834eb5a8d9fb63ee6dfa3d18"
+  },
+  {
+    "id": "branch-crlf-two-else-subexpression",
+    "kind": "conditional",
+    "source": "$(if ($true) { 1 }\r\n`\r\n`\r\nelse { 0 })\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "4cac9c64dd1540c0c60c8af6e659e779b623e5d97d8d14ac5c2dc3feeb009e00"
+  },
+  {
+    "id": "branch-crlf-two-else-hashtable-value",
+    "kind": "conditional",
+    "source": "@{ value = if ($true) { 1 }\r\n`\r\n`\r\nelse { 0 }\r\n}\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "ab1a2b4191c0fc7d37907b7718f00d0c49b0ac3ce5572ef2e29b4240589feafa"
+  },
+  {
+    "id": "branch-crlf-two-else-script-block",
+    "kind": "conditional",
+    "source": "{ $result = if ($true) { 1 }\r\n`\r\n`\r\nelse { 0 }\r\n}\r\n",
+    "accepted": true,
+    "elseifs": 0,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "b06c57ec887c153f07afaf2c91e0f6ce12567e336c95177dd1f5f2d9b3f83ab6"
+  },
+  {
+    "id": "branch-crlf-two-elseif-standalone",
+    "kind": "conditional",
+    "source": "if ($true) { 1 }\r\n`\r\n`\r\nelseif ($false) { 2 } else { 0 }\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "c32d0260b7605531256a80035e7fbec9912d3128dddbfaa2b229cece9e3ac2d2"
+  },
+  {
+    "id": "branch-crlf-two-elseif-assignment",
+    "kind": "conditional",
+    "source": "$result = if ($true) { 1 }\r\n`\r\n`\r\nelseif ($false) { 2 } else { 0 }\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "4918e64e6a53c91b9c4742b61b876febb60cb425bb370c200e193c9453834833"
+  },
+  {
+    "id": "branch-crlf-two-elseif-parenthesized-assignment",
+    "kind": "conditional",
+    "source": "($result = if ($true) { 1 }\r\n`\r\n`\r\nelseif ($false) { 2 } else { 0 })\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "b6bb6dcc7886f8d677dc25d567d99dae809322dbfd38792d81fed25c1d4d0151"
+  },
+  {
+    "id": "branch-crlf-two-elseif-subexpression",
+    "kind": "conditional",
+    "source": "$(if ($true) { 1 }\r\n`\r\n`\r\nelseif ($false) { 2 } else { 0 })\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "cbf0870008466b775226e0f127261a77fdf97771526c08f0c5442d77aabf9890"
+  },
+  {
+    "id": "branch-crlf-two-elseif-hashtable-value",
+    "kind": "conditional",
+    "source": "@{ value = if ($true) { 1 }\r\n`\r\n`\r\nelseif ($false) { 2 } else { 0 }\r\n}\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": false,
+    "source_sha256": "18b018b555e78e5dc1b7288772f89a0b2a369ff46ca72daf0114cd9f4beb05cc"
+  },
+  {
+    "id": "branch-crlf-two-elseif-script-block",
+    "kind": "conditional",
+    "source": "{ $result = if ($true) { 1 }\r\n`\r\n`\r\nelseif ($false) { 2 } else { 0 }\r\n}\r\n",
+    "accepted": true,
+    "elseifs": 1,
+    "elses": 1,
+    "assignment": true,
+    "source_sha256": "46922d8c1a995e13de4f5cda84dcc92a04c0cd56981341f972a3956ec9cf5fd2"
+  },
+  {
+    "id": "dash-200b-1-empty",
+    "kind": "arguments",
+    "source": "Capture-Native -​\n",
+    "accepted": true,
+    "expected_values": [
+      "-​"
+    ],
+    "argument_source": "-​",
+    "dynamic": false,
+    "source_sha256": "61e6a7dbf0588564a9fa73fb66e2ce1898d3bd665b4e8c8df1656b9297ed0a4f"
+  },
+  {
+    "id": "dash-200b-1-tail",
+    "kind": "arguments",
+    "source": "Capture-Native -​tail\n",
+    "accepted": true,
+    "expected_values": [
+      "-​tail"
+    ],
+    "argument_source": "-​tail",
+    "dynamic": false,
+    "source_sha256": "3cce0941ec69cd0f31d80daf69253bb856fe5bb2bd2ded6e9805664890282ddc"
+  },
+  {
+    "id": "dash-200b-1-double-quoted",
+    "kind": "arguments",
+    "source": "Capture-Native -​\"two words\"\n",
+    "accepted": true,
+    "expected_values": [
+      "-​two words"
+    ],
+    "argument_source": "-​\"two words\"",
+    "dynamic": false,
+    "source_sha256": "34650deb103b30a68b1d8315a1a5e908b00bc8a65514d8fefd46e9811b2ace5c"
+  },
+  {
+    "id": "dash-200b-1-single-quoted",
+    "kind": "arguments",
+    "source": "Capture-Native -​'two words'\n",
+    "accepted": true,
+    "expected_values": [
+      "-​two words"
+    ],
+    "argument_source": "-​'two words'",
+    "dynamic": false,
+    "source_sha256": "a7a2f86b62fe52ecfbdb13cf1cad4c8c54d9fd858af7ef6ffc494c29b60efa0f"
+  },
+  {
+    "id": "dash-200b-1-escaped-space",
+    "kind": "arguments",
+    "source": "Capture-Native -​` tail\n",
+    "accepted": true,
+    "expected_values": [
+      "-​ tail"
+    ],
+    "argument_source": "-​` tail",
+    "dynamic": false,
+    "source_sha256": "5847d45e2922b988e61bb05ab57536083435b6aca29123025ca7d45dd5fbad32"
+  },
+  {
+    "id": "dash-200b-1-escaped-dollar",
+    "kind": "arguments",
+    "source": "Capture-Native -​`$tail\n",
+    "accepted": true,
+    "expected_values": [
+      "-​$tail"
+    ],
+    "argument_source": "-​`$tail",
+    "dynamic": false,
+    "source_sha256": "401c6f72ed4c0f7bc7b7706d4df6e668cca52c518f647dc0f028150080955178"
+  },
+  {
+    "id": "dash-200b-1-variable",
+    "kind": "arguments",
+    "source": "$tail = 'value'\nCapture-Native -​$tail\n",
+    "accepted": true,
+    "expected_values": [
+      "-​value"
+    ],
+    "argument_source": "-​$tail",
+    "dynamic": true,
+    "source_sha256": "f426ff8d6b0fa5daabbf747fd65488efba39711223ef3d1bb7e74b2f24192aed"
+  },
+  {
+    "id": "dash-200b-1-protected-double",
+    "kind": "arguments",
+    "source": "Capture-Native \"-​\"\n",
+    "accepted": true,
+    "expected_values": [
+      "-​"
+    ],
+    "argument_source": "\"-​\"",
+    "dynamic": false,
+    "protected": true,
+    "source_sha256": "d311474676deefefb31be8f53255b6c5f637e57d449e6c2617d9338e4362bf27"
+  },
+  {
+    "id": "dash-200b-1-protected-single",
+    "kind": "arguments",
+    "source": "Capture-Native '-​'\n",
+    "accepted": true,
+    "expected_values": [
+      "-​"
+    ],
+    "argument_source": "'-​'",
+    "dynamic": false,
+    "protected": true,
+    "source_sha256": "cdc418009a25f03a621842a4d4bdde988812019e92c4fcb950958e9fa1459e33"
+  },
+  {
+    "id": "dash-200b-2-empty",
+    "kind": "arguments",
+    "source": "Capture-Native --​\n",
+    "accepted": true,
+    "expected_values": [
+      "--​"
+    ],
+    "argument_source": "--​",
+    "dynamic": false,
+    "source_sha256": "d20f8ea7d145feaa39ec84b39a76450093703a7bc6a51b842a39f48c3eaa4cff"
+  },
+  {
+    "id": "dash-200b-2-tail",
+    "kind": "arguments",
+    "source": "Capture-Native --​tail\n",
+    "accepted": true,
+    "expected_values": [
+      "--​tail"
+    ],
+    "argument_source": "--​tail",
+    "dynamic": false,
+    "source_sha256": "2623c12384706b7ee1a3cf3c32fe435084faf71c97ddae2452df1b6b2b300a30"
+  },
+  {
+    "id": "dash-200b-2-double-quoted",
+    "kind": "arguments",
+    "source": "Capture-Native --​\"two words\"\n",
+    "accepted": true,
+    "expected_values": [
+      "--​two words"
+    ],
+    "argument_source": "--​\"two words\"",
+    "dynamic": false,
+    "source_sha256": "8154501c8a8cd69688a06d1fb482d5d6d0057eb1edcc0b6bf1a5576a2fb0c719"
+  },
+  {
+    "id": "dash-200b-2-single-quoted",
+    "kind": "arguments",
+    "source": "Capture-Native --​'two words'\n",
+    "accepted": true,
+    "expected_values": [
+      "--​two words"
+    ],
+    "argument_source": "--​'two words'",
+    "dynamic": false,
+    "source_sha256": "d206d5af56a91eff6855bace8ab15f70d299378cce95e74a84a183116ab2d390"
+  },
+  {
+    "id": "dash-200b-2-escaped-space",
+    "kind": "arguments",
+    "source": "Capture-Native --​` tail\n",
+    "accepted": true,
+    "expected_values": [
+      "--​ tail"
+    ],
+    "argument_source": "--​` tail",
+    "dynamic": false,
+    "source_sha256": "f99f6e07a3df25247be34696a082adcf06fb9969321f1c62b161a7a1f7194187"
+  },
+  {
+    "id": "dash-200b-2-escaped-dollar",
+    "kind": "arguments",
+    "source": "Capture-Native --​`$tail\n",
+    "accepted": true,
+    "expected_values": [
+      "--​$tail"
+    ],
+    "argument_source": "--​`$tail",
+    "dynamic": false,
+    "source_sha256": "d5211e6b3964508a6c47caeb5f59f829d40e646f1afd743c5027bd2d9113618e"
+  },
+  {
+    "id": "dash-200b-2-variable",
+    "kind": "arguments",
+    "source": "$tail = 'value'\nCapture-Native --​$tail\n",
+    "accepted": true,
+    "expected_values": [
+      "--​value"
+    ],
+    "argument_source": "--​$tail",
+    "dynamic": true,
+    "source_sha256": "15fd68a72fa130650b3974fabe2b58641ad507e8e86d13c9165705b8ea2779f7"
+  },
+  {
+    "id": "dash-200b-2-protected-double",
+    "kind": "arguments",
+    "source": "Capture-Native \"--​\"\n",
+    "accepted": true,
+    "expected_values": [
+      "--​"
+    ],
+    "argument_source": "\"--​\"",
+    "dynamic": false,
+    "protected": true,
+    "source_sha256": "77b10eb798ceedaffd0e7bb7f0410782fcef4b6542849254b4c88eff01fb2b94"
+  },
+  {
+    "id": "dash-200b-2-protected-single",
+    "kind": "arguments",
+    "source": "Capture-Native '--​'\n",
+    "accepted": true,
+    "expected_values": [
+      "--​"
+    ],
+    "argument_source": "'--​'",
+    "dynamic": false,
+    "protected": true,
+    "source_sha256": "9f11fcebe971511f94539f28cb6f9b46d76d7b9b7de1b6a9a982a985f9490c1f"
+  },
+  {
+    "id": "dash-feff-1-empty",
+    "kind": "arguments",
+    "source": "Capture-Native -﻿\n",
+    "accepted": true,
+    "expected_values": [
+      "-﻿"
+    ],
+    "argument_source": "-﻿",
+    "dynamic": false,
+    "source_sha256": "33741e8bd9d87c0e2ab1626d04b02fc950a11badb3066ac71e7e53105603b81e"
+  },
+  {
+    "id": "dash-feff-1-tail",
+    "kind": "arguments",
+    "source": "Capture-Native -﻿tail\n",
+    "accepted": true,
+    "expected_values": [
+      "-﻿tail"
+    ],
+    "argument_source": "-﻿tail",
+    "dynamic": false,
+    "source_sha256": "fee5f8d47b000c42f8b3d98a50aacaf557c07747f2f2b640c634b95c5fc28d56"
+  },
+  {
+    "id": "dash-feff-1-double-quoted",
+    "kind": "arguments",
+    "source": "Capture-Native -﻿\"two words\"\n",
+    "accepted": true,
+    "expected_values": [
+      "-﻿two words"
+    ],
+    "argument_source": "-﻿\"two words\"",
+    "dynamic": false,
+    "source_sha256": "acbad4d20954d386129ed86fd8be40293885b1e0b23e68f629f00a847deaffb7"
+  },
+  {
+    "id": "dash-feff-1-single-quoted",
+    "kind": "arguments",
+    "source": "Capture-Native -﻿'two words'\n",
+    "accepted": true,
+    "expected_values": [
+      "-﻿two words"
+    ],
+    "argument_source": "-﻿'two words'",
+    "dynamic": false,
+    "source_sha256": "a3290cf80abcdbdd9274612f21c9926cd3e5423c2b1ccfd08b3f883ba9f953ef"
+  },
+  {
+    "id": "dash-feff-1-escaped-space",
+    "kind": "arguments",
+    "source": "Capture-Native -﻿` tail\n",
+    "accepted": true,
+    "expected_values": [
+      "-﻿ tail"
+    ],
+    "argument_source": "-﻿` tail",
+    "dynamic": false,
+    "source_sha256": "0d92eb42d607083ba3084daa1afa4ff2b61f47f59459b58217839ff68e5f5571"
+  },
+  {
+    "id": "dash-feff-1-escaped-dollar",
+    "kind": "arguments",
+    "source": "Capture-Native -﻿`$tail\n",
+    "accepted": true,
+    "expected_values": [
+      "-﻿$tail"
+    ],
+    "argument_source": "-﻿`$tail",
+    "dynamic": false,
+    "source_sha256": "2465bef3453cac18c4128cf912318dd52b919781556fbc7f9b2aa79b078ce3e6"
+  },
+  {
+    "id": "dash-feff-1-variable",
+    "kind": "arguments",
+    "source": "$tail = 'value'\nCapture-Native -﻿$tail\n",
+    "accepted": true,
+    "expected_values": [
+      "-﻿value"
+    ],
+    "argument_source": "-﻿$tail",
+    "dynamic": true,
+    "source_sha256": "a457b4f404f39841e2a8e75800cab4d3270e14596090e27a18a35cbe65cf70c8"
+  },
+  {
+    "id": "dash-feff-1-protected-double",
+    "kind": "arguments",
+    "source": "Capture-Native \"-﻿\"\n",
+    "accepted": true,
+    "expected_values": [
+      "-﻿"
+    ],
+    "argument_source": "\"-﻿\"",
+    "dynamic": false,
+    "protected": true,
+    "source_sha256": "cc5238dc9a0c07ef165b009f6844ec975cdcbf390b8f238ac47e76dd98cd71ad"
+  },
+  {
+    "id": "dash-feff-1-protected-single",
+    "kind": "arguments",
+    "source": "Capture-Native '-﻿'\n",
+    "accepted": true,
+    "expected_values": [
+      "-﻿"
+    ],
+    "argument_source": "'-﻿'",
+    "dynamic": false,
+    "protected": true,
+    "source_sha256": "dd8a7d92bc86b52a6faa327bd0e0b08935aecad27b2ec9574748880d304f53e2"
+  },
+  {
+    "id": "dash-feff-2-empty",
+    "kind": "arguments",
+    "source": "Capture-Native --﻿\n",
+    "accepted": true,
+    "expected_values": [
+      "--﻿"
+    ],
+    "argument_source": "--﻿",
+    "dynamic": false,
+    "source_sha256": "b5d8c77f550f2dd4c92484eac3719b54e02c12777285ca51cf008a3e113ab371"
+  },
+  {
+    "id": "dash-feff-2-tail",
+    "kind": "arguments",
+    "source": "Capture-Native --﻿tail\n",
+    "accepted": true,
+    "expected_values": [
+      "--﻿tail"
+    ],
+    "argument_source": "--﻿tail",
+    "dynamic": false,
+    "source_sha256": "8a96c93c48d50f1e26d1d08c5be92d8ce0b1e741103b9fa8f9ffa248e65525d2"
+  },
+  {
+    "id": "dash-feff-2-double-quoted",
+    "kind": "arguments",
+    "source": "Capture-Native --﻿\"two words\"\n",
+    "accepted": true,
+    "expected_values": [
+      "--﻿two words"
+    ],
+    "argument_source": "--﻿\"two words\"",
+    "dynamic": false,
+    "source_sha256": "52b24754ae5c63d10b892de8d18c900f2419acb2fc6c6d007a3492f1ae79f1e1"
+  },
+  {
+    "id": "dash-feff-2-single-quoted",
+    "kind": "arguments",
+    "source": "Capture-Native --﻿'two words'\n",
+    "accepted": true,
+    "expected_values": [
+      "--﻿two words"
+    ],
+    "argument_source": "--﻿'two words'",
+    "dynamic": false,
+    "source_sha256": "d79ba6da6755fd105e50f1849ead9f8f1aeb620563f5a0d3b52f416b34c26cbd"
+  },
+  {
+    "id": "dash-feff-2-escaped-space",
+    "kind": "arguments",
+    "source": "Capture-Native --﻿` tail\n",
+    "accepted": true,
+    "expected_values": [
+      "--﻿ tail"
+    ],
+    "argument_source": "--﻿` tail",
+    "dynamic": false,
+    "source_sha256": "b928127bc7ad96c7eb7403708d69d9f31dd70fa3c4f9babe19b2fa3261b997df"
+  },
+  {
+    "id": "dash-feff-2-escaped-dollar",
+    "kind": "arguments",
+    "source": "Capture-Native --﻿`$tail\n",
+    "accepted": true,
+    "expected_values": [
+      "--﻿$tail"
+    ],
+    "argument_source": "--﻿`$tail",
+    "dynamic": false,
+    "source_sha256": "bc75ffba71ed87a6856c201fd74a58ea868ae1bad045961f07c5e914ccb2483f"
+  },
+  {
+    "id": "dash-feff-2-variable",
+    "kind": "arguments",
+    "source": "$tail = 'value'\nCapture-Native --﻿$tail\n",
+    "accepted": true,
+    "expected_values": [
+      "--﻿value"
+    ],
+    "argument_source": "--﻿$tail",
+    "dynamic": true,
+    "source_sha256": "93018913b6c90c31a46c0f2a4dcfdd512879c5c1218ab1bd317fbe829da7f42e"
+  },
+  {
+    "id": "dash-feff-2-protected-double",
+    "kind": "arguments",
+    "source": "Capture-Native \"--﻿\"\n",
+    "accepted": true,
+    "expected_values": [
+      "--﻿"
+    ],
+    "argument_source": "\"--﻿\"",
+    "dynamic": false,
+    "protected": true,
+    "source_sha256": "d01bb20ab30376131e9dd91eb1155a7922654d637a79291cb0478237b374be25"
+  },
+  {
+    "id": "dash-feff-2-protected-single",
+    "kind": "arguments",
+    "source": "Capture-Native '--﻿'\n",
+    "accepted": true,
+    "expected_values": [
+      "--﻿"
+    ],
+    "argument_source": "'--﻿'",
+    "dynamic": false,
+    "protected": true,
+    "source_sha256": "3a887b05989c31f43b5159a82e81e339e6796aec6f150609e16675b1566a89c7"
+  },
+  {
+    "id": "dash-2060-1-empty",
+    "kind": "arguments",
+    "source": "Capture-Native -⁠\n",
+    "accepted": true,
+    "expected_values": [
+      "-⁠"
+    ],
+    "argument_source": "-⁠",
+    "dynamic": false,
+    "source_sha256": "9d203679bf89cc0798a4404480c52c03390ae1fc51f6a32d4fcfad4659d37ef2"
+  },
+  {
+    "id": "dash-2060-1-tail",
+    "kind": "arguments",
+    "source": "Capture-Native -⁠tail\n",
+    "accepted": true,
+    "expected_values": [
+      "-⁠tail"
+    ],
+    "argument_source": "-⁠tail",
+    "dynamic": false,
+    "source_sha256": "983a8215dcf1d66daf204dcb147704a1279aa9c2379350502ad5c21629a2b986"
+  },
+  {
+    "id": "dash-2060-1-double-quoted",
+    "kind": "arguments",
+    "source": "Capture-Native -⁠\"two words\"\n",
+    "accepted": true,
+    "expected_values": [
+      "-⁠two words"
+    ],
+    "argument_source": "-⁠\"two words\"",
+    "dynamic": false,
+    "source_sha256": "d928e9489235ac0bed75e7177bb0b37e3d423bcd8c77d6631971130712c7f4ad"
+  },
+  {
+    "id": "dash-2060-1-single-quoted",
+    "kind": "arguments",
+    "source": "Capture-Native -⁠'two words'\n",
+    "accepted": true,
+    "expected_values": [
+      "-⁠two words"
+    ],
+    "argument_source": "-⁠'two words'",
+    "dynamic": false,
+    "source_sha256": "265844a9ba4168e5db3ac389fea861a76a741d47ae28f5e3da2155a764635d35"
+  },
+  {
+    "id": "dash-2060-1-escaped-space",
+    "kind": "arguments",
+    "source": "Capture-Native -⁠` tail\n",
+    "accepted": true,
+    "expected_values": [
+      "-⁠ tail"
+    ],
+    "argument_source": "-⁠` tail",
+    "dynamic": false,
+    "source_sha256": "e6349a1f2e2dea2532ac1b93183203412c175118e082587a7c61f97296ba1631"
+  },
+  {
+    "id": "dash-2060-1-escaped-dollar",
+    "kind": "arguments",
+    "source": "Capture-Native -⁠`$tail\n",
+    "accepted": true,
+    "expected_values": [
+      "-⁠$tail"
+    ],
+    "argument_source": "-⁠`$tail",
+    "dynamic": false,
+    "source_sha256": "9cff39aeb5c03f2ef147da658f3cb737fb6e48f97a59430e926706286bb3fc94"
+  },
+  {
+    "id": "dash-2060-1-variable",
+    "kind": "arguments",
+    "source": "$tail = 'value'\nCapture-Native -⁠$tail\n",
+    "accepted": true,
+    "expected_values": [
+      "-⁠value"
+    ],
+    "argument_source": "-⁠$tail",
+    "dynamic": true,
+    "source_sha256": "92e91fcb6e6b91485b853a28a937e58fdd5ce37aab613a5a02c11df01cc03080"
+  },
+  {
+    "id": "dash-2060-1-protected-double",
+    "kind": "arguments",
+    "source": "Capture-Native \"-⁠\"\n",
+    "accepted": true,
+    "expected_values": [
+      "-⁠"
+    ],
+    "argument_source": "\"-⁠\"",
+    "dynamic": false,
+    "protected": true,
+    "source_sha256": "d0c6d4ebbff2f4178770100ba25fccd0d79a3030db65da86e0be357ded8f3446"
+  },
+  {
+    "id": "dash-2060-1-protected-single",
+    "kind": "arguments",
+    "source": "Capture-Native '-⁠'\n",
+    "accepted": true,
+    "expected_values": [
+      "-⁠"
+    ],
+    "argument_source": "'-⁠'",
+    "dynamic": false,
+    "protected": true,
+    "source_sha256": "ebe85c0d4dc522131ce5bc2e1fd02bc28819c4644e4b098775c194572045cf0c"
+  },
+  {
+    "id": "dash-2060-2-empty",
+    "kind": "arguments",
+    "source": "Capture-Native --⁠\n",
+    "accepted": true,
+    "expected_values": [
+      "--⁠"
+    ],
+    "argument_source": "--⁠",
+    "dynamic": false,
+    "source_sha256": "c8acc4b9dbefc9641fe208f0105919e1f91133db92e502743fbd906ed4d9990a"
+  },
+  {
+    "id": "dash-2060-2-tail",
+    "kind": "arguments",
+    "source": "Capture-Native --⁠tail\n",
+    "accepted": true,
+    "expected_values": [
+      "--⁠tail"
+    ],
+    "argument_source": "--⁠tail",
+    "dynamic": false,
+    "source_sha256": "886b45ab81d4af2208a6edf8e9dafcd22daf62c9fbd69f18b0d885de7b4d60c7"
+  },
+  {
+    "id": "dash-2060-2-double-quoted",
+    "kind": "arguments",
+    "source": "Capture-Native --⁠\"two words\"\n",
+    "accepted": true,
+    "expected_values": [
+      "--⁠two words"
+    ],
+    "argument_source": "--⁠\"two words\"",
+    "dynamic": false,
+    "source_sha256": "928c272b69e9beffa71205dc861562b886122270a60b4a48d74827c5124e3ee2"
+  },
+  {
+    "id": "dash-2060-2-single-quoted",
+    "kind": "arguments",
+    "source": "Capture-Native --⁠'two words'\n",
+    "accepted": true,
+    "expected_values": [
+      "--⁠two words"
+    ],
+    "argument_source": "--⁠'two words'",
+    "dynamic": false,
+    "source_sha256": "b465070c18d915152e5586a7ace9b9d418cafdc59d9139b5a5c2be1eeddc5e04"
+  },
+  {
+    "id": "dash-2060-2-escaped-space",
+    "kind": "arguments",
+    "source": "Capture-Native --⁠` tail\n",
+    "accepted": true,
+    "expected_values": [
+      "--⁠ tail"
+    ],
+    "argument_source": "--⁠` tail",
+    "dynamic": false,
+    "source_sha256": "78df696f76956125288cf3e1fa7dadc00348021e43da3cab83d86de445df752a"
+  },
+  {
+    "id": "dash-2060-2-escaped-dollar",
+    "kind": "arguments",
+    "source": "Capture-Native --⁠`$tail\n",
+    "accepted": true,
+    "expected_values": [
+      "--⁠$tail"
+    ],
+    "argument_source": "--⁠`$tail",
+    "dynamic": false,
+    "source_sha256": "17f56eecc96e4fb45ce551d57903840c3c6776ac5acf63668225f3d7e0ffb0ad"
+  },
+  {
+    "id": "dash-2060-2-variable",
+    "kind": "arguments",
+    "source": "$tail = 'value'\nCapture-Native --⁠$tail\n",
+    "accepted": true,
+    "expected_values": [
+      "--⁠value"
+    ],
+    "argument_source": "--⁠$tail",
+    "dynamic": true,
+    "source_sha256": "41277c70b9ff9b423cf590ec17d063633b234e7c1616dd8101f6eab116b89d07"
+  },
+  {
+    "id": "dash-2060-2-protected-double",
+    "kind": "arguments",
+    "source": "Capture-Native \"--⁠\"\n",
+    "accepted": true,
+    "expected_values": [
+      "--⁠"
+    ],
+    "argument_source": "\"--⁠\"",
+    "dynamic": false,
+    "protected": true,
+    "source_sha256": "9856634dbb30b58a0c38673489dd7b6e8f66270c1c6a94f35a990417dad24694"
+  },
+  {
+    "id": "dash-2060-2-protected-single",
+    "kind": "arguments",
+    "source": "Capture-Native '--⁠'\n",
+    "accepted": true,
+    "expected_values": [
+      "--⁠"
+    ],
+    "argument_source": "'--⁠'",
+    "dynamic": false,
+    "protected": true,
+    "source_sha256": "d971da2be5c483a2ce82d126008451fdac3e94fb72932f92607976cb3a4dbec0"
+  },
+  {
+    "id": "ordinary-escape-lf-standalone",
+    "kind": "observation",
+    "source": "Write-Output first\n`Write-Output second\n",
+    "accepted": true,
+    "source_sha256": "a684250f0334e54ce1707b4940ccde1e40b9f091c070b0bdcfe6fca676dd9f9e"
+  },
+  {
+    "id": "ordinary-escape-lf-assignment",
+    "kind": "observation",
+    "source": "$result = Write-Output first\n`Write-Output second\n",
+    "accepted": true,
+    "source_sha256": "9aa1539a4a0daf998b6cbb80190f4b5cb9fd688ae69fb2cf29c2b151e76320c8"
+  },
+  {
+    "id": "ordinary-escape-lf-subexpression",
+    "kind": "observation",
+    "source": "$(Write-Output first\n`Write-Output second)\n",
+    "accepted": true,
+    "source_sha256": "cad32dd1589cd18e2916ed8a81a8b22cd41c8cc9e4083b97bc0e6c98548367a8"
+  },
+  {
+    "id": "ordinary-escape-lf-script-block",
+    "kind": "observation",
+    "source": "{ Write-Output first\n`Write-Output second\n}\n",
+    "accepted": true,
+    "source_sha256": "7e450011c1b965b41468517d67e70028657dc873f0468bbd5c2af8b52405ed29"
+  },
+  {
+    "id": "ordinary-escape-crlf-standalone",
+    "kind": "observation",
+    "source": "Write-Output first\r\n`Write-Output second\r\n",
+    "accepted": true,
+    "source_sha256": "0b9aaac696484682e2e9d49a8af0581b66987dc169d81a1b19ac6b96026f7a97"
+  },
+  {
+    "id": "ordinary-escape-crlf-assignment",
+    "kind": "observation",
+    "source": "$result = Write-Output first\r\n`Write-Output second\r\n",
+    "accepted": true,
+    "source_sha256": "b571c9b3443b9710d57a478a4ee2f44687f916f5e5f5f8884e761584196b3636"
+  },
+  {
+    "id": "ordinary-escape-crlf-subexpression",
+    "kind": "observation",
+    "source": "$(Write-Output first\r\n`Write-Output second)\r\n",
+    "accepted": true,
+    "source_sha256": "92fa5c213d411ec6fd409c1492f15d657df7e8a99fbd6e40130daa38a4a90577"
+  },
+  {
+    "id": "ordinary-escape-crlf-script-block",
+    "kind": "observation",
+    "source": "{ Write-Output first\r\n`Write-Output second\r\n}\r\n",
+    "accepted": true,
+    "source_sha256": "ee332ebd1319323991fb6bd349680c347b3525e142b057054bd3f8c54538f6cb"
+  },
+  {
+    "id": "comma-200b-1-bare",
+    "kind": "arguments_observe",
+    "source": "Capture-Native -​a,b\n",
+    "accepted": true,
+    "argument_source": "-​a,b",
+    "source_sha256": "b96c60e442186f8c3f07a08122534bcd31f1d60bc840f1f9cbbdc92f801eccc4"
+  },
+  {
+    "id": "comma-200b-1-quoted",
+    "kind": "arguments_observe",
+    "source": "Capture-Native -​\"a,b\"\n",
+    "accepted": true,
+    "argument_source": "-​\"a,b\"",
+    "source_sha256": "402a7b5023d30463dd539f4c19af7cc1ab12252eb612a3e36e017916f0073a8c"
+  },
+  {
+    "id": "comma-200b-1-escaped",
+    "kind": "arguments_observe",
+    "source": "Capture-Native -​a`,b\n",
+    "accepted": true,
+    "argument_source": "-​a`,b",
+    "source_sha256": "af4cebb220f180e1c46548166594a08269d202ccc48e19bce32aa3518f2d8c29"
+  },
+  {
+    "id": "comma-200b-2-bare",
+    "kind": "arguments_observe",
+    "source": "Capture-Native --​a,b\n",
+    "accepted": true,
+    "argument_source": "--​a,b",
+    "source_sha256": "8575b96e0f1417587562744f388b618f26e4b850fcd527e5c53d91a11cdff90c"
+  },
+  {
+    "id": "comma-200b-2-quoted",
+    "kind": "arguments_observe",
+    "source": "Capture-Native --​\"a,b\"\n",
+    "accepted": true,
+    "argument_source": "--​\"a,b\"",
+    "source_sha256": "e2585b4f4258796a506998cb4e7fcb63258d7f31312f3f195315d64de8d692af"
+  },
+  {
+    "id": "comma-200b-2-escaped",
+    "kind": "arguments_observe",
+    "source": "Capture-Native --​a`,b\n",
+    "accepted": true,
+    "argument_source": "--​a`,b",
+    "source_sha256": "efbf87b0b6f7e2384faed3c6e3fd755a662a70a9e5e658c1555cd4eee40b3988"
+  },
+  {
+    "id": "comma-feff-1-bare",
+    "kind": "arguments_observe",
+    "source": "Capture-Native -﻿a,b\n",
+    "accepted": true,
+    "argument_source": "-﻿a,b",
+    "source_sha256": "4d151f144810b39b963d7207d70bc8b443a67cd7c1ab7a650869f6754ae864ee"
+  },
+  {
+    "id": "comma-feff-1-quoted",
+    "kind": "arguments_observe",
+    "source": "Capture-Native -﻿\"a,b\"\n",
+    "accepted": true,
+    "argument_source": "-﻿\"a,b\"",
+    "source_sha256": "460bbf85ed9ab8c933282698169b0a4f64c3858b10dca68fd86682d58c57c734"
+  },
+  {
+    "id": "comma-feff-1-escaped",
+    "kind": "arguments_observe",
+    "source": "Capture-Native -﻿a`,b\n",
+    "accepted": true,
+    "argument_source": "-﻿a`,b",
+    "source_sha256": "0b648da2d88ac6fc0dd75a2164c487fb4d28ecc3674b10d110b2b6c50cf0f136"
+  },
+  {
+    "id": "comma-feff-2-bare",
+    "kind": "arguments_observe",
+    "source": "Capture-Native --﻿a,b\n",
+    "accepted": true,
+    "argument_source": "--﻿a,b",
+    "source_sha256": "0e5e843a046acbfab6d78e4d047ce6abbcbada4fa0107884931d7f1c6fa9cbfa"
+  },
+  {
+    "id": "comma-feff-2-quoted",
+    "kind": "arguments_observe",
+    "source": "Capture-Native --﻿\"a,b\"\n",
+    "accepted": true,
+    "argument_source": "--﻿\"a,b\"",
+    "source_sha256": "07cd30fbe5921ef5af29b0427c2efec72a9fffb95dd790a89eb1a9b54c4c23c1"
+  },
+  {
+    "id": "comma-feff-2-escaped",
+    "kind": "arguments_observe",
+    "source": "Capture-Native --﻿a`,b\n",
+    "accepted": true,
+    "argument_source": "--﻿a`,b",
+    "source_sha256": "7cb1ed6f09c877f977f9fab6e928ca64be358625d956f29168d29a078458038c"
+  },
+  {
+    "id": "comma-2060-1-bare",
+    "kind": "arguments_observe",
+    "source": "Capture-Native -⁠a,b\n",
+    "accepted": true,
+    "argument_source": "-⁠a,b",
+    "source_sha256": "f8e627857f74b5201769a3491289949902d31caf7d690852a4d1e77aa3ec1a97"
+  },
+  {
+    "id": "comma-2060-1-quoted",
+    "kind": "arguments_observe",
+    "source": "Capture-Native -⁠\"a,b\"\n",
+    "accepted": true,
+    "argument_source": "-⁠\"a,b\"",
+    "source_sha256": "2f5e7f77e523ce135e877ab17e796e21eb2215b910dadbce262c7da141133678"
+  },
+  {
+    "id": "comma-2060-1-escaped",
+    "kind": "arguments_observe",
+    "source": "Capture-Native -⁠a`,b\n",
+    "accepted": true,
+    "argument_source": "-⁠a`,b",
+    "source_sha256": "4937b60a6c65ec82324445e0e8a9740bac7667034c233cb3f3f344c37035ddbf"
+  },
+  {
+    "id": "comma-2060-2-bare",
+    "kind": "arguments_observe",
+    "source": "Capture-Native --⁠a,b\n",
+    "accepted": true,
+    "argument_source": "--⁠a,b",
+    "source_sha256": "695534429f21d49b77de757a9aab7936224588c84d0e77b2683939859aaf5ab3"
+  },
+  {
+    "id": "comma-2060-2-quoted",
+    "kind": "arguments_observe",
+    "source": "Capture-Native --⁠\"a,b\"\n",
+    "accepted": true,
+    "argument_source": "--⁠\"a,b\"",
+    "source_sha256": "fabb551a31513aa4bd91431ff06cc1b4b70f2b1025d7d52fbdaff949472cdecf"
+  },
+  {
+    "id": "comma-2060-2-escaped",
+    "kind": "arguments_observe",
+    "source": "Capture-Native --⁠a`,b\n",
+    "accepted": true,
+    "argument_source": "--⁠a`,b",
+    "source_sha256": "a2cd5e1fde5449766d8a3b450232281e1cf71bf3527cd98497ec0b135c82c596"
+  }
+]

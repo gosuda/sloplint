@@ -1,0 +1,242 @@
+[
+  {
+    "id": "token-lf-lf-attached-none-top",
+    "source": "Get-Date`\n`\n| Write-Output\n",
+    "accepted": true,
+    "source_sha256": "fe6da1a012546a1e3d467741461a000059264432afb86e1380e7d063110bd91e"
+  },
+  {
+    "id": "token-lf-lf-attached-none-group",
+    "source": "(Get-Date`\n`\n| Write-Output)\n",
+    "accepted": true,
+    "source_sha256": "f664da6e9942d94b975d54ea45e90a069d671236e7b1598e93bff3f260d03f55"
+  },
+  {
+    "id": "token-lf-lf-attached-space-top",
+    "source": "Get-Date`\n `\n| Write-Output\n",
+    "accepted": true,
+    "source_sha256": "f276cd622cec703ca28b80efd67c57b314cbb1ac986b94824f530685a398a65b"
+  },
+  {
+    "id": "token-lf-lf-attached-space-group",
+    "source": "(Get-Date`\n `\n| Write-Output)\n",
+    "accepted": true,
+    "source_sha256": "2c0005c72676e3500c7f207689ed2d785544e5439032cf3f0f3370a321a25621"
+  },
+  {
+    "id": "token-lf-lf-spaced-none-top",
+    "source": "Get-Date `\n`\n| Write-Output\n",
+    "accepted": true,
+    "source_sha256": "a4574bbc25a59cb3e43f13a9448e5fc0a877849912b51bbf0e970472e0cdba67"
+  },
+  {
+    "id": "token-lf-lf-spaced-none-group",
+    "source": "(Get-Date `\n`\n| Write-Output)\n",
+    "accepted": true,
+    "source_sha256": "9efa44c7fe7ac8436213aa40272b4b39ad1894ddf9869b9a67a8a5f56ef7ef91"
+  },
+  {
+    "id": "token-lf-lf-spaced-space-top",
+    "source": "Get-Date `\n `\n| Write-Output\n",
+    "accepted": true,
+    "source_sha256": "e02723411d480018205e50269ba73592b61985fb940e6040a1916a0ad87eb03a"
+  },
+  {
+    "id": "token-lf-lf-spaced-space-group",
+    "source": "(Get-Date `\n `\n| Write-Output)\n",
+    "accepted": true,
+    "source_sha256": "7ee8b7b0ac27e268c9982dbd10f5308c1d029e9798870d27a5b4e3c152486eff"
+  },
+  {
+    "id": "token-lf-crlf-attached-none-top",
+    "source": "Get-Date`\n`\r\n| Write-Output\r\n",
+    "accepted": true,
+    "source_sha256": "e4e5c54985b4777bf8add7acdc0b25e5867211d2753628cb24084f472a44e984"
+  },
+  {
+    "id": "token-lf-crlf-attached-none-group",
+    "source": "(Get-Date`\n`\r\n| Write-Output)\r\n",
+    "accepted": true,
+    "source_sha256": "570600ace458852e288fa608afabea64d0f5791b563336024735b9b7c176f54f"
+  },
+  {
+    "id": "token-lf-crlf-attached-space-top",
+    "source": "Get-Date`\n `\r\n| Write-Output\r\n",
+    "accepted": true,
+    "source_sha256": "ee0435820d88d0db40ca4c9fc81af789926849c0592065bde73d1370708c46b2"
+  },
+  {
+    "id": "token-lf-crlf-attached-space-group",
+    "source": "(Get-Date`\n `\r\n| Write-Output)\r\n",
+    "accepted": true,
+    "source_sha256": "217caefccf3f0d1d0db24bffa99ff89ba27bef0c03a5052138a0132290ad5872"
+  },
+  {
+    "id": "token-lf-crlf-spaced-none-top",
+    "source": "Get-Date `\n`\r\n| Write-Output\r\n",
+    "accepted": true,
+    "source_sha256": "94470df10d49e5fec7856e5603141411a08cb7e1e6c8826d934e6ce2d49f3b6c"
+  },
+  {
+    "id": "token-lf-crlf-spaced-none-group",
+    "source": "(Get-Date `\n`\r\n| Write-Output)\r\n",
+    "accepted": true,
+    "source_sha256": "5da7e196ccf59e902610bf741f619daa61d4cce3ff656bbc14b229c516be2efb"
+  },
+  {
+    "id": "token-lf-crlf-spaced-space-top",
+    "source": "Get-Date `\n `\r\n| Write-Output\r\n",
+    "accepted": true,
+    "source_sha256": "3fc76b5ff076f48f4423d252afc60bbb513e3414390f3f5a4405ee1c9646fbc5"
+  },
+  {
+    "id": "token-lf-crlf-spaced-space-group",
+    "source": "(Get-Date `\n `\r\n| Write-Output)\r\n",
+    "accepted": true,
+    "source_sha256": "9423cfc603704c41cb8077910d2945ab838afd4cdfe456bc77ffd20924695d04"
+  },
+  {
+    "id": "token-crlf-lf-attached-none-top",
+    "source": "Get-Date`\r\n`\n| Write-Output\n",
+    "accepted": false,
+    "source_sha256": "a6c4436569e00c2713c5193af38a495a5fd87e4628afea4f6f17b0c9c2e526d4"
+  },
+  {
+    "id": "token-crlf-lf-attached-none-group",
+    "source": "(Get-Date`\r\n`\n| Write-Output)\n",
+    "accepted": false,
+    "source_sha256": "7b65652f97a245cacd43d9eac960028af1dae1ecc22185c0083eb01f8a4761ca"
+  },
+  {
+    "id": "token-crlf-lf-attached-space-top",
+    "source": "Get-Date`\r\n `\n| Write-Output\n",
+    "accepted": false,
+    "source_sha256": "cd12ac81919f8c33204b242dc8eb1a589f3ee602c5c08af96004d2a10eb0ceae"
+  },
+  {
+    "id": "token-crlf-lf-attached-space-group",
+    "source": "(Get-Date`\r\n `\n| Write-Output)\n",
+    "accepted": false,
+    "source_sha256": "f03eef876f0bdb03cb23a0ea83851f4958af5b486e0f9cdef7ae62fe46f650ce"
+  },
+  {
+    "id": "token-crlf-lf-spaced-none-top",
+    "source": "Get-Date `\r\n`\n| Write-Output\n",
+    "accepted": true,
+    "source_sha256": "a4b78e754c1aa205d27a4e8b6b151a87347c25524bd53de5f1a1b670167bc023"
+  },
+  {
+    "id": "token-crlf-lf-spaced-none-group",
+    "source": "(Get-Date `\r\n`\n| Write-Output)\n",
+    "accepted": true,
+    "source_sha256": "f9e07110408fb7b6d96b673ad4a196177e4c4b22fd018615aabab7e2257c7326"
+  },
+  {
+    "id": "token-crlf-lf-spaced-space-top",
+    "source": "Get-Date `\r\n `\n| Write-Output\n",
+    "accepted": true,
+    "source_sha256": "0dd1fcbbcf39183a1344f48b9f7c42ae134068e98e7bee500a5b6fe6c53161cd"
+  },
+  {
+    "id": "token-crlf-lf-spaced-space-group",
+    "source": "(Get-Date `\r\n `\n| Write-Output)\n",
+    "accepted": true,
+    "source_sha256": "2b718785e4f4a34fc0b5cd315cfa8a85d57636247a86aaabd39c9b26f7c1f543"
+  },
+  {
+    "id": "token-crlf-crlf-attached-none-top",
+    "source": "Get-Date`\r\n`\r\n| Write-Output\r\n",
+    "accepted": false,
+    "source_sha256": "d948a6bc9d41c326a6bc8a8c5a23e3befd515284542300585b4fa3dec0de3048"
+  },
+  {
+    "id": "token-crlf-crlf-attached-none-group",
+    "source": "(Get-Date`\r\n`\r\n| Write-Output)\r\n",
+    "accepted": false,
+    "source_sha256": "8f1dfb52c233b4d6f46c48dda315f994b17bfefcca2c0a9da667700f5ef1bf44"
+  },
+  {
+    "id": "token-crlf-crlf-attached-space-top",
+    "source": "Get-Date`\r\n `\r\n| Write-Output\r\n",
+    "accepted": false,
+    "source_sha256": "36b146ceca8d8e17cead8f2e3e0aadb756ce5a1e736750d62fc59f2f7bc6c3a6"
+  },
+  {
+    "id": "token-crlf-crlf-attached-space-group",
+    "source": "(Get-Date`\r\n `\r\n| Write-Output)\r\n",
+    "accepted": false,
+    "source_sha256": "30d99504eeb53d36692a712983a6385c3cac734a0b6e0ee246cc59ec5bbc14f1"
+  },
+  {
+    "id": "token-crlf-crlf-spaced-none-top",
+    "source": "Get-Date `\r\n`\r\n| Write-Output\r\n",
+    "accepted": true,
+    "source_sha256": "f7f23278fa45626e1be11647176a9f5363ed111848d1fd8b9ff404619aa08c6c"
+  },
+  {
+    "id": "token-crlf-crlf-spaced-none-group",
+    "source": "(Get-Date `\r\n`\r\n| Write-Output)\r\n",
+    "accepted": true,
+    "source_sha256": "964c03b7cb88ea59c2385edef4a10488b68834555bafb165aa528fd541de802f"
+  },
+  {
+    "id": "token-crlf-crlf-spaced-space-top",
+    "source": "Get-Date `\r\n `\r\n| Write-Output\r\n",
+    "accepted": true,
+    "source_sha256": "51dd72991edae0597997682313267f3fcf29ffa580b0c5d0d2efa0976af0af6d"
+  },
+  {
+    "id": "token-crlf-crlf-spaced-space-group",
+    "source": "(Get-Date `\r\n `\r\n| Write-Output)\r\n",
+    "accepted": true,
+    "source_sha256": "b5fcf5b71f647c352b185c0d4189d4a9910ffb4475d3271ef9e08dfedf1cb4d5"
+  },
+  {
+    "id": "token-ordinary-lf-lf-top",
+    "source": "Get-Date\n`\n| Write-Output\n",
+    "accepted": false,
+    "source_sha256": "9992e28bb9dd6fc7de5a66413e1de04c065f7daf48d761c6a6c9c9ed4a3cc9ce"
+  },
+  {
+    "id": "token-ordinary-lf-lf-group",
+    "source": "(Get-Date\n`\n| Write-Output)\n",
+    "accepted": false,
+    "source_sha256": "9dce0be79d42316a409fb9e15ef461827cb271c35b369fd325481b9784f8c7b8"
+  },
+  {
+    "id": "token-ordinary-lf-crlf-top",
+    "source": "Get-Date\n`\r\n| Write-Output\r\n",
+    "accepted": false,
+    "source_sha256": "48fee81403328d135a8bc7498d23260ffc9a86465548056074510cbec46d481d"
+  },
+  {
+    "id": "token-ordinary-lf-crlf-group",
+    "source": "(Get-Date\n`\r\n| Write-Output)\r\n",
+    "accepted": false,
+    "source_sha256": "1630213d9041b2a44758ef32f7826e7f2084dce04a32e98943209faa2eb66688"
+  },
+  {
+    "id": "token-ordinary-crlf-lf-top",
+    "source": "Get-Date\r\n`\n| Write-Output\n",
+    "accepted": false,
+    "source_sha256": "ee1b7c5b7c736422648e35ce11314fe007206219e1c2036b7ff61b5cb954b145"
+  },
+  {
+    "id": "token-ordinary-crlf-lf-group",
+    "source": "(Get-Date\r\n`\n| Write-Output)\n",
+    "accepted": false,
+    "source_sha256": "3ba8b6fcfdd1b2b060618d394857d32e822a67a87e0363799734981c7c858e26"
+  },
+  {
+    "id": "token-ordinary-crlf-crlf-top",
+    "source": "Get-Date\r\n`\r\n| Write-Output\r\n",
+    "accepted": false,
+    "source_sha256": "ea7952ce7f581005f387c5888d8adea65c8c1e4ed1c85fb5d580cc5b54da98a9"
+  },
+  {
+    "id": "token-ordinary-crlf-crlf-group",
+    "source": "(Get-Date\r\n`\r\n| Write-Output)\r\n",
+    "accepted": false,
+    "source_sha256": "d7e6f8a7167016985e902d67bffbc7e2f93549a1a5c2ddf80950d7f49b0b3361"
+  }
+]

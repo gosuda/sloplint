@@ -1,0 +1,16 @@
+[
+  {
+    "id": "guard-complete-prefix-lf",
+    "source": "Capture-Native hi <# note #> ---`\n next\n",
+    "source_sha256": "8ee569688db638f6b6b55d6e0f8a9608d31158a5726dcf38bb63ce4da99d25cf",
+    "kind": "runtime-observation",
+    "accepted": null
+  },
+  {
+    "id": "guard-complete-prefix-crlf",
+    "source": "Capture-Native hi <# note #> ---`\r\n next\r\n",
+    "source_sha256": "1ad8f78a6558ce373121917ef2613fc4568a26291faa013bcf9c4c697ef86316",
+    "kind": "observation",
+    "accepted": null
+  }
+]

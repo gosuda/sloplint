@@ -1,0 +1,861 @@
+{
+  "native_cases": 442,
+  "results": [
+    {
+      "args": [
+        "rustup",
+        "toolchain",
+        "install",
+        "1.100.0",
+        "--profile",
+        "minimal",
+        "--component",
+        "rustfmt,clippy"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source",
+      "exit": 0,
+      "expected": 0,
+      "log_sha256": "5c4a350545b58a7cd7623d96848abeb542cb3374b1e2fd7fa37219ad787a6f5c",
+      "name": "rust-toolchain",
+      "seconds": 6.418255586000015,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "tar",
+        "-xzf",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/powershell.tar.gz",
+        "-C",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/powershell"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source",
+      "exit": 0,
+      "expected": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "name": "extract-powershell",
+      "seconds": 0.9314495649999799,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/powershell/pwsh",
+        "-NoLogo",
+        "-NoProfile",
+        "-File",
+        "/home/runner/work/sloplint/sloplint/proof/ci-tools/powershell-context-boundaries-r22/native-oracle.ps1",
+        "-CasesPath",
+        "/home/runner/work/sloplint/sloplint/proof/ci-tools/powershell-context-boundaries-r22/cases.json"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source",
+      "exit": 0,
+      "expected": 0,
+      "log_sha256": "eb4183cbcd1e0ab3c8c2616dcf6f77bc1b73af7d6766192fa35169150b1c673d",
+      "name": "native-witnesses",
+      "seconds": 3.220345712000011,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-4.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/legacy_source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "7a41b04546f1da256f8a09a839d0014fe88ecb669f7987cb9b286e11d433a55d",
+      "name": "trace-legacy-continued-lf-space-spaces-1",
+      "seconds": 1.1359962289999999,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-5.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/legacy_source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "bf972d0e7f68ec8cd3e31bfda40a2c54afd6fe6a403733fc68a3c96c4d6b6218",
+      "name": "trace-legacy-continued-lf-space-spaces-2",
+      "seconds": 0.0018291929999918466,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-120.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/legacy_source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "6899bcb817fa639ae11bd69d98a04bc914c2e6bd3edd203daa769f2f92124d07",
+      "name": "trace-legacy-branch-lf-block-ordinary-else-exe",
+      "seconds": 0.0014283470000009402,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-130.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/legacy_source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "6b8ff920f7d6dbb2e8eabf455edfd895d5f39f1efef20e0aea0fdf7b3be4cbb5",
+      "name": "trace-legacy-branch-lf-block-ordinary-else-block",
+      "seconds": 0.0013497660000041378,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-136.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/legacy_source/vendor/tree-sitter-powershell",
+      "exit": 1,
+      "expected": null,
+      "log_sha256": "98dd29a47f3c97e891825b9b8c30784b28f645cf71249256e27bcf268472aec4",
+      "name": "trace-legacy-branch-lf-block-assigned-else-exe",
+      "seconds": 0.0013637570000071264,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-146.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/legacy_source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "84dd7a5025a79dbc34f76a3959f2a15516e3959f82105429759c76fc04402d58",
+      "name": "trace-legacy-branch-lf-block-assigned-else-block",
+      "seconds": 0.0013016559999812216,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-189.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/legacy_source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "2ae8adb6acce3fa60e811d332f1ef33305be2e82626785a7dde9e96164c17468",
+      "name": "trace-legacy-continued-crlf-space-spaces-2",
+      "seconds": 0.001264375999994627,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-368.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/legacy_source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "a425f9975e295b23e3c603d49c698bab6984023da2a9118ece47eea7e26c389e",
+      "name": "trace-legacy-redirect-out-space-dash",
+      "seconds": 0.0012381749999974545,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-370.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/legacy_source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "f8f8fd45f0d3953743a3135ce81b85f3db58c81ddd5be274b56c21a8f4e5cfc3",
+      "name": "trace-legacy-redirect-out-space-plain",
+      "seconds": 0.0012259650000032707,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-384.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/legacy_source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "a03bba0696bb629179c08f6b84028f314db95281e7312ebecf01c36d95e7795e",
+      "name": "trace-legacy-redirect-out-mixed-dash",
+      "seconds": 0.0012182750000135911,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-4.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/pre_source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "7a41b04546f1da256f8a09a839d0014fe88ecb669f7987cb9b286e11d433a55d",
+      "name": "trace-previous-continued-lf-space-spaces-1",
+      "seconds": 1.1480408749999924,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-5.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/pre_source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "bf972d0e7f68ec8cd3e31bfda40a2c54afd6fe6a403733fc68a3c96c4d6b6218",
+      "name": "trace-previous-continued-lf-space-spaces-2",
+      "seconds": 0.0017898619999812126,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-120.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/pre_source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "ba85dcfe3a3b261dd807bfd5657f6186687aa559b18e43ae52c9f0202a2c2846",
+      "name": "trace-previous-branch-lf-block-ordinary-else-exe",
+      "seconds": 0.0013633869999978288,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-130.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/pre_source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "9d39d682bbb625ecb26ed089657171747971e6e05c3a9f236bf8f45e99109555",
+      "name": "trace-previous-branch-lf-block-ordinary-else-block",
+      "seconds": 0.0013115950000042176,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-136.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/pre_source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "ad4a8b25ec1464327478d4bf9f76228f5a21c1c865885f2c11f152c201197ec1",
+      "name": "trace-previous-branch-lf-block-assigned-else-exe",
+      "seconds": 0.0012760949999801596,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-146.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/pre_source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "8e40f92381323cb1b7a5487f6462a1fcdc2bdd043358d31aff721294364805e6",
+      "name": "trace-previous-branch-lf-block-assigned-else-block",
+      "seconds": 0.0012686549999898489,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-189.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/pre_source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "2ae8adb6acce3fa60e811d332f1ef33305be2e82626785a7dde9e96164c17468",
+      "name": "trace-previous-continued-crlf-space-spaces-2",
+      "seconds": 0.0012262939999914124,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-368.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/pre_source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "a425f9975e295b23e3c603d49c698bab6984023da2a9118ece47eea7e26c389e",
+      "name": "trace-previous-redirect-out-space-dash",
+      "seconds": 0.0012335350000114431,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-370.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/pre_source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "f8f8fd45f0d3953743a3135ce81b85f3db58c81ddd5be274b56c21a8f4e5cfc3",
+      "name": "trace-previous-redirect-out-space-plain",
+      "seconds": 0.0011943840000014916,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-384.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/pre_source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "a03bba0696bb629179c08f6b84028f314db95281e7312ebecf01c36d95e7795e",
+      "name": "trace-previous-redirect-out-mixed-dash",
+      "seconds": 0.0012219650000133697,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-4.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 1,
+      "expected": null,
+      "log_sha256": "93a5eb3b5a3a4dc79d7cbaec7f9a5afca57f9a7ac020714c81d8c502259c3c82",
+      "name": "trace-current-continued-lf-space-spaces-1",
+      "seconds": 1.1746115960000054,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-5.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 1,
+      "expected": null,
+      "log_sha256": "9f87afa05910af3804d4f8bb38c88a748d6d595d25d6b18dc119c9b0d40cd8b9",
+      "name": "trace-current-continued-lf-space-spaces-2",
+      "seconds": 0.0018046110000113913,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-120.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "6899bcb817fa639ae11bd69d98a04bc914c2e6bd3edd203daa769f2f92124d07",
+      "name": "trace-current-branch-lf-block-ordinary-else-exe",
+      "seconds": 0.0013397859999884076,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-130.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "6b8ff920f7d6dbb2e8eabf455edfd895d5f39f1efef20e0aea0fdf7b3be4cbb5",
+      "name": "trace-current-branch-lf-block-ordinary-else-block",
+      "seconds": 0.001363875999999209,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-136.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 1,
+      "expected": null,
+      "log_sha256": "a3a10e8025c6ce17d676027cdb5486f2953bcf3467331873c580385768324ef4",
+      "name": "trace-current-branch-lf-block-assigned-else-exe",
+      "seconds": 0.0014340769999989789,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-146.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "84dd7a5025a79dbc34f76a3959f2a15516e3959f82105429759c76fc04402d58",
+      "name": "trace-current-branch-lf-block-assigned-else-block",
+      "seconds": 0.0012710350000020298,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-189.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 1,
+      "expected": null,
+      "log_sha256": "6393832151f6f523ca02cce4a0a70868a0782e2328c2f0e5138fb631094996af",
+      "name": "trace-current-continued-crlf-space-spaces-2",
+      "seconds": 0.0013097949999973935,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-368.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "00e4378de90c70a5015673cd590e9248c2cc0ccc7b42ad67e8ea250022eec358",
+      "name": "trace-current-redirect-out-space-dash",
+      "seconds": 0.0012528449999820168,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-370.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "f8f8fd45f0d3953743a3135ce81b85f3db58c81ddd5be274b56c21a8f4e5cfc3",
+      "name": "trace-current-redirect-out-space-plain",
+      "seconds": 0.0012250849999873026,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/tree-sitter",
+        "parse",
+        "/home/runner/work/_temp/powershell-context-boundaries-r22/cases/case-384.ps1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source/vendor/tree-sitter-powershell",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "8f7b942fc9c3a8b7cdbc0e9bfac5687823b120b2b96bfed6763abaf6f1134ab8",
+      "name": "trace-current-redirect-out-mixed-dash",
+      "seconds": 0.0012273849999928643,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "fmt",
+        "--all"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/legacy_source",
+      "exit": 0,
+      "expected": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "name": "legacy-format",
+      "seconds": 0.8323120359999905,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "--no-run"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/legacy_source",
+      "exit": 0,
+      "expected": 0,
+      "log_sha256": "3776bbbaa1dd387d9c4488fbab4ae296048668883877cbb8b2ed0a74e1f427bc",
+      "name": "legacy-frozen-tests-compile",
+      "seconds": 22.95856969999997,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "powershell_context_boundaries::indented_bare_dashes_follow_separated_line_continuations",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/legacy_source",
+      "exit": 101,
+      "expected": null,
+      "log_sha256": "73a8d88f7eaf273b8dc4ffce36cfc870518c781eb221d64d74b43eeb0589ff51",
+      "name": "legacy-continued-dashes",
+      "seconds": 14.458977753999989,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "powershell_context_boundaries::keyword_like_executable_after_an_escaped_line_is_a_separate_call",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/legacy_source",
+      "exit": 101,
+      "expected": null,
+      "log_sha256": "931d5e2c9140cacbb7b38e782cc959c1a6a40016bf463fb687204a29523ef752",
+      "name": "legacy-keyword-command",
+      "seconds": 14.216638769999975,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "powershell_context_boundaries::spaced_dash_redirection_retains_its_legacy_separator_capture",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/legacy_source",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "7bf10a9a85d6450a1024e0683f3d6884b6f503181c418942b65ca8961d0815e2",
+      "name": "legacy-redirect-query",
+      "seconds": 13.88612939899997,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "powershell_context_boundaries::observe_public_redirection_queries",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/legacy_source",
+      "exit": 0,
+      "expected": 0,
+      "log_sha256": "4de16b37daac10ee4d583959aa348faa384addb4d781a8b2da8f417251c11e8e",
+      "name": "legacy-query-observation",
+      "seconds": 13.970353072000023,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "fmt",
+        "--all"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/pre_source",
+      "exit": 0,
+      "expected": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "name": "previous-format",
+      "seconds": 0.8080738230000293,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "--no-run"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/pre_source",
+      "exit": 0,
+      "expected": 0,
+      "log_sha256": "3f5bc22f9d5fbcb3cc52c2f434e2e3df09202126ae419da072c5741bd2caae12",
+      "name": "previous-frozen-tests-compile",
+      "seconds": 18.755363524000018,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "powershell_context_boundaries::indented_bare_dashes_follow_separated_line_continuations",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/pre_source",
+      "exit": 101,
+      "expected": null,
+      "log_sha256": "5a68760de242f696cc39d4839778a75588dab0083ac44f4954710782b2f4c7ee",
+      "name": "previous-continued-dashes",
+      "seconds": 15.094348136000008,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "powershell_context_boundaries::keyword_like_executable_after_an_escaped_line_is_a_separate_call",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/pre_source",
+      "exit": 0,
+      "expected": null,
+      "log_sha256": "a7f116be8c217802a967938830e79f62300bab3846a33a24c792bc47f49ed13f",
+      "name": "previous-keyword-command",
+      "seconds": 14.477345457000013,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "powershell_context_boundaries::spaced_dash_redirection_retains_its_legacy_separator_capture",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/pre_source",
+      "exit": 101,
+      "expected": null,
+      "log_sha256": "50f7c5fa8d8d9b75e4daf74e91c91fe361576a9b6da94aee66a579650df45452",
+      "name": "previous-redirect-query",
+      "seconds": 14.161608946000001,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "powershell_context_boundaries::observe_public_redirection_queries",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/pre_source",
+      "exit": 0,
+      "expected": 0,
+      "log_sha256": "52d1aa0e09948771f24216299615548ee399b1856238da76ff96ca2d94fc11a7",
+      "name": "previous-query-observation",
+      "seconds": 14.219833531999996,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "fmt",
+        "--all"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source",
+      "exit": 0,
+      "expected": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "name": "current-format",
+      "seconds": 0.8398350960000016,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "--no-run"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source",
+      "exit": 0,
+      "expected": 0,
+      "log_sha256": "e1e255ef0f0d74d5b2e2cc786a8bcd7d8816f6e4ddccf073df7d20506b9b388b",
+      "name": "current-frozen-tests-compile",
+      "seconds": 22.072583009000027,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "powershell_context_boundaries::indented_bare_dashes_follow_separated_line_continuations",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source",
+      "exit": 101,
+      "expected": null,
+      "log_sha256": "b1374d898744d63b2ecc42ee5edc86aee6e91c9e9c73f6c490dbd2302a18bcd9",
+      "name": "current-continued-dashes",
+      "seconds": 14.049938098999974,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "powershell_context_boundaries::keyword_like_executable_after_an_escaped_line_is_a_separate_call",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source",
+      "exit": 101,
+      "expected": null,
+      "log_sha256": "8453887a76ec3b955357977bd7eaa69a2d0efd215d9714180006dffbff06c55a",
+      "name": "current-keyword-command",
+      "seconds": 14.241460655000026,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "powershell_context_boundaries::spaced_dash_redirection_retains_its_legacy_separator_capture",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source",
+      "exit": 101,
+      "expected": null,
+      "log_sha256": "06312bdcbb74ba88f1fd7d397c70b9882e0ccb1633c095a55ee199d98b2fb3b9",
+      "name": "current-redirect-query",
+      "seconds": 14.457393823000018,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "powershell_context_boundaries::observe_public_redirection_queries",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source",
+      "exit": 0,
+      "expected": 0,
+      "log_sha256": "0976de64e2f9719214322e6fb9c873c5bf351edeb78754bd1347dd35e10bcfc8",
+      "name": "current-query-observation",
+      "seconds": 14.429529289000016,
+      "timed_out": false
+    }
+  ],
+  "sources": {
+    "current": {
+      "head": "83f73f04e7f20bf405dbf4c2de3bd5467c8010bb",
+      "index_sha256": "6d1356e9a95311d7f8447e4b31e41b60047cd08580cf9a966c99c4d1a3a983eb",
+      "tracked_blobs": 4905,
+      "tree": "703b3a5a445883598bfb7ef05c263a76d6629235"
+    },
+    "legacy": {
+      "head": "61c88ec4d492dd1ab72f76b15b84fa9434cccfaa",
+      "index_sha256": "1059c0d72b59e04c73c0d1031e2511e6f9163c52c4eefea0a0e247da3c7b4b7f",
+      "tracked_blobs": 4897,
+      "tree": "589aff2ec97f6e6f8179453ff6882fe19b3b65b2"
+    },
+    "previous": {
+      "head": "3071f522049cbe2d440bc68ca20e8887fdbdaa9a",
+      "index_sha256": "2efe050e2dc0c875054b046b8cb1b4aa57da1775ca81c0681e9f3ead00061b99",
+      "tracked_blobs": 4902,
+      "tree": "171bbe1c7137faf98fb7981f69288120cd18bdf6"
+    }
+  }
+}
