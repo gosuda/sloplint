@@ -1177,7 +1177,7 @@
   {
     "path": "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo",
     "mode": "100644",
-    "sha": "c2b054996254dd40602863182b3f20d655d96585"
+    "sha": "0b544bb57a976cee0963042b950a8aa1de13713c"
   },
   {
     "path": "cmd/sqlc-gen-spira/testdata/continued-strings.json",
