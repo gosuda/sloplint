@@ -4,7 +4,6 @@ from __future__ import annotations
 import hashlib
 import io
 import json
-import os
 import zipfile
 from pathlib import PurePosixPath
 
@@ -12,8 +11,8 @@ from artifact_support import download
 import baseline_support as base
 
 
-def authenticate(specification: dict[str, object]) -> dict[str, object]:
-    artifact = download(specification, os.environ["GH_TOKEN"])
+def authenticate(specification: dict[str, object], token: str) -> dict[str, object]:
+    artifact = download(specification, token)
     prior = base.OUTPUT / "prior-failed-observer"
     prior.mkdir(exist_ok=False)
     (prior / "artifact.zip").write_bytes(artifact.data)

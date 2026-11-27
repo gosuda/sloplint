@@ -147,6 +147,7 @@ def nested_race_records() -> list[dict[str, object]]:
 
 
 def main() -> None:
+    artifact_token = os.environ.pop("GH_TOKEN")
     manifest = base.object_value(json.loads((base.PROOF / "manifest.json").read_bytes()))
     for name, wanted in base.object_value(manifest["proof_sha256"]).items():
         if Path(name).name != name or base.digest((base.PROOF / name).read_bytes()) != wanted:
@@ -169,7 +170,7 @@ def main() -> None:
     original_path = os.environ["PATH"]
     try:
         report["before"] = proof.source_snapshot(manifest, "source")
-        report["prior_failed_observer"] = recover_failure.authenticate(base.object_value(manifest["prior_failure"]))
+        report["prior_failed_observer"] = recover_failure.authenticate(base.object_value(manifest["prior_failure"]), artifact_token)
         base.run("logos-version", ["logos", "version"])
         if base.run("go-cache-disabled", ["go", "env", "GOCACHEPROG"]).strip():
             raise RuntimeError("external compiler cache active")
