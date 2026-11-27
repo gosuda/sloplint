@@ -1,4 +1,5 @@
-//! Walk exit, Ruby method visibility, and C++ member access stay linear in file size.
+//! Walk exit, Ruby method visibility, C++ member access, and C++ piece names
+//! stay linear in file size.
 //!
 //! Each case analyzes a generated file on a thread with the default 2 MiB stack and
 //! waits at most `CAP` for the result. The quadratic forms take tens of seconds on
@@ -94,6 +95,16 @@ fn cpp_members(count: usize) -> String {
     source
 }
 
+/// C++ with one declaration holding `count` initialized declarators.
+fn cpp_many_declarators(count: usize) -> String {
+    let mut source = String::from("void f() {\n    int a0 = 0");
+    for index in 1..count {
+        source.push_str(&format!(", a{index} = {index}"));
+    }
+    source.push_str(";\n}\n");
+    source
+}
+
 /// `(deepest nesting, function count)` of the first function in the analysis.
 fn deepest_and_count(analysis: &Analysis<'_>) -> (u32, usize) {
     let max_depth = analysis
@@ -116,6 +127,11 @@ fn counts_by_exported(analysis: &Analysis<'_>) -> (usize, usize) {
         .filter(|f| f.visibility == Visibility::Exported)
         .count();
     (total, public)
+}
+
+/// Binding count over the analysis.
+fn binding_count(analysis: &Analysis<'_>) -> usize {
+    analysis.facts.bindings.len()
 }
 
 #[test]
@@ -183,4 +199,17 @@ fn cpp_member_access_stays_linear_in_members() {
     );
     assert_eq!(total, count, "every member is a function fact");
     assert_eq!(public, count / 2, "only the first half follows `public:`");
+}
+
+#[test]
+fn cpp_piece_names_stay_linear_in_declarators() {
+    let count = 2000;
+    let bindings = analyze_within(
+        "2000 C++ declarators",
+        Lang::Cpp,
+        "case.cpp",
+        cpp_many_declarators(count),
+        binding_count,
+    );
+    assert_eq!(bindings, count, "every declarator binds its name");
 }

@@ -129,11 +129,32 @@ pub(crate) fn push_cpp_piece_name<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Ve
         return;
     }
     let want = pos_of(n);
-    let (all, _) = c_family::decl_info(cx, decl, CPP_DECLARATORS.wrap);
-    for (name, pos) in all {
-        if pos == want {
-            out.push((name, pos));
-            return;
-        }
+    let found = cx.members.decl_pieces(
+        decl,
+        || {
+            let (all, _) = c_family::decl_info(cx, decl, CPP_DECLARATORS.wrap);
+            let base = cx.src.as_ptr() as usize;
+            let end = base.wrapping_add(cx.src.len());
+            all.into_iter()
+                .filter_map(|(name, pos)| {
+                    let start = name.as_ptr() as usize;
+                    (start >= base && start + name.len() <= end)
+                        .then(|| (start - base, name.len(), pos))
+                })
+                .collect()
+        },
+        |pieces| {
+            pieces
+                .iter()
+                .find(|(_, _, pos)| *pos == want)
+                .and_then(|(from, len, pos)| {
+                    cx.src
+                        .get(*from..from.checked_add(*len)?)
+                        .map(|name| (name, *pos))
+                })
+        },
+    );
+    if let Some((name, pos)) = found {
+        out.push((name, pos));
     }
 }

@@ -2,14 +2,19 @@ use std::cell::{OnceCell, RefCell};
 use std::collections::HashMap;
 use tree_sitter::Node;
 
+use sloplint_core::facts::Pos;
 use sloplint_core::lang::Lang;
 
 use crate::hooks::{Container, slice};
+
+/// One declaration's names as `(start, len, pos)` byte ranges into the file source.
+type DeclPieces = Vec<(usize, usize, Pos)>;
 
 #[derive(Default)]
 pub(crate) struct MemberStates {
     before: RefCell<HashMap<usize, Option<bool>>>,
     macro_locals: RefCell<HashMap<usize, bool>>,
+    decl_pieces: RefCell<HashMap<usize, DeclPieces>>,
 }
 
 impl MemberStates {
@@ -24,6 +29,25 @@ impl MemberStates {
         let local = compute();
         self.macro_locals.borrow_mut().insert(body.id(), local);
         local
+    }
+
+    /// Names of one declaration as `(start, len, pos)` byte ranges into the
+    /// file source, computed once per declaration. Ranges re-slice the source
+    /// instead of holding `&str` so this per-file state needs no lifetime.
+    pub(crate) fn decl_pieces<R>(
+        &self,
+        decl: Node<'_>,
+        compute: impl FnOnce() -> DeclPieces,
+        with: impl FnOnce(&DeclPieces) -> R,
+    ) -> R {
+        if self.decl_pieces.borrow().contains_key(&decl.id()) {
+            let known = self.decl_pieces.borrow();
+            return with(&known[&decl.id()]);
+        }
+        let computed = compute();
+        let result = with(&computed);
+        self.decl_pieces.borrow_mut().insert(decl.id(), computed);
+        result
     }
 
     pub(crate) fn state_before(
@@ -304,5 +328,56 @@ impl Cx<'_, '_> {
             Container::Class { exported, .. } => Some(exported),
             _ => None,
         })
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse_cpp_declaration(src: &str) -> tree_sitter::Tree {
+        let mut parser = tree_sitter::Parser::new();
+        parser
+            .set_language(&tree_sitter_cpp::LANGUAGE.into())
+            .expect("cpp grammar loads");
+        parser.parse(src, None).expect("snippet parses")
+    }
+
+    #[test]
+    fn decl_pieces_compute_once_per_declaration() {
+        let tree = parse_cpp_declaration("int a = 1, b = 2;");
+        let decl = tree.root_node().named_child(0).expect("one declaration");
+        assert_eq!(decl.kind(), "declaration");
+        let states = MemberStates::default();
+        let calls = std::cell::Cell::new(0u32);
+        let compute = || {
+            calls.set(calls.get() + 1);
+            vec![(4, 1, Pos { line: 1, byte: 4 })]
+        };
+        for _ in 0..3 {
+            let seen = states.decl_pieces(decl, compute, |pieces| pieces.to_vec());
+            assert_eq!(seen, vec![(4, 1, Pos { line: 1, byte: 4 })]);
+        }
+        assert_eq!(calls.get(), 1, "three lookups share one scan");
+    }
+
+    #[test]
+    fn decl_pieces_key_on_declaration() {
+        let tree = parse_cpp_declaration("int a = 1; int b = 2;");
+        let root = tree.root_node();
+        let first = root.named_child(0).expect("first declaration");
+        let second = root.named_child(1).expect("second declaration");
+        let states = MemberStates::default();
+        let calls = std::cell::Cell::new(0u32);
+        for decl in [first, second] {
+            states.decl_pieces(
+                decl,
+                || {
+                    calls.set(calls.get() + 1);
+                    vec![]
+                },
+                |_| {},
+            );
+        }
+        assert_eq!(calls.get(), 2, "each declaration scans once");
     }
 }
