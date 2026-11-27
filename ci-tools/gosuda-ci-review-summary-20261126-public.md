@@ -1,16 +1,16 @@
 # Gosuda public CI and PR audit
 
-Snapshot R29: broad reads from 2026-11-27 03:46:27 to 03:49:26 UTC, with a targeted public-mirror refresh through 04:13:32 UTC. Individual records retain their observation times. This public report omits private repository identities, source revisions and findings. PR titles, branch names and review bodies are omitted from the data projection, including private-origin metadata in the public landing mirror.
+Snapshot R32: canonical repository, PR and review reads from 2026-11-27 05:12:04.090 to 05:16:46.411 UTC. Individual source records preserve their observation times. This public report omits private repository identities, findings and evidence. PR titles, branch names and review bodies are omitted, including private-origin metadata in the public landing mirror.
 
 ## Current result
 
-All runner selections on the **151 open public PR heads** use Depot, or the head contains no runner jobs. Every declared macOS runner on those heads is exactly `depot-macos-latest`. No Ubuntu 26.04 runner selection was found.
+All runner selections on the **159 open public PR heads** use Depot, or the head contains no runner jobs. Every declared macOS runner on those heads is exactly `depot-macos-latest`. No Ubuntu 26.04 selection was found.
 
-The public scope contains **115 repositories, 151 PRs across 52 repositories, 430 review threads and 958 inline comments**. Canonical open-PR lists were read for every repository. All inline-comment counts agree with GitHub's REST counts. Every required read ultimately succeeded, and no mergeability value is unknown. Initial branch-ref requests with malformed URL encoding were corrected; the receipt does not claim zero request errors.
+The public scope contains **115 repositories, 159 PRs across 52 repositories, 468 review threads and 1,012 inline comments**. Canonical open-PR lists were read for every repository. Inline-comment counts reconcile with GitHub's REST counts, and no mergeability value is unknown. R32 had no unexpected failed reads; expected empty-repository and absent-workflow responses are recorded separately.
 
-The runner audit covers **291 immutable source commits, 244 unique YAML blobs and 772 unique job definitions**. It includes current defaults, actual base refs and maintained PR heads. Static labels, finite matrix variants, local reusable workflows and cargo-dist runner mappings are resolved. The report verifies declared selection; it does not claim that every CI run passed or estimate billing savings.
+The runner audit covers **299 immutable source commits, 245 unique YAML blobs and 778 unique job definitions**, across 570 workflow occurrences. Current defaults, actual base refs and maintained PR heads are included. Static labels, finite matrices, local reusable workflows and cargo-dist runner mappings are resolved. This verifies declared selection, not universal runtime success or billing savings.
 
-The public delta is one new landing-mirror PR with no review threads. Its head and actual base contain no workflows. All other public PR heads and review states match the preceding broad audit. Private-origin mirror titles, branch names, bodies and repository identities remain omitted.
+Eight new PRs appeared since R29 and contribute 28 unresolved threads. Several existing heads also changed externally. The new workflow blob in elegant-mermaid #28 contains six weekly/manual jobs on Depot Ubuntu or Windows. The other new inventories reused earlier definitions only where immutable workflow blobs matched. The public landing mirror still has 26 open PRs, with no additions after #120 or closures during this refresh.
 
 ## Default branches still awaiting published migrations
 
@@ -45,26 +45,33 @@ For sloplint #137, the published repair verifies complete PowerShell redirection
 
 ## Remaining review threads
 
-There are **26 unresolved public review threads on seven PRs**.
+There are **49 unresolved public review threads on 14 PRs** in this snapshot. The active repair queue includes the seven new PRs outside the preserved pause. Source changes require their applicable repository gates before publication and thread resolution.
 
 | PR | Threads | Exact current head | State |
 | --- | ---: | --- | --- |
-| [gosuda/gglint #33](https://github.com/gosuda/gglint/pull/33) | 5 | `b7f2808eb6b9` | Preserved pause |
-| [gosuda/LoGOs #334](https://github.com/gosuda/LoGOs/pull/334) | 1 | `682c21d440d5` | Preserved pause |
-| [gosuda/LoGOs #336](https://github.com/gosuda/LoGOs/pull/336) | 5 | `aaabdc702edc` | Preserved pause |
+| [gosuda/bamTiScript #260](https://github.com/gosuda/bamTiScript/pull/260) | 2 | `97b2682378c9` | Active repair queue |
+| [gosuda/Charamel #32](https://github.com/gosuda/Charamel/pull/32) | 4 | `53cdbc3dd32e` | Active repair queue |
+| [gosuda/dstack-skills #34](https://github.com/gosuda/dstack-skills/pull/34) | 1 | `3fd028e70964` | Active repair queue |
+| [gosuda/elegant-mermaid #28](https://github.com/gosuda/elegant-mermaid/pull/28) | 5 | `2b61fca73a31` | Active repair queue |
+| [gosuda/gglint #33](https://github.com/gosuda/gglint/pull/33) | 2 | `dcb7e6be40f9` | Preserved pause |
+| [gosuda/LoGOs #336](https://github.com/gosuda/LoGOs/pull/336) | 3 | `8d676fe1e595` | Preserved pause |
 | [gosuda/LoGOs #339](https://github.com/gosuda/LoGOs/pull/339) | 3 | `1cccd8960b7a` | Preserved pause |
-| [gosuda/LoGOs #342](https://github.com/gosuda/LoGOs/pull/342) | 4 | `9cb0ef15ac9a` | Preserved pause |
+| [gosuda/LoGOs #342](https://github.com/gosuda/LoGOs/pull/342) | 5 | `1cd2591d1fa9` | Preserved pause |
 | [gosuda/LoGOs #343](https://github.com/gosuda/LoGOs/pull/343) | 5 | `1ea43146195b` | Preserved pause |
+| [gosuda/LoGOs #344](https://github.com/gosuda/LoGOs/pull/344) | 3 | `6cd2829ee92e` | Preserved pause |
+| [gosuda/portal-tunnel #851](https://github.com/gosuda/portal-tunnel/pull/851) | 2 | `ac6ade92d901` | Active repair queue |
 | [gosuda/ruk #20](https://github.com/gosuda/ruk/pull/20) | 3 | `adbb6ff975bb` | Preserved pause |
+| [gosuda/sloplint #138](https://github.com/gosuda/sloplint/pull/138) | 2 | `e2608e57b277` | Active repair queue |
+| [gosuda/spira #47](https://github.com/gosuda/spira/pull/47) | 9 | `76ec82d9307d` | Active repair queue |
 
-LoGOs source changes, gglint repairs, BiBeam source/dependency-gate investigation and Ruk20 publication remain within a preserved execution pause. The agent registry reports a possible-cybersecurity-risk flag on the root worker, but it does not identify a repository, action, tool call or PR. No separate action-specific rejection record has been recovered. This report does not assign an unsupported repository-specific reason or retry those actions.
+LoGOs source changes, gglint repairs, BiBeam source/dependency-gate investigation and Ruk20 publication remain within a preserved execution pause. The agent registry reports a possible-cybersecurity-risk flag on the root worker, without identifying a repository, action, tool call or PR. No separate action-specific rejection record has been recovered. No unsupported repository-specific reason is assigned, and those actions have not been retried.
 
-One actual public conflict remains: [gosuda/ssh-chat #1](https://github.com/gosuda/ssh-chat/pull/1). Its PR head is in `fatheradvisor/ssh-chat`, outside the authorized write boundary. The branch was not changed.
+One actual conflict remains: [gosuda/ssh-chat #1](https://github.com/gosuda/ssh-chat/pull/1). Its head belongs to `fatheradvisor/ssh-chat`, outside the authorized write boundary. A blocked check status is not classified as a merge conflict.
 
 ## Evidence and limits
 
-The complete public snapshot is `ci-tools/gosuda-pr-audit-20261126-public.json`, SHA-256 `7d3e49846082e179bcbd908e8539c2ef973a022cd0114d77e0875995677d452a`. It records source heads, actual bases, review resolution, runner declarations and observation times. Files cached from earlier reads are reused only by identical immutable source commit and Git blob SHA.
+The complete public snapshot is `ci-tools/gosuda-pr-audit-20261126-public.json`, SHA-256 `55f6073e20a2b8902e45cf9d33e4a3e8154ddf9c9b084ad4ce0e0ac4626060de`. It records exact heads, actual bases, review resolution, runner declarations and observation times.
 
-This is a finite, non-atomic read window. Later pushes, comments, closures and merges can change the result. An unstable check state is not treated as a merge conflict. Review resolution is determined by `is_resolved`, including outdated threads.
+This is a finite, non-atomic read window. Later pushes, reviews and merges can change the result. Review resolution uses `is_resolved`, including outdated threads. The newer active source work will be recorded separately after validation and publication; this snapshot does not predict its outcome.
 
-All publishing was additive. No force push, commit amendment, PR merge, automatic merge, archive change or repository-setting change was performed.
+All publication remains additive. No force push, commit amendment, PR merge, automatic merge, archive change or repository-setting change was performed.
