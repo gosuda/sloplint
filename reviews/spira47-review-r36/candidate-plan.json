@@ -9,7 +9,7 @@
     "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
     "blobs": 609
   },
-  "authored_sha256": "d9f7440fbbc042ab860f350c6d40e4e9ac62fd6148ca02994e226d0417e99ca2",
+  "authored_sha256": "7b85d6e062d8059e2eac853a15380064f67560d1466edf297e8e3ff35cea6e4c",
   "authored_files": [
     {
       "path": "cmd/sqlc-gen-spira/model.lgo",
@@ -21,7 +21,7 @@
     },
     {
       "path": "migrate/serial_test.lgo",
-      "sha256": "727d51ec9fa4e1d521b406200da052694fbf812d4cce6b28c55d06b0d858c460"
+      "sha256": "941dad4bca15d677bfbc333abd8b86ee54c0e3aef92e67bc1978c6b0dcd645d9"
     },
     {
       "path": "docs/specs/migrate.md",
@@ -105,11 +105,28 @@
   "watchdog_negative_control": "Temporarily replace only Apply's acquisition context with context.Background, compile first, require TestQueuedApplyHonorsContext to fail with its watchdog diagnostic within the bounded command deadline, then restore the exact candidate.",
   "native_reuse": "Reuse only the authenticated unchanged fourteen-query PostgreSQL receipt and unchanged baseline source/test contract; the candidate generator and all prescribed source gates execute anew.",
   "scope": "No compiler, linter, dependency, configuration, limit or baseline change.",
-  "candidate_tree": "eb9547a9b5a884bfaf5b29cc968859906399ec8d",
+  "candidate_tree": "d34e094ffcd7ec2f63727bae30b8bf83582a6767",
   "candidate_blobs": 611,
-  "source_correction_since_d6dcc": "Only canonical import ordering: logos/sync precedes slices in migrate/serial_test.lgo. No behavior or frozen assertion changed.",
+  "source_correction_since_d6dcc": "Canonical import ordering in migrate/serial_test.lgo, followed by extraction of its existing watchdog timer/select block into releaseStalledApply. The same go-group child calls it; all assertions, channels and timing limits are unchanged.",
   "driver_sha256": "ce246daad380488a6a64babf0ac5f4b9f50eb023c2ad7ae7a880356b30af177b",
   "artifact_helper_sha256": "8e9b1dc135988293262eb373358637b47c0a390672bd5628753a9caf8a68ee29",
   "workflow_sha256": "f61e7c5d8d34df228ebaf43f3f6d3dff9c511e5fac84325beb44ea7db371d907",
-  "manifest_sha256": "02fb2445d9ec25f72514684429ece75276447b95462edd48b66e817029c91ff5"
+  "manifest_sha256": "0811003fd469cbf35f2f0448f182ad569b1f4b42ba9ebc8868dbc82ed1e73f94",
+  "fixture_refactor": {
+    "producer": "0a801443782c9c56c8a35bbf2b117256cf1f3805",
+    "run": 45985649688,
+    "job": 140460458731,
+    "tree": "eb9547a9b5a884bfaf5b29cc968859906399ec8d",
+    "artifact": 15191802000,
+    "zip_sha256": "4c921def54f00f3e2487017451f6aebabaacb4353b354616748adefa641f2b17",
+    "result": "failure",
+    "gate": "candidate-compile",
+    "raw_exit": 1,
+    "expected": 0,
+    "reason": "TestQueuedApplyHonorsContext line count 64 exceeds unchanged 60.",
+    "source_restored": true,
+    "evidence_commit": "0627ea217a90682206b9cd35110379537ee2703b",
+    "followup_delta": "Only the unchanged watchdog timer/select block is extracted into a helper called by the same structured group child. All assertions and timing limits remain unchanged.",
+    "gate_reuse": false
+  }
 }

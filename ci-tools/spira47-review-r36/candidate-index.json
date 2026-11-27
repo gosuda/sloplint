@@ -2632,7 +2632,7 @@
   {
     "path": "migrate/serial_test.lgo",
     "mode": "100644",
-    "sha": "ca46f33b52d270d0249144351abb3b78e4257335"
+    "sha": "76294b2748b8566899191683e544ffa778b1d8f0"
   },
   {
     "path": "migrate/sqlite_boundary_test.lgo",
