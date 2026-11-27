@@ -40,5 +40,19 @@
     "allow": true,
     "native_name": "changed",
     "native_version": 0
+  },
+  {
+    "name": "qualified-function-alias",
+    "sql": "UPDATE items SET name = 'changed' RETURNING public.operator(name) version;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "unqualified-function-alias",
+    "sql": "UPDATE items SET name = 'changed' RETURNING operator(name) version;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
   }
 ]

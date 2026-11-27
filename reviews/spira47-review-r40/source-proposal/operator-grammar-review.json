@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "purpose": "Discriminate PostgreSQL's symbolic OPERATOR construct from normal functions with the same name.",
+  "primary_sources": [
+    {
+      "repository": "postgres/postgres",
+      "ref": "REL_18_4",
+      "path": "src/backend/parser/gram.y",
+      "blob": "03c80eaaf22a74fa2a4a6b977e394d3bc34ffb46",
+      "sha256": "7e548b673a1e03eb3a56c5eb9ad92d8e11095fac76e14cb258ca851f58274724",
+      "rules": [
+        "func_name admits type_function_name and qualified ColId indirection",
+        "type_function_name admits unreserved_keyword",
+        "qual_Op uses OPERATOR '(' any_operator ')'",
+        "any_operator is all_Op or ColId '.' any_operator"
+      ]
+    },
+    {
+      "repository": "postgres/postgres",
+      "ref": "REL_18_4",
+      "path": "src/include/parser/kwlist.h",
+      "blob": "a4af3f717a1118e4b3561786c9f642c2ca5772d5",
+      "sha256": "fdcdf3694513cba63b4016f63032472b686e381bb35f17c5d645bc2f6f1dac16",
+      "rule": "operator is UNRESERVED_KEYWORD and BARE_LABEL"
+    },
+    {
+      "repository": "postgres/postgres",
+      "ref": "REL_18_4",
+      "path": "src/backend/parser/scan.l",
+      "blob": "08990831fe81ad463bceb8a8fcd52e63d230d81c",
+      "sha256": "bf453f1ae3c22b84fea6f8e8bed4fda476b7cfa49b234efbf92ca228234d0293",
+      "rule": "op_chars is the exact symbolic operator character class used by the new private helper"
+    },
+    {
+      "repository": "sqlc-dev/sqlc",
+      "ref": "3ad8b20fb02b",
+      "path": "internal/sql/catalog/func.go",
+      "blob": "e1707773115e2a79d78a16e62ff463f9186386c2",
+      "sha256": "7e40a12b41eb721b847d81c40e335f0ed482fd973f65ba77deb2cfba136f5c94",
+      "rule": "createFunction records declared ReturnType and arguments in the chosen/default schema"
+    },
+    {
+      "repository": "sqlc-dev/sqlc",
+      "ref": "3ad8b20fb02b",
+      "path": "internal/compiler/output_columns.go",
+      "blob": "557fb7d5752940936ba75d1f15304198bc1258f5",
+      "sha256": "33f2c7058f90498bc862f087d7e39eba147d483b61633a07e3747682fed9a7ce",
+      "rules": [
+        "FuncCall resolves its declared return type and preserves explicit aliases",
+        "A_Expr output without an alias retains an empty column name"
+      ]
+    }
+  ],
+  "native_outcomes": "Unexecuted until the final gate's unchanged-source native and real-SQLc observations. Source-derived expectations are not reported as native success.",
+  "added_cases": [
+    {
+      "name": "qualified-function-alias",
+      "sql": "UPDATE items SET name = 'changed' RETURNING public.operator(name) version;",
+      "allow": false,
+      "native_name": "changed",
+      "native_version": 0
+    },
+    {
+      "name": "unqualified-function-alias",
+      "sql": "UPDATE items SET name = 'changed' RETURNING operator(name) version;",
+      "allow": false,
+      "native_name": "changed",
+      "native_version": 0
+    }
+  ],
+  "preserved": {
+    "original20json": true,
+    "first6boundaryrows": true,
+    "schema_prefix": true
+  }
+}

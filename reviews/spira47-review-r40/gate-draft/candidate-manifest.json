@@ -10,14 +10,14 @@
     "index_file": "source-index.json"
   },
   "tests": {
-    "tree": "3df6aca0284b97978126635a1f15c1649b2593a1",
+    "tree": "c547ed75d64ff1cc0da98abd7070c3425af014b9",
     "blobs": 624,
     "index_file": "final-test-index.json",
     "runtime_helper_unchanged": true,
     "scope": "Four final test/data paths only; model, scanner and nested runtime helper remain unchanged until candidate application."
   },
   "candidate": {
-    "tree": "64a505b0a8661017f2aee4e6333e4e2de6a18c64",
+    "tree": "9b0592ca5b21e341c543512562f42565c5e198dc",
     "blobs": 625,
     "index_file": "candidate-index.json",
     "changed_paths": [
@@ -74,21 +74,21 @@
     "original_reference_cases": 20,
     "original_unchanged_red": 12,
     "original_unchanged_controls": 8,
-    "boundary_cases": 6,
-    "boundary_unchanged_red": 3,
+    "boundary_cases": 8,
+    "boundary_unchanged_red": 5,
     "boundary_unchanged_controls": 3,
-    "candidate_direct_passes": 26,
-    "native_original": 26,
-    "native_unchanged_captured": 6,
-    "native_candidate_captured": 26,
+    "candidate_direct_passes": 28,
+    "native_original": 28,
+    "native_unchanged_captured": 8,
+    "native_candidate_captured": 28,
     "candidate_pipeline": {
       "generated": 10,
-      "version_refusals": 15,
+      "version_refusals": 17,
       "unnamed_column_refusals": 1
     },
     "qualified_operator": "The exact unaliased qualified-operator SQL is a positive native/direct-Generate reference control. Source-pinned SQLc is predicted to emit one empty-named A_Expr output column; both unchanged and repaired real pipelines must reproduce the existing exact column-0-needs-an-alias refusal before the version check. No SQL spelling or direct expectation is altered.",
-    "unchanged_pipeline": "All six newly added exact queries run through unchanged real SQLc first. Five must generate; the unaliased operator must reach the existing exact output-column refusal. Unexpected actual results fail the proof before production application.",
-    "request_identity": "All26 candidate captured query metadata/text objects must equal authenticated original20 or same-job unchanged6 records, including output columns.",
+    "unchanged_pipeline": "All eight newly added exact queries run through unchanged real SQLc first. Seven must generate; the unaliased symbolic operator must reach the existing exact output-column refusal. Unexpected actual results fail the proof before production application.",
+    "request_identity": "All28 candidate captured query metadata/text objects must equal authenticated original20 or same-job unchanged8 records, including output columns.",
     "nested_race": "Actual two distinct generated modules must execute ['test','-race','-count=1','-v','.'] through the immutable real compiler. Authenticated baseline requires exactly the corresponding missing-race vectors.",
     "retained": {
       "dollar": 14,
@@ -104,34 +104,52 @@
       "tracked/untracked/whitespace and full625 identity",
       "original621 restoration"
     ],
-    "full_source_gates_reused": false
+    "full_source_gates_reused": false,
+    "operator_function": "Both qualified public.operator(name) and unqualified operator(name) with a bare version alias are negative reference cases. The proof schema appends only CREATE FUNCTION public.operator(text) RETURNS text LANGUAGE sql IMMUTABLE AS 'SELECT $1'; the original schema prefix and all original26 SQL bytes remain exact."
   },
   "source_review": {
-    "proposal": "752734d48a483f306604fdb6939dd7c6a1f8fc08",
-    "authored_sha256": "55e787e4532f4e8f49ad3049e1481a96d2804f1afcaf49d32712f4f63f60ee25",
-    "parent": "Eight authored files, corrected kind-aware punctuation and OPERATOR-close handling, exact625/624 trees, original20 prefix and six boundary controls reviewed.",
-    "rejected_unexecuted_proposal": {
-      "commit": "1d0ab35d7b6f8a50bb925239b6ef7234acf6fbc3",
-      "candidate_tree": "44dd3cc555b6d74a2822434df5cd6900f650d31d",
-      "executed": false,
-      "findings": [
-        {
-          "problem": "Quoted identifier text was used as structural punctuation.",
-          "correction": "All delimiter, depth, cast and name-head checks now require referencePunctuation through the private punctuation method.",
-          "witnesses": [
-            "quoted-call-punctuation",
-            "quoted-depth-punctuation"
-          ]
-        },
-        {
-          "problem": "The closing parenthesis of a qualified OPERATOR name was treated as the end of an expression that could take a bare alias.",
-          "correction": "Bare-alias classification now distinguishes OPERATOR's matching parentheses by token kind and depth.",
-          "witnesses": [
-            "qualified-operator-operand"
-          ]
-        }
-      ]
-    }
+    "proposal_base": "752734d48a483f306604fdb6939dd7c6a1f8fc08",
+    "authored_sha256": "cb774362130c0ba4b64194c7b6924ab7406b7e54547dff570620258fb5962c8c",
+    "operator_correction": "The OPERATOR construct must start at an unqualified keyword and contain an optional qualified-name prefix followed only by symbolic operator characters from PostgreSQL REL_18_4 scan.l. Qualified and unqualified functions named operator remain ordinary operands and their following bare aliases are excluded.",
+    "rejected_unexecuted_proposals": [
+      {
+        "commit": "1d0ab35d7b6f8a50bb925239b6ef7234acf6fbc3",
+        "candidate_tree": "44dd3cc555b6d74a2822434df5cd6900f650d31d",
+        "executed": false,
+        "findings": [
+          {
+            "problem": "Quoted identifier text was used as structural punctuation.",
+            "correction": "All delimiter, depth, cast and name-head checks now require referencePunctuation through the private punctuation method.",
+            "witnesses": [
+              "quoted-call-punctuation",
+              "quoted-depth-punctuation"
+            ]
+          },
+          {
+            "problem": "The closing parenthesis of a qualified OPERATOR name was treated as the end of an expression that could take a bare alias.",
+            "correction": "Bare-alias classification now distinguishes OPERATOR's matching parentheses by token kind and depth.",
+            "witnesses": [
+              "qualified-operator-operand"
+            ]
+          }
+        ]
+      },
+      {
+        "commit": "752734d48a483f306604fdb6939dd7c6a1f8fc08",
+        "candidate_tree": "64a505b0a8661017f2aee4e6333e4e2de6a18c64",
+        "executed": false,
+        "findings": [
+          {
+            "problem": "The final name component operator before '(' was treated as the OPERATOR construct even for a normal function.",
+            "correction": "Require unqualified construct spelling plus an actual symbolic operator name inside the matching parentheses.",
+            "witnesses": [
+              "qualified-function-alias",
+              "unqualified-function-alias"
+            ]
+          }
+        ]
+      }
+    ]
   },
   "preserved_failures": {
     "observer_path": {
@@ -166,16 +184,16 @@
     "launch_test.py": "31d90542191330a6be39b61ce5d5dc447dedbbb0b557706ef0a00c9d93a7c733",
     "linter_support.py": "5594ac624c616c8641723dcc710220346117e826b3e59ed5728c016e38fc1ee1",
     "source-index.json": "628d91c699ed64ab99c4dd00f936fc2187aa5d7daa53377e306daae80177b9fc",
-    "final-test-index.json": "b4caab8508762ad09b556f5eae9e0e9c0a381af355072ddbaee6d926d5d9a99e",
-    "candidate-index.json": "eb8f9d3e7253ae137bd498e6fe966956c56118bca4445423f4eb98d4104ec273",
-    "authored-candidate.json": "55e787e4532f4e8f49ad3049e1481a96d2804f1afcaf49d32712f4f63f60ee25",
+    "final-test-index.json": "2bbae50d10f663a3342fd4d25a4ea05b2e3f02e3d6dace53766fd3923fda32e1",
+    "candidate-index.json": "bf439c611c5bce6d388e6409c018feb745f19370ee5478ccac2864564f7ecb2c",
+    "authored-candidate.json": "cb774362130c0ba4b64194c7b6924ab7406b7e54547dff570620258fb5962c8c",
     "version-references.json": "dd4ce8e234ddd6f4fd668608944dc5bd3b15ce23f3ff9de463d48b9706d8332a",
-    "version-reference-boundaries.json": "56ed7003b803bb3781f92d52eeafb96647d920d31b75b07666aac1462556442b",
+    "version-reference-boundaries.json": "2139c1a1432c60553dcfe53dcd926ca60c458b4b1459a62a2536e246acb8c45b",
     "baseline-report.json": "762d5c18c6700bad44c5dee8186e664e171121562093f87d2b9b1443a911e156",
-    "schema.sql": "8d16f5318bc6ce7490f44cbb53a02fb65fe335c2747e237cba3fa60ba27b862b",
+    "schema.sql": "9b34ea17e9600b6523e1efc269b49b4061cd719007002b21b5f9195b440af553",
     "candidate_archive.py": "a1d4c1a4f278a5aaa7f555ea2159dd104cb2ac45d50045fb91a1ecf324a1aeec",
     "reference_observer.py": "357ea10b7685eff7adc6f96541f99aa67a99efad999ab4eaff09b8acc15114ff",
-    "verify_candidate.py": "cf9816a52a73f986c9dcb66d75226abc136c73100232419de7ccb1eb0405d154"
+    "verify_candidate.py": "1e38034da3db27a30e244be069e54869f32a6ffaf76efc284629806ed22253d6"
   },
   "workflow_sha256": "76ba835edd80304c0147fd8e322d49e12e19039061a891eeb707f533c34ebdc6",
   "publication_eligible": false,

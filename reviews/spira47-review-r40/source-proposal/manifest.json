@@ -10,17 +10,17 @@
     "index_file": "source-index.json"
   },
   "candidate": {
-    "tree": "64a505b0a8661017f2aee4e6333e4e2de6a18c64",
+    "tree": "9b0592ca5b21e341c543512562f42565c5e198dc",
     "blobs": 625,
     "index_file": "candidate-index.json"
   },
   "unchanged_production_tests": {
-    "tree": "3df6aca0284b97978126635a1f15c1649b2593a1",
+    "tree": "c547ed75d64ff1cc0da98abd7070c3425af014b9",
     "blobs": 624,
     "index_file": "final-test-index.json",
     "runtime_helper_unchanged": true
   },
-  "authored_sha256": "55e787e4532f4e8f49ad3049e1481a96d2804f1afcaf49d32712f4f63f60ee25",
+  "authored_sha256": "cb774362130c0ba4b64194c7b6924ab7406b7e54547dff570620258fb5962c8c",
   "files": [
     {
       "path": "cmd/sqlc-gen-spira/model.lgo",
@@ -31,8 +31,8 @@
     {
       "path": "cmd/sqlc-gen-spira/version_reference.lgo",
       "mode": "100644",
-      "sha256": "94500100999ad9a6f9ba76c5fc3fae3f659ccbfc5792e9f67c1bebbec0eea7a4",
-      "blob": "152b8557f877801905e2ceaf58119148de5e0d5d"
+      "sha256": "f3c2fb8217abe06f16b9e0651e045d2da72af695b5cf288c8e9d17a042e3fefb",
+      "blob": "de5af94f52d91c2d91e93c0e1608386450d38807"
     },
     {
       "path": "cmd/sqlc-gen-spira/query_constants_test.lgo",
@@ -49,8 +49,8 @@
     {
       "path": "cmd/sqlc-gen-spira/version_reference_test.lgo",
       "mode": "100644",
-      "sha256": "6df20cfdea4fc73e84b118c0ae031a1565406435d4167663bcc20d726c9113e4",
-      "blob": "878ac564cc74d4cbad397bb75efcb47b6a352347"
+      "sha256": "0f6a7d7c2b7419755294bac874f43be3c73a5d64ac9d8946f4c72964d694eaa4",
+      "blob": "b8fef503f15b129532b47997904e76cc541c5961"
     },
     {
       "path": "cmd/sqlc-gen-spira/testdata/version-references.json",
@@ -61,14 +61,14 @@
     {
       "path": "cmd/sqlc-gen-spira/testdata/version-reference-boundaries.json",
       "mode": "100644",
-      "sha256": "56ed7003b803bb3781f92d52eeafb96647d920d31b75b07666aac1462556442b",
-      "blob": "971dacb39f081bbafcc3a0c69c401b0a5634636a"
+      "sha256": "2139c1a1432c60553dcfe53dcd926ca60c458b4b1459a62a2536e246acb8c45b",
+      "blob": "8aa068ca0495d35f04be9286281e7cece9e4fe0f"
     },
     {
       "path": "docs/specs/sqlc-gen-spira.md",
       "mode": "100644",
-      "sha256": "319ee77b2e74136590484ac8fc53948d7eb78ba8a2d3cb91edeada691409a93b",
-      "blob": "f0f3870c83cc4a04ff6a13c51082b8f1502296b2"
+      "sha256": "b77a27d3de46329275f9f5358c70d525a862dae5ebcf7598eae728a0b49e6312",
+      "blob": "8dab03590521d753958b47b673a08c6080a8e6bd"
     }
   ],
   "frozen_original": {
@@ -84,20 +84,22 @@
     "baseline_verified": true
   },
   "new_structural_controls": {
-    "cases": 6,
+    "cases": 8,
     "file": "version-reference-boundaries.json",
-    "sha256": "56ed7003b803bb3781f92d52eeafb96647d920d31b75b07666aac1462556442b",
+    "sha256": "2139c1a1432c60553dcfe53dcd926ca60c458b4b1459a62a2536e246acb8c45b",
     "expected_unchanged_red": [
       "parenthesized-bare-alias",
       "qualified-cast-type",
-      "quoted-depth-punctuation"
+      "quoted-depth-punctuation",
+      "qualified-function-alias",
+      "unqualified-function-alias"
     ],
     "expected_controls": [
       "function-from-operand",
       "quoted-call-punctuation",
       "qualified-operator-operand"
     ],
-    "native_observation": "pending in the final proof before any production application"
+    "native_observation": "Pending in the final gate before production application. The two new operator-function definitions are added only to the native/SQLc proof schema."
   },
   "scope": {
     "postgresql_only": true,
@@ -109,37 +111,55 @@
     "name_roles": "Complete identifier chains exclude qualifier components, call/type heads, explicit aliases/collations, recognized write headers and terminal bare RETURNING aliases; expression operands and call arguments remain visible.",
     "case": "ASCII folding for unquoted names; quoted names preserve case and unescape doubled quotes.",
     "limitation": "Syntactic presence check, not complete reference-to-table binding across nested queries or CTE scopes.",
-    "nested_race": "Only -race is added to the existing shared generated-package test command."
+    "nested_race": "Only -race is added to the existing shared generated-package test command.",
+    "operator_shape": "The OPERATOR construct must start at an unqualified keyword and contain an optional qualified-name prefix followed only by symbolic operator characters from PostgreSQL REL_18_4 scan.l. Qualified and unqualified functions named operator remain ordinary operands and their following bare aliases are excluded."
   },
   "required_gates": [
     "Authenticated unchanged-source and missing-race baseline; preserve both observer failures",
-    "Native original and actual captured SQL for26 cases, with unchanged-production15RED/11controls before application",
+    "Native original and actual captured SQL for28 cases, with unchanged-production17RED/11controls before application",
     "All existing14dollar/12typed/14continued/8compiled/40pipeline cases",
     "Actual nested argv includes-race in both generated module directories",
     "Native compiler/race focused tests and actual just gate/slop/eject",
     "Complete625-byte/mode/tree identity and original621 restoration"
   ],
   "publication_eligible": false,
-  "rejected_source_proposal": {
-    "commit": "1d0ab35d7b6f8a50bb925239b6ef7234acf6fbc3",
-    "candidate_tree": "44dd3cc555b6d74a2822434df5cd6900f650d31d",
-    "executed": false,
-    "findings": [
-      {
-        "problem": "Quoted identifier text was used as structural punctuation.",
-        "correction": "All delimiter, depth, cast and name-head checks now require referencePunctuation through the private punctuation method.",
-        "witnesses": [
-          "quoted-call-punctuation",
-          "quoted-depth-punctuation"
-        ]
-      },
-      {
-        "problem": "The closing parenthesis of a qualified OPERATOR name was treated as the end of an expression that could take a bare alias.",
-        "correction": "Bare-alias classification now distinguishes OPERATOR's matching parentheses by token kind and depth.",
-        "witnesses": [
-          "qualified-operator-operand"
-        ]
-      }
-    ]
-  }
+  "rejected_source_proposals": [
+    {
+      "commit": "1d0ab35d7b6f8a50bb925239b6ef7234acf6fbc3",
+      "candidate_tree": "44dd3cc555b6d74a2822434df5cd6900f650d31d",
+      "executed": false,
+      "findings": [
+        {
+          "problem": "Quoted identifier text was used as structural punctuation.",
+          "correction": "All delimiter, depth, cast and name-head checks now require referencePunctuation through the private punctuation method.",
+          "witnesses": [
+            "quoted-call-punctuation",
+            "quoted-depth-punctuation"
+          ]
+        },
+        {
+          "problem": "The closing parenthesis of a qualified OPERATOR name was treated as the end of an expression that could take a bare alias.",
+          "correction": "Bare-alias classification now distinguishes OPERATOR's matching parentheses by token kind and depth.",
+          "witnesses": [
+            "qualified-operator-operand"
+          ]
+        }
+      ]
+    },
+    {
+      "commit": "752734d48a483f306604fdb6939dd7c6a1f8fc08",
+      "candidate_tree": "64a505b0a8661017f2aee4e6333e4e2de6a18c64",
+      "executed": false,
+      "findings": [
+        {
+          "problem": "The final name component operator before '(' was treated as the OPERATOR construct even for a normal function.",
+          "correction": "Require unqualified construct spelling plus an actual symbolic operator name inside the matching parentheses.",
+          "witnesses": [
+            "qualified-function-alias",
+            "unqualified-function-alias"
+          ]
+        }
+      ]
+    }
+  ]
 }

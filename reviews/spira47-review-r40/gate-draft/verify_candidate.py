@@ -130,9 +130,9 @@ def main() -> None:
         if module["Version"] != manifest["sqlc_version"]:
             raise RuntimeError("source-pinned SQLc differs")
         original = observer.rows_from("version-references.json", 20)
-        boundaries = observer.rows_from("version-reference-boundaries.json", 6)
+        boundaries = observer.rows_from("version-reference-boundaries.json", 8)
         cases = original + boundaries
-        if len({base.text(row["name"]) for row in cases}) != 26:
+        if len({base.text(row["name"]) for row in cases}) != 28:
             raise RuntimeError("combined frozen case identities differ")
         authored = authored_rows()
         test_paths = {
@@ -186,7 +186,7 @@ def main() -> None:
                 raise ValueError("authenticated baseline pipeline is not an array")
             prior_rows = [base.object_value(row) for row in old_pipeline] + prior_new
             previous = {base.text(row["name"]): row for row in prior_rows}
-            if len(previous) != 26:
+            if len(previous) != 28:
                 raise RuntimeError("actual unchanged request coverage differs")
             candidate_pipeline: list[dict[str, object]] = []
             report["candidate_pipeline"] = candidate_pipeline
@@ -200,7 +200,7 @@ def main() -> None:
                 kind: sum(row["pipeline_contract"] == kind for row in candidate_pipeline)
                 for kind in ("generated", "version-refusal", "unnamed-column")
             }
-            if actual_partition != {"generated": 10, "version-refusal": 15, "unnamed-column": 1}:
+            if actual_partition != {"generated": 10, "version-refusal": 17, "unnamed-column": 1}:
                 raise RuntimeError("final actual pipeline partition differs")
             report["pipeline_partition"] = actual_partition
         verify_runtime_suites(report)
