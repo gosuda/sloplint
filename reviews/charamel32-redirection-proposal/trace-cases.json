@@ -1,0 +1,486 @@
+[
+  {
+    "id": "nested_equal",
+    "command": "cmd /d /c echo key=value",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo key=value",
+      "echo key=value"
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "nested_equal_spaced",
+    "command": "cmd /d /c echo key value",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo key value",
+      "echo key value"
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "nested_punctuation",
+    "command": "cmd /d /c echo first,,second;;third=last",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo first,,second;;third=last",
+      "echo first,,second;;third=last"
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "nested_punctuation_spaced",
+    "command": "cmd /d /c echo first second third last",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo first second third last",
+      "echo first second third last"
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "nested_tab",
+    "command": "cmd /d /c echo key\tvalue",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo key\tvalue",
+      "echo key\tvalue"
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "nested_tab_spaced",
+    "command": "cmd /d /c echo key value",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo key value",
+      "echo key value"
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "nested_blank",
+    "command": "cmd /d /c echo(",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo(",
+      "echo("
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "nested_quoted_blank",
+    "command": "cmd /d /c \"echo(\"",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c \"echo(\"",
+      "echo("
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "nested_double_blank",
+    "command": "cmd /d /c cmd /d /c echo(",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c cmd /d /c echo(",
+      "cmd /d /c echo(",
+      "echo("
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "nested_quoted_equal",
+    "command": "cmd /d /c \"echo key=value\"",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c \"echo key=value\"",
+      "echo key=value"
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "nested_double_equal",
+    "command": "cmd /d /c cmd /d /c echo key=value",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c cmd /d /c echo key=value",
+      "cmd /d /c echo key=value",
+      "echo key=value"
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "nested_for_equal",
+    "command": "cmd /d /c for /f \"delims==\" %i in (\"key=value\") do @echo %i",
+    "expected_kind": "review",
+    "expected_sources": [
+      "cmd /d /c for /f \"delims==\" %i in (\"key=value\") do @echo %i",
+      "for /f \"delims==\" %i in (\"key=value\") do @echo %i"
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "nested_redirect_equal",
+    "command": "cmd /d /c echo key=value>capture.txt",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo key=value>capture.txt",
+      "echo key=value"
+    ],
+    "provenance": "corrected by native outer-redirection ownership: primary 45982750445"
+  },
+  {
+    "id": "nested_redirect_prefix",
+    "command": "cmd /d /c 2>capture.txt echo key=value",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c 2>capture.txt echo key=value",
+      "echo key=value"
+    ],
+    "provenance": "corrected by native outer-redirection ownership: primary 45982750445"
+  },
+  {
+    "id": "nested_prefix_separators",
+    "command": "cmd /d /c =,;echo key=value",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c =,;echo key=value",
+      "=,;echo key=value"
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "nested_loop_blank",
+    "command": "cmd /d /c for %i in (alpha) do @echo(",
+    "expected_kind": "review",
+    "expected_sources": [
+      "cmd /d /c for %i in (alpha) do @echo(",
+      "for %i in (alpha) do @echo("
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "trailing_plain",
+    "command": "cmd /d /c echo key=value  ",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo key=value  ",
+      "echo key=value  "
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "trailing_trimmed_control",
+    "command": "cmd /d /c echo key=value",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo key=value",
+      "echo key=value"
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "leading_plain",
+    "command": "cmd /d /c   echo key=value",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c   echo key=value",
+      "echo key=value"
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "quoted_trailing_outside",
+    "command": "cmd /d /c \"echo key=value\"  ",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c \"echo key=value\"  ",
+      "echo key=value  "
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "quoted_trailing_inside",
+    "command": "cmd /d /c \"echo key=value  \"",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c \"echo key=value  \"",
+      "echo key=value  "
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "prefix_trailing",
+    "command": "cmd /d /c =,;echo key=value  ",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c =,;echo key=value  ",
+      "=,;echo key=value  "
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "for-body-source-offset",
+    "command": "for %i in (alpha) do cmd /d /c echo key=value",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "for %i in (alpha) do cmd /d /c echo key=value",
+      "echo key=value"
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "group-local-source-offset",
+    "command": "(cmd /d /c echo key=value)",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "(cmd /d /c echo key=value)",
+      "cmd /d /c echo key=value",
+      "echo key=value"
+    ],
+    "provenance": "retained c009 parser trace"
+  },
+  {
+    "id": "reported_quoted_outer",
+    "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
+      "echo ready "
+    ],
+    "provenance": "native primary 45982750445"
+  },
+  {
+    "id": "quoted_outer_stderr",
+    "command": "cmd /d /c \"echo ready\" 2> \"capture (sales & support).txt\"",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c \"echo ready\" 2> \"capture (sales & support).txt\"",
+      "echo ready "
+    ],
+    "provenance": "native primary 45982750445"
+  },
+  {
+    "id": "quoted_outer_both",
+    "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>&1",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>&1",
+      "echo ready "
+    ],
+    "provenance": "native primary 45982750445"
+  },
+  {
+    "id": "quoted_outer_append",
+    "command": "cmd /d /c \"echo ready\" >> \"capture (sales & support).txt\"",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c \"echo ready\" >> \"capture (sales & support).txt\"",
+      "echo ready "
+    ],
+    "provenance": "native primary 45982750445"
+  },
+  {
+    "id": "redirect_before_payload",
+    "command": "cmd /d /c > \"capture (sales & support).txt\" \"echo ready\"",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c > \"capture (sales & support).txt\" \"echo ready\"",
+      "echo ready"
+    ],
+    "provenance": "native primary 45982750445"
+  },
+  {
+    "id": "redirect_before_switch",
+    "command": "cmd > \"capture (sales & support).txt\" /d /c \"echo ready\"",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd > \"capture (sales & support).txt\" /d /c \"echo ready\"",
+      "echo ready"
+    ],
+    "provenance": "native primary 45982750445"
+  },
+  {
+    "id": "quoted_inner",
+    "command": "cmd /d /c \"echo ready>capture.txt\"",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c \"echo ready>capture.txt\"",
+      "echo ready>capture.txt"
+    ],
+    "provenance": "native primary 45982750445"
+  },
+  {
+    "id": "inner_plus_outer",
+    "command": "cmd /d /c \"echo ready>capture.txt\" > \"capture (sales & support).txt\"",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c \"echo ready>capture.txt\" > \"capture (sales & support).txt\"",
+      "echo ready>capture.txt "
+    ],
+    "provenance": "native primary 45982750445"
+  },
+  {
+    "id": "quoted_literal_greater",
+    "command": "cmd /d /c echo \"ready>text\"",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo \"ready>text\"",
+      "echo \"ready>text\""
+    ],
+    "provenance": "native primary 45982750445"
+  },
+  {
+    "id": "two_outer_targets",
+    "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>error.txt",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>error.txt",
+      "echo ready "
+    ],
+    "provenance": "native primary 45982750445"
+  },
+  {
+    "id": "following_command",
+    "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" & echo done",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" & echo done",
+      "echo ready  "
+    ],
+    "provenance": "native primary 45982750445"
+  },
+  {
+    "id": "grouped_outer",
+    "command": "(cmd /d /c \"echo ready\" > \"capture (sales & support).txt\")",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "(cmd /d /c \"echo ready\" > \"capture (sales & support).txt\")",
+      "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
+      "echo ready "
+    ],
+    "provenance": "native primary 45982750445"
+  },
+  {
+    "id": "for_body_outer",
+    "command": "for %I in (1) do cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "for %I in (1) do cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
+      "echo ready "
+    ],
+    "provenance": "native primary 45982750445"
+  },
+  {
+    "id": "trailing_space_outer",
+    "command": "cmd /d /c \"echo ready\"  > \"capture (sales & support).txt\"  ",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c \"echo ready\"  > \"capture (sales & support).txt\"  ",
+      "echo ready    "
+    ],
+    "provenance": "native primary 45982750445"
+  },
+  {
+    "id": "echo_two_spaces",
+    "command": "cmd /d /c echo ready >capture.txt  2>\"capture (sales & support).txt\"",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo ready >capture.txt  2>\"capture (sales & support).txt\"",
+      "echo ready "
+    ],
+    "provenance": "native adjacent redirections 45983364759"
+  },
+  {
+    "id": "echo_tab_gap",
+    "command": "cmd /d /c echo ready >capture.txt\t2>\"capture (sales & support).txt\"",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo ready >capture.txt\t2>\"capture (sales & support).txt\"",
+      "echo ready "
+    ],
+    "provenance": "native adjacent redirections 45983364759"
+  },
+  {
+    "id": "echo_argument_between",
+    "command": "cmd /d /c echo ready >capture.txt tail >\"capture (sales & support).txt\"",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo ready >capture.txt tail >\"capture (sales & support).txt\"",
+      "echo ready  tail "
+    ],
+    "provenance": "native adjacent redirections 45983364759"
+  },
+  {
+    "id": "echo_duplication_before",
+    "command": "cmd /d /c echo ready 2>&1 >\"capture (sales & support).txt\"",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo ready 2>&1 >\"capture (sales & support).txt\"",
+      "echo ready "
+    ],
+    "provenance": "native adjacent redirections 45983364759"
+  },
+  {
+    "id": "echo_comma_gap",
+    "command": "cmd /d /c echo ready >capture.txt , 2>\"capture (sales & support).txt\"",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo ready >capture.txt , 2>\"capture (sales & support).txt\"",
+      "echo ready "
+    ],
+    "provenance": "native adjacent redirections 45983364759"
+  },
+  {
+    "id": "echo_quoted_digit",
+    "command": "cmd /d /c echo \"2\">capture.txt",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo \"2\">capture.txt",
+      "echo \"2\""
+    ],
+    "provenance": "native descriptor ownership 45984034668"
+  },
+  {
+    "id": "echo_quoted_digits",
+    "command": "cmd /d /c echo \"12\">capture.txt",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo \"12\">capture.txt",
+      "echo \"12\""
+    ],
+    "provenance": "native descriptor ownership 45984034668"
+  },
+  {
+    "id": "echo_two_digits",
+    "command": "cmd /d /c echo 12>capture.txt",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo 12>capture.txt",
+      "echo 12"
+    ],
+    "provenance": "native descriptor ownership 45984034668"
+  },
+  {
+    "id": "echo_escaped_digit",
+    "command": "cmd /d /c echo ^2>capture.txt",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo ^2>capture.txt",
+      "echo ^2"
+    ],
+    "provenance": "Native literal-argument control; unchanged raw caret spelling is consumed by the recursive screen, not asserted equal to the native child command line."
+  },
+  {
+    "id": "echo_ordinary_digit",
+    "command": "cmd /d /c echo 2>capture.txt",
+    "expected_kind": "clear",
+    "expected_sources": [
+      "cmd /d /c echo 2>capture.txt",
+      "echo "
+    ],
+    "provenance": "native descriptor ownership 45984034668"
+  }
+]

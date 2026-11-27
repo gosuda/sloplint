@@ -1,0 +1,1153 @@
+{
+  "producer": "03ed1231409462d749208debb1b6d356fc83854b",
+  "run": "45982750445",
+  "before": {
+    "head": "c00962f26db32a41cfc1c487027a8b6316cb8bf1",
+    "tree": "99508a172cd995a72dc9845016324e13a5b88527",
+    "source_sha256": {
+      "bin/crush/lib/shell_screen.ml": "792c5754d9829cdc4af9c644e9c51f44f52ba38f10b300076df73aa9b745a82f",
+      "test/crush/test_tools_shell.ml": "1853053b04e708dc02983b8c1ad18a5c9858f87743d6c6c5916cc818caad4480"
+    },
+    "source_clean": true,
+    "index_sha256": "b176302374f3c15ec910552e2e86b8bde292d0ee78413d9e84d4e5b0a2e05543"
+  },
+  "after": {
+    "head": "c00962f26db32a41cfc1c487027a8b6316cb8bf1",
+    "tree": "99508a172cd995a72dc9845016324e13a5b88527",
+    "source_sha256": {
+      "bin/crush/lib/shell_screen.ml": "792c5754d9829cdc4af9c644e9c51f44f52ba38f10b300076df73aa9b745a82f",
+      "test/crush/test_tools_shell.ml": "1853053b04e708dc02983b8c1ad18a5c9858f87743d6c6c5916cc818caad4480"
+    },
+    "source_clean": true,
+    "index_sha256": "b176302374f3c15ec910552e2e86b8bde292d0ee78413d9e84d4e5b0a2e05543"
+  },
+  "system": {
+    "python": "3.13.17 (tags/v3.13.17:64e080d, Oct 21 2026, 14:08:53) [MSC v.1944 64 bit (AMD64)]",
+    "windows": [
+      "2025Server",
+      "10.0.26100",
+      "SP0",
+      "Multiprocessor Free"
+    ],
+    "comspec": "C:\\Windows\\system32\\cmd.exe"
+  },
+  "inputs": {
+    "observe.py": "1719172f7052e657ed3ec57917b719fdad0d23e1e52844cbdb844f8b34d17b8e",
+    "observe-child.ps1": "042679e664738b3fc8ac05a5c2d02593e7fc268b4355334c05761d24853094ef",
+    "observations.json": "e1a7bd3d96286e819d23d28e5b99a0a183609a539e442e57a106f20319ee9450"
+  },
+  "records": [
+    {
+      "id": "quoted_control",
+      "kind": "echo",
+      "command": "cmd /d /c \"echo ready\"",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c \"echo ready\"",
+      "outer_pid": 1188,
+      "actual_exit": 0,
+      "seconds": 0.02279899999999202,
+      "timeout": false,
+      "stdout": {
+        "bytes": 7,
+        "sha256": "83e24203f3532a5d379e2dfcab2a0bffa0b0d059eddc22ab04155ed229343ef3",
+        "base64": "cmVhZHkNCg==",
+        "text": "ready\r\n"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {},
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "reported_quoted_outer",
+      "kind": "echo",
+      "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
+      "outer_pid": 3092,
+      "actual_exit": 0,
+      "seconds": 0.014400299999991262,
+      "timeout": false,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture (sales & support).txt": {
+          "bytes": 8,
+          "sha256": "012d762deb8bae3ea78503242a6d138d53e267a7829b85fc806c0ae32291b062",
+          "base64": "cmVhZHkgDQo=",
+          "text": "ready \r\n"
+        }
+      },
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "quoted_outer_stderr",
+      "kind": "echo",
+      "command": "cmd /d /c \"echo ready\" 2> \"capture (sales & support).txt\"",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c \"echo ready\" 2> \"capture (sales & support).txt\"",
+      "outer_pid": 3776,
+      "actual_exit": 0,
+      "seconds": 0.013833699999992177,
+      "timeout": false,
+      "stdout": {
+        "bytes": 8,
+        "sha256": "012d762deb8bae3ea78503242a6d138d53e267a7829b85fc806c0ae32291b062",
+        "base64": "cmVhZHkgDQo=",
+        "text": "ready \r\n"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture (sales & support).txt": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        }
+      },
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "quoted_outer_both",
+      "kind": "echo",
+      "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>&1",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>&1",
+      "outer_pid": 4928,
+      "actual_exit": 0,
+      "seconds": 0.015534500000001117,
+      "timeout": false,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture (sales & support).txt": {
+          "bytes": 8,
+          "sha256": "012d762deb8bae3ea78503242a6d138d53e267a7829b85fc806c0ae32291b062",
+          "base64": "cmVhZHkgDQo=",
+          "text": "ready \r\n"
+        }
+      },
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "quoted_outer_append",
+      "kind": "echo",
+      "command": "cmd /d /c \"echo ready\" >> \"capture (sales & support).txt\"",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c \"echo ready\" >> \"capture (sales & support).txt\"",
+      "outer_pid": 4064,
+      "actual_exit": 0,
+      "seconds": 0.01431180000000154,
+      "timeout": false,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture (sales & support).txt": {
+          "bytes": 8,
+          "sha256": "012d762deb8bae3ea78503242a6d138d53e267a7829b85fc806c0ae32291b062",
+          "base64": "cmVhZHkgDQo=",
+          "text": "ready \r\n"
+        }
+      },
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "redirect_before_payload",
+      "kind": "echo",
+      "command": "cmd /d /c > \"capture (sales & support).txt\" \"echo ready\"",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c > \"capture (sales & support).txt\" \"echo ready\"",
+      "outer_pid": 1816,
+      "actual_exit": 0,
+      "seconds": 0.01447200000001203,
+      "timeout": false,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture (sales & support).txt": {
+          "bytes": 7,
+          "sha256": "83e24203f3532a5d379e2dfcab2a0bffa0b0d059eddc22ab04155ed229343ef3",
+          "base64": "cmVhZHkNCg==",
+          "text": "ready\r\n"
+        }
+      },
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "redirect_before_switch",
+      "kind": "echo",
+      "command": "cmd > \"capture (sales & support).txt\" /d /c \"echo ready\"",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd > \"capture (sales & support).txt\" /d /c \"echo ready\"",
+      "outer_pid": 1780,
+      "actual_exit": 0,
+      "seconds": 0.013652600000000348,
+      "timeout": false,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture (sales & support).txt": {
+          "bytes": 7,
+          "sha256": "83e24203f3532a5d379e2dfcab2a0bffa0b0d059eddc22ab04155ed229343ef3",
+          "base64": "cmVhZHkNCg==",
+          "text": "ready\r\n"
+        }
+      },
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "unquoted_attached",
+      "kind": "echo",
+      "command": "cmd /d /c echo key=value>capture.txt",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c echo key=value>capture.txt",
+      "outer_pid": 4516,
+      "actual_exit": 0,
+      "seconds": 0.011704699999995682,
+      "timeout": false,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture.txt": {
+          "bytes": 11,
+          "sha256": "bc8b83921fe8837968cf179a52dc5f026d718a38e74a33c9c0c163178ec83eb0",
+          "base64": "a2V5PXZhbHVlDQo=",
+          "text": "key=value\r\n"
+        }
+      },
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "unquoted_prefix",
+      "kind": "echo",
+      "command": "cmd /d /c 2>capture.txt echo key=value",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c 2>capture.txt echo key=value",
+      "outer_pid": 7132,
+      "actual_exit": 0,
+      "seconds": 0.01148369999999943,
+      "timeout": false,
+      "stdout": {
+        "bytes": 11,
+        "sha256": "bc8b83921fe8837968cf179a52dc5f026d718a38e74a33c9c0c163178ec83eb0",
+        "base64": "a2V5PXZhbHVlDQo=",
+        "text": "key=value\r\n"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture.txt": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        }
+      },
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "quoted_inner",
+      "kind": "echo",
+      "command": "cmd /d /c \"echo ready>capture.txt\"",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c \"echo ready>capture.txt\"",
+      "outer_pid": 5036,
+      "actual_exit": 0,
+      "seconds": 0.0160915000000017,
+      "timeout": false,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture.txt": {
+          "bytes": 7,
+          "sha256": "83e24203f3532a5d379e2dfcab2a0bffa0b0d059eddc22ab04155ed229343ef3",
+          "base64": "cmVhZHkNCg==",
+          "text": "ready\r\n"
+        }
+      },
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "inner_plus_outer",
+      "kind": "echo",
+      "command": "cmd /d /c \"echo ready>capture.txt\" > \"capture (sales & support).txt\"",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c \"echo ready>capture.txt\" > \"capture (sales & support).txt\"",
+      "outer_pid": 4252,
+      "actual_exit": 0,
+      "seconds": 0.012839200000001938,
+      "timeout": false,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture (sales & support).txt": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "capture.txt": {
+          "bytes": 8,
+          "sha256": "012d762deb8bae3ea78503242a6d138d53e267a7829b85fc806c0ae32291b062",
+          "base64": "cmVhZHkgDQo=",
+          "text": "ready \r\n"
+        }
+      },
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "quoted_literal_greater",
+      "kind": "echo",
+      "command": "cmd /d /c echo \"ready>text\"",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c echo \"ready>text\"",
+      "outer_pid": 2128,
+      "actual_exit": 0,
+      "seconds": 0.011130900000011934,
+      "timeout": false,
+      "stdout": {
+        "bytes": 14,
+        "sha256": "26a96424365ac6b94f557e41633a77d225f2576684e0aaf3a2d9cd637b2402df",
+        "base64": "InJlYWR5PnRleHQiDQo=",
+        "text": "\"ready>text\"\r\n"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {},
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "two_outer_targets",
+      "kind": "echo",
+      "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>error.txt",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>error.txt",
+      "outer_pid": 5140,
+      "actual_exit": 0,
+      "seconds": 0.015091799999993327,
+      "timeout": false,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture (sales & support).txt": {
+          "bytes": 8,
+          "sha256": "012d762deb8bae3ea78503242a6d138d53e267a7829b85fc806c0ae32291b062",
+          "base64": "cmVhZHkgDQo=",
+          "text": "ready \r\n"
+        },
+        "error.txt": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        }
+      },
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "following_command",
+      "kind": "echo",
+      "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" & echo done",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" & echo done",
+      "outer_pid": 2844,
+      "actual_exit": 0,
+      "seconds": 0.014749899999998206,
+      "timeout": false,
+      "stdout": {
+        "bytes": 6,
+        "sha256": "12e5cb1d6521d6a9f0369978cca6ec93c52582896608bf12882764ae21a0c6e4",
+        "base64": "ZG9uZQ0K",
+        "text": "done\r\n"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture (sales & support).txt": {
+          "bytes": 9,
+          "sha256": "6c3623908e205874a67ae09230539cc34a6d3ecc944116a1a640ce63e5b34345",
+          "base64": "cmVhZHkgIA0K",
+          "text": "ready  \r\n"
+        }
+      },
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "grouped_outer",
+      "kind": "echo",
+      "command": "(cmd /d /c \"echo ready\" > \"capture (sales & support).txt\")",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c (cmd /d /c \"echo ready\" > \"capture (sales & support).txt\")",
+      "outer_pid": 1092,
+      "actual_exit": 0,
+      "seconds": 0.013859400000001187,
+      "timeout": false,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture (sales & support).txt": {
+          "bytes": 8,
+          "sha256": "012d762deb8bae3ea78503242a6d138d53e267a7829b85fc806c0ae32291b062",
+          "base64": "cmVhZHkgDQo=",
+          "text": "ready \r\n"
+        }
+      },
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "for_body_outer",
+      "kind": "echo",
+      "command": "for %I in (1) do cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c for %I in (1) do cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
+      "outer_pid": 1504,
+      "actual_exit": 0,
+      "seconds": 0.013564299999998752,
+      "timeout": false,
+      "stdout": {
+        "bytes": 146,
+        "sha256": "5423690ab68bcb9ded12e16dc63c83740472990c258b214af30efe13049cca70",
+        "base64": "DQpDOlxVc2Vyc1xBRE1JTkl+MVxBcHBEYXRhXExvY2FsXFRlbXBcY2hhcmFtZWwzMi1yZWRpcmVjdGlvbi1heWNfdTR0X1xmb3JfYm9keV9vdXRlcj5jbWQgL2QgL2MgImVjaG8gcmVhZHkiICAxPiJjYXB0dXJlIChzYWxlcyAmIHN1cHBvcnQpLnR4dCIgDQo=",
+        "text": "\r\nC:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\charamel32-redirection-ayc_u4t_\\for_body_outer>cmd /d /c \"echo ready\"  1>\"capture (sales & support).txt\" \r\n"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture (sales & support).txt": {
+          "bytes": 8,
+          "sha256": "012d762deb8bae3ea78503242a6d138d53e267a7829b85fc806c0ae32291b062",
+          "base64": "cmVhZHkgDQo=",
+          "text": "ready \r\n"
+        }
+      },
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "exact_separator_control",
+      "kind": "echo",
+      "command": "cmd /d /c echo key=value",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c echo key=value",
+      "outer_pid": 1820,
+      "actual_exit": 0,
+      "seconds": 0.01132969999999034,
+      "timeout": false,
+      "stdout": {
+        "bytes": 11,
+        "sha256": "bc8b83921fe8837968cf179a52dc5f026d718a38e74a33c9c0c163178ec83eb0",
+        "base64": "a2V5PXZhbHVlDQo=",
+        "text": "key=value\r\n"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {},
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "spaced_separator_control",
+      "kind": "echo",
+      "command": "cmd /d /c echo key value",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c echo key value",
+      "outer_pid": 1848,
+      "actual_exit": 0,
+      "seconds": 0.013781999999991967,
+      "timeout": false,
+      "stdout": {
+        "bytes": 11,
+        "sha256": "25e059529e5903830600c41f5e38cdd0c46be9602b6102b0773c52961ca75fc2",
+        "base64": "a2V5IHZhbHVlDQo=",
+        "text": "key value\r\n"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {},
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "multiple_equals_control",
+      "kind": "echo",
+      "command": "cmd /d /c echo key==value",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c echo key==value",
+      "outer_pid": 3328,
+      "actual_exit": 0,
+      "seconds": 0.011299800000003302,
+      "timeout": false,
+      "stdout": {
+        "bytes": 12,
+        "sha256": "4c9897bc98e5782625e94f46289a082f15cbbcbe7b1b11caae97b0fdd591e016",
+        "base64": "a2V5PT12YWx1ZQ0K",
+        "text": "key==value\r\n"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {},
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "trailing_space_outer",
+      "kind": "echo",
+      "command": "cmd /d /c \"echo ready\"  > \"capture (sales & support).txt\"  ",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c \"echo ready\"  > \"capture (sales & support).txt\"  ",
+      "outer_pid": 5268,
+      "actual_exit": 0,
+      "seconds": 0.013954200000000583,
+      "timeout": false,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture (sales & support).txt": {
+          "bytes": 11,
+          "sha256": "3a125371e28fe4455873c30d11a67e417405bc2cb59ddeaa7c50d53ccd304d26",
+          "base64": "cmVhZHkgICAgDQo=",
+          "text": "ready    \r\n"
+        }
+      },
+      "owned_children": [],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "child_quoted_control",
+      "kind": "child",
+      "command": "cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\"",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\"",
+      "outer_pid": 2764,
+      "actual_exit": 0,
+      "seconds": 1.5868298000000038,
+      "timeout": false,
+      "stdout": {
+        "bytes": 206,
+        "sha256": "d007f011a7bbe3b1e1c0dc4253d2a1cd81162a5e15a73781dd89edfd89af4db5",
+        "base64": "eyJvYnNlcnZlcl9waWQiOjMxNDQsInBhcmVudF9waWQiOjU1MzIsInBhcmVudF9uYW1lIjoiY21kLmV4ZSIsInBhcmVudF9jb21tYW5kX2xpbmUiOiJjbWQgIC9kIC9jIFwicG93ZXJzaGVsbC5leGUgLU5vUHJvZmlsZSAtTm9uSW50ZXJhY3RpdmUgLUZpbGUgb2JzZXJ2ZS1jaGlsZC5wczEga2V5PXZhbHVlXCIiLCJhcmd1bWVudHMiOlsia2V5PXZhbHVlIl19DQo=",
+        "text": "{\"observer_pid\":3144,\"parent_pid\":5532,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /c \\\"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\\\"\",\"arguments\":[\"key=value\"]}\r\n"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {},
+      "owned_children": [
+        {
+          "observer_pid": 3144,
+          "parent_pid": 5532,
+          "parent_name": "cmd.exe",
+          "parent_command_line": "cmd  /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\"",
+          "arguments": [
+            "key=value"
+          ]
+        }
+      ],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "child_quoted_outer",
+      "kind": "child",
+      "command": "cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\" > \"capture (sales & support).txt\"",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\" > \"capture (sales & support).txt\"",
+      "outer_pid": 7012,
+      "actual_exit": 0,
+      "seconds": 0.2923692000000102,
+      "timeout": false,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture (sales & support).txt": {
+          "bytes": 207,
+          "sha256": "6f5747329e020aa6717943d50fbfaa677605cfae349a732838fa89557884c99d",
+          "base64": "eyJvYnNlcnZlcl9waWQiOjY5MTYsInBhcmVudF9waWQiOjMyMDgsInBhcmVudF9uYW1lIjoiY21kLmV4ZSIsInBhcmVudF9jb21tYW5kX2xpbmUiOiJjbWQgIC9kIC9jIFwicG93ZXJzaGVsbC5leGUgLU5vUHJvZmlsZSAtTm9uSW50ZXJhY3RpdmUgLUZpbGUgb2JzZXJ2ZS1jaGlsZC5wczEga2V5PXZhbHVlXCIgIiwiYXJndW1lbnRzIjpbImtleT12YWx1ZSJdfQ0K",
+          "text": "{\"observer_pid\":6916,\"parent_pid\":3208,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /c \\\"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\\\" \",\"arguments\":[\"key=value\"]}\r\n"
+        }
+      },
+      "owned_children": [
+        {
+          "observer_pid": 6916,
+          "parent_pid": 3208,
+          "parent_name": "cmd.exe",
+          "parent_command_line": "cmd  /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\" ",
+          "arguments": [
+            "key=value"
+          ]
+        }
+      ],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "child_quoted_outer_stderr",
+      "kind": "child",
+      "command": "cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\" 2> \"capture (sales & support).txt\"",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\" 2> \"capture (sales & support).txt\"",
+      "outer_pid": 1816,
+      "actual_exit": 0,
+      "seconds": 0.294277699999995,
+      "timeout": false,
+      "stdout": {
+        "bytes": 207,
+        "sha256": "3019034347059d27e378786df05ee050d84fcbd02a8c0deb970ae9382f12573b",
+        "base64": "eyJvYnNlcnZlcl9waWQiOjE3ODAsInBhcmVudF9waWQiOjM0MjQsInBhcmVudF9uYW1lIjoiY21kLmV4ZSIsInBhcmVudF9jb21tYW5kX2xpbmUiOiJjbWQgIC9kIC9jIFwicG93ZXJzaGVsbC5leGUgLU5vUHJvZmlsZSAtTm9uSW50ZXJhY3RpdmUgLUZpbGUgb2JzZXJ2ZS1jaGlsZC5wczEga2V5PXZhbHVlXCIgIiwiYXJndW1lbnRzIjpbImtleT12YWx1ZSJdfQ0K",
+        "text": "{\"observer_pid\":1780,\"parent_pid\":3424,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /c \\\"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\\\" \",\"arguments\":[\"key=value\"]}\r\n"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture (sales & support).txt": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        }
+      },
+      "owned_children": [
+        {
+          "observer_pid": 1780,
+          "parent_pid": 3424,
+          "parent_name": "cmd.exe",
+          "parent_command_line": "cmd  /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\" ",
+          "arguments": [
+            "key=value"
+          ]
+        }
+      ],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "child_quoted_outer_both",
+      "kind": "child",
+      "command": "cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\" > \"capture (sales & support).txt\" 2>&1",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\" > \"capture (sales & support).txt\" 2>&1",
+      "outer_pid": 4704,
+      "actual_exit": 0,
+      "seconds": 0.29799519999998836,
+      "timeout": false,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture (sales & support).txt": {
+          "bytes": 207,
+          "sha256": "88bb55db8cb9af25b20b916d83dabb1be05f229418fae3002bb73efff83ae21f",
+          "base64": "eyJvYnNlcnZlcl9waWQiOjM3NjgsInBhcmVudF9waWQiOjM1NjgsInBhcmVudF9uYW1lIjoiY21kLmV4ZSIsInBhcmVudF9jb21tYW5kX2xpbmUiOiJjbWQgIC9kIC9jIFwicG93ZXJzaGVsbC5leGUgLU5vUHJvZmlsZSAtTm9uSW50ZXJhY3RpdmUgLUZpbGUgb2JzZXJ2ZS1jaGlsZC5wczEga2V5PXZhbHVlXCIgIiwiYXJndW1lbnRzIjpbImtleT12YWx1ZSJdfQ0K",
+          "text": "{\"observer_pid\":3768,\"parent_pid\":3568,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /c \\\"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\\\" \",\"arguments\":[\"key=value\"]}\r\n"
+        }
+      },
+      "owned_children": [
+        {
+          "observer_pid": 3768,
+          "parent_pid": 3568,
+          "parent_name": "cmd.exe",
+          "parent_command_line": "cmd  /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\" ",
+          "arguments": [
+            "key=value"
+          ]
+        }
+      ],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "child_before_payload",
+      "kind": "child",
+      "command": "cmd /d /c > \"capture (sales & support).txt\" \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\"",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c > \"capture (sales & support).txt\" \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\"",
+      "outer_pid": 3840,
+      "actual_exit": 0,
+      "seconds": 0.29972130000000163,
+      "timeout": false,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture (sales & support).txt": {
+          "bytes": 207,
+          "sha256": "4cea9d1f8ecefb11f640c92e80ea1dccac5fdf86c762a4cae8969a880d74619e",
+          "base64": "eyJvYnNlcnZlcl9waWQiOjIzNTYsInBhcmVudF9waWQiOjE0MjQsInBhcmVudF9uYW1lIjoiY21kLmV4ZSIsInBhcmVudF9jb21tYW5kX2xpbmUiOiJjbWQgIC9kIC9jICBcInBvd2Vyc2hlbGwuZXhlIC1Ob1Byb2ZpbGUgLU5vbkludGVyYWN0aXZlIC1GaWxlIG9ic2VydmUtY2hpbGQucHMxIGtleT12YWx1ZVwiIiwiYXJndW1lbnRzIjpbImtleT12YWx1ZSJdfQ0K",
+          "text": "{\"observer_pid\":2356,\"parent_pid\":1424,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /c  \\\"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\\\"\",\"arguments\":[\"key=value\"]}\r\n"
+        }
+      },
+      "owned_children": [
+        {
+          "observer_pid": 2356,
+          "parent_pid": 1424,
+          "parent_name": "cmd.exe",
+          "parent_command_line": "cmd  /d /c  \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\"",
+          "arguments": [
+            "key=value"
+          ]
+        }
+      ],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "child_before_switch",
+      "kind": "child",
+      "command": "cmd > \"capture (sales & support).txt\" /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\"",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd > \"capture (sales & support).txt\" /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\"",
+      "outer_pid": 5288,
+      "actual_exit": 0,
+      "seconds": 0.29399529999999174,
+      "timeout": false,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture (sales & support).txt": {
+          "bytes": 207,
+          "sha256": "5de3885a438a432a403a735c9608001681186e2c8538c04565838b4913430090",
+          "base64": "eyJvYnNlcnZlcl9waWQiOjU5NzIsInBhcmVudF9waWQiOjI2NDQsInBhcmVudF9uYW1lIjoiY21kLmV4ZSIsInBhcmVudF9jb21tYW5kX2xpbmUiOiJjbWQgICAvZCAvYyBcInBvd2Vyc2hlbGwuZXhlIC1Ob1Byb2ZpbGUgLU5vbkludGVyYWN0aXZlIC1GaWxlIG9ic2VydmUtY2hpbGQucHMxIGtleT12YWx1ZVwiIiwiYXJndW1lbnRzIjpbImtleT12YWx1ZSJdfQ0K",
+          "text": "{\"observer_pid\":5972,\"parent_pid\":2644,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd   /d /c \\\"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\\\"\",\"arguments\":[\"key=value\"]}\r\n"
+        }
+      },
+      "owned_children": [
+        {
+          "observer_pid": 5972,
+          "parent_pid": 2644,
+          "parent_name": "cmd.exe",
+          "parent_command_line": "cmd   /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\"",
+          "arguments": [
+            "key=value"
+          ]
+        }
+      ],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "child_unquoted_attached",
+      "kind": "child",
+      "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value>capture.txt",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value>capture.txt",
+      "outer_pid": 6616,
+      "actual_exit": 0,
+      "seconds": 0.2913761000000079,
+      "timeout": false,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture.txt": {
+          "bytes": 202,
+          "sha256": "42e0128a53e0c19fd12a1306a75a245a6c57ea5e03d0b12132a85017458b567f",
+          "base64": "eyJvYnNlcnZlcl9waWQiOjMyNjgsInBhcmVudF9waWQiOjQ1NDAsInBhcmVudF9uYW1lIjoiY21kLmV4ZSIsInBhcmVudF9jb21tYW5kX2xpbmUiOiJjbWQgIC9kIC9jIHBvd2Vyc2hlbGwuZXhlIC1Ob1Byb2ZpbGUgLU5vbkludGVyYWN0aXZlIC1GaWxlIG9ic2VydmUtY2hpbGQucHMxIGtleT12YWx1ZSIsImFyZ3VtZW50cyI6WyJrZXk9dmFsdWUiXX0NCg==",
+          "text": "{\"observer_pid\":3268,\"parent_pid\":4540,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\",\"arguments\":[\"key=value\"]}\r\n"
+        }
+      },
+      "owned_children": [
+        {
+          "observer_pid": 3268,
+          "parent_pid": 4540,
+          "parent_name": "cmd.exe",
+          "parent_command_line": "cmd  /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value",
+          "arguments": [
+            "key=value"
+          ]
+        }
+      ],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "child_unquoted_prefix",
+      "kind": "child",
+      "command": "cmd /d /c 2>capture.txt powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c 2>capture.txt powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value",
+      "outer_pid": 6744,
+      "actual_exit": 0,
+      "seconds": 0.3013242000000105,
+      "timeout": false,
+      "stdout": {
+        "bytes": 203,
+        "sha256": "1ff4ef7a161b7a75acef0297bf44528cc73bc6bd28f02a94f3e8488576030368",
+        "base64": "eyJvYnNlcnZlcl9waWQiOjYyODQsInBhcmVudF9waWQiOjMwMjQsInBhcmVudF9uYW1lIjoiY21kLmV4ZSIsInBhcmVudF9jb21tYW5kX2xpbmUiOiJjbWQgIC9kIC9jICBwb3dlcnNoZWxsLmV4ZSAtTm9Qcm9maWxlIC1Ob25JbnRlcmFjdGl2ZSAtRmlsZSBvYnNlcnZlLWNoaWxkLnBzMSBrZXk9dmFsdWUiLCJhcmd1bWVudHMiOlsia2V5PXZhbHVlIl19DQo=",
+        "text": "{\"observer_pid\":6284,\"parent_pid\":3024,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /c  powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\",\"arguments\":[\"key=value\"]}\r\n"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture.txt": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        }
+      },
+      "owned_children": [
+        {
+          "observer_pid": 6284,
+          "parent_pid": 3024,
+          "parent_name": "cmd.exe",
+          "parent_command_line": "cmd  /d /c  powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value",
+          "arguments": [
+            "key=value"
+          ]
+        }
+      ],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "child_quoted_inner",
+      "kind": "child",
+      "command": "cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value>capture.txt\"",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value>capture.txt\"",
+      "outer_pid": 1720,
+      "actual_exit": 0,
+      "seconds": 0.29921039999999266,
+      "timeout": false,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture.txt": {
+          "bytes": 223,
+          "sha256": "804d7978fe9987430550dccb97aadfce1fa39f844bd6a4ef34b5dd527631e770",
+          "base64": "eyJvYnNlcnZlcl9waWQiOjY5NDAsInBhcmVudF9waWQiOjUwODgsInBhcmVudF9uYW1lIjoiY21kLmV4ZSIsInBhcmVudF9jb21tYW5kX2xpbmUiOiJjbWQgIC9kIC9jIFwicG93ZXJzaGVsbC5leGUgLU5vUHJvZmlsZSAtTm9uSW50ZXJhY3RpdmUgLUZpbGUgb2JzZXJ2ZS1jaGlsZC5wczEga2V5PXZhbHVlXHUwMDNlY2FwdHVyZS50eHRcIiIsImFyZ3VtZW50cyI6WyJrZXk9dmFsdWUiXX0NCg==",
+          "text": "{\"observer_pid\":6940,\"parent_pid\":5088,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /c \\\"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\\u003ecapture.txt\\\"\",\"arguments\":[\"key=value\"]}\r\n"
+        }
+      },
+      "owned_children": [
+        {
+          "observer_pid": 6940,
+          "parent_pid": 5088,
+          "parent_name": "cmd.exe",
+          "parent_command_line": "cmd  /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value>capture.txt\"",
+          "arguments": [
+            "key=value"
+          ]
+        }
+      ],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "child_inner_plus_outer",
+      "kind": "child",
+      "command": "cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value>capture.txt\" > \"capture (sales & support).txt\"",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value>capture.txt\" > \"capture (sales & support).txt\"",
+      "outer_pid": 5620,
+      "actual_exit": 0,
+      "seconds": 0.2942589999999967,
+      "timeout": false,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture (sales & support).txt": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "capture.txt": {
+          "bytes": 224,
+          "sha256": "34dabaaddf842a863cb17d6126afef00243209fdaae16ceb1d8d926b2be3d6bf",
+          "base64": "eyJvYnNlcnZlcl9waWQiOjQ5NjAsInBhcmVudF9waWQiOjY4MjAsInBhcmVudF9uYW1lIjoiY21kLmV4ZSIsInBhcmVudF9jb21tYW5kX2xpbmUiOiJjbWQgIC9kIC9jIFwicG93ZXJzaGVsbC5leGUgLU5vUHJvZmlsZSAtTm9uSW50ZXJhY3RpdmUgLUZpbGUgb2JzZXJ2ZS1jaGlsZC5wczEga2V5PXZhbHVlXHUwMDNlY2FwdHVyZS50eHRcIiAiLCJhcmd1bWVudHMiOlsia2V5PXZhbHVlIl19DQo=",
+          "text": "{\"observer_pid\":4960,\"parent_pid\":6820,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /c \\\"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\\u003ecapture.txt\\\" \",\"arguments\":[\"key=value\"]}\r\n"
+        }
+      },
+      "owned_children": [
+        {
+          "observer_pid": 4960,
+          "parent_pid": 6820,
+          "parent_name": "cmd.exe",
+          "parent_command_line": "cmd  /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value>capture.txt\" ",
+          "arguments": [
+            "key=value"
+          ]
+        }
+      ],
+      "cleanup": null,
+      "required_pass": true
+    },
+    {
+      "id": "child_grouped_outer",
+      "kind": "child",
+      "command": "(cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\" > \"capture (sales & support).txt\")",
+      "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c (cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\" > \"capture (sales & support).txt\")",
+      "outer_pid": 5708,
+      "actual_exit": 0,
+      "seconds": 0.3044115000000005,
+      "timeout": false,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": "",
+        "text": ""
+      },
+      "files": {
+        "capture (sales & support).txt": {
+          "bytes": 207,
+          "sha256": "900dc300a86a6173ca7fbaffb51a29194f14ad8ba7d8338ded2bf42b725970a3",
+          "base64": "eyJvYnNlcnZlcl9waWQiOjY5NjQsInBhcmVudF9waWQiOjEwOTIsInBhcmVudF9uYW1lIjoiY21kLmV4ZSIsInBhcmVudF9jb21tYW5kX2xpbmUiOiJjbWQgIC9kIC9jIFwicG93ZXJzaGVsbC5leGUgLU5vUHJvZmlsZSAtTm9uSW50ZXJhY3RpdmUgLUZpbGUgb2JzZXJ2ZS1jaGlsZC5wczEga2V5PXZhbHVlXCIgIiwiYXJndW1lbnRzIjpbImtleT12YWx1ZSJdfQ0K",
+          "text": "{\"observer_pid\":6964,\"parent_pid\":1092,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /c \\\"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\\\" \",\"arguments\":[\"key=value\"]}\r\n"
+        }
+      },
+      "owned_children": [
+        {
+          "observer_pid": 6964,
+          "parent_pid": 1092,
+          "parent_name": "cmd.exe",
+          "parent_command_line": "cmd  /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\" ",
+          "arguments": [
+            "key=value"
+          ]
+        }
+      ],
+      "cleanup": null,
+      "required_pass": true
+    }
+  ],
+  "record_count": 31,
+  "failures": [],
+  "scope": "All rows require a bounded exit zero; child rows additionally require one JSON record from their own observer and immediate Cmd parent. Exact text and file bytes are observations, not guessed expected values. No production source is modified."
+}
