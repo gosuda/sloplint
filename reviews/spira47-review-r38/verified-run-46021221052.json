@@ -1,0 +1,829 @@
+{
+  "schema": 1,
+  "conclusion": "success",
+  "producer": "e168a19f2ace42724d73932297f16b65fa0f9d84",
+  "run": 46021221052,
+  "job": 140581049752,
+  "url": "https://github.com/gosuda/sloplint/actions/runs/46021221052",
+  "artifact": {
+    "id": 15210655064,
+    "name": "spira47-dollar-runtime-completion-r38",
+    "bytes": 812892,
+    "zip_sha256": "6893d1b112c55f48d689b5c0b24af2249f8901c3c1a3b81f71e92d51707163dd",
+    "api_upload_digest_match": true,
+    "downloaded_by_chat_coordinator": false
+  },
+  "raw_log_sha256": "3e2350c3d67e08101d4cfc6c14f501ddd34e87baafbd69ca9939344d3b0a3e92",
+  "coordinator_validation": {
+    "command_count": 21,
+    "all_actual_command_log_hashes": true,
+    "all_starts_results_report_exact": true,
+    "all_expected_exits": true,
+    "no_timeouts": true,
+    "both_manifests_match": true,
+    "complete_source_identity_stable": true,
+    "complete_original_restored": true
+  },
+  "source": {
+    "repository": "gosuda/spira",
+    "base_head": "593d792bf282f7b7119dafb057a389b04c91fd6d",
+    "actual_main_at_launch": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "candidate_tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+    "candidate_blobs": 621,
+    "candidate_index_sha256": "3ac9074f7cdce055c9d99c656ea683e5323921dc8beee595debf175b6f80e7a1",
+    "source_proposal": "b59e61effa0f165eebdffc21e17f7ccf43238e63",
+    "authored_sha256": "ba4813fb7bcae07979f275f59441c7b1ea5daaa4ad425f8a410f224d735a1139",
+    "files": [
+      {
+        "path": "cmd/sqlc-gen-spira/dollar_literal_test.lgo",
+        "mode": "100644",
+        "sha256": "874339543c92b97a33433fd8e121ac0fd7a7e80c2a6ffe9310194cd72db758bf",
+        "blob": "e6c311ff218b614622f4ee74747c9d031189d447"
+      },
+      {
+        "path": "cmd/sqlc-gen-spira/testdata/dollar-strings.json",
+        "mode": "100644",
+        "sha256": "067a846ece8471f659dcab5c2a69f25ae3aee33f4437e5d07b33317d201af70f",
+        "blob": "1f2af327b48884a1c2da50d5066a3ad083a2a388"
+      },
+      {
+        "path": "cmd/sqlc-gen-spira/query_constants_test.lgo",
+        "mode": "100644",
+        "sha256": "bccb80d5452b4aca2c1097a712926df09cf642ed7108c470a103744c7037bf40",
+        "blob": "663a599b8290d17d3e70f6f637787885d7f9e557"
+      },
+      {
+        "path": "cmd/sqlc-gen-spira/testdata/query_constants_test.lgo.tmpl",
+        "mode": "100644",
+        "sha256": "aeb23535b145fb6946780121cbbc1c77f44361bd05ad496b8bcf32e2b9aefdd6",
+        "blob": "d0c94977a5cc21883143aa68f481ccdbf289588d"
+      },
+      {
+        "path": "cmd/sqlc-gen-spira/testdata/query-constant-values.json",
+        "mode": "100644",
+        "sha256": "a15051e112569f683775ec9242b5077d7c9fe167b8d852062b838d8ab68cfbd7",
+        "blob": "21c52f821a31be96a94a456f9f26b66475a22e3b"
+      },
+      {
+        "path": "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo",
+        "mode": "100644",
+        "sha256": "59735304ef40f43d0ae2a153a8dbde7e96d766eede9d5bd5e0ab810f1a35be9e",
+        "blob": "5c2a1a0e6ba5dd4a31aced8750946ef1d745c706"
+      },
+      {
+        "path": "cmd/sqlc-gen-spira/testdata/sqlc-literal-pipeline.json",
+        "mode": "100644",
+        "sha256": "ad36d1af1d66770d6a3f6bcaf911787b3141f824c8316d59723529dc2f3650b8",
+        "blob": "211d22e91affb7fda7baf64cef20fa01978d0371"
+      },
+      {
+        "path": "cmd/sqlc-gen-spira/model.lgo",
+        "mode": "100644",
+        "sha256": "097b8f4a47f905fb8d2cf329358bbdda0e24cdffcbaa1d35028b444bc458fad1",
+        "blob": "0f170412a191b644ed7081f00ab06f30564b2fb4"
+      },
+      {
+        "path": "cmd/sqlc-gen-spira/gen.lgo",
+        "mode": "100644",
+        "sha256": "02fa1b9a06cac5d1b04c1d889e6e9a4ddc47e5fabcb714eb58efa92b2a90ccec",
+        "blob": "f4afbff7a211d3f126b63f5b1f313bedba88314f"
+      },
+      {
+        "path": "docs/specs/sqlc-gen-spira.md",
+        "mode": "100644",
+        "sha256": "c8708c7579e2552c8ac8b6186190ff929b91d56361a215cfbc3b1da033d0d523",
+        "blob": "4a57ea5483b9508962033e7e37bb19d1b1353d32"
+      }
+    ]
+  },
+  "actual_source_gates": [
+    {
+      "name": "just-gate",
+      "command": [
+        "just",
+        "gate"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "49a95c32a6eeb8512df8201d5166293cc570a43b6c0b857ab97e6a8601a02139"
+    },
+    {
+      "name": "just-slop",
+      "command": [
+        "just",
+        "slop"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f075cb3086483bc3725b82581577ca383a28e5e8ed63c1143815ae7eb2cad2e0"
+    },
+    {
+      "name": "just-eject",
+      "command": [
+        "just",
+        "eject"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fa1ed21baaeab17f540fea001cb379123cc9bda7129b5c539f920d4c759d1f06"
+    }
+  ],
+  "focused_verification": {
+    "dollar_passed": 14,
+    "dollar_failed": 0,
+    "pipeline_passed": 40,
+    "pipeline_failed": 0,
+    "direct_compiled_queries": 8,
+    "direct_compiled_mismatches": [],
+    "pipeline_compiled_queries": 32,
+    "pipeline_compiled_mismatches": [],
+    "pipeline_outcomes": {
+      "generated": 32,
+      "upstream-rejection": 4,
+      "version-refusal": 4
+    },
+    "native_original": 48,
+    "native_original_matches": true,
+    "captured_requests": 36,
+    "captured_native_matches": true,
+    "direct_compiled_native": 8,
+    "direct_compiled_native_matches": true,
+    "pipeline_compiled_native": 32,
+    "pipeline_compiled_native_matches": true,
+    "native_version": "180007",
+    "archive_authenticated_by_completion": true,
+    "command_logs_authenticated": 195,
+    "producer_run": 46016220487,
+    "producer_conclusion": "failure",
+    "boundary": "Only the completed unchanged-production REDs, candidate focused tests and native observations are reused. The earlier failed full gate is not a pass."
+  },
+  "preserved_failures": [
+    {
+      "run": 46016220487,
+      "producer": "94dadaf62ae595080dd34e51a9cebd0bae0acd75",
+      "actual_gate_exit": 127,
+      "reason": "rg missing",
+      "receipt": "https://github.com/gosuda/sloplint/blob/22b1169d349a89e7b48cc040b5c13a6055e1abf6/reviews/spira47-review-r38/failed-run-46016220487.json",
+      "receipt_sha256": "e79a770d817feaddf59e5d7e643a3a44af9fb9c68f8e1c6853bd0f0dcc83e626"
+    },
+    {
+      "run": 46019378430,
+      "producer": "52e03d798e5aa54d3b45f21c0439f3bff122ad5b",
+      "actual_setup_exit": 1,
+      "source_driver_started": false,
+      "artifact_created": false,
+      "receipt": "https://github.com/gosuda/sloplint/blob/e168a19f2ace42724d73932297f16b65fa0f9d84/reviews/spira47-review-r38/failed-setup-46019378430.json",
+      "receipt_sha256": "619ce4a7e2ef20c5ad74efc840e047c3681d736dd212428cd468291597f4e051"
+    }
+  ],
+  "ripgrep_native_confirmation": {
+    "version": "ripgrep 15.1.0 (rev af60c2de9d)",
+    "archive_sha256": "1c9297be4a084eea7ecaedf93eb03d058d6faae29bbc57ecdaf5063921491599",
+    "full_version_log_sha256": "1ddd66e93a293afa0064953516898709c91ccb09fad39af951da1e52f58d2465"
+  },
+  "sloplint": {
+    "files": 373,
+    "findings": 1,
+    "blocker": 0,
+    "critical": 0,
+    "major": 0,
+    "minor": 1,
+    "skipped": 12,
+    "unchanged_finding": "web/web.lgo:116 Handle generic-name",
+    "threshold": "major; unchanged"
+  },
+  "limits": [
+    "No just engines run is claimed.",
+    "No upstream-Go runtime execution of temporary generated test packages is claimed; actual just eject completed the official Go1.27.4 build.",
+    "Four native-valid input forms remain rejected by pinned sqlc before plugin execution; all four refusal paths remain asserted."
+  ],
+  "reviews": {
+    "source": {
+      "reviewer": "/root/bitcoin_round7",
+      "proposal": "b59e61effa0f165eebdffc21e17f7ccf43238e63",
+      "sha256": "ba4813fb7bcae07979f275f59441c7b1ea5daaa4ad425f8a410f224d735a1139",
+      "candidate_tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+      "full_tree_blobs": 621,
+      "verdict": "No blocking source, test or oracle finding. Native final source gates pending; no execution by reviewer."
+    },
+    "full_driver": {
+      "reviewer": "/root/bitcoin_round7",
+      "original_draft": "b3d366330e19d4b0b464e8b0f86a816e9971c414",
+      "corrected_draft": "c460b34b2080d9b2d55e09572c3efffb7b5ffda9",
+      "verdict": "No remaining blocking source/test/driver finding after including the unchanged transitive pipeline observer and its SHA-256.",
+      "correction_sha256": "c3a797b3fd4a9312c2d009bcc462426bfde91bd724398b306d1292eccbcad039",
+      "coordinator_readback": true,
+      "native_execution_claim": false,
+      "reviewer_correction_independently_verified": true,
+      "final_manifest_sha256": "411f45334c4ad2ba03b923d4d761519a644d17df90f1250248095e24186ba9be",
+      "final_declared_hash_count": 20
+    },
+    "completion": {
+      "reviewer": "/root/bitcoin_round7/bamti_relation_followup/elegant_mermaid_followup",
+      "commit": "52ed94cd9bc8152c515419134d82d1584cad8a8a",
+      "verdict": "No concrete blocker. All22 proof hashes/transitive imports,10 source paths,actual195 receipts/report and official ripgrep asset digest independently matched.",
+      "native_execution": false,
+      "artifact_zip_download": false,
+      "source": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+      "driver_sha256": "e4964d090832d64e8820aeecdc270a786647922fdb8d0cb34ad28b0fa183f540",
+      "support_sha256": "26e7f6822ff3299959c47468c7ff87ba0cb6734603140b9039a106fa822f30de",
+      "manifest_sha256": "f269bc4c0859be44aa02bb668032804ce104ac3983d92dc8941b7043721d351a",
+      "workflow_sha256": "00147aa0e080dbede628bb795bbf70b90807cd5b8bfa441ede0ca7a61940d80d"
+    },
+    "observer_correction": {
+      "reviewer": "/root/bitcoin_round7/bamti_relation_followup/elegant_mermaid_followup",
+      "commit": "e168a19f2ace42724d73932297f16b65fa0f9d84",
+      "verdict": "No concrete blocker. Exact display-format-only driver change, installer evidence/order change and all21 other proof identities independently checked; source/gates/authentication/restoration unchanged.",
+      "driver_sha256": "70c71a8fce9caff5e720811937c83522b955f3a5182be4eb072b3737ffa96d59",
+      "workflow_sha256": "94ab4aa3f5fa311e8ed25c722abf51be4310f1092bdf67dbe16270851c9e9b3a",
+      "manifest_sha256": "82344175ae01e29589bfcd5705e195f4075fe61e002119d92baa7befb203fcd7",
+      "native_execution": false
+    }
+  },
+  "source_gates_passed": true,
+  "source_restored": true,
+  "publication_eligible": true,
+  "source_publication_pending": true,
+  "full_report": {
+    "schema": 1,
+    "completion_manifest": {
+      "schema": 1,
+      "purpose": "Authenticate the unchanged candidate's completed focused evidence and execute all remaining full source gates after installing the missing required ripgrep tool.",
+      "source": {
+        "repository": "gosuda/spira",
+        "head": "593d792bf282f7b7119dafb057a389b04c91fd6d",
+        "tree": "1ec9a3d1e6a53ad1a50723869c6d381cf64d7877",
+        "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+        "blobs": 616,
+        "index_file": "source-index.json"
+      },
+      "candidate": {
+        "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+        "blobs": 621,
+        "index_file": "candidate-index.json",
+        "changed_paths": [
+          "cmd/sqlc-gen-spira/dollar_literal_test.lgo",
+          "cmd/sqlc-gen-spira/testdata/dollar-strings.json",
+          "cmd/sqlc-gen-spira/query_constants_test.lgo",
+          "cmd/sqlc-gen-spira/testdata/query_constants_test.lgo.tmpl",
+          "cmd/sqlc-gen-spira/testdata/query-constant-values.json",
+          "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo",
+          "cmd/sqlc-gen-spira/testdata/sqlc-literal-pipeline.json",
+          "cmd/sqlc-gen-spira/model.lgo",
+          "cmd/sqlc-gen-spira/gen.lgo",
+          "docs/specs/sqlc-gen-spira.md"
+        ]
+      },
+      "original_manifest_sha256": "411f45334c4ad2ba03b923d4d761519a644d17df90f1250248095e24186ba9be",
+      "proof_sha256": {
+        "baseline_support.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
+        "native_support.py": "d288f94d76a058d418a289b8c6dc4a77e0a1fbbf00ef52f3b5dbdc53da8d531e",
+        "verify_baseline.py": "49d5a534981a8bdb69273f62b31d58b210e198be2b74416b5af94eaf3c091e44",
+        "artifact_support.py": "b3f27ccd5d75efea94530f1294d7e0d23d89b46d7d9e5771cc0b3d32a56d1b28",
+        "candidate_support.py": "6ce7910d468e426e034ccf7c1ef286fd56866571cfeb437b67098b5b57ed8c49",
+        "pipeline_support.py": "5d80d840defefd6df01bcc6fd0c056cd9781c2de1d13e2d10890540db66e53ad",
+        "verify_candidate.py": "e2835159527ec276d9cad9a319ed5fde245576713a26b63f6e78c47847c0070f",
+        "authored-candidate.json": "ba4813fb7bcae07979f275f59441c7b1ea5daaa4ad425f8a410f224d735a1139",
+        "source-index.json": "8db1a56dbe2e97087478a3e25b5a7298cb2c75f42607d2ffb51def942834b2b6",
+        "current-final-tests-index.json": "dae20fec3dc054f9351a1e69e5eac8edf3815db1a8b186dfdf8f7e28af33cd3e",
+        "candidate-index.json": "628d91c699ed64ab99c4dd00f936fc2187aa5d7daa53377e306daae80177b9fc",
+        "dollar-strings-final.json": "067a846ece8471f659dcab5c2a69f25ae3aee33f4437e5d07b33317d201af70f",
+        "query-constant-values.json": "a15051e112569f683775ec9242b5077d7c9fe167b8d852062b838d8ab68cfbd7",
+        "retained-native-cases.json": "50ddfc2bfad5d2454d4557d54c8f2d08ad2f3281596dce28fd4f624ac0423b78",
+        "sqlc-literal-pipeline-final.json": "ad36d1af1d66770d6a3f6bcaf911787b3141f824c8316d59723529dc2f3650b8",
+        "schema.sql": "bfa56ef159e985b85976918f7fdc7bb79c82095913a8470ce42fd6494b2e99cc",
+        "baseline-report.json": "b79f38301fd14dc0d15a53584402a70c5dd0450ab782cebd090b46bbbc448ce1",
+        "candidate-manifest.json": "411f45334c4ad2ba03b923d4d761519a644d17df90f1250248095e24186ba9be",
+        "pipeline_observer.py": "c3a797b3fd4a9312c2d009bcc462426bfde91bd724398b306d1292eccbcad039",
+        "verify_completion.py": "70c71a8fce9caff5e720811937c83522b955f3a5182be4eb072b3737ffa96d59",
+        "completion_support.py": "26e7f6822ff3299959c47468c7ff87ba0cb6734603140b9039a106fa822f30de",
+        "failed-candidate-report.json": "c2ad7f02bae0908373e46f3daea62c023abd7a750e41ec377fe45df637654cb6"
+      },
+      "workflow": ".github/workflows/spira47-review-r38.yml",
+      "workflow_sha256": "94ab4aa3f5fa311e8ed25c722abf51be4310f1092bdf67dbe16270851c9e9b3a",
+      "focused_artifact": {
+        "producer": "94dadaf62ae595080dd34e51a9cebd0bae0acd75",
+        "run": 46016220487,
+        "job": 140563913964,
+        "artifact": 15205559337,
+        "name": "spira47-dollar-runtime-candidate-r38",
+        "zip_bytes": 922998,
+        "zip_sha256": "30e8a5e7155b95a44a45c53154c541766851b564d3d77c13dd5f33051bddf136",
+        "conclusion": "failure"
+      },
+      "failed_gate_log_sha256": "93092c961cb8d7d550f35191c99d73f66cc5f658cb1e662c92fb872188713908",
+      "candidate_index_sha256": "3ac9074f7cdce055c9d99c656ea683e5323921dc8beee595debf175b6f80e7a1",
+      "failure_receipt": {
+        "commit": "22b1169d349a89e7b48cc040b5c13a6055e1abf6",
+        "path": "reviews/spira47-review-r38/failed-run-46016220487.json",
+        "sha256": "e79a770d817feaddf59e5d7e643a3a44af9fb9c68f8e1c6853bd0f0dcc83e626",
+        "raw_log_sha256": "51e10622d453ba9c92fa065c2336fb0f69d21cb1c578b55017055bd615b1ee55"
+      },
+      "ripgrep": {
+        "version": "15.1.0",
+        "url": "https://github.com/BurntSushi/ripgrep/releases/download/15.1.0/ripgrep-15.1.0-x86_64-unknown-linux-musl.tar.gz",
+        "sha256": "1c9297be4a084eea7ecaedf93eb03d058d6faae29bbc57ecdaf5063921491599",
+        "source": "Official BurntSushi/ripgrep release API digest",
+        "version_format": {
+          "source_commit": "af60c2de9d85e7f3d81c78601669468cf02dabab",
+          "path": "crates/core/flags/doc/version.rs",
+          "accepted": "ripgrep 15.1.0 with optional '(rev HEX)' suffix; full output preserved; exact archive digest remains mandatory."
+        }
+      },
+      "reuse_boundary": "All 195 original command logs and the exact failed report/source identities are authenticated. Focused RED/GREEN/native evidence is reused; failed just gate is not reused as a pass. Actual just gate, just slop and just eject are required again.",
+      "product_changes": false,
+      "source_gate_threshold_changes": false,
+      "publication_eligible": false,
+      "setup_failure": {
+        "run": 46019378430,
+        "job": 140574730781,
+        "producer": "52e03d798e5aa54d3b45f21c0439f3bff122ad5b",
+        "raw_exit": 1,
+        "artifact_created": false,
+        "source_driver_started": false,
+        "raw_log_sha256": "00767d3eecff80a7b8f54a1b775d0561cf86c03b8f089eeb8f1f4bff27227aa5",
+        "receipt_sha256": "619ce4a7e2ef20c5ad74efc840e047c3681d736dd212428cd468291597f4e051"
+      }
+    },
+    "source_manifest": {
+      "schema": 1,
+      "purpose": "Prove unchanged-production final regression tests, exact compiled query values and native PostgreSQL semantics, then all prescribed source gates on the reviewed repair.",
+      "source": {
+        "repository": "gosuda/spira",
+        "head": "593d792bf282f7b7119dafb057a389b04c91fd6d",
+        "tree": "1ec9a3d1e6a53ad1a50723869c6d381cf64d7877",
+        "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+        "blobs": 616,
+        "index_file": "source-index.json"
+      },
+      "current_tests": {
+        "tree": "bed0006e87b548f6d2c668d538243a73c9f3f39c",
+        "blobs": 621,
+        "index_file": "current-final-tests-index.json",
+        "scope": "Only the seven final test/data paths applied to unchanged maintained production."
+      },
+      "candidate": {
+        "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+        "blobs": 621,
+        "index_file": "candidate-index.json",
+        "changed_paths": [
+          "cmd/sqlc-gen-spira/dollar_literal_test.lgo",
+          "cmd/sqlc-gen-spira/testdata/dollar-strings.json",
+          "cmd/sqlc-gen-spira/query_constants_test.lgo",
+          "cmd/sqlc-gen-spira/testdata/query_constants_test.lgo.tmpl",
+          "cmd/sqlc-gen-spira/testdata/query-constant-values.json",
+          "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo",
+          "cmd/sqlc-gen-spira/testdata/sqlc-literal-pipeline.json",
+          "cmd/sqlc-gen-spira/model.lgo",
+          "cmd/sqlc-gen-spira/gen.lgo",
+          "docs/specs/sqlc-gen-spira.md"
+        ]
+      },
+      "proof_sha256": {
+        "baseline_support.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
+        "native_support.py": "d288f94d76a058d418a289b8c6dc4a77e0a1fbbf00ef52f3b5dbdc53da8d531e",
+        "verify_baseline.py": "49d5a534981a8bdb69273f62b31d58b210e198be2b74416b5af94eaf3c091e44",
+        "artifact_support.py": "b3f27ccd5d75efea94530f1294d7e0d23d89b46d7d9e5771cc0b3d32a56d1b28",
+        "candidate_support.py": "6ce7910d468e426e034ccf7c1ef286fd56866571cfeb437b67098b5b57ed8c49",
+        "pipeline_support.py": "5d80d840defefd6df01bcc6fd0c056cd9781c2de1d13e2d10890540db66e53ad",
+        "verify_candidate.py": "e2835159527ec276d9cad9a319ed5fde245576713a26b63f6e78c47847c0070f",
+        "authored-candidate.json": "ba4813fb7bcae07979f275f59441c7b1ea5daaa4ad425f8a410f224d735a1139",
+        "source-index.json": "8db1a56dbe2e97087478a3e25b5a7298cb2c75f42607d2ffb51def942834b2b6",
+        "current-final-tests-index.json": "dae20fec3dc054f9351a1e69e5eac8edf3815db1a8b186dfdf8f7e28af33cd3e",
+        "candidate-index.json": "628d91c699ed64ab99c4dd00f936fc2187aa5d7daa53377e306daae80177b9fc",
+        "dollar-strings-final.json": "067a846ece8471f659dcab5c2a69f25ae3aee33f4437e5d07b33317d201af70f",
+        "query-constant-values.json": "a15051e112569f683775ec9242b5077d7c9fe167b8d852062b838d8ab68cfbd7",
+        "retained-native-cases.json": "50ddfc2bfad5d2454d4557d54c8f2d08ad2f3281596dce28fd4f624ac0423b78",
+        "sqlc-literal-pipeline-final.json": "ad36d1af1d66770d6a3f6bcaf911787b3141f824c8316d59723529dc2f3650b8",
+        "schema.sql": "bfa56ef159e985b85976918f7fdc7bb79c82095913a8470ce42fd6494b2e99cc",
+        "baseline-report.json": "b79f38301fd14dc0d15a53584402a70c5dd0450ab782cebd090b46bbbc448ce1",
+        "pipeline_observer.py": "c3a797b3fd4a9312c2d009bcc462426bfde91bd724398b306d1292eccbcad039"
+      },
+      "workflow_sha256": "07659444f6bad3113def8b9d73fd0890292f6ed40c22c1da8da8aef1c9271467",
+      "toolchain": {
+        "repository": "gosuda/LoGOs",
+        "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+        "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+        "bootstrap_go": "1.27.4",
+        "fresh_build": true
+      },
+      "postgres_image": "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782",
+      "postgres_version_num": "180007",
+      "sqlc_version": "v1.31.2-0.20261023030206-3ad8b20fb02b",
+      "tools": {
+        "node": "26.13.1",
+        "pnpm": "12.21.0",
+        "just": "1.59.0",
+        "uv": "0.13.9",
+        "python": "3.15"
+      },
+      "baseline_artifact": {
+        "producer": "c95e03f77fe277a4f973ce475e8804dd983fa42b",
+        "run": 46010784691,
+        "job": 140545433373,
+        "artifact": 15203947679,
+        "name": "spira47-dollar-runtime-baseline-r38",
+        "zip_bytes": 346701,
+        "zip_sha256": "42ba8f98c5cee2703cb0c10a2efd062836d425fc6431e19a09806e4aa361fd9f",
+        "conclusion": "success"
+      },
+      "linter_artifact": {
+        "producer": "bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+        "run": 45765398446,
+        "job": 139724970737,
+        "artifact": 15091303567,
+        "name": "lean-rust-and-cli-bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+        "zip_bytes": 17472007,
+        "zip_sha256": "e362f672d39498374a637a68ded7f57205b415e68006a4dc4a4a882405f5af33",
+        "binary_sha256": "a04c9c3e53c8aae18e2d5f89faaf3ad68b89980218ca9d1fc4af5ce487401024",
+        "conclusion": "success"
+      },
+      "contracts": {
+        "dollar_cases": 14,
+        "original_dollar_prefix_unchanged": 13,
+        "direct_compiled_cases": 8,
+        "pipeline_cases": 40,
+        "generated_packages": 32,
+        "version_refusals": 4,
+        "upstream_refusals": 4,
+        "unchanged_pipeline_red": 11,
+        "unchanged_pipeline_controls": 29,
+        "original_native": 48,
+        "captured_request_native": 36,
+        "compiled_query_native": 40,
+        "source_literal_spelling": "Only declaration identity is checked lexically; complete generated packages are compiled and runtime values must equal external JSON byte-for-byte."
+      },
+      "source_review": {
+        "proposal": "b59e61effa0f165eebdffc21e17f7ccf43238e63",
+        "authored_sha256": "ba4813fb7bcae07979f275f59441c7b1ea5daaa4ad425f8a410f224d735a1139",
+        "parent_review_pending": true,
+        "child_design_review": "No blocking dollar-token design finding; doubled-quote identifier control appended without changing original 13."
+      },
+      "prior_scope": {
+        "r37_source": "593d792bf282f7b7119dafb057a389b04c91fd6d",
+        "r37_full_run": 46003935409,
+        "r37_retired_at": "870adb73916931b75bdb48076d34a7870fcc9323",
+        "r38_baseline_receipt": "5a9e19a49eda94237f6a2b3fd16326bb18aafd53",
+        "new_threads": [
+          "PRRT_kwDOVpFduc68zFK3",
+          "PRRT_kwDOVpFduc68zFMT"
+        ]
+      },
+      "publication_eligible": false
+    },
+    "source_gates_passed": true,
+    "source_restored": true,
+    "publication_eligible": true,
+    "before": {
+      "label": "source",
+      "tree": "1ec9a3d1e6a53ad1a50723869c6d381cf64d7877",
+      "blobs": 616,
+      "index_sha256": "6a7281d2131f03a2f2494e090d5d8569fe2b583f0e8e660fb054f5f5fd233a85"
+    },
+    "reused_focused": {
+      "producer": "94dadaf62ae595080dd34e51a9cebd0bae0acd75",
+      "run": 46016220487,
+      "job": 140563913964,
+      "artifact": 15205559337,
+      "name": "spira47-dollar-runtime-candidate-r38",
+      "zip_bytes": 922998,
+      "zip_sha256": "30e8a5e7155b95a44a45c53154c541766851b564d3d77c13dd5f33051bddf136",
+      "producer_conclusion": "failure",
+      "download_digest_verified": true,
+      "command_logs_verified": 195,
+      "producer_remains_failed": true,
+      "failed_gate": "just gate: raw 127, rg missing; slop/eject not reached",
+      "reused_scope": "Frozen unchanged-production REDs, focused candidate tests and native PostgreSQL observations only.",
+      "full_source_gate_reuse": false,
+      "candidate": {
+        "label": "candidate",
+        "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+        "blobs": 621,
+        "index_sha256": "3ac9074f7cdce055c9d99c656ea683e5323921dc8beee595debf175b6f80e7a1"
+      },
+      "original": {
+        "label": "source",
+        "tree": "1ec9a3d1e6a53ad1a50723869c6d381cf64d7877",
+        "blobs": 616,
+        "index_sha256": "6a7281d2131f03a2f2494e090d5d8569fe2b583f0e8e660fb054f5f5fd233a85"
+      },
+      "native_original": 48,
+      "native_captured": 36,
+      "native_compiled": 40,
+      "pipeline_partition": {
+        "generated": 32,
+        "version-refusal": 4,
+        "upstream-rejection": 4
+      }
+    },
+    "linter": {
+      "producer": "bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+      "run": 45765398446,
+      "job": 139724970737,
+      "artifact": 15091303567,
+      "name": "lean-rust-and-cli-bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+      "zip_bytes": 17472007,
+      "zip_sha256": "e362f672d39498374a637a68ded7f57205b415e68006a4dc4a4a882405f5af33",
+      "producer_conclusion": "success",
+      "download_digest_verified": true,
+      "binary_sha256": "a04c9c3e53c8aae18e2d5f89faaf3ad68b89980218ca9d1fc4af5ce487401024",
+      "binary_bytes": 191012744,
+      "version": "sloplint 0.1.0",
+      "source": "bc2067d1ec888789e6584dc6a24e8c67d1b0b506"
+    },
+    "candidate_before": {
+      "label": "candidate",
+      "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+      "blobs": 621,
+      "index_sha256": "3ac9074f7cdce055c9d99c656ea683e5323921dc8beee595debf175b6f80e7a1"
+    },
+    "candidate_after": {
+      "label": "candidate",
+      "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+      "blobs": 621,
+      "index_sha256": "3ac9074f7cdce055c9d99c656ea683e5323921dc8beee595debf175b6f80e7a1"
+    },
+    "restored": {
+      "label": "source",
+      "tree": "1ec9a3d1e6a53ad1a50723869c6d381cf64d7877",
+      "blobs": 616,
+      "index_sha256": "6a7281d2131f03a2f2494e090d5d8569fe2b583f0e8e660fb054f5f5fd233a85"
+    },
+    "commands": [
+      {
+        "name": "proof-head",
+        "command": [
+          "git",
+          "-C",
+          "/home/runner/work/sloplint/sloplint/proof",
+          "rev-parse",
+          "HEAD"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "9d976ec5a5fd828ecabab5f7595309c3d54e35adffabf2c12cb95e2251e7c75f"
+      },
+      {
+        "name": "source-head",
+        "command": [
+          "git",
+          "rev-parse",
+          "HEAD"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "8b5c0c72a1604715f006a54361faf570e93efb1f6d54b104de900c8792951a85"
+      },
+      {
+        "name": "logos-version",
+        "command": [
+          "logos",
+          "version"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "3a7b14cf792a79c78a9e42aab8906e0774b54ecddbbbc520ce94651a34aec2f9"
+      },
+      {
+        "name": "node-version",
+        "command": [
+          "node",
+          "--version"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "417336d0f30f0481a3e337b10abf4da8263d1a181c639c757a2a68401935bdb6"
+      },
+      {
+        "name": "pnpm-version",
+        "command": [
+          "pnpm",
+          "--version"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "6ee1d7e9e7a434fa5d1f756e268596cff8e9d03d453fd81462507b1d7ba22e6f"
+      },
+      {
+        "name": "just-version",
+        "command": [
+          "just",
+          "--version"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "9b7567d90fbce31fba37284f79c4d38cbbe20b42fa01cfa5504d27838a5e11ce"
+      },
+      {
+        "name": "ripgrep-version",
+        "command": [
+          "rg",
+          "--version"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "1ddd66e93a293afa0064953516898709c91ccb09fad39af951da1e52f58d2465"
+      },
+      {
+        "name": "go-cache-disabled",
+        "command": [
+          "go",
+          "env",
+          "GOCACHEPROG"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+      },
+      {
+        "name": "sloplint-version",
+        "command": [
+          "sloplint",
+          "--version"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "234fbe737d28020f20bf97b03b9a7414b7029b6949961325f555d79562413a1f"
+      },
+      {
+        "name": "sqlc-modules",
+        "command": [
+          "go",
+          "-C",
+          "/home/runner/work/sloplint/sloplint/source/tools",
+          "mod",
+          "download"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "sqlc-module",
+        "command": [
+          "go",
+          "-C",
+          "/home/runner/work/sloplint/sloplint/source/tools",
+          "list",
+          "-m",
+          "-json",
+          "github.com/sqlc-dev/sqlc"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "78fe4571c2a0ec0aca3a70bff3218c5a6e5d56ddc513732f01ecd45fd9717dc6"
+      },
+      {
+        "name": "stage-source-10",
+        "command": [
+          "git",
+          "add",
+          "--",
+          "cmd/sqlc-gen-spira/dollar_literal_test.lgo",
+          "cmd/sqlc-gen-spira/testdata/dollar-strings.json",
+          "cmd/sqlc-gen-spira/query_constants_test.lgo",
+          "cmd/sqlc-gen-spira/testdata/query_constants_test.lgo.tmpl",
+          "cmd/sqlc-gen-spira/testdata/query-constant-values.json",
+          "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo",
+          "cmd/sqlc-gen-spira/testdata/sqlc-literal-pipeline.json",
+          "cmd/sqlc-gen-spira/model.lgo",
+          "cmd/sqlc-gen-spira/gen.lgo",
+          "docs/specs/sqlc-gen-spira.md"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "just-gate",
+        "command": [
+          "just",
+          "gate"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "49a95c32a6eeb8512df8201d5166293cc570a43b6c0b857ab97e6a8601a02139"
+      },
+      {
+        "name": "just-slop",
+        "command": [
+          "just",
+          "slop"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "f075cb3086483bc3725b82581577ca383a28e5e8ed63c1143815ae7eb2cad2e0"
+      },
+      {
+        "name": "just-eject",
+        "command": [
+          "just",
+          "eject"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "fa1ed21baaeab17f540fea001cb379123cc9bda7129b5c539f920d4c759d1f06"
+      },
+      {
+        "name": "whitespace",
+        "command": [
+          "git",
+          "diff",
+          "--cached",
+          "--check",
+          "HEAD"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "tracked-source-unchanged",
+        "command": [
+          "git",
+          "diff",
+          "--exit-code"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "untracked-source",
+        "command": [
+          "git",
+          "ls-files",
+          "--others",
+          "--exclude-standard"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "restore-original-source",
+        "command": [
+          "git",
+          "restore",
+          "--source",
+          "593d792bf282f7b7119dafb057a389b04c91fd6d",
+          "--staged",
+          "--worktree",
+          "--",
+          "."
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "source-restoration",
+        "command": [
+          "git",
+          "diff",
+          "--exit-code",
+          "HEAD"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "restored-untracked-source",
+        "command": [
+          "git",
+          "ls-files",
+          "--others",
+          "--exclude-standard"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  }
+}
