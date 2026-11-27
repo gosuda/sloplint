@@ -43,7 +43,7 @@
     "schema.sql": "8d16f5318bc6ce7490f44cbb53a02fb65fe335c2747e237cba3fa60ba27b862b",
     "artifact_support.py": "b3f27ccd5d75efea94530f1294d7e0d23d89b46d7d9e5771cc0b3d32a56d1b28",
     "prior-report.json": "0581c8331a8463cc5ac6a63e1c752926c7d3b2c12ca7b2b9af73377ee32919e7",
-    "recover_failure.py": "41a8bc4bb407b8d72f47e9d502ef43ad0278fcc42c3bfaf5f2b32098e19fb259",
+    "recover_failure.py": "3001d995c493906bc527692a8fb88c170e4920705e8e28c6c0669eb932b255b3",
     "launch_test.py": "31d90542191330a6be39b61ce5d5dc447dedbbb0b557706ef0a00c9d93a7c733"
   },
   "workflow_sha256": "391ea1a534ebcf27ccd10e3063297b27766efcc41ad1b13a17cbb9bc0c24ddcf",
@@ -93,5 +93,18 @@
     "zip_sha256": "586b6123b6a0a7a829aa89ce9bfd2c9ed5de86c4f30a61b8d6366b2ef63a3c0f",
     "conclusion": "failure"
   },
-  "observer_correction": "The pinned test runner prepends GOROOT/bin to PATH. Its documented -exec hook now invokes the real test binary through a launcher that restores only the observer's PATH priority. Actual test/production bytes, compiler, nested argv expectation and all SQL oracles stay unchanged. The failed archive's complete argv records are authenticated and emitted first. The artifact token is removed from os.environ before the first child command and passed explicitly only to the artifact downloader; it is never restored into the process environment."
+  "observer_correction": "The pinned test runner prepends GOROOT/bin to PATH. Its documented -exec hook now invokes the real test binary through a launcher that restores only the observer's PATH priority. Actual test/production bytes, compiler, nested argv expectation and all SQL oracles stay unchanged. The failed archive's complete argv records are authenticated and emitted first. The artifact token is removed from os.environ before the first child command and passed explicitly only to the artifact downloader; it is never restored into the process environment.",
+  "archive_read_correction": "The immutable ZIP contains full SQLc request payloads that this observer does not consume. Recovery validates every central-directory path and the member-count bound, emits each declared size, and reads only report.json (4 MiB) and logos-argv.jsonl (128 KiB) through bounded streams. ZIP digest/size, run/job identity and exact report equality remain mandatory. The preceding combined archive-bound rejection remains a failed run; no source tests ran there.",
+  "prior_archive_bound_failure": {
+    "producer": "7b166f72cb191b33d710389dccceb4f1cc3577a5",
+    "run": 46029336371,
+    "job": 140608831290,
+    "artifact": 15213971655,
+    "zip_sha256": "93ad4f28096354547558679da6ac5f5ee8c29efd06bd05472604dabbd8d8d916",
+    "raw_job_log_sha256": "bbfa45a5b75374c5442c485a79075da7f6977799b7ac85dd56d4cb4a056b2894",
+    "source_restored": true,
+    "phase": "combined central-directory member-count/aggregate-size check",
+    "source_tests_reached": false,
+    "conclusion": "failure"
+  }
 }

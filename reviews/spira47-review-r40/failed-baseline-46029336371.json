@@ -1,0 +1,223 @@
+{
+  "schema": 1,
+  "producer": "7b166f72cb191b33d710389dccceb4f1cc3577a5",
+  "run": 46029336371,
+  "job": 140608831290,
+  "artifact": {
+    "id": 15213971655,
+    "node_id": "MDg6QXJ0aWZhY3QxNTIxMzk3MTY1NQ==",
+    "name": "spira47-version-reference-baseline-r40",
+    "size_in_bytes": 453531,
+    "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15213971655",
+    "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15213971655/zip",
+    "expired": false,
+    "digest": "sha256:93ad4f28096354547558679da6ac5f5ee8c29efd06bd05472604dabbd8d8d916",
+    "created_at": "2026-11-27T16:00:35Z",
+    "updated_at": "2026-11-27T16:00:35Z",
+    "expires_at": "2026-12-11T16:00:34Z",
+    "workflow_run": {
+      "id": 46029336371,
+      "repository_id": 1424164147,
+      "head_repository_id": 1424164147,
+      "head_branch": "ci/spira47-version-refs-20261127-r40",
+      "head_sha": "7b166f72cb191b33d710389dccceb4f1cc3577a5"
+    }
+  },
+  "zip_sha256": "93ad4f28096354547558679da6ac5f5ee8c29efd06bd05472604dabbd8d8d916",
+  "raw_job_log_sha256": "bbfa45a5b75374c5442c485a79075da7f6977799b7ac85dd56d4cb4a056b2894",
+  "source_restored": true,
+  "phase": "combined central-directory member-count/aggregate-size check",
+  "source_tests_reached": false,
+  "conclusion": "failure",
+  "report": {
+    "schema": 1,
+    "producer": "7b166f72cb191b33d710389dccceb4f1cc3577a5",
+    "run": "46029336371",
+    "manifest": {
+      "schema": 1,
+      "purpose": "Freeze actual PostgreSQL and unchanged public-generator reference roles, plus both actual nested generated-test argument vectors. No production repair is applied.",
+      "source": {
+        "repository": "gosuda/spira",
+        "head": "4bde2ec5e8bf23ffbeca0b4b54e8c9c7c005e33f",
+        "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+        "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+        "blobs": 621,
+        "index_file": "source-index.json"
+      },
+      "tests": {
+        "tree": "0d6a92efd9b8d24e58cdcadad0253c2565759994",
+        "blobs": 623,
+        "index_file": "test-index.json",
+        "changed_paths": [
+          "cmd/sqlc-gen-spira/version_reference_test.lgo",
+          "cmd/sqlc-gen-spira/testdata/version-references.json",
+          "cmd/sqlc-gen-spira/continued_escape_test.lgo"
+        ],
+        "production_unchanged": true
+      },
+      "toolchain": {
+        "repository": "gosuda/LoGOs",
+        "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+        "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+        "bootstrap_go": "1.27.4",
+        "fresh_build": true
+      },
+      "postgres_image": "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782",
+      "postgres_version_num": "180007",
+      "sqlc_version": "v1.31.2-0.20261023030206-3ad8b20fb02b",
+      "proof_sha256": {
+        "baseline_support.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
+        "proof_support.py": "6cc72c815508ccb1c501420c049d7c188ca4577d2ae6b8853eb5228d0c655569",
+        "native_support.py": "eb17dd6d33bcb3256a037de831ce95825c149c7287cad234e6dd438fe7af2953",
+        "capture_logos.py": "e00e719e8eb63b0c3c21889398799c0c0751a54a679a247c8b74d26e1bd77f32",
+        "verify_baseline.py": "5183f60e7e06b197118f7233ba9fb6df4f648255220254b5d2b1cb5bea429f38",
+        "version-references.json": "dd4ce8e234ddd6f4fd668608944dc5bd3b15ce23f3ff9de463d48b9706d8332a",
+        "authored-tests.json": "2910ca457f0cf0e50e7c30530f6944a015390f309b80ef20c8ab4da23e6f495e",
+        "source-index.json": "628d91c699ed64ab99c4dd00f936fc2187aa5d7daa53377e306daae80177b9fc",
+        "test-index.json": "985d70dae339c92251a5a1b4f76f5fc93416b180dff9be9c63f580a4ff92ab75",
+        "schema.sql": "8d16f5318bc6ce7490f44cbb53a02fb65fe335c2747e237cba3fa60ba27b862b",
+        "artifact_support.py": "b3f27ccd5d75efea94530f1294d7e0d23d89b46d7d9e5771cc0b3d32a56d1b28",
+        "prior-report.json": "0581c8331a8463cc5ac6a63e1c752926c7d3b2c12ca7b2b9af73377ee32919e7",
+        "recover_failure.py": "41a8bc4bb407b8d72f47e9d502ef43ad0278fcc42c3bfaf5f2b32098e19fb259",
+        "launch_test.py": "31d90542191330a6be39b61ce5d5dc447dedbbb0b557706ef0a00c9d93a7c733"
+      },
+      "workflow_sha256": "391ea1a534ebcf27ccd10e3063297b27766efcc41ad1b13a17cbb9bc0c24ddcf",
+      "contracts": {
+        "cases": 20,
+        "expected_red": [
+          "reported-alias",
+          "alias-exact",
+          "alias-quoted",
+          "alias-bare",
+          "alias-bare-quoted",
+          "qualifier-only",
+          "function-name",
+          "cast-type",
+          "postfix-type",
+          "typed-literal",
+          "collation-name",
+          "longer-identifier"
+        ],
+        "expected_controls": [
+          "quoted-assignment",
+          "unquoted-assignment",
+          "predicate-only",
+          "qualified-predicate",
+          "returned-reference",
+          "function-argument",
+          "delete-reference",
+          "qualified-returned"
+        ],
+        "native": "Each original and exact captured request executes against PostgreSQL 18.7 and must retain the frozen final row values. RETURNING output is preserved; only the final JSON state is parsed.",
+        "pipeline": "Each current-source call is predicted to generate; actual exits, full request metadata and both generated files are recorded. Any unexpected outcome fails the baseline rather than being relabeled.",
+        "nested_race": "Unmodified shared helper must launch two distinct generated-module test processes with exactly ['test','-count=1','-v','.']; this records the missing -race flag without substituting a fake compiler.",
+        "source_identity": "Complete 621/623 tracked path/blob/mode/tree identities before/after; all original bytes restored. Permanent tests compile before expected RED.",
+        "preserved": "Published14 dollar,12 typed,14 continued,8 direct runtime and40 pipeline cases remain unchanged. Existing version controls run too."
+      },
+      "review": {
+        "parent": "Original baseline reviewed at4884; bounded observer correction pending independent review."
+      },
+      "publication_eligible": false,
+      "prior_failure": {
+        "producer": "5889c641b120ea325e1ff9a04769739db461f039",
+        "run": 46027118627,
+        "job": 140601265244,
+        "artifact": 15213535172,
+        "name": "spira47-version-reference-baseline-r40",
+        "zip_bytes": 503117,
+        "zip_sha256": "586b6123b6a0a7a829aa89ce9bfd2c9ed5de86c4f30a61b8d6366b2ef63a3c0f",
+        "conclusion": "failure"
+      },
+      "observer_correction": "The pinned test runner prepends GOROOT/bin to PATH. Its documented -exec hook now invokes the real test binary through a launcher that restores only the observer's PATH priority. Actual test/production bytes, compiler, nested argv expectation and all SQL oracles stay unchanged. The failed archive's complete argv records are authenticated and emitted first. The artifact token is removed from os.environ before the first child command and passed explicitly only to the artifact downloader; it is never restored into the process environment."
+    },
+    "baseline_verified": false,
+    "observations_complete": false,
+    "source_restored": true,
+    "publication_eligible": false,
+    "before": {
+      "label": "source",
+      "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+      "blobs": 621,
+      "index_sha256": "3ac9074f7cdce055c9d99c656ea683e5323921dc8beee595debf175b6f80e7a1"
+    },
+    "restored": {
+      "label": "source",
+      "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+      "blobs": 621,
+      "index_sha256": "3ac9074f7cdce055c9d99c656ea683e5323921dc8beee595debf175b6f80e7a1"
+    },
+    "commands": [
+      {
+        "name": "proof-head",
+        "command": [
+          "git",
+          "-C",
+          "/home/runner/work/sloplint/sloplint/proof",
+          "rev-parse",
+          "HEAD"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "bf0a4f80c64e821129e48e71f678d49c51bed0af3fcdfb0e6aa9b96622e7d05f"
+      },
+      {
+        "name": "source-head",
+        "command": [
+          "git",
+          "rev-parse",
+          "HEAD"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "5937e4680750159d4f488aa186a50c69c3af9fcd31fb1ddd24e874892adc56d5"
+      },
+      {
+        "name": "restore-original-source",
+        "command": [
+          "git",
+          "restore",
+          "--source",
+          "4bde2ec5e8bf23ffbeca0b4b54e8c9c7c005e33f",
+          "--staged",
+          "--worktree",
+          "--",
+          "."
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "source-restoration",
+        "command": [
+          "git",
+          "diff",
+          "--exit-code",
+          "HEAD"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "untracked-restoration",
+        "command": [
+          "git",
+          "ls-files",
+          "--others",
+          "--exclude-standard"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  },
+  "publication_eligible": false,
+  "error": "ValueError: failed observer artifact exceeds the frozen bound"
+}
