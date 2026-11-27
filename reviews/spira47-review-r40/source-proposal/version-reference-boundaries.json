@@ -1,0 +1,23 @@
+[
+  {
+    "name": "parenthesized-bare-alias",
+    "sql": "UPDATE items SET name = 'changed' RETURNING (name) version;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "qualified-cast-type",
+    "sql": "UPDATE items SET name = 'changed'::public.version;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "function-from-operand",
+    "sql": "UPDATE items SET name = substring(name FROM version + 1);",
+    "allow": true,
+    "native_name": "before",
+    "native_version": 0
+  }
+]
