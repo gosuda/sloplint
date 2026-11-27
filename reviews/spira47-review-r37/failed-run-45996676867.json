@@ -1,0 +1,240 @@
+{
+  "schema": 1,
+  "status": "failure",
+  "producer": "046bffc506d6655280f8d89fa666f52232e68649",
+  "run": 45996676867,
+  "job": 140497686934,
+  "artifact": {
+    "id": 15195684168,
+    "node_id": "MDg6QXJ0aWZhY3QxNTE5NTY4NDE2OA==",
+    "name": "spira47-review-r37",
+    "size_in_bytes": 4273,
+    "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15195684168",
+    "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15195684168/zip",
+    "expired": false,
+    "digest": "sha256:f7583d32da860fd7f6402b1125089c88360607abdcd7de1593b7aabc1e6f8829",
+    "created_at": "2026-11-27T12:15:10Z",
+    "updated_at": "2026-11-27T12:15:10Z",
+    "expires_at": "2026-12-11T12:15:09Z",
+    "workflow_run": {
+      "id": 45996676867,
+      "repository_id": 1424164147,
+      "head_repository_id": 1424164147,
+      "head_branch": "ci/spira47-typed-prefix-20261127-r37",
+      "head_sha": "046bffc506d6655280f8d89fa666f52232e68649"
+    }
+  },
+  "raw_log_sha256": "b33c14af6a0675a2b7049f0b314ea40a02e8b5a1a2c14c3f58c2225170783e33",
+  "report": {
+    "schema": 1,
+    "manifest": {
+      "schema": 1,
+      "purpose": "Freeze typed-literal escape-prefix failures and real source-pinned sqlc preprocessing on unchanged published Spira.",
+      "source": {
+        "repository": "gosuda/spira",
+        "head": "82ce092dd0799ee6f644262d3c724c587350633a",
+        "tree": "d34e094ffcd7ec2f63727bae30b8bf83582a6767",
+        "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+        "blobs": 611
+      },
+      "toolchain": {
+        "repository": "gosuda/LoGOs",
+        "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+        "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+        "bootstrap_go": "1.27.4",
+        "fresh_build": true
+      },
+      "postgres_image": "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782",
+      "postgres_version_num": "180007",
+      "sqlc_version": "v1.31.2-0.20261023030206-3ad8b20fb02b",
+      "proof_sha256": {
+        "verify.py": "e3b226d297cc4e011251d8d44f8571c6a9760dc3061af833c3a3b6e1058c457f",
+        "baseline_support.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
+        "typed_literal_test.lgo": "c5435f53affa2c19a5864e0bbcc7bfc731ee9cd0d66f92d70fe1fd8ea88e34a3",
+        "typed-literals.json": "af4a4119677d429c96be284283fc9caf6db658b13644633cad7e23915cd33b1a",
+        "native-cases.json": "50ddfc2bfad5d2454d4557d54c8f2d08ad2f3281596dce28fd4f624ac0423b78",
+        "schema.sql": "bfa56ef159e985b85976918f7fdc7bb79c82095913a8470ce42fd6494b2e99cc",
+        "source-index.json": "03b61679c1b341b74acce34d37348444e80caa8b3f8ea3238a4ca63cf9b28777"
+      },
+      "workflow_sha256": "87b2e3b6caba94f3afc1a09f12c5d6cd948a42b83ea33d8678cac75ff3318861",
+      "native_cases": 26,
+      "new_typed_cases": 12,
+      "retained_native_cases": 14,
+      "expected_generator_failures": [
+        "typed-name-lf",
+        "typed-name-crlf",
+        "typed-qualified-comment",
+        "typed-name-single",
+        "typed-digit-tail",
+        "typed-underscore-tail",
+        "typed-dollar-tail",
+        "typed-utf8-tail"
+      ],
+      "controls": [
+        "quoted-type-control",
+        "standard-text-control",
+        "escape-boundary-control",
+        "typed-string-only-version"
+      ],
+      "pipeline_observation": "Each exact SQL goes through real go tool sqlc generate and the actual built plugin. A pipefail wrapper records the unmodified request bytes. The captured query text is executed on native PostgreSQL against the same frozen result. Actual sqlc exits and every captured/generated payload are preserved; no parser-success claim substitutes for native values.",
+      "source_changes": "Inject only frozen external test and fixture; no production edits. Restore all611 tracked blobs and remove only the two created paths.",
+      "review_threads": [
+        "PRRT_kwDOVpFduc68wxcA",
+        "PRRT_kwDOVpFduc68wxdV"
+      ],
+      "previous_completed_scope": {
+        "published": "82ce092dd0799ee6f644262d3c724c587350633a",
+        "terminal": "e2151ac6afdaac3fd4f0b221f37d61f72daf0283",
+        "native_run": 45988490445
+      },
+      "host": {
+        "repository": "gosuda/sloplint",
+        "isolated_base": "57248742cfc7f29d72fede5c20b0ce8e73a62420",
+        "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa"
+      },
+      "publication_eligible": false
+    },
+    "baseline_verified": false,
+    "source_restored": true,
+    "publication_eligible": false,
+    "initial_index_sha256": "83bdd56e301e0af66ae28bface94f2b81ff484d77cd79124224e84605bb453a6",
+    "restored_index_sha256": "83bdd56e301e0af66ae28bface94f2b81ff484d77cd79124224e84605bb453a6",
+    "commands": [
+      {
+        "name": "source-head",
+        "command": [
+          "git",
+          "rev-parse",
+          "HEAD"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "2021c6aba2218ec0f88d968b65167bc1285efed02beb816905e9645e8aa74737"
+      },
+      {
+        "name": "source-tree",
+        "command": [
+          "git",
+          "rev-parse",
+          "HEAD^{tree}"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "6b41eb79ef085a46c67e9ee4888aa831513649165d39937d26e2580fef2ba31b"
+      },
+      {
+        "name": "logos-version",
+        "command": [
+          "logos",
+          "version"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "3a7b14cf792a79c78a9e42aab8906e0774b54ecddbbbc520ce94651a34aec2f9"
+      },
+      {
+        "name": "go-cache-disabled",
+        "command": [
+          "go",
+          "env",
+          "GOCACHEPROG"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+      },
+      {
+        "name": "generator-compile",
+        "command": [
+          "logos",
+          "test",
+          "-race",
+          "-run",
+          "^$",
+          "-count=1",
+          "./cmd/sqlc-gen-spira"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "d3d9a20c6e953b90de8ce7d0e0e5a2b7692901dd9afd49f6c4d22052dc2f2457"
+      },
+      {
+        "name": "typed-literal-unchanged-red",
+        "command": [
+          "logos",
+          "test",
+          "-race",
+          "-count=1",
+          "-v",
+          "-run",
+          "^TestPostgresTypedLiteralBoundaries$",
+          "./cmd/sqlc-gen-spira"
+        ],
+        "raw_exit": 1,
+        "expected": 1,
+        "timed_out": false,
+        "log_sha256": "533c40231ffd02f4930ea48b89e114205090dd316c8b6add34b20929eab54651"
+      },
+      {
+        "name": "restore-tracked-source",
+        "command": [
+          "git",
+          "restore",
+          "--source",
+          "82ce092dd0799ee6f644262d3c724c587350633a",
+          "--staged",
+          "--worktree",
+          "--",
+          "."
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "source-restoration",
+        "command": [
+          "git",
+          "diff",
+          "--exit-code",
+          "HEAD"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  },
+  "observed_failed": [
+    "typed-name-lf",
+    "typed-name-crlf",
+    "typed-qualified-comment",
+    "typed-name-single",
+    "typed-digit-tail",
+    "typed-underscore-tail",
+    "typed-dollar-tail",
+    "typed-utf8-tail"
+  ],
+  "observed_passed": [
+    "quoted-type-control",
+    "standard-text-control",
+    "escape-boundary-control",
+    "typed-string-only-version"
+  ],
+  "old_matcher_missing": [
+    "typed-utf8-tail"
+  ],
+  "native_postgresql_reached": false,
+  "real_sqlc_reached": false,
+  "correction": "Allow digits in the observer's existing frozen-case ID matcher. Preserve every SQL byte, expectation, test, production byte, and source index. Strict expected case-set comparisons remain unchanged.",
+  "source_restored": true,
+  "baseline_verified": false,
+  "publication_eligible": false
+}

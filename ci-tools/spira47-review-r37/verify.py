@@ -57,7 +57,7 @@ def observe_native(container: str, case: dict[str, object], sql: str, lane: str)
 
 def observe_sqlc(container: str, case: dict[str, object], plugin: Path) -> dict[str, object]:
     name, sql = base.text(case["name"]), base.text(case["sql"])
-    if not re.fullmatch("[a-z-]+", name):
+    if not re.fullmatch("[a-z0-9-]+", name):
         raise ValueError("Unsafe frozen case ID")
     work = BUILD / "sqlc-cases" / name
     work.mkdir(parents=True, exist_ok=False)
@@ -207,8 +207,8 @@ def main() -> None:
                        expected=1, timeout=900)
         cases = cases_from("typed-literals.json", 12)
         expected_fails = {base.text(row["name"]) for row in cases[:8]}
-        failed = set(re.findall(r"^\s*--- FAIL: TestPostgresTypedLiteralBoundaries/([a-z-]+) ", log, re.MULTILINE))
-        passed = set(re.findall(r"^\s*--- PASS: TestPostgresTypedLiteralBoundaries/([a-z-]+) ", log, re.MULTILINE))
+        failed = set(re.findall(r"^\s*--- FAIL: TestPostgresTypedLiteralBoundaries/([a-z0-9-]+) ", log, re.MULTILINE))
+        passed = set(re.findall(r"^\s*--- PASS: TestPostgresTypedLiteralBoundaries/([a-z0-9-]+) ", log, re.MULTILINE))
         if failed != expected_fails or passed != {base.text(row["name"]) for row in cases[8:]}:
             raise RuntimeError("Unchanged generator did not reproduce the frozen typed-literal boundary/control split")
         report["generator_failed"] = sorted(failed)

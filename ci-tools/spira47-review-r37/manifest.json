@@ -19,7 +19,7 @@
   "postgres_version_num": "180007",
   "sqlc_version": "v1.31.2-0.20261023030206-3ad8b20fb02b",
   "proof_sha256": {
-    "verify.py": "e3b226d297cc4e011251d8d44f8571c6a9760dc3061af833c3a3b6e1058c457f",
+    "verify.py": "c1df997b43c126e3100414f94361ba833fc63552a7d3be3eb8e5504de4b6cd43",
     "baseline_support.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
     "typed_literal_test.lgo": "c5435f53affa2c19a5864e0bbcc7bfc731ee9cd0d66f92d70fe1fd8ea88e34a3",
     "typed-literals.json": "af4a4119677d429c96be284283fc9caf6db658b13644633cad7e23915cd33b1a",
@@ -63,5 +63,18 @@
     "isolated_base": "57248742cfc7f29d72fede5c20b0ce8e73a62420",
     "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa"
   },
-  "publication_eligible": false
+  "publication_eligible": false,
+  "prior_failure": {
+    "producer": "046bffc506d6655280f8d89fa666f52232e68649",
+    "run": 45996676867,
+    "job": 140497686934,
+    "artifact": 15195684168,
+    "zip_sha256": "f7583d32da860fd7f6402b1125089c88360607abdcd7de1593b7aabc1e6f8829",
+    "raw_log_sha256": "b33c14af6a0675a2b7049f0b314ea40a02e8b5a1a2c14c3f58c2225170783e33",
+    "receipt_sha256": "77047690ca7c3d4d9f7dba81efb08760259b6d9b26a4678fce5f7ddddf0e31b5",
+    "actual_generator_exit": 1,
+    "harness_exit": 1,
+    "native_reached": false,
+    "correction": "Allow digits in the observer's existing frozen-case ID matcher. Preserve every SQL byte, expectation, test, production byte, and source index. Strict expected case-set comparisons remain unchanged."
+  }
 }
