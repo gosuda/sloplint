@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "purpose": "Resolve the remaining exact-space question between removed current-level redirections.",
+  "head": "c00962f26db32a41cfc1c487027a8b6316cb8bf1",
+  "tree": "99508a172cd995a72dc9845016324e13a5b88527",
+  "source_sha256": {
+    "bin/crush/lib/shell_screen.ml": "792c5754d9829cdc4af9c644e9c51f44f52ba38f10b300076df73aa9b745a82f",
+    "test/crush/test_tools_shell.ml": "1853053b04e708dc02983b8c1ad18a5c9858f87743d6c6c5916cc818caad4480"
+  },
+  "observer_sha256": "042679e664738b3fc8ac05a5c2d02593e7fc268b4355334c05761d24853094ef",
+  "cases": [
+    {
+      "id": "echo_two_spaces",
+      "kind": "echo",
+      "command": "cmd /d /c echo ready >capture.txt  2>\"capture (sales & support).txt\"",
+      "require_exit": 0
+    },
+    {
+      "id": "child_two_spaces",
+      "kind": "child",
+      "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value >capture.txt  2>\"capture (sales & support).txt\"",
+      "require_exit": 0
+    },
+    {
+      "id": "echo_tab_gap",
+      "kind": "echo",
+      "command": "cmd /d /c echo ready >capture.txt\t2>\"capture (sales & support).txt\"",
+      "require_exit": 0
+    },
+    {
+      "id": "child_tab_gap",
+      "kind": "child",
+      "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value >capture.txt\t2>\"capture (sales & support).txt\"",
+      "require_exit": 0
+    },
+    {
+      "id": "echo_argument_between",
+      "kind": "echo",
+      "command": "cmd /d /c echo ready >capture.txt tail >\"capture (sales & support).txt\"",
+      "require_exit": 0
+    },
+    {
+      "id": "child_argument_between",
+      "kind": "child",
+      "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value >capture.txt tail >\"capture (sales & support).txt\"",
+      "require_exit": 0
+    },
+    {
+      "id": "echo_duplication_before",
+      "kind": "echo",
+      "command": "cmd /d /c echo ready 2>&1 >\"capture (sales & support).txt\"",
+      "require_exit": 0
+    },
+    {
+      "id": "child_duplication_before",
+      "kind": "child",
+      "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value 2>&1 >\"capture (sales & support).txt\"",
+      "require_exit": 0
+    },
+    {
+      "id": "echo_comma_gap",
+      "kind": "echo",
+      "command": "cmd /d /c echo ready >capture.txt , 2>\"capture (sales & support).txt\"",
+      "require_exit": 0
+    },
+    {
+      "id": "child_comma_gap",
+      "kind": "child",
+      "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value >capture.txt , 2>\"capture (sales & support).txt\"",
+      "require_exit": 0
+    }
+  ],
+  "scope": "All rows require a bounded exit zero; child rows additionally require one JSON record from their own observer and immediate Cmd parent. Exact text and file bytes are observations, not guessed expected values. No production source is modified.",
+  "docs": [
+    "https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-process",
+    "https://learn.microsoft.com/en-us/powershell/module/cimcmdlets/get-ciminstance?view=powershell-5.1"
+  ],
+  "primary": {
+    "producer": "03ed1231409462d749208debb1b6d356fc83854b",
+    "run": 45982750445,
+    "job": 140450547364,
+    "artifact": 15189908663,
+    "zip_sha256": "4e7a5abb20f43910e8ef4216e3141cd8f6f42d45291e9efa335a248f65b4f323"
+  }
+}

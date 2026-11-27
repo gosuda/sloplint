@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "purpose": "Resolve the remaining exact-space question between removed current-level redirections.",
+  "purpose": "Determine native file-descriptor-prefix ownership before redirection span extraction.",
   "head": "c00962f26db32a41cfc1c487027a8b6316cb8bf1",
   "tree": "99508a172cd995a72dc9845016324e13a5b88527",
   "source_sha256": {
@@ -10,63 +10,63 @@
   "observer_sha256": "042679e664738b3fc8ac05a5c2d02593e7fc268b4355334c05761d24853094ef",
   "cases": [
     {
-      "id": "echo_two_spaces",
+      "id": "echo_quoted_digit",
       "kind": "echo",
-      "command": "cmd /d /c echo ready >capture.txt  2>\"capture (sales & support).txt\"",
+      "command": "cmd /d /c echo \"2\">capture.txt",
       "require_exit": 0
     },
     {
-      "id": "child_two_spaces",
+      "id": "child_quoted_digit",
       "kind": "child",
-      "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value >capture.txt  2>\"capture (sales & support).txt\"",
+      "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value \"2\">capture.txt",
       "require_exit": 0
     },
     {
-      "id": "echo_tab_gap",
+      "id": "echo_quoted_digits",
       "kind": "echo",
-      "command": "cmd /d /c echo ready >capture.txt\t2>\"capture (sales & support).txt\"",
+      "command": "cmd /d /c echo \"12\">capture.txt",
       "require_exit": 0
     },
     {
-      "id": "child_tab_gap",
+      "id": "child_quoted_digits",
       "kind": "child",
-      "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value >capture.txt\t2>\"capture (sales & support).txt\"",
+      "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value \"12\">capture.txt",
       "require_exit": 0
     },
     {
-      "id": "echo_argument_between",
+      "id": "echo_two_digits",
       "kind": "echo",
-      "command": "cmd /d /c echo ready >capture.txt tail >\"capture (sales & support).txt\"",
+      "command": "cmd /d /c echo 12>capture.txt",
       "require_exit": 0
     },
     {
-      "id": "child_argument_between",
+      "id": "child_two_digits",
       "kind": "child",
-      "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value >capture.txt tail >\"capture (sales & support).txt\"",
+      "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value 12>capture.txt",
       "require_exit": 0
     },
     {
-      "id": "echo_duplication_before",
+      "id": "echo_escaped_digit",
       "kind": "echo",
-      "command": "cmd /d /c echo ready 2>&1 >\"capture (sales & support).txt\"",
+      "command": "cmd /d /c echo ^2>capture.txt",
       "require_exit": 0
     },
     {
-      "id": "child_duplication_before",
+      "id": "child_escaped_digit",
       "kind": "child",
-      "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value 2>&1 >\"capture (sales & support).txt\"",
+      "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value ^2>capture.txt",
       "require_exit": 0
     },
     {
-      "id": "echo_comma_gap",
+      "id": "echo_ordinary_digit",
       "kind": "echo",
-      "command": "cmd /d /c echo ready >capture.txt , 2>\"capture (sales & support).txt\"",
+      "command": "cmd /d /c echo 2>capture.txt",
       "require_exit": 0
     },
     {
-      "id": "child_comma_gap",
+      "id": "child_ordinary_digit",
       "kind": "child",
-      "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value >capture.txt , 2>\"capture (sales & support).txt\"",
+      "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value 2>capture.txt",
       "require_exit": 0
     }
   ],
