@@ -1,0 +1,50 @@
+{
+  "body": "This follow-up repairs the shell screen's command/argument boundaries while preserving exact-command approval for unparsed or computed code.\n\n## Behavior\n\n- Cmd `/c` and `/k` payloads are analyzed as complete commands. Literal text such as `echo ready for review` does not become an unfinished loop.\n- FOR headers, parenthesized input sets, the actual `do` delimiter, and nonempty bodies are kept separate. A recursive root named `do` is data; missing delimiters and bodies require review.\n- FOR /F file and literal-string inputs can pass screening. Command inputs require explicit approval. Supported `usebackq` options select backquoted command sources; attached keyword spellings that the screen does not parse also require review.\n- Quoted POSIX `${@}`, slices/defaults of it, and `${!prefix@}` are not assumed to produce one field. This preserves the review boundary for computed `env`, `find`, and `fd` argument positions.\n- Literal attached `fd` filters share recognition between screening and read-only classification. Real execution options remain mutable, and tests now require their screen verdict to be Clear rather than accepting a conservative fallback as evidence.\n- Valid grouped `command` lookup switches and GNU `env`'s lone-dash option terminator preserve the executable boundary.\n\nThe external merge already imported POSIX wrapper/operand handling, executable-suffix checks, and fd permission classification. Those changes remain present; this follow-up repairs the review findings on that merged source. The public interfaces are unchanged. The only tool-implementation change is the fd-only literal-argument exception required for attached filters to retain read-only classification; assignment prefixes, redirections, and execution actions remain mutable.\n\n## Verification\n\nExact input head: `5be8cba8e9150be37b35dec47f2cace5647d704f`.\nCandidate tree: `457cd4529dbca9dfb84a258f6a4854b3ce5c6ac2`.\n\n- Native observations were frozen before their corresponding repairs: 37 Cmd cases, 50 POSIX cases on Bash, Dash, GNU env, and fd, then 18 focused Windows FOR /F option/quote observations.\n- [Candidate preparation](https://github.com/gosuda/sloplint/actions/runs/45956779383) passed. It authenticated all three native archives, observed 60 mismatches among 115 frozen classifier expectations on the maintained source, and proved the two attached-keyword false-Clear cases on the earlier candidate. The corrected, formatted candidate passes all 115 expectations with warning-clean compilation and exact original-source restoration.\n- [Current full proof](https://github.com/gosuda/sloplint/actions/runs/45957479981): Linux PASSED all three AGENTS gates after the required `rd` switch bootstrap (`@fmt`, full release build, and all 1,775 reported tests across 30 suites). Exact source/index identity and whitespace checks passed. Windows is PENDING; it replays all 55 frozen Cmd outputs, builds the full repository, and runs the actual tools-shell and permission suites.\n- The native permission test checks that blanket approval cannot run a command-source FOR /F loop, a bodyless loop, or either attached-keyword command-source fixture. Exact explicit approval permits the harmless command-source fixtures.\n\nThe earlier Windows checkout failure and three initially incomplete stdout hypotheses remain recorded as failed historical runs. The complete Cmd echo traces are preserved in the replay oracle. The first preparation transport failure also remains separate; it occurred before any candidate application. The first full Linux and Windows runs correctly failed the new long-form fd read-only assertion, exposing the separate equals-token guard; the candidate includes its narrow correction. A later native option observation found that Cmd accepts `usebackqdelims=` and `tokens=*usebackq`; those attached keyword forms now remain behind review instead of being assigned the default quote mode.\n\n[Immutable proof checkpoint](https://github.com/gosuda/sloplint/blob/0a60a5c81b539444484ffbf596d8a78f179c8cee/ci-tools/charamel32-cmd/checkpoint.json).\n\n## Earlier scope\n\nThe original PR addressed merged #30/#12 shell-screen feedback and retained computed-set coverage. Its earlier test result is historical evidence for that source, not a result for this externally merged revision. The CLI follow-up mentioned in the original body remains tracked by #26.\n",
+  "replies": [
+    {
+      "thread": "PRRT_kwDOUbWGks68pEjK",
+      "comment": 4715589949,
+      "text": "The Cmd wrapper now reparses the complete literal /c or /k payload, preserving argument boundaries. The frozen old-source witness classifies `cmd /c echo ready for review` as Review; the candidate is Clear. Missing-do and bodyless payload controls remain Review. Exact source and required gate links will be attached after publication."
+    },
+    {
+      "thread": "PRRT_kwDOUbWGks68pEkO",
+      "comment": 4715590060,
+      "text": "The parser recognizes `do` only after the parenthesized input set closes. Both quoted and unquoted recursive roots named `do` now remain data. Native Windows observations cover the root directory and the unchanged missing-body boundary; the old/candidate classifier pair is Review → Clear."
+    },
+    {
+      "thread": "PRRT_kwDOUbWGks68pEky",
+      "comment": 4715590141,
+      "text": "FOR /F now distinguishes supported file/literal inputs from command sources. File and literal inputs are Clear when their body is literal; single-quoted commands without usebackq and backtick commands with usebackq remain Review. Native observations also establish that Cmd accepts attached keywords (`usebackqdelims=` and `tokens=*usebackq`). Those unparsed attached forms conservatively require exact-command approval. Frozen quote/option controls and real Windows denial/Allow_once tests cover this boundary."
+    },
+    {
+      "thread": "PRRT_kwDOUbWGks68qHVK",
+      "comment": 4716036754,
+      "text": "The parameter-expansion path now clears the single-field proof for braced positional `@` and indirect prefix-`@` expansions. Native Bash/Dash records and classifier rows cover the quoted direct, sliced/default, and indirect forms, with scalar-transform, literal-@, and prefix-* controls retained. `env A=\"${@}\" true` changes from Clear to Review."
+    },
+    {
+      "thread": "PRRT_kwDOUbWGks68qHWW",
+      "comment": 4716036873,
+      "text": "Attached fd data-option recognition is shared by the execution scan and read-only classification. Native fd comparisons cover short attached and long equals forms. Plain attached searches are Clear/read-only; real -x/-X/--exec/--exec-batch actions remain recognized and mutable, including after an attached filter."
+    },
+    {
+      "thread": "PRRT_kwDOUbWGks68qHXk",
+      "comment": 4716037000,
+      "text": "The command wrapper accepts fixed short-option groups containing only p/v/V before the terminator. A v or V selects lookup; p-only groups retain execution semantics. Bash/Dash observations and verdict controls cover grouped/separate forms, the terminator, invalid letters, computed operands, and executable suffixes."
+    },
+    {
+      "thread": "PRRT_kwDOUbWGks68qHYe",
+      "comment": 4716037087,
+      "text": "Each existing literal fd execution-option row now asserts Shell_screen.Clear before asserting that the action is mutable. Attached-filter execution controls assert both properties too, so a conservative Review fallback cannot satisfy the test accidentally."
+    },
+    {
+      "thread": "PRRT_kwDOUbWGks68qHZW",
+      "comment": 4716037196,
+      "text": "The PR description now includes the imported POSIX wrapper/operand, executable-suffix, and fd permission-classification scope, and separates the earlier source's evidence from the current exact-tree proof."
+    },
+    {
+      "thread": "PRRT_kwDOUbWGks68qHaJ",
+      "comment": 4716037287,
+      "text": "The env wrapper now consumes the lone '-' after recognized options and treats the following word as the command boundary. It does not resume option parsing afterward. Native tests use only an owned harmless executable stub; the frozen `env -i - ./cu''rl.exe` classifier witness changes from Clear to Blocked while the `env - -i ...` control preserves the literal '-i' executable boundary."
+    }
+  ]
+}
