@@ -1,0 +1,4863 @@
+{
+  "schema": 1,
+  "verified_at": "2026-11-27 22:08:53 UTC",
+  "repository": "gosuda/spira",
+  "pr": 47,
+  "source": {
+    "repository": "gosuda/spira",
+    "head": "f3a47a04f1defe427494124507ec621118525265",
+    "tree": "cae17384cce41647b686a80932833cf5a7b09b19",
+    "blobs": 633,
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "index_file": "source-index.json"
+  },
+  "candidate": {
+    "label": "candidate",
+    "tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0",
+    "blobs": 638,
+    "index_sha256": "a8f431d2319f13259dba66403a2971d30443d26a0c73ab8a2fbc1947c637642c"
+  },
+  "producer": "673f0c39445d4b583c4d3371609ce585c39be87b",
+  "run": 46073659117,
+  "job": 140756258552,
+  "run_url": "https://github.com/gosuda/sloplint/actions/runs/46073659117",
+  "run_conclusion": "success",
+  "manifest_sha256": "d9f05b8cb3d764cce6eefcb0247fbbc3971be1e4ad983431355f730f2ed53fa5",
+  "workflow_sha256": "3e49f5e07dc5ad8d81b4c1aae4402ffe6e7047a838de03d8775f0fd08d7f6b98",
+  "driver_sha256": "64ec870742cc49d70f5abbb8ba4aaf04bed8df4b642e19b76f4d3eeb6232a8ac",
+  "raw_log_sha256": "4f5b21b67a78eeee807a4a3343fd0ee13372686d42d614d497bb033e7c5c9ad8",
+  "raw_log_utf8_bytes": 1225322,
+  "report_sha256": "8337d9925f35c55aac6130e07be6803bda972fa5625cbda0354fccce2d64b822",
+  "command_count": 228,
+  "unique_command_names": 228,
+  "all_commands_reconciled": true,
+  "all_stdout_hashes_reconciled": true,
+  "unexpected_exits": [],
+  "timeouts": 0,
+  "commands": [
+    {
+      "name": "proof-head",
+      "command": [
+        "git",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/proof",
+        "rev-parse",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "5f33d00ec9bce0a88c8f7c308a5036e436b7996335f9240f92682dfd3c96929c"
+    },
+    {
+      "name": "source-head",
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "b5f0f62269a210df5828b8a44b4377a534f7b55f0d4ce7ee0582a45857aeaa6d"
+    },
+    {
+      "name": "logos-version",
+      "command": [
+        "logos",
+        "version"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "3a7b14cf792a79c78a9e42aab8906e0774b54ecddbbbc520ce94651a34aec2f9"
+    },
+    {
+      "name": "go-cache-disabled",
+      "command": [
+        "go",
+        "env",
+        "GOCACHEPROG"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "name": "sqlc-modules",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "mod",
+        "download"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "sqlc-module",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "list",
+        "-m",
+        "-json",
+        "github.com/sqlc-dev/sqlc"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "78fe4571c2a0ec0aca3a70bff3218c5a6e5d56ddc513732f01ecd45fd9717dc6"
+    },
+    {
+      "name": "stage-unchanged-tests",
+      "command": [
+        "git",
+        "add",
+        "--",
+        "cmd/sqlc-gen-spira/version_relation_test.lgo",
+        "cmd/sqlc-gen-spira/testdata/version-relation-roles.json",
+        "cmd/sqlc-gen-spira/sqlc_postgres_version_test.lgo",
+        "cmd/sqlc-gen-spira/testdata/sqlc-version-pipeline.json"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "unchanged-test-compile",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-run",
+        "^$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "d3d9a20c6e953b90de8ce7d0e0e5a2b7692901dd9afd49f6c4d22052dc2f2457"
+    },
+    {
+      "name": "unchanged-relation-roles",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "-run",
+        "^TestPostgresRelationReferenceRoles$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "9c6a44c709b2bbbaf4536cdfdb1c7774cffac39e784e239227930f5e5f66c4c1"
+    },
+    {
+      "name": "unchanged-permanent-version-pipeline",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "-run",
+        "^TestSQLcPostgresVersionPipeline$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "caed527859ef24a0bb81d02312fa9bc17ae021247680e13569d55755fe9614f4"
+    },
+    {
+      "name": "stage-candidate",
+      "command": [
+        "git",
+        "add",
+        "--",
+        "cmd/sqlc-gen-spira/version_reference.lgo",
+        "cmd/sqlc-gen-spira/version_relation.lgo",
+        "cmd/sqlc-gen-spira/version_relation_test.lgo",
+        "cmd/sqlc-gen-spira/testdata/version-relation-roles.json",
+        "cmd/sqlc-gen-spira/sqlc_postgres_version_test.lgo",
+        "cmd/sqlc-gen-spira/testdata/sqlc-version-pipeline.json",
+        "docs/specs/sqlc-gen-spira.md"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-test-compile",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-run",
+        "^$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "3d6f43d30e00ced2022c6b162e0d78574894f28a6bc994b4fff77f8bc9b1e026"
+    },
+    {
+      "name": "candidate-direct-and-retained-controls",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "-run",
+        "^(TestPostgresContinuedEscapeStrings|TestPostgresDollarQuotedBoundaries|TestVersionedWriteRefused|TestPostgresTypedLiteralBoundaries|TestVersionedWriteBypassShapesRefused|TestVersionedWriteIgnoresLiteralsAndComments|TestVersionedWriteRefusesStringOnlyVersion|TestVersionedWriteAcceptsBackslashEscapeBeforeVersion|TestPostgresVersionReferenceRoles|TestPostgresVersionReferenceRoleBoundaries|TestPostgresRelationReferenceRoles|TestPostgresVersionCatalogResolution|TestPostgresVersionCTEs|TestPostgresCTEProjectionRoles|TestPostgresCTEProjectionClauseBoundaries)$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "3ef3197fdd9e3279433bf6ee18eba37f94fbd52630c2c9dde41dc54897cc00a1"
+    },
+    {
+      "name": "build-candidate-plugin",
+      "command": [
+        "logos",
+        "build",
+        "-o",
+        "/home/runner/work/_temp/spira47-baseline-build/candidate-plugin",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "postgres-image",
+      "command": [
+        "docker",
+        "pull",
+        "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "0a3a3e0588d6d9f374dbf29f5e30a89baf65454779071ba6f575e5309e34bba0"
+    },
+    {
+      "name": "postgres-image-identity",
+      "command": [
+        "docker",
+        "image",
+        "inspect",
+        "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "7ec3ecd3c328cfc286d513248ba22f69d93ebc00b168d0868bd5817bef36b614"
+    },
+    {
+      "name": "postgres-start",
+      "command": [
+        "docker",
+        "run",
+        "--detach",
+        "--network",
+        "none",
+        "--name",
+        "spira47-roles-r42-46073659117-1",
+        "--env",
+        "POSTGRES_HOST_AUTH_METHOD=trust",
+        "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "b83f95d511ece0d8bfd1c086adb44ab594169bdd1c9be24dcce756f73354e78e"
+    },
+    {
+      "name": "postgres-version",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "SHOW server_version_num;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "23115ea6bcfc1e8cf9bf3b7e201ecf38f5a9c76d337eea137c01265e768d7c31"
+    },
+    {
+      "name": "postgres-schema",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "CREATE DOMAIN version AS text;\nCREATE COLLATION version FROM \"C\";\n"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "original-lower-option-lower-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET version = version + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+    },
+    {
+      "name": "candidate-sqlc-lower-option-lower-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/lower-option-lower-column/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-lower-option-lower-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET version = version + 1\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+    },
+    {
+      "name": "original-mixed-option-lower-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET version = version + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+    },
+    {
+      "name": "candidate-sqlc-mixed-option-lower-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/mixed-option-lower-column/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-mixed-option-lower-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET version = version + 1\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+    },
+    {
+      "name": "original-upper-option-lower-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET version = version + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+    },
+    {
+      "name": "candidate-sqlc-upper-option-lower-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/upper-option-lower-column/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-upper-option-lower-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET version = version + 1\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+    },
+    {
+      "name": "original-mixed-option-alias-refusal",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING name AS version;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "61e3e3ab05786aeb00b93ee369c028dc8e95d76fabde7cdb687972331ebfcc96"
+    },
+    {
+      "name": "candidate-sqlc-mixed-option-alias-refusal",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/mixed-option-alias-refusal/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-mixed-option-alias-refusal",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING name AS version\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "61e3e3ab05786aeb00b93ee369c028dc8e95d76fabde7cdb687972331ebfcc96"
+    },
+    {
+      "name": "original-quoted-column-exact-option",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET \"Version\" = \"Version\" + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"Version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+    },
+    {
+      "name": "candidate-sqlc-quoted-column-exact-option",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/quoted-column-exact-option/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-quoted-column-exact-option",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET \"Version\" = \"Version\" + 1\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"Version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+    },
+    {
+      "name": "original-quoted-column-folded-option",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET \"Version\" = \"Version\" + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"Version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+    },
+    {
+      "name": "candidate-sqlc-quoted-column-folded-option",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/quoted-column-folded-option/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-quoted-column-folded-option",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET \"Version\" = \"Version\" + 1\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"Version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "77c3a8aa9cba46289ca05704114593a3e18259a72179d9e560324733dfab5c27"
+    },
+    {
+      "name": "original-quoted-column-alias-refusal",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING name AS \"Version\";\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"Version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "61e3e3ab05786aeb00b93ee369c028dc8e95d76fabde7cdb687972331ebfcc96"
+    },
+    {
+      "name": "candidate-sqlc-quoted-column-alias-refusal",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/quoted-column-alias-refusal/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "2888f33a80ce9b76cd4b5513863bbf00afc126e64a6a92c2e31bf85b711c7c98"
+    },
+    {
+      "name": "candidate-processed-quoted-column-alias-refusal",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' RETURNING name AS \"Version\"\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"Version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "61e3e3ab05786aeb00b93ee369c028dc8e95d76fabde7cdb687972331ebfcc96"
+    },
+    {
+      "name": "original-missing-configured-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nSELECT id FROM items;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "9bbec63997532eeea319a0f4a22d9a359dc1e8b8c19ad3d608cdb461e5f50f83"
+    },
+    {
+      "name": "candidate-sqlc-missing-configured-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/missing-configured-column/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "394683d866b3a34b620929740b85f68036ca43dde79149a4403e5cebb41f0a93"
+    },
+    {
+      "name": "candidate-processed-missing-configured-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nSELECT id FROM items\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "9bbec63997532eeea319a0f4a22d9a359dc1e8b8c19ad3d608cdb461e5f50f83"
+    },
+    {
+      "name": "original-ambiguous-folded-option",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"VERSION\" integer NOT NULL DEFAULT 0, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nUPDATE items SET \"Version\" = \"Version\" + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"VERSION\", \"Version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac40648e2643fe1c02952a3ad8279d683a7db6a0db9281ac1f2e3d475d632796"
+    },
+    {
+      "name": "candidate-sqlc-ambiguous-folded-option",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/ambiguous-folded-option/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "e1de039e0d29c5de2b3e63b94782f4a0410ba4b1cdf23141114f801d0b94c2eb"
+    },
+    {
+      "name": "candidate-processed-ambiguous-folded-option",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"VERSION\" integer NOT NULL DEFAULT 0, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nUPDATE items SET \"Version\" = \"Version\" + 1\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"VERSION\", \"Version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac40648e2643fe1c02952a3ad8279d683a7db6a0db9281ac1f2e3d475d632796"
+    },
+    {
+      "name": "original-exact-option-before-fold-collision",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"VERSION\" integer NOT NULL DEFAULT 0, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nUPDATE items SET \"Version\" = \"Version\" + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"VERSION\", \"Version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac40648e2643fe1c02952a3ad8279d683a7db6a0db9281ac1f2e3d475d632796"
+    },
+    {
+      "name": "candidate-sqlc-exact-option-before-fold-collision",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/exact-option-before-fold-collision/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-exact-option-before-fold-collision",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"VERSION\" integer NOT NULL DEFAULT 0, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nUPDATE items SET \"Version\" = \"Version\" + 1\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"VERSION\", \"Version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac40648e2643fe1c02952a3ad8279d683a7db6a0db9281ac1f2e3d475d632796"
+    },
+    {
+      "name": "original-exact-option-rejects-quoted-sibling",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"VERSION\" integer NOT NULL DEFAULT 0, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nUPDATE items SET \"VERSION\" = \"VERSION\" + 1;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"VERSION\", \"Version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "8e9ba54b651b1030a822c9c8e595a84c320e0358757382363e62393f392bc592"
+    },
+    {
+      "name": "candidate-sqlc-exact-option-rejects-quoted-sibling",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/exact-option-rejects-quoted-sibling/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "2888f33a80ce9b76cd4b5513863bbf00afc126e64a6a92c2e31bf85b711c7c98"
+    },
+    {
+      "name": "candidate-processed-exact-option-rejects-quoted-sibling",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"VERSION\" integer NOT NULL DEFAULT 0, \"Version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nUPDATE items SET \"VERSION\" = \"VERSION\" + 1\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"VERSION\", \"Version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "8e9ba54b651b1030a822c9c8e595a84c320e0358757382363e62393f392bc592"
+    },
+    {
+      "name": "original-plain-cte-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "candidate-sqlc-plain-cte-reference",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/plain-cte-reference/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-plain-cte-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-materialized-cte-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "candidate-sqlc-materialized-cte-reference",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/materialized-cte-reference/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-materialized-cte-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-not-materialized-cte-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS NOT MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "candidate-sqlc-not-materialized-cte-reference",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/not-materialized-cte-reference/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-not-materialized-cte-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS NOT MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-plain-cte-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "candidate-sqlc-plain-cte-omission",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/plain-cte-omission/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-plain-cte-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "original-materialized-cte-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "candidate-sqlc-materialized-cte-omission",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/materialized-cte-omission/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-materialized-cte-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "original-not-materialized-cte-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS NOT MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "candidate-sqlc-not-materialized-cte-omission",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/not-materialized-cte-omission/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-not-materialized-cte-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS NOT MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "original-mixed-case-materialized-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nwItH bumped aS mAtErIaLiZeD (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "candidate-sqlc-mixed-case-materialized-reference",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/mixed-case-materialized-reference/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-mixed-case-materialized-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nwItH bumped aS mAtErIaLiZeD (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-column-list-materialized-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped(result_id) AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT result_id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "candidate-sqlc-column-list-materialized-reference",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/column-list-materialized-reference/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-column-list-materialized-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped(result_id) AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT result_id FROM bumped\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-second-materialized-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS (SELECT 1 AS value), bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "candidate-sqlc-second-materialized-reference",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/second-materialized-reference/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-second-materialized-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS (SELECT 1 AS value), bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-recursive-materialized-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "candidate-sqlc-recursive-materialized-reference",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/recursive-materialized-reference/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-recursive-materialized-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-quoted-cte-name-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH \"materialized\" AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM \"materialized\";\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "candidate-sqlc-quoted-cte-name-reference",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/quoted-cte-name-reference/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-quoted-cte-name-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH \"materialized\" AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM \"materialized\"\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-main-alias-list-after-with",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS (SELECT 1 AS value) UPDATE items SET name = 'changed' FROM (VALUES (1)) AS materialized(version);\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "candidate-sqlc-main-alias-list-after-with",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/main-alias-list-after-with/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-main-alias-list-after-with",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS (SELECT 1 AS value) UPDATE items SET name = 'changed' FROM (VALUES (1)) AS materialized(version)\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "original-main-cast-after-with",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS (SELECT 1 AS value) UPDATE items SET name = CAST('changed' AS version);\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "candidate-sqlc-main-cast-after-with",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/main-cast-after-with/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-main-cast-after-with",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS (SELECT 1 AS value) UPDATE items SET name = CAST('changed' AS version)\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "original-main-alias-list-without-with",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' FROM (VALUES (1)) AS materialized(version);\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "candidate-sqlc-main-alias-list-without-with",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/main-alias-list-without-with/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-main-alias-list-without-with",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' FROM (VALUES (1)) AS materialized(version)\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "original-materialized-cte-output-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id AS version FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "candidate-sqlc-materialized-cte-output-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/materialized-cte-output-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-materialized-cte-output-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH bumped AS MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id AS version FROM bumped\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "original-ordinality-alias-list-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' FROM unnest(ARRAY[1]) WITH ORDINALITY AS materialized(version, position) RETURNING items.id;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "candidate-sqlc-ordinality-alias-list-omission",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/ordinality-alias-list-omission/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-ordinality-alias-list-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nUPDATE items SET name = 'changed' FROM unnest(ARRAY[1]) WITH ORDINALITY AS materialized(version, position) RETURNING items.id\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "original-ordinality-cte-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH ordinality AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM ordinality;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "candidate-sqlc-ordinality-cte-reference",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/ordinality-cte-reference/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-ordinality-cte-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH ordinality AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM ordinality\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-nested-materialized-cte-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH a AS MATERIALIZED (WITH b AS MATERIALIZED (SELECT version FROM items) SELECT 1 FROM b) UPDATE items SET name = 'changed' WHERE EXISTS (SELECT 1 FROM a);\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "candidate-sqlc-nested-materialized-cte-reference",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/nested-materialized-cte-reference/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "7d976e896a2d0217987e1c4784b65fddc8f4fcb88101b7642ac026f877addc08"
+    },
+    {
+      "name": "original-search-sibling-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "candidate-sqlc-search-sibling-reference",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/search-sibling-reference/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-search-sibling-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-search-sibling-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "candidate-sqlc-search-sibling-omission",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/search-sibling-omission/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-search-sibling-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "original-cycle-sibling-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "candidate-sqlc-cycle-sibling-reference",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/cycle-sibling-reference/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-cycle-sibling-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-cycle-sibling-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "candidate-sqlc-cycle-sibling-omission",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/cycle-sibling-omission/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-cycle-sibling-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "original-search-cycle-sibling-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "candidate-sqlc-search-cycle-sibling-reference",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/search-cycle-sibling-reference/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-search-cycle-sibling-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-search-cycle-sibling-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "candidate-sqlc-search-cycle-sibling-omission",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/search-cycle-sibling-omission/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-search-cycle-sibling-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "original-explicit-cycle-mark-sibling-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "candidate-sqlc-explicit-cycle-mark-sibling-reference",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/explicit-cycle-mark-sibling-reference/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-explicit-cycle-mark-sibling-reference",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "538736114f28809121005aab5a518ecef0c6d0bc41f67f3ad8c44ba65c0eb3e5"
+    },
+    {
+      "name": "original-explicit-cycle-mark-sibling-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "candidate-sqlc-explicit-cycle-mark-sibling-omission",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/explicit-cycle-mark-sibling-omission/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-explicit-cycle-mark-sibling-omission",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fc2e3d148dbd1ad8755b3709f02b40cfd4a7cfafa9e2716cd5a86bef397c7ddb"
+    },
+    {
+      "name": "original-qualified-time-select-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.time version FROM items AS i) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-qualified-time-select-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/qualified-time-select-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-qualified-time-select-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.time version FROM items AS i) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-qualified-time-select-quoted-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.time \"version\" FROM items AS i) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-qualified-time-select-quoted-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/qualified-time-select-quoted-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-qualified-time-select-quoted-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.time \"version\" FROM items AS i) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-qualified-time-select-explicit-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.time AS version FROM items AS i) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-qualified-time-select-explicit-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/qualified-time-select-explicit-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-qualified-time-select-explicit-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.time AS version FROM items AS i) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-qualified-quoted-time-select-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.\"time\" version FROM items AS i) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-qualified-quoted-time-select-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/qualified-quoted-time-select-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-qualified-quoted-time-select-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.\"time\" version FROM items AS i) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-qualified-version-select-time",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.version time FROM items AS i) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-qualified-version-select-time",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/qualified-version-select-time/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-qualified-version-select-time",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.version time FROM items AS i) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-qualified-time-select-operand",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.time + i.version AS value FROM items AS i) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-qualified-time-select-operand",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/qualified-time-select-operand/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-qualified-time-select-operand",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.time + i.version AS value FROM items AS i) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-qualified-time-returning-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nUPDATE items SET name = 'changed' RETURNING items.time version;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f0aa5df62b886fe0612af966d9cc87a53a225560dcc102a4e63883fd8be23e48"
+    },
+    {
+      "name": "candidate-sqlc-qualified-time-returning-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/qualified-time-returning-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-qualified-time-returning-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nUPDATE items SET name = 'changed' RETURNING items.time version\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f0aa5df62b886fe0612af966d9cc87a53a225560dcc102a4e63883fd8be23e48"
+    },
+    {
+      "name": "original-qualified-version-returning-time",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nUPDATE items SET name = 'changed' RETURNING items.version time;\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f0aa5df62b886fe0612af966d9cc87a53a225560dcc102a4e63883fd8be23e48"
+    },
+    {
+      "name": "candidate-sqlc-qualified-version-returning-time",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/qualified-version-returning-time/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-qualified-version-returning-time",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nUPDATE items SET name = 'changed' RETURNING items.version time\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "f0aa5df62b886fe0612af966d9cc87a53a225560dcc102a4e63883fd8be23e48"
+    },
+    {
+      "name": "original-relation-bare-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT id FROM items version) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-bare-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-bare-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-relation-bare-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT id FROM items version) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-relation-explicit-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT id FROM items AS version) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-explicit-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-explicit-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-relation-explicit-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT id FROM items AS version) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-relation-quoted-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT id FROM items \"version\") UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-quoted-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-quoted-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-relation-quoted-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT id FROM items \"version\") UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-relation-qualified-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT id FROM public.items version) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-qualified-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-qualified-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-relation-qualified-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT id FROM public.items version) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-relation-only-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT id FROM ONLY (items) version) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-only-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-only-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-relation-only-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT id FROM ONLY (items) version) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-relation-join-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.id FROM items i JOIN items version ON i.id = version.id) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-join-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-join-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-relation-join-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.id FROM items i JOIN items version ON i.id = version.id) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-relation-comma-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.id FROM items i, items version) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-comma-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-comma-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-relation-comma-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.id FROM items i, items version) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-relation-derived-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT x FROM (SELECT 1 AS x) version) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-derived-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-derived-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-relation-derived-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT x FROM (SELECT 1 AS x) version) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-relation-lateral-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT x FROM LATERAL (SELECT 1 AS x) version) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-lateral-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-lateral-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-relation-lateral-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT x FROM LATERAL (SELECT 1 AS x) version) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-relation-function-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT 1 FROM generate_series(1, 2) version) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-function-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-function-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-relation-function-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT 1 FROM generate_series(1, 2) version) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-relation-ordinality-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT 1 FROM generate_series(1, 2) WITH ORDINALITY version) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-ordinality-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-ordinality-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-relation-ordinality-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT 1 FROM generate_series(1, 2) WITH ORDINALITY version) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-relation-column-list",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT x FROM items i(version, x, y, z)) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-column-list",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-column-list/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "6459437501d664b065f0c3eb2c46bd0a52ee9d45a9a436e3faf89d27abec5c46"
+    },
+    {
+      "name": "original-relation-column-list-explicit",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT x FROM items AS i(version, x, y, z)) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-column-list-explicit",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-column-list-explicit/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "6459437501d664b065f0c3eb2c46bd0a52ee9d45a9a436e3faf89d27abec5c46"
+    },
+    {
+      "name": "original-relation-parenthesized-join-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT 1 FROM (items a JOIN items b USING (id)) version) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-parenthesized-join-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-parenthesized-join-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "candidate-processed-relation-parenthesized-join-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT 1 FROM (items a JOIN items b USING (id)) version) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-relation-qualified-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT version.version FROM items version) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-qualified-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-qualified-column/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-relation-qualified-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT version.version FROM items version) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-relation-join-on-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.id FROM items i JOIN items j ON j.version = i.id) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-join-on-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-join-on-column/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-relation-join-on-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.id FROM items i JOIN items j ON j.version = i.id) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-relation-where-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT id FROM items i WHERE version = 0) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-where-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-where-column/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-relation-where-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT id FROM items i WHERE version = 0) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-relation-function-argument",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT n FROM items i, LATERAL generate_series(0, i.version) seq(n)) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-function-argument",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-function-argument/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-relation-function-argument",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT n FROM items i, LATERAL generate_series(0, i.version) seq(n)) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-relation-distinct-from-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT 0 IS DISTINCT FROM version FROM items i) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-distinct-from-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-distinct-from-column/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-relation-distinct-from-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT 0 IS DISTINCT FROM version FROM items i) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-relation-function-from-operand",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT substring('abc' FROM version + 1) AS value FROM items i) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-function-from-operand",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-function-from-operand/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-relation-function-from-operand",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT substring('abc' FROM version + 1) AS value FROM items i) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-relation-using-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.id FROM items i JOIN items j USING (version)) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-using-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-using-column/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-relation-using-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.id FROM items i JOIN items j USING (version)) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-relation-array-on-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.id FROM items i JOIN items j ON ARRAY[1, i.version] = ARRAY[1, 0]) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "candidate-sqlc-relation-array-on-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/candidate/relation-array-on-column/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-processed-relation-array-on-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-roles-r42-46073659117-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.id FROM items i JOIN items j ON ARRAY[1, i.version] = ARRAY[1, 0]) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "postgres-cleanup",
+      "command": [
+        "docker",
+        "rm",
+        "-f",
+        "-v",
+        "spira47-roles-r42-46073659117-1"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "5f19b511dba009f80851941d549655739aa6778d1c5ed85f211d75d2f47f796d"
+    },
+    {
+      "name": "candidate-generated-runtime-suites",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-exec",
+        "/home/runner/work/_temp/spira47-baseline-build/argv-observer/launch-test",
+        "-count=1",
+        "-v",
+        "-run",
+        "^(TestGeneratedQueryConstants|TestSQLcPostgresLiteralPipeline|TestSQLcPostgresVersionPipeline)$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "38f38b39644cb7a5af4863327f28a9fa9885c0c876bc8357f911190fe044a2b2"
+    },
+    {
+      "name": "just-gate",
+      "command": [
+        "just",
+        "gate"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "16811d35c934c1ccd3b638a77170a252fbd83caa83ab7498ee54c8a76ddc859a"
+    },
+    {
+      "name": "just-slop",
+      "command": [
+        "just",
+        "slop"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "726d7fbdf59cbe1c13e9700670dd50c6460bf8496bec07d8960b8dd3480a18f8"
+    },
+    {
+      "name": "just-eject",
+      "command": [
+        "just",
+        "eject"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ab7498a95970cfb5b1c90e4813ce0421daa66a7df192a40978b9c488b6b63a42"
+    },
+    {
+      "name": "candidate-whitespace",
+      "command": [
+        "git",
+        "diff",
+        "--cached",
+        "--check",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-unstaged",
+      "command": [
+        "git",
+        "diff",
+        "--exit-code"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-untracked",
+      "command": [
+        "git",
+        "ls-files",
+        "--others",
+        "--exclude-standard"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "restore-original-source",
+      "command": [
+        "git",
+        "restore",
+        "--source",
+        "f3a47a04f1defe427494124507ec621118525265",
+        "--staged",
+        "--worktree",
+        "--",
+        "."
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "source-restoration",
+      "command": [
+        "git",
+        "diff",
+        "--exit-code",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "untracked-restoration",
+      "command": [
+        "git",
+        "ls-files",
+        "--others",
+        "--exclude-standard"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "artifact": {
+    "id": 15233558976,
+    "name": "spira47-relation-roles-candidate-r42",
+    "size_in_bytes": 1622996,
+    "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15233558976",
+    "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15233558976/zip",
+    "expired": false,
+    "created_at": "2026-11-27T22:06:18Z",
+    "expires_at": "2026-12-11T22:06:18Z",
+    "updated_at": "2026-11-27T22:06:18Z",
+    "digest": "sha256:88a17b5cfb3a981851d2341641280fb8ac12b13ae59733bc47c4ba76621370b0",
+    "workflow_run": {
+      "id": 46073659117,
+      "repository_id": 1424164147,
+      "head_repository_id": 1424164147,
+      "head_branch": "ci/spira47-relation-roles-20261127-r42",
+      "head_sha": "673f0c39445d4b583c4d3371609ce585c39be87b"
+    }
+  },
+  "artifact_upload_api_digest_match": true,
+  "artifact_zip_independently_downloaded_here": false,
+  "source_identity": {
+    "before": {
+      "label": "source",
+      "tree": "cae17384cce41647b686a80932833cf5a7b09b19",
+      "blobs": 633,
+      "index_sha256": "ad55ead6076d79ebc984cdc089a352b5eb054f0b6ebda1602236579fb0141d85"
+    },
+    "tests_before": {
+      "label": "tests",
+      "tree": "1023a56edb760173d0d69ccc582567b94509c877",
+      "blobs": 637,
+      "index_sha256": "c2717d9d797dbda30e11d933baee9da94bbff6c0ef3c4ce649f995eff6a1e187"
+    },
+    "tests_after": {
+      "label": "tests",
+      "tree": "1023a56edb760173d0d69ccc582567b94509c877",
+      "blobs": 637,
+      "index_sha256": "c2717d9d797dbda30e11d933baee9da94bbff6c0ef3c4ce649f995eff6a1e187"
+    },
+    "candidate_before": {
+      "label": "candidate",
+      "tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0",
+      "blobs": 638,
+      "index_sha256": "a8f431d2319f13259dba66403a2971d30443d26a0c73ab8a2fbc1947c637642c"
+    },
+    "candidate_after": {
+      "label": "candidate",
+      "tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0",
+      "blobs": 638,
+      "index_sha256": "a8f431d2319f13259dba66403a2971d30443d26a0c73ab8a2fbc1947c637642c"
+    },
+    "restored": {
+      "label": "source",
+      "tree": "cae17384cce41647b686a80932833cf5a7b09b19",
+      "blobs": 633,
+      "index_sha256": "ad55ead6076d79ebc984cdc089a352b5eb054f0b6ebda1602236579fb0141d85"
+    }
+  },
+  "suite_outcomes": [
+    {
+      "test": "TestPostgresRelationReferenceRoles",
+      "passed": 15,
+      "failed": 15
+    },
+    {
+      "test": "TestSQLcPostgresVersionPipeline",
+      "passed": 53,
+      "failed": 14
+    },
+    {
+      "test": "TestPostgresContinuedEscapeStrings",
+      "passed": 14,
+      "failed": 0
+    },
+    {
+      "test": "TestPostgresDollarQuotedBoundaries",
+      "passed": 14,
+      "failed": 0
+    },
+    {
+      "test": "TestVersionedWriteRefused",
+      "passed": 0,
+      "failed": 0
+    },
+    {
+      "test": "TestPostgresTypedLiteralBoundaries",
+      "passed": 12,
+      "failed": 0
+    },
+    {
+      "test": "TestVersionedWriteBypassShapesRefused",
+      "passed": 0,
+      "failed": 0
+    },
+    {
+      "test": "TestVersionedWriteIgnoresLiteralsAndComments",
+      "passed": 0,
+      "failed": 0
+    },
+    {
+      "test": "TestVersionedWriteRefusesStringOnlyVersion",
+      "passed": 0,
+      "failed": 0
+    },
+    {
+      "test": "TestVersionedWriteAcceptsBackslashEscapeBeforeVersion",
+      "passed": 0,
+      "failed": 0
+    },
+    {
+      "test": "TestPostgresVersionReferenceRoles",
+      "passed": 20,
+      "failed": 0
+    },
+    {
+      "test": "TestPostgresVersionReferenceRoleBoundaries",
+      "passed": 8,
+      "failed": 0
+    },
+    {
+      "test": "TestPostgresRelationReferenceRoles",
+      "passed": 30,
+      "failed": 0
+    },
+    {
+      "test": "TestPostgresVersionCatalogResolution",
+      "passed": 11,
+      "failed": 0
+    },
+    {
+      "test": "TestPostgresVersionCTEs",
+      "passed": 26,
+      "failed": 0
+    },
+    {
+      "test": "TestPostgresCTEProjectionRoles",
+      "passed": 10,
+      "failed": 0
+    },
+    {
+      "test": "TestPostgresCTEProjectionClauseBoundaries",
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "test": "TestGeneratedQueryConstants",
+      "passed": 0,
+      "failed": 0
+    },
+    {
+      "test": "TestSQLcPostgresLiteralPipeline",
+      "passed": 60,
+      "failed": 0
+    },
+    {
+      "test": "TestSQLcPostgresVersionPipeline",
+      "passed": 67,
+      "failed": 0
+    }
+  ],
+  "native": {
+    "version": "180007",
+    "original": 67,
+    "processed": 64,
+    "matches": true
+  },
+  "pipeline_partition": {
+    "generated": 30,
+    "plugin-refusal": 34,
+    "upstream": 3
+  },
+  "compiled_value_counts": [
+    8,
+    40,
+    30
+  ],
+  "nested_race_commands": [
+    {
+      "argv": [
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "."
+      ],
+      "cwd": "/tmp/TestGeneratedQueryConstants1116749481/001",
+      "module": "module example.com/spira-sqlc-runtime",
+      "pid": 43795
+    },
+    {
+      "argv": [
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "."
+      ],
+      "cwd": "/tmp/TestSQLcPostgresLiteralPipeline1147353480/001",
+      "module": "module example.com/spira-sqlc-runtime",
+      "pid": 47170
+    },
+    {
+      "argv": [
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "."
+      ],
+      "cwd": "/tmp/TestSQLcPostgresVersionPipeline1333733628/001",
+      "module": "module example.com/spira-sqlc-runtime",
+      "pid": 50818
+    }
+  ],
+  "documentation": {
+    "sentences": 21,
+    "maximum_whitespace_delimited_words": 15
+  },
+  "authenticated_baseline": {
+    "producer": "1e3727f8611f3548727b25534e0f534b3f754cf6",
+    "run": 46070228650,
+    "job": 140745126134,
+    "artifact": 15232697489,
+    "name": "spira47-relation-roles-baseline-r42",
+    "zip_bytes": 706825,
+    "zip_sha256": "d77ca9b5011526a574548896be1f519043257f5c7da2aaa1b699f31f4de4907a",
+    "producer_conclusion": "success",
+    "download_digest_verified": true,
+    "report_sha256": "9e1c4ce2a1bd9d57b65ccd0877555be35da6c2a9c44cba3c6aad955678821ffb",
+    "command_logs_verified": 110,
+    "native_cases": 30,
+    "pipeline_cases": 30,
+    "source_restoration_verified": true,
+    "full_source_gates_reused": false
+  },
+  "authenticated_prior": {
+    "producer": "f4cf3affecceb7459e9d4b9e9561415defef6197",
+    "run": 46061112680,
+    "job": 140715332598,
+    "artifact": 15229680826,
+    "name": "spira47-catalog-cte-candidate-r41",
+    "zip_bytes": 1322443,
+    "zip_sha256": "84b23da565a2ebc612846a38ebc91d2d9f836bb728c5a5542e186e00af283279",
+    "producer_conclusion": "success",
+    "download_digest_verified": true,
+    "report_sha256": "34bbe593df70f1e29ae0d27578cf1f8c3560345b98317643eef4ce7a6be9eded",
+    "selected_unique_command_logs_verified": 113,
+    "native_cases": 37,
+    "pipeline_cases": 37,
+    "selection": [
+      "lower-option-lower-column",
+      "mixed-option-lower-column",
+      "upper-option-lower-column",
+      "mixed-option-alias-refusal",
+      "quoted-column-exact-option",
+      "quoted-column-folded-option",
+      "quoted-column-alias-refusal",
+      "missing-configured-column",
+      "ambiguous-folded-option",
+      "exact-option-before-fold-collision",
+      "exact-option-rejects-quoted-sibling",
+      "plain-cte-reference",
+      "materialized-cte-reference",
+      "not-materialized-cte-reference",
+      "plain-cte-omission",
+      "materialized-cte-omission",
+      "not-materialized-cte-omission",
+      "mixed-case-materialized-reference",
+      "column-list-materialized-reference",
+      "second-materialized-reference",
+      "recursive-materialized-reference",
+      "quoted-cte-name-reference",
+      "main-alias-list-after-with",
+      "main-cast-after-with",
+      "main-alias-list-without-with",
+      "materialized-cte-output-alias",
+      "ordinality-alias-list-omission",
+      "ordinality-cte-reference",
+      "nested-materialized-cte-reference",
+      "search-sibling-reference",
+      "search-sibling-omission",
+      "cycle-sibling-reference",
+      "cycle-sibling-omission",
+      "search-cycle-sibling-reference",
+      "search-cycle-sibling-omission",
+      "explicit-cycle-mark-sibling-reference",
+      "explicit-cycle-mark-sibling-omission"
+    ],
+    "full_source_gates_reused": false,
+    "log_scope": "Only the 113 unique selected-case, runtime and retained-control logs are read. The prior 204 receipts have 198 per-name files; six repeated setup names are not included."
+  },
+  "authenticated_linter": {
+    "producer": "bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+    "run": 45765398446,
+    "job": 139724970737,
+    "artifact": 15091303567,
+    "name": "lean-rust-and-cli-bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+    "zip_bytes": 17472007,
+    "zip_sha256": "e362f672d39498374a637a68ded7f57205b415e68006a4dc4a4a882405f5af33",
+    "producer_conclusion": "success",
+    "download_digest_verified": true,
+    "binary_sha256": "a04c9c3e53c8aae18e2d5f89faaf3ad68b89980218ca9d1fc4af5ce487401024",
+    "binary_bytes": 191012744,
+    "version": "sloplint 0.1.0",
+    "source": "bc2067d1ec888789e6584dc6a24e8c67d1b0b506"
+  },
+  "source_gates": [
+    {
+      "name": "just-gate",
+      "command": [
+        "just",
+        "gate"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "16811d35c934c1ccd3b638a77170a252fbd83caa83ab7498ee54c8a76ddc859a"
+    },
+    {
+      "name": "just-slop",
+      "command": [
+        "just",
+        "slop"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "726d7fbdf59cbe1c13e9700670dd50c6460bf8496bec07d8960b8dd3480a18f8"
+    },
+    {
+      "name": "just-eject",
+      "command": [
+        "just",
+        "eject"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ab7498a95970cfb5b1c90e4813ce0421daa66a7df192a40978b9c488b6b63a42"
+    }
+  ],
+  "qualifications": [
+    "All 228 command names are unique in this run; each stdout occurrence and artifact log has its own identity.",
+    "Sloplint preserved the existing major threshold: zero blocker/critical/major, one existing Handle minor in unchanged web/web.lgo, 12 skipped files.",
+    "The eject recipe completed the stock Go 1.27.4 build. No stock-Go test or just engines result is claimed.",
+    "Source repository has no ordinary Actions workflow.",
+    "The earlier 46068178205 observer-location failure is preserved, with no failed source-gate reuse."
+  ],
+  "regressions_verified": true,
+  "focused_gates_passed": true,
+  "source_gates_passed": true,
+  "source_restored": true,
+  "publication_eligible": true,
+  "source_published": false,
+  "overall_pr_work_complete": false
+}
