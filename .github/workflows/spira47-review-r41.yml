@@ -1,10 +1,10 @@
-name: "Spira 47 catalog, CTE and retained pipeline baseline r41"
+name: "Spira 47 introduced SELECT alias baseline r41"
 on:
   push:
     branches: ["ci/spira47-catalog-cte-20261127-r41"]
     paths:
       - ".github/workflows/spira47-review-r41.yml"
-      - "ci-tools/spira47-review-r41/**"
+      - "ci-tools/spira47-r41-alias/**"
 permissions:
   contents: read
 concurrency:
@@ -65,13 +65,13 @@ jobs:
       - name: Freeze authentic native and unchanged-source outcomes
         run: |
           export GOENV=off GOCACHEPROG=''
-          uv run --no-project --python 3.15 proof/ci-tools/spira47-review-r41/verify_baseline.py \
-            source proof/ci-tools/spira47-review-r41 "$RUNNER_TEMP/spira47-r41-baseline-evidence"
+          uv run --no-project --python 3.15 proof/ci-tools/spira47-r41-alias/verify_alias_baseline.py \
+            source proof/ci-tools/spira47-r41-alias "$RUNNER_TEMP/spira47-r41-select-alias-evidence"
       - name: Preserve exact source and native evidence
         if: always()
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
-          name: spira47-catalog-cte-baseline-r41
-          path: ${{ runner.temp }}/spira47-r41-baseline-evidence
+          name: spira47-select-alias-baseline-r41
+          path: ${{ runner.temp }}/spira47-r41-select-alias-evidence
           if-no-files-found: error
           retention-days: 14

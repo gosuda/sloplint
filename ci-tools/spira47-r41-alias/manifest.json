@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "purpose": "Freeze the SELECT bare-output-alias regression hypothesized in the inactive CTE proposal; no corrected production or publication.",
+  "source": {
+    "repository": "gosuda/spira",
+    "head": "6031a63255bc7496e22b38921e10401a2d50c291",
+    "tree": "e4214ecf0b2b5a214d26921664313b98d14efb13",
+    "blobs": 625,
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "index_file": "source-index.json"
+  },
+  "tests": {
+    "tree": "1fa7e3ac0a333bc1d2b69a1ce23d18402d512f9d",
+    "blobs": 630,
+    "index_file": "test-index.json",
+    "production_unchanged": true
+  },
+  "proposed": {
+    "tree": "d865a7d0e949ee674e1d13dd09e84c5ef8789b28",
+    "blobs": 631,
+    "index_file": "proposed-index.json",
+    "source_proposal_commit": "5863a89fca0390474647332c5dab82bee591371f",
+    "production_bytes_unchanged_from_reviewed_proposal": true
+  },
+  "toolchain": {
+    "repository": "gosuda/LoGOs",
+    "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+    "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+    "bootstrap_go": "1.27.4",
+    "fresh_build": true
+  },
+  "postgres_image": "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782",
+  "postgres_version_num": "180007",
+  "sqlc_version": "v1.31.2-0.20261023030206-3ad8b20fb02b",
+  "tools": {
+    "uv": "0.13.9",
+    "python": "3.15"
+  },
+  "contracts": {
+    "cases": 10,
+    "native_original": 10,
+    "native_processed_per_source": 10,
+    "unchanged_failed": [
+      "cte-select-column",
+      "cte-select-all-column",
+      "cte-select-distinct-column",
+      "cte-select-distinct-on-column",
+      "cte-select-function-argument",
+      "cte-select-operator-operand",
+      "cte-select-sibling-column"
+    ],
+    "proposed_failed": [
+      "cte-select-quoted-alias",
+      "cte-select-bare-alias"
+    ],
+    "proposed_pipeline_refusals": [
+      "cte-select-explicit-alias"
+    ],
+    "unchanged_pipeline_partition": {
+      "generated": 0,
+      "plugin-refusal": 10
+    },
+    "proposed_pipeline_partition": {
+      "generated": 9,
+      "plugin-refusal": 1
+    },
+    "query_metadata_unchanged": true,
+    "all_original_37_cases_and_7_test_paths_preserved": true,
+    "baseline_verified_scope": "The known inaccurate proposal must fail two newly frozen alias-negative assertions while genuine-reference controls pass. This is a successful diagnostic harness only if every native, source, pipeline and restoration condition matches; the proposed source remains ineligible for publication.",
+    "source_gates_reused": false
+  },
+  "completed_original_baseline": {
+    "commit": "815abc8715bdb5bc3d69aeaa09b92e77e5c2ec15",
+    "run": 46055423838,
+    "job": 140696615860,
+    "artifact": 15225739880,
+    "report_sha256": "f3260715e44cf18ffdc38fb500fdff0c1dc2e421e5d15d5e9ff96cdbd7899fd5"
+  },
+  "proof_sha256": {
+    "baseline_support.py": "c1124b78e01e1cbb8b296c2199240a3f19b2673f2add1b327f2ba2d40b348e38",
+    "proof_support.py": "e24d7a897bbafc7f1d29557be3b0dd8fdd2756258b91161b92fb48c4b5df74f5",
+    "native_support.py": "70e59aad5436371c7c7e08772b89f797f01755d02ca71214180309cc916afd53",
+    "observer.py": "311c6b97c19ff10d1a68f7d186c9de00a27185207bbf9071f5a7430cf2195578",
+    "verify_baseline.py": "74effd6fe6cd99dd2b00b37397419e0e8090d72448929540f256ded4225981bf",
+    "schema.sql": "250795d402dca7144e24f33dc51026083c7664385436545bca8762b7a66de6bc",
+    "source-index.json": "9172ff6ef0f04168d8c9c0ffbb32612f672beef67af29b7c6b65af107a746615",
+    "test-index.json": "1b023ebe772f6959e1f599300de905da1601912c26eca712ac62f53d54debe46",
+    "proposed-index.json": "64d5e29a470cff422b3c54ffdeca8407d0777a729dc1b693a5a2f2f455d02ebd",
+    "authored-tests.json": "27f7c8dcb8458c09e4fe35100f90b29d65b7b8976a906f3407af13e9cb16054b",
+    "authored-proposed.json": "e441a5c19711c1de2968e1a51275dea93c939c4081e9f44fe6d82f00d13a00e5",
+    "version-projections.json": "3462fcabeeee48c49f90e9021422da1a646dfaa05bb616bcda4a2998694a5444",
+    "verify_alias_baseline.py": "00f9d27bc62897893e2bcddbab6f4b32baf9ee36e145b2bdb00a3a707b61d73a"
+  },
+  "workflow_sha256": "6610947a1bfa9c54f00c07141af0a6987279bd086382fa38cae5e09ce33b74a9",
+  "publication_eligible": false
+}
