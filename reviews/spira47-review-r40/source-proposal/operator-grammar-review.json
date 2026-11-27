@@ -51,7 +51,7 @@
       ]
     }
   ],
-  "native_outcomes": "Unexecuted until the final gate's unchanged-source native and real-SQLc observations. Source-derived expectations are not reported as native success.",
+  "native_outcomes": "Original static expectations were unexecuted at3c092. Run46036218162 later established27 valid native states and one unqualified syntax rejection; it remained failure and did not apply production. The unreserved keyword category alone did not establish expression-context parsing.",
   "added_cases": [
     {
       "name": "qualified-function-alias",
@@ -72,5 +72,12 @@
     "original20json": true,
     "first6boundaryrows": true,
     "schema_prefix": true
+  },
+  "native_disposition": {
+    "run": 46036218162,
+    "qualified_function": "native success; returns changed and leaves version0",
+    "unqualified_function": "native syntax error at or near closing parenthesis; disproves the prior native-valid prediction",
+    "production_applied": false,
+    "next_proof": "Retain exact SQL/direct negative and require explicit42601 plus SQLc pre-plugin syntax refusal"
   }
 }

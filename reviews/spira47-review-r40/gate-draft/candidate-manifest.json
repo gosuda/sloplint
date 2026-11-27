@@ -10,14 +10,14 @@
     "index_file": "source-index.json"
   },
   "tests": {
-    "tree": "c547ed75d64ff1cc0da98abd7070c3425af014b9",
+    "tree": "e7156d523e7fce71cc987e6acb200ef1c583c5cd",
     "blobs": 624,
     "index_file": "final-test-index.json",
     "runtime_helper_unchanged": true,
     "scope": "Four final test/data paths only; model, scanner and nested runtime helper remain unchanged until candidate application."
   },
   "candidate": {
-    "tree": "9b0592ca5b21e341c543512562f42565c5e198dc",
+    "tree": "e4214ecf0b2b5a214d26921664313b98d14efb13",
     "blobs": 625,
     "index_file": "candidate-index.json",
     "changed_paths": [
@@ -79,16 +79,17 @@
     "boundary_unchanged_controls": 3,
     "candidate_direct_passes": 28,
     "native_original": 28,
-    "native_unchanged_captured": 8,
-    "native_candidate_captured": 28,
+    "native_unchanged_captured": 7,
+    "native_candidate_captured": 27,
     "candidate_pipeline": {
       "generated": 10,
-      "version_refusals": 17,
-      "unnamed_column_refusals": 1
+      "version_refusals": 16,
+      "unnamed_column_refusals": 1,
+      "upstream_syntax_refusals": 1
     },
     "qualified_operator": "The exact unaliased qualified-operator SQL is a positive native/direct-Generate reference control. Source-pinned SQLc is predicted to emit one empty-named A_Expr output column; both unchanged and repaired real pipelines must reproduce the existing exact column-0-needs-an-alias refusal before the version check. No SQL spelling or direct expectation is altered.",
-    "unchanged_pipeline": "All eight newly added exact queries run through unchanged real SQLc first. Seven must generate; the unaliased symbolic operator must reach the existing exact output-column refusal. Unexpected actual results fail the proof before production application.",
-    "request_identity": "All28 candidate captured query metadata/text objects must equal authenticated original20 or same-job unchanged8 records, including output columns.",
+    "unchanged_pipeline": "All eight appended exact queries run through unchanged real SQLc first. Six must generate; the unaliased symbolic operator must reach the existing exact output-column refusal, and the unquoted unqualified operator(name) source must reproduce its syntax rejection before invoking the plugin. Unexpected actual results fail before production application.",
+    "request_identity": "The27 candidate captured query metadata/text objects must equal authenticated original20 or same-job unchanged7 records, including output columns. The one upstream syntax control must have no request/generated files on either source.",
     "nested_race": "Actual two distinct generated modules must execute ['test','-race','-count=1','-v','.'] through the immutable real compiler. Authenticated baseline requires exactly the corresponding missing-race vectors.",
     "retained": {
       "dollar": 14,
@@ -105,12 +106,15 @@
       "original621 restoration"
     ],
     "full_source_gates_reused": false,
-    "operator_function": "Both qualified public.operator(name) and unqualified operator(name) with a bare version alias are negative reference cases. The proof schema appends only CREATE FUNCTION public.operator(text) RETURNS text LANGUAGE sql IMMUTABLE AS 'SELECT $1'; the original schema prefix and all original26 SQL bytes remain exact."
+    "operator_function": "Qualified public.operator(name) with a bare version alias is native-valid and must be refused. The exact unqualified operator(name) spelling is preserved as a PostgreSQL and SQLc syntax-error control. The sole added proof-schema function and all28 SQL/direct-allow values stay unchanged.",
+    "native_original_valid_states": 27,
+    "native_original_syntax_rejections": 1,
+    "direct_refusal_scope": "Seventeen unchanged-source direct-Generate failures comprise16 native-valid reference-role refusals plus one preserved syntax-control refusal; eleven genuine reference controls pass. This does not claim the upstream-rejected spelling is valid PostgreSQL."
   },
   "source_review": {
     "proposal_base": "752734d48a483f306604fdb6939dd7c6a1f8fc08",
-    "authored_sha256": "cb774362130c0ba4b64194c7b6924ab7406b7e54547dff570620258fb5962c8c",
-    "operator_correction": "The OPERATOR construct must start at an unqualified keyword and contain an optional qualified-name prefix followed only by symbolic operator characters from PostgreSQL REL_18_4 scan.l. Qualified and unqualified functions named operator remain ordinary operands and their following bare aliases are excluded.",
+    "authored_sha256": "a2e2b95a28d565ddaf8a209ea0ff3deba50a700d648f32bc00fe58abeeecbbc3",
+    "operator_correction": "The OPERATOR construct must start at an unqualified keyword and contain an optional qualified-name prefix followed only by symbolic operator characters from PostgreSQL REL_18_4 scan.l. The qualified function named operator remains an ordinary operand; the unqualified operator(name) spelling is an explicit native/upstream syntax-rejection control.",
     "rejected_unexecuted_proposals": [
       {
         "commit": "1d0ab35d7b6f8a50bb925239b6ef7234acf6fbc3",
@@ -173,6 +177,22 @@
       "phase": "combined central-directory member-count/aggregate-size check",
       "source_tests_reached": false,
       "conclusion": "failure"
+    },
+    "native_prediction": {
+      "producer": "922ac683b3bdbeb7f296e74280d69e9f03d77e8f",
+      "run": 46036218162,
+      "job": 140632184087,
+      "artifact": 15215953988,
+      "zip_sha256": "b51ee58ad671dd037f956013aaaaa226640f1a1f2935d079adf5825c35fe8a18",
+      "raw_job_log_sha256": "e752d41b0574b76b568e706c22a693632fa8a31688212f65b12d8e0f47473d54",
+      "conclusion": "failure",
+      "production_applied": false,
+      "source_tests_reached": false,
+      "source_restored": true,
+      "actual_native_passes": 27,
+      "failed_input": "unqualified-function-alias",
+      "actual_exit": 1,
+      "expected_exit": 0
     }
   },
   "proof_sha256": {
@@ -184,16 +204,16 @@
     "launch_test.py": "31d90542191330a6be39b61ce5d5dc447dedbbb0b557706ef0a00c9d93a7c733",
     "linter_support.py": "5594ac624c616c8641723dcc710220346117e826b3e59ed5728c016e38fc1ee1",
     "source-index.json": "628d91c699ed64ab99c4dd00f936fc2187aa5d7daa53377e306daae80177b9fc",
-    "final-test-index.json": "2bbae50d10f663a3342fd4d25a4ea05b2e3f02e3d6dace53766fd3923fda32e1",
-    "candidate-index.json": "bf439c611c5bce6d388e6409c018feb745f19370ee5478ccac2864564f7ecb2c",
-    "authored-candidate.json": "cb774362130c0ba4b64194c7b6924ab7406b7e54547dff570620258fb5962c8c",
+    "final-test-index.json": "0c1c0992378cdecd3f68505553574eafd691d1e1483c2fa3ae2b270782903427",
+    "candidate-index.json": "9172ff6ef0f04168d8c9c0ffbb32612f672beef67af29b7c6b65af107a746615",
+    "authored-candidate.json": "a2e2b95a28d565ddaf8a209ea0ff3deba50a700d648f32bc00fe58abeeecbbc3",
     "version-references.json": "dd4ce8e234ddd6f4fd668608944dc5bd3b15ce23f3ff9de463d48b9706d8332a",
-    "version-reference-boundaries.json": "2139c1a1432c60553dcfe53dcd926ca60c458b4b1459a62a2536e246acb8c45b",
+    "version-reference-boundaries.json": "cdd91ec2867dbc187110e727d96d12c2ea1ead6afbe4592fc6313c6feec7ecbb",
     "baseline-report.json": "762d5c18c6700bad44c5dee8186e664e171121562093f87d2b9b1443a911e156",
     "schema.sql": "9b34ea17e9600b6523e1efc269b49b4061cd719007002b21b5f9195b440af553",
     "candidate_archive.py": "a1d4c1a4f278a5aaa7f555ea2159dd104cb2ac45d50045fb91a1ecf324a1aeec",
-    "reference_observer.py": "357ea10b7685eff7adc6f96541f99aa67a99efad999ab4eaff09b8acc15114ff",
-    "verify_candidate.py": "1e38034da3db27a30e244be069e54869f32a6ffaf76efc284629806ed22253d6"
+    "reference_observer.py": "505d50497979f70afc10782d5a57f80babf129fd437489135c1954356cfec5e0",
+    "verify_candidate.py": "d406e9454c5bb96e15ed5f823f91afca8b60ab8297482a249b84d5e73ab8960e"
   },
   "workflow_sha256": "76ba835edd80304c0147fd8e322d49e12e19039061a891eeb707f533c34ebdc6",
   "publication_eligible": false,

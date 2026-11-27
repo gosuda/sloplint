@@ -10,17 +10,17 @@
     "index_file": "source-index.json"
   },
   "candidate": {
-    "tree": "9b0592ca5b21e341c543512562f42565c5e198dc",
+    "tree": "e4214ecf0b2b5a214d26921664313b98d14efb13",
     "blobs": 625,
     "index_file": "candidate-index.json"
   },
   "unchanged_production_tests": {
-    "tree": "c547ed75d64ff1cc0da98abd7070c3425af014b9",
+    "tree": "e7156d523e7fce71cc987e6acb200ef1c583c5cd",
     "blobs": 624,
     "index_file": "final-test-index.json",
     "runtime_helper_unchanged": true
   },
-  "authored_sha256": "cb774362130c0ba4b64194c7b6924ab7406b7e54547dff570620258fb5962c8c",
+  "authored_sha256": "a2e2b95a28d565ddaf8a209ea0ff3deba50a700d648f32bc00fe58abeeecbbc3",
   "files": [
     {
       "path": "cmd/sqlc-gen-spira/model.lgo",
@@ -61,14 +61,14 @@
     {
       "path": "cmd/sqlc-gen-spira/testdata/version-reference-boundaries.json",
       "mode": "100644",
-      "sha256": "2139c1a1432c60553dcfe53dcd926ca60c458b4b1459a62a2536e246acb8c45b",
-      "blob": "8aa068ca0495d35f04be9286281e7cece9e4fe0f"
+      "sha256": "cdd91ec2867dbc187110e727d96d12c2ea1ead6afbe4592fc6313c6feec7ecbb",
+      "blob": "8f1b5c3de5cb8f44fe12e6f9bbd0690eaf2bb05a"
     },
     {
       "path": "docs/specs/sqlc-gen-spira.md",
       "mode": "100644",
-      "sha256": "b77a27d3de46329275f9f5358c70d525a862dae5ebcf7598eae728a0b49e6312",
-      "blob": "8dab03590521d753958b47b673a08c6080a8e6bd"
+      "sha256": "bf9556cd63661b068321133c40b69a358c19120c5a262ece63507dd4a3927435",
+      "blob": "7e2b85240d4bcd9708b3862edd67f16788238f78"
     }
   ],
   "frozen_original": {
@@ -86,7 +86,7 @@
   "new_structural_controls": {
     "cases": 8,
     "file": "version-reference-boundaries.json",
-    "sha256": "2139c1a1432c60553dcfe53dcd926ca60c458b4b1459a62a2536e246acb8c45b",
+    "sha256": "cdd91ec2867dbc187110e727d96d12c2ea1ead6afbe4592fc6313c6feec7ecbb",
     "expected_unchanged_red": [
       "parenthesized-bare-alias",
       "qualified-cast-type",
@@ -99,7 +99,7 @@
       "quoted-call-punctuation",
       "qualified-operator-operand"
     ],
-    "native_observation": "Pending in the final gate before production application. The two new operator-function definitions are added only to the native/SQLc proof schema."
+    "native_observation": "The first27 sources passed on PostgreSQL18.7 in46036218162; the exact appended unqualified operator(name) source was a syntax error. Its SQL/direct allow=false remains unchanged; native_error now records42601 and the corrected proof will require the explicit server code. No source was applied in that failed run."
   },
   "scope": {
     "postgresql_only": true,
@@ -112,11 +112,11 @@
     "case": "ASCII folding for unquoted names; quoted names preserve case and unescape doubled quotes.",
     "limitation": "Syntactic presence check, not complete reference-to-table binding across nested queries or CTE scopes.",
     "nested_race": "Only -race is added to the existing shared generated-package test command.",
-    "operator_shape": "The OPERATOR construct must start at an unqualified keyword and contain an optional qualified-name prefix followed only by symbolic operator characters from PostgreSQL REL_18_4 scan.l. Qualified and unqualified functions named operator remain ordinary operands and their following bare aliases are excluded."
+    "operator_shape": "The OPERATOR construct must start at an unqualified keyword and contain an optional qualified-name prefix followed only by symbolic operator characters from PostgreSQL REL_18_4 scan.l. The qualified function named operator remains an ordinary operand; the unqualified operator(name) spelling is an explicit native/upstream syntax-rejection control."
   },
   "required_gates": [
     "Authenticated unchanged-source and missing-race baseline; preserve both observer failures",
-    "Native original and actual captured SQL for28 cases, with unchanged-production17RED/11controls before application",
+    "Native27 valid SQL states and one syntax rejection, actual27 captured requests plus one upstream absence, with unchanged-production17RED/11controls before application",
     "All existing14dollar/12typed/14continued/8compiled/40pipeline cases",
     "Actual nested argv includes-race in both generated module directories",
     "Native compiler/race focused tests and actual just gate/slop/eject",
@@ -161,5 +161,15 @@
         }
       ]
     }
-  ]
+  ],
+  "observer_failure": {
+    "run": 46036218162,
+    "job": 140632184087,
+    "producer": "922ac683b3bdbeb7f296e74280d69e9f03d77e8f",
+    "candidate_source_applied": false,
+    "conclusion": "failure",
+    "reason": "Incorrect native-valid prediction for unquoted unqualified operator(name)",
+    "corrected_fields": "Only that row's impossible native_name/native_version expectations become native_error=42601; SQL and direct allow=false stay exact.",
+    "production_bytes_unchanged": true
+  }
 }

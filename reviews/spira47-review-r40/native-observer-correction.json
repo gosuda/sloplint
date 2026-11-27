@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "failed_run": 46036218162,
+  "actual_error": {
+    "name": "original-unqualified-function-alias",
+    "log_sha256": "6c89a4af282807574ee887180246640a53d3977a74aaa6a27e27601427fcf03d",
+    "bytes": 171,
+    "text": "ERROR:  syntax error at or near \")\"\nLINE 3: ...items SET name = 'changed' RETURNING operator(name) version;\n                                                             ^\n"
+  },
+  "old_case": {
+    "name": "unqualified-function-alias",
+    "sql": "UPDATE items SET name = 'changed' RETURNING operator(name) version;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  "new_case": {
+    "name": "unqualified-function-alias",
+    "sql": "UPDATE items SET name = 'changed' RETURNING operator(name) version;",
+    "allow": false,
+    "native_error": "42601"
+  },
+  "production_sha256": [
+    {
+      "path": "cmd/sqlc-gen-spira/model.lgo",
+      "sha256": "face86cedd33f5aac016ecc7b80947e1cf422ba3e8999b5b7d013d30fc948c4c"
+    },
+    {
+      "path": "cmd/sqlc-gen-spira/version_reference.lgo",
+      "sha256": "f3c2fb8217abe06f16b9e0651e045d2da72af695b5cf288c8e9d17a042e3fefb"
+    }
+  ],
+  "statement": "Correction follows the actual native rejection. No SQL bytes, direct allow expectations, production code, limits, gate commands or existing valid-case expectations are changed. The new verbose native error and pinned SQLc pre-plugin refusal are still required actual observations."
+}
