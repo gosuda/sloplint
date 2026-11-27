@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "phase": "candidate-native-proof-running",
+  "producer": "94dadaf62ae595080dd34e51a9cebd0bae0acd75",
+  "producer_tree": "5dc8b7ed6dee70df0632a9cd4ab95cde746044f6",
+  "run": 46016220487,
+  "job": 140563913964,
+  "url": "https://github.com/gosuda/sloplint/actions/runs/46016220487",
+  "source": {
+    "repository": "gosuda/spira",
+    "head": "593d792bf282f7b7119dafb057a389b04c91fd6d",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "tree": "1ec9a3d1e6a53ad1a50723869c6d381cf64d7877",
+    "blobs": 616
+  },
+  "candidate": {
+    "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+    "blobs": 621,
+    "authored_sha256": "ba4813fb7bcae07979f275f59441c7b1ea5daaa4ad425f8a410f224d735a1139"
+  },
+  "manifest_sha256": "411f45334c4ad2ba03b923d4d761519a644d17df90f1250248095e24186ba9be",
+  "driver_sha256": "e2835159527ec276d9cad9a319ed5fde245576713a26b63f6e78c47847c0070f",
+  "workflow_sha256": "07659444f6bad3113def8b9d73fd0890292f6ed40c22c1da8da8aef1c9271467",
+  "review": {
+    "source": "b59e61effa0f165eebdffc21e17f7ccf43238e63",
+    "final_proof": "c460b34b2080d9b2d55e09572c3efffb7b5ffda9",
+    "verdict": "No remaining static blocker; native outcomes pending."
+  },
+  "baseline": {
+    "run": 46010784691,
+    "job": 140545433373,
+    "producer": "c95e03f77fe277a4f973ce475e8804dd983fa42b",
+    "artifact": 15203947679,
+    "zip_sha256": "42ba8f98c5cee2703cb0c10a2efd062836d425fc6431e19a09806e4aa361fd9f"
+  },
+  "source_gates_passed": false,
+  "publication_eligible": false
+}
