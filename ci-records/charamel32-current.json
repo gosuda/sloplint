@@ -1,889 +1,187 @@
 {
-  "task": "Charamel PR32 attached FOR/F option follow-up",
+  "schema_version": 2,
+  "task": "Charamel PR32 parser and approval-boundary reconciliation",
   "public_only": true,
-  "maintained_source_updated": false,
-  "maintained_head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
-  "actual_main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-  "previous_candidate_tree": "e4dc56c7aa06c798df5eca42ecad54e2ffe83423",
-  "source_delta": "Preserve supported separated usebackq and delims=data; attached keyword forms remain unparsed and require exact-command approval.",
-  "native_options": {
-    "producer": "2786b929fed8e9f74702a07c6ffceadbebbf6b95",
-    "run": 45955429909,
-    "job": 140360714513,
-    "conclusion": "success",
-    "artifact": 15178263350,
-    "zip_sha256": "b4602929f39c98eb52826a554890eff70cfd93d49f2b9b5d45756e6ba98239d6",
-    "log_sha256": "7da14afd6cc592263703579371b3ee544428852cb5754f6e9984425f98cb5734",
-    "report": {
-      "producer": "2786b929fed8e9f74702a07c6ffceadbebbf6b95",
-      "run": "45955429909",
-      "source": "5be8cba8e9150be37b35dec47f2cace5647d704f",
-      "tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
-      "candidate_tree_under_review": "e4dc56c7aa06c798df5eca42ecad54e2ffe83423",
-      "windows_version": "\r\nMicrosoft Windows [Version 10.0.26100.33674]\r\n",
-      "driver_sha256": "e7b7e343eb57a45d71e2f6a4680e62a4780ab80b5e34fc3ec7529292e74db073",
-      "manifest_sha256": "e640f2aa8b058c3d6231b45e830b93368d617e8112c6d03106b579e9f2c94c47",
-      "records": [
-        {
-          "id": "options_0_single",
-          "options": "",
-          "quote": "single",
-          "command": "for /f %i in ('echo 9173') do @echo RESULT:[%i]",
-          "expected_lines": [
-            "RESULT:[9173]"
-          ],
-          "actual_exit": 0,
-          "stdout": "RESULT:[9173]\r\n",
-          "stderr": "",
-          "stdout_sha256": "ff60cfcf207337d55198ef70d8a5535be4191e7bf6b38d883f088c7a28086f12",
-          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          "seconds": 0.013858800000008387,
-          "accepted_control": true
-        },
-        {
-          "id": "options_0_backtick",
-          "options": "",
-          "quote": "backtick",
-          "command": "for /f %i in (`echo 9173`) do @echo RESULT:[%i]",
-          "expected_lines": null,
-          "actual_exit": 2,
-          "stdout": "",
-          "stderr": "The system cannot find the file `echo.\r\n",
-          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          "stderr_sha256": "ed948e62016d50cf37e3d772a83c7d2eda6d89b2077ff90ad68a0b5947a5bed1",
-          "seconds": 0.00592660000000933,
-          "accepted_control": true
-        },
-        {
-          "id": "options_1_single",
-          "options": "usebackq",
-          "quote": "single",
-          "command": "for /f \"usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
-          "expected_lines": null,
-          "actual_exit": 0,
-          "stdout": "RESULT:[echo]\r\n",
-          "stderr": "",
-          "stdout_sha256": "1b4b9e30bacd83e467ac4df817bd8b472123b270254986b62d343f34062c4726",
-          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          "seconds": 0.005804099999991763,
-          "accepted_control": true
-        },
-        {
-          "id": "options_1_backtick",
-          "options": "usebackq",
-          "quote": "backtick",
-          "command": "for /f \"usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
-          "expected_lines": [
-            "RESULT:[9173]"
-          ],
-          "actual_exit": 0,
-          "stdout": "RESULT:[9173]\r\n",
-          "stderr": "",
-          "stdout_sha256": "ff60cfcf207337d55198ef70d8a5535be4191e7bf6b38d883f088c7a28086f12",
-          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          "seconds": 0.010894999999990773,
-          "accepted_control": true
-        },
-        {
-          "id": "options_2_single",
-          "options": "delims=usebackq",
-          "quote": "single",
-          "command": "for /f \"delims=usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
-          "expected_lines": null,
-          "actual_exit": 0,
-          "stdout": "RESULT:[9173]\r\n",
-          "stderr": "",
-          "stdout_sha256": "ff60cfcf207337d55198ef70d8a5535be4191e7bf6b38d883f088c7a28086f12",
-          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          "seconds": 0.010912199999992822,
-          "accepted_control": true
-        },
-        {
-          "id": "options_2_backtick",
-          "options": "delims=usebackq",
-          "quote": "backtick",
-          "command": "for /f \"delims=usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
-          "expected_lines": null,
-          "actual_exit": 2,
-          "stdout": "",
-          "stderr": "The system cannot find the file `echo.\r\n",
-          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          "stderr_sha256": "ed948e62016d50cf37e3d772a83c7d2eda6d89b2077ff90ad68a0b5947a5bed1",
-          "seconds": 0.005418899999995119,
-          "accepted_control": true
-        },
-        {
-          "id": "options_3_single",
-          "options": "delims= usebackq",
-          "quote": "single",
-          "command": "for /f \"delims= usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
-          "expected_lines": null,
-          "actual_exit": 0,
-          "stdout": "RESULT:[echo 9173]\r\n",
-          "stderr": "",
-          "stdout_sha256": "717e7d5f459125cc71259092d6b90d32e6e9fc9b685f3a488752a958eda15c2d",
-          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          "seconds": 0.0054526999999922054,
-          "accepted_control": true
-        },
-        {
-          "id": "options_3_backtick",
-          "options": "delims= usebackq",
-          "quote": "backtick",
-          "command": "for /f \"delims= usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
-          "expected_lines": null,
-          "actual_exit": 0,
-          "stdout": "RESULT:[9173]\r\n",
-          "stderr": "",
-          "stdout_sha256": "ff60cfcf207337d55198ef70d8a5535be4191e7bf6b38d883f088c7a28086f12",
-          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          "seconds": 0.010856000000003974,
-          "accepted_control": true
-        },
-        {
-          "id": "options_4_single",
-          "options": "tokens=* delims= usebackq",
-          "quote": "single",
-          "command": "for /f \"tokens=* delims= usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
-          "expected_lines": null,
-          "actual_exit": 0,
-          "stdout": "RESULT:[echo 9173]\r\n",
-          "stderr": "",
-          "stdout_sha256": "717e7d5f459125cc71259092d6b90d32e6e9fc9b685f3a488752a958eda15c2d",
-          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          "seconds": 0.005585500000009347,
-          "accepted_control": true
-        },
-        {
-          "id": "options_4_backtick",
-          "options": "tokens=* delims= usebackq",
-          "quote": "backtick",
-          "command": "for /f \"tokens=* delims= usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
-          "expected_lines": null,
-          "actual_exit": 0,
-          "stdout": "RESULT:[9173]\r\n",
-          "stderr": "",
-          "stdout_sha256": "ff60cfcf207337d55198ef70d8a5535be4191e7bf6b38d883f088c7a28086f12",
-          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          "seconds": 0.011081799999999475,
-          "accepted_control": true
-        },
-        {
-          "id": "options_5_single",
-          "options": "usebackqdelims=",
-          "quote": "single",
-          "command": "for /f \"usebackqdelims=\" %i in ('echo 9173') do @echo RESULT:[%i]",
-          "expected_lines": null,
-          "actual_exit": 0,
-          "stdout": "RESULT:[echo 9173]\r\n",
-          "stderr": "",
-          "stdout_sha256": "717e7d5f459125cc71259092d6b90d32e6e9fc9b685f3a488752a958eda15c2d",
-          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          "seconds": 0.005214600000002179,
-          "accepted_control": true
-        },
-        {
-          "id": "options_5_backtick",
-          "options": "usebackqdelims=",
-          "quote": "backtick",
-          "command": "for /f \"usebackqdelims=\" %i in (`echo 9173`) do @echo RESULT:[%i]",
-          "expected_lines": null,
-          "actual_exit": 0,
-          "stdout": "RESULT:[9173]\r\n",
-          "stderr": "",
-          "stdout_sha256": "ff60cfcf207337d55198ef70d8a5535be4191e7bf6b38d883f088c7a28086f12",
-          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          "seconds": 0.010721300000000156,
-          "accepted_control": true
-        },
-        {
-          "id": "options_6_single",
-          "options": "tokens=*usebackq",
-          "quote": "single",
-          "command": "for /f \"tokens=*usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
-          "expected_lines": null,
-          "actual_exit": 0,
-          "stdout": "RESULT:[echo 9173]\r\n",
-          "stderr": "",
-          "stdout_sha256": "717e7d5f459125cc71259092d6b90d32e6e9fc9b685f3a488752a958eda15c2d",
-          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          "seconds": 0.005336900000003197,
-          "accepted_control": true
-        },
-        {
-          "id": "options_6_backtick",
-          "options": "tokens=*usebackq",
-          "quote": "backtick",
-          "command": "for /f \"tokens=*usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
-          "expected_lines": null,
-          "actual_exit": 0,
-          "stdout": "RESULT:[9173]\r\n",
-          "stderr": "",
-          "stdout_sha256": "ff60cfcf207337d55198ef70d8a5535be4191e7bf6b38d883f088c7a28086f12",
-          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          "seconds": 0.010814600000003338,
-          "accepted_control": true
-        },
-        {
-          "id": "options_7_single",
-          "options": "usebackq tokens=* delims=",
-          "quote": "single",
-          "command": "for /f \"usebackq tokens=* delims=\" %i in ('echo 9173') do @echo RESULT:[%i]",
-          "expected_lines": null,
-          "actual_exit": 0,
-          "stdout": "RESULT:[echo 9173]\r\n",
-          "stderr": "",
-          "stdout_sha256": "717e7d5f459125cc71259092d6b90d32e6e9fc9b685f3a488752a958eda15c2d",
-          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          "seconds": 0.005416400000001431,
-          "accepted_control": true
-        },
-        {
-          "id": "options_7_backtick",
-          "options": "usebackq tokens=* delims=",
-          "quote": "backtick",
-          "command": "for /f \"usebackq tokens=* delims=\" %i in (`echo 9173`) do @echo RESULT:[%i]",
-          "expected_lines": null,
-          "actual_exit": 0,
-          "stdout": "RESULT:[9173]\r\n",
-          "stderr": "",
-          "stdout_sha256": "ff60cfcf207337d55198ef70d8a5535be4191e7bf6b38d883f088c7a28086f12",
-          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          "seconds": 0.010694699999987733,
-          "accepted_control": true
-        },
-        {
-          "id": "options_8_single",
-          "options": "delims=usebackq tokens=*",
-          "quote": "single",
-          "command": "for /f \"delims=usebackq tokens=*\" %i in ('echo 9173') do @echo RESULT:[%i]",
-          "expected_lines": null,
-          "actual_exit": 0,
-          "stdout": "RESULT:[9173]\r\n",
-          "stderr": "",
-          "stdout_sha256": "ff60cfcf207337d55198ef70d8a5535be4191e7bf6b38d883f088c7a28086f12",
-          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          "seconds": 0.010721200000006093,
-          "accepted_control": true
-        },
-        {
-          "id": "options_8_backtick",
-          "options": "delims=usebackq tokens=*",
-          "quote": "backtick",
-          "command": "for /f \"delims=usebackq tokens=*\" %i in (`echo 9173`) do @echo RESULT:[%i]",
-          "expected_lines": null,
-          "actual_exit": 2,
-          "stdout": "",
-          "stderr": "The system cannot find the file `echo.\r\n",
-          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          "stderr_sha256": "ed948e62016d50cf37e3d772a83c7d2eda6d89b2077ff90ad68a0b5947a5bed1",
-          "seconds": 0.005332500000008622,
-          "accepted_control": true
-        }
-      ],
-      "control_failures": [],
-      "source_clean": true,
-      "observational_rows_are_not_claimed_native_valid": true
-    }
+  "snapshot_utc": "2026-11-27 08:18:33 UTC",
+  "state": "full_current_source_gate_running",
+  "maintained": {
+    "repository": "gosuda/Charamel",
+    "pr": 32,
+    "branch": "followup/merged-threads-1127",
+    "head": "38d586ae3b2bce634e854990844f1db0b7642618",
+    "tree": "10a647a31d2e9cca96d31be7189bce76c3017f80",
+    "actual_main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
+    "published_by_this_followup": false
   },
-  "prior_full_gates": {
-    "run": 45953711104,
-    "producer": "25e678050193b0d7ee92e1335a8d32ab76460fe8",
-    "linux": {
-      "producer": "25e678050193b0d7ee92e1335a8d32ab76460fe8",
-      "run": "45953711104",
-      "lane": "linux",
-      "identity": {
-        "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
-        "original_tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
-        "candidate_tree": "e4dc56c7aa06c798df5eca42ecad54e2ffe83423",
-        "source_sha256": {
-          "bin/crush/lib/shell_screen.ml": "a8e7e443a07c064d76e948b84bfdd75e0d08e88f51bad19bf4064859cc85e888",
-          "bin/crush/lib/tools_shell.ml": "dd04f4b372f42d5ad4d64d09168ded0e8939c8263c25693e4704303d00623928",
-          "test/crush/test_tools_shell.ml": "3ca62e11823c855f28f6f0a0e49818320f4007527d764573a767b902db0fa71a"
-        },
-        "changed_paths": [
-          "bin/crush/lib/shell_screen.ml",
-          "bin/crush/lib/tools_shell.ml",
-          "test/crush/test_tools_shell.ml"
-        ],
-        "unstaged_clean": true,
-        "unexpected_untracked": [],
-        "index_sha256": "f0704c0962090c1210ae21932bb4612764ad3959ca9038197e7ed69c530c9607"
-      },
-      "commands": [
-        {
-          "label": "compiler-and-formatter",
-          "script": "test \"$(ocamlc -version)\" = 5.5.1\ntest \"$(ocamlformat --version)\" = 0.29.0\nopam list --installed",
-          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 0.17162509900003897,
-          "log_sha256": "380d384b5cb72e8aa68600edaeb03228ac298c5f6330d5fed6631aec9305dcb3"
-        },
-        {
-          "label": "format",
-          "script": "dune build @fmt",
-          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 7.865571018999958,
-          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        },
-        {
-          "label": "release-build",
-          "script": "dune build --profile release",
-          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 22.508647617000065,
-          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        },
-        {
-          "label": "release-tests",
-          "script": "dune runtest --profile release",
-          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 13.048959454999931,
-          "log_sha256": "8bda4053cac0c349cc1c7ed86ab7b511b062787e3f35938b7a50aff0cf764f82",
-          "test_summary": [
-            "Test Successful in 0.001s. 15 tests run.",
-            "Test Successful in 0.013s. 89 tests run.",
-            "Test Successful in 0.001s. 5 tests run.",
-            "Test Successful in 0.018s. 15 tests run.",
-            "Test Successful in 0.021s. 38 tests run.",
-            "Test Successful in 0.028s. 13 tests run.",
-            "Test Successful in 0.026s. 34 tests run.",
-            "Test Successful in 0.013s. 7 tests run.",
-            "Test Successful in 0.039s. 26 tests run.",
-            "Test Successful in 0.202s. 78 tests run.",
-            "Test Successful in 0.026s. 62 tests run.",
-            "Test Successful in 0.001s. 18 tests run.",
-            "Test Successful in 0.017s. 16 tests run.",
-            "Test Successful in 0.007s. 15 tests run.",
-            "Test Successful in 0.029s. 13 tests run.",
-            "Test Successful in 0.012s. 7 tests run.",
-            "Test Successful in 0.010s. 8 tests run.",
-            "Test Successful in 0.062s. 25 tests run.",
-            "Test Successful in 0.039s. 395 tests run.",
-            "Test Successful in 0.070s. 143 tests run.",
-            "Test Successful in 0.429s. 103 tests run.",
-            "Test Successful in 0.222s. 28 tests run.",
-            "Test Successful in 0.039s. 16 tests run.",
-            "Test Successful in 0.105s. 22 tests run.",
-            "Test Successful in 0.033s. 89 tests run.",
-            "Test Successful in 0.186s. 87 tests run.",
-            "Test Successful in 0.567s. 77 tests run.",
-            "Test Successful in 2.389s. 66 tests run.",
-            "Test Successful in 8.082s. 42 tests run.",
-            "  [OK]          session                 5   file permissions are enforced.",
-            "  [OK]          permission              0   plan ceiling.",
-            "  [OK]          permission              1   unknown mutation targets.",
-            "  [OK]          permission              2   yolo and plan order.",
-            "  [OK]          permission              3   deny before allow.",
-            "  [OK]          permission              4   deny before session approval.",
-            "  [OK]          permission              5   exact config entries.",
-            "  [OK]          permission              6   exact session grants.",
-            "  [OK]          permission              7   asker session grant.",
-            "  [OK]          permission              8   hook order.",
-            "  [OK]          permission              9   local read-only approval.",
-            "  [OK]          permission             10   read-only plan behavior.",
-            "  [OK]          permission             11   component-aware containment.",
-            "  [OK]          permission             12   decision observability.",
-            "  [OK]          permission             13   policy lock while asking.",
-            "  [OK]          permission             14   entry matching.",
-            "  [OK]          permission             15   review needs explicit approval.",
-            "  [OK]          artifact                6   directory permissions are enforced.",
-            "  [OK]          tools-shell             0   conservative shell classifier.",
-            "  [OK]          tools-shell             1   screen reads shell quoting.",
-            "  [OK]          tools-shell             2   literal here-document boundaries.",
-            "  [OK]          tools-shell             3   ANSI-C NUL screening.",
-            "  [OK]          tools-shell             4   parameter quote context.",
-            "  [OK]          tools-shell             5   command lookup mode.",
-            "  [OK]          tools-shell             6   find data positions.",
-            "  [OK]          tools-shell             7   nested fd actions are screened once.",
-            "  [OK]          tools-shell             8   ANSI-C NUL matches bash.",
-            "  [OK]          tools-shell             9   screen requires review.",
-            "  [OK]          tools-shell            10   screen clears ordinary commands.",
-            "  [OK]          tools-shell            11   screen verdict table.",
-            "  [OK]          tools-shell            12   review argument boundaries.",
-            "  [OK]          tools-shell            13   Cmd loop approval boundary.",
-            "  [OK]          tools-shell            14   wrapper option and argument bound...",
-            "  [OK]          tools-shell            15   xargs replacement positions.",
-            "  [OK]          tools-shell            16   executable suffix positions.",
-            "  [OK]          tools-shell            17   shell information switches.",
-            "  [OK]          tools-shell            18   watch execution mode.",
-            "  [OK]          tools-shell            19   foreground capture.",
-            "  [OK]          tools-shell            20   foreground deadline.",
-            "  [OK]          tools-shell            21   background lifecycle.",
-            "  [OK]          tools-shell            22   permission receives read-only cla...",
-            "  [OK]          tools-shell            23   windows fixtures pin zero exit.",
-            "  [OK]          ui                      2   permission dialog bridge round trip.",
-            "Test Successful in 10.053s. 223 tests run."
-          ]
-        },
-        {
-          "label": "whitespace",
-          "script": "git diff --cached --check",
-          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 0.016970033999996303,
-          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        }
-      ],
-      "accepted": true,
-      "native_windows_full_suite_claim": false
+  "candidate": {
+    "tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
+    "source_sha256": {
+      "bin/crush/lib/shell_screen.ml": "76f8ed44a22f5f6d022732aa7d92fba00517fee38ed9d4a3cf28e6d5e0fdd1fe",
+      "bin/crush/lib/tools_shell.ml": "dd04f4b372f42d5ad4d64d09168ded0e8939c8263c25693e4704303d00623928",
+      "test/crush/test_tools_shell.ml": "5ce61e22f1d031bc43a2375a80f5240589e073e41eee6f592b08d97e26a28e8c"
     },
-    "windows": {
-      "job": 140355223838,
-      "status": "in_progress"
+    "paths": [
+      "bin/crush/lib/shell_screen.ml",
+      "bin/crush/lib/tools_shell.ml",
+      "test/crush/test_tools_shell.ml"
+    ]
+  },
+  "current_gate": {
+    "producer": "f5adc8cbc2b99e6764dd182a6285368a5df60ed5",
+    "tree": "837b7cf0cd47e6648aeb271a4190ab12328773fb",
+    "run": 45964436559,
+    "job": 140389628289,
+    "status": "in_progress",
+    "preflight": "success",
+    "conclusion": null,
+    "manifest": {
+      "head": "38d586ae3b2bce634e854990844f1db0b7642618",
+      "original_tree": "10a647a31d2e9cca96d31be7189bce76c3017f80",
+      "candidate_tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
+      "prepared_tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
+      "source_sha256": {
+        "bin/crush/lib/shell_screen.ml": "76f8ed44a22f5f6d022732aa7d92fba00517fee38ed9d4a3cf28e6d5e0fdd1fe",
+        "bin/crush/lib/tools_shell.ml": "dd04f4b372f42d5ad4d64d09168ded0e8939c8263c25693e4704303d00623928",
+        "test/crush/test_tools_shell.ml": "5ce61e22f1d031bc43a2375a80f5240589e073e41eee6f592b08d97e26a28e8c"
+      },
+      "patch_sha256": "0f6ae438a94789b88a938dc030195f7db756b493f6a83a35c92345a7d9893464",
+      "driver_sha256": "657123549471959be92b5dd0f033cdb934e51a8fbd56aafedc2820b705c49454",
+      "preparation": {
+        "id": 15182191626,
+        "sha256": "f2d8970d0b9d4b0fca6ed2a1e4b16f6b6eedc316ac13293142ecf831c5d5d490",
+        "report": "prepare-result.json",
+        "producer": "8dece2aac1d8cc2adb407a676a231d042eecebbe",
+        "run": 45963141716,
+        "job": 140385428457
+      },
+      "windows_proof": {
+        "id": 15181286677,
+        "sha256": "5459c195bb44cb21a73a43fffa88a67fa67bba8fcd9cfb7575c0806cdd902941",
+        "producer": "0a60a5c81b539444484ffbf596d8a78f179c8cee",
+        "run": 45957479981,
+        "job": 140367202997
+      },
+      "windows_tree": "457cd4529dbca9dfb84a258f6a4854b3ce5c6ac2",
+      "previous_sha256": {
+        "bin/crush/lib/shell_screen.ml": "76f8ed44a22f5f6d022732aa7d92fba00517fee38ed9d4a3cf28e6d5e0fdd1fe",
+        "bin/crush/lib/tools_shell.ml": "dd04f4b372f42d5ad4d64d09168ded0e8939c8263c25693e4704303d00623928",
+        "test/crush/test_tools_shell.ml": "6225ae491aac514cf56594597277cd39e3b53524a53412fc2311444dac65ce77"
+      },
+      "windows_fixture_sha256": "84e4ea277db9f271b3ecc06e11702e3ff28dc04f2f88a7caf5dba2add2a68e07",
+      "native_observed_sha256": "1db8a4202cc9f0d7e3da4b037bd035f2618c24a445ee1ce88390fb2c433f535d",
+      "native_options_sha256": "4828864f66e1c3b3b861d1fe2be1b9fd9571c6e92dccbfb4b751114e3c65d638",
+      "required_linux": [
+        "dune build @fmt",
+        "dune build --profile release",
+        "dune runtest --profile release"
+      ],
+      "limitations": [
+        "Current tree runs all Linux AGENTS gates. Windows evidence is carried only after complete non-test blob/mode equality and exact native permission-fixture equality.",
+        "No claim that the merged test-only tree was run on Windows, or that the full Windows suite passed.",
+        "Historical failed native setup/oracle/transport/fd-integration proofs remain unchanged."
+      ]
     }
-  },
-  "first_full_gate_failure": {
-    "run": 45951139556,
-    "linux_job": 140347035292,
-    "windows_job": 140347034772,
-    "conclusion": "failure",
-    "reason": "Both lanes have the same fd --type=f README read-only assertion; addressed by the third-file candidate integration.",
-    "windows_log_sha256": "5cace809e5e8407727e4edb22f132a4dd702cbd7719d807cf9605a4a8dc01e84"
-  },
-  "pending": [
-    "Corrected Windows terminal source/permission result and artifact verification.",
-    "Fresh raw maintained head and actual main before additive publication.",
-    "PR body/replies, addressed thread resolution, ordinary CI and owned workflow retirement."
-  ],
-  "limits": [
-    "This is not a complete Cmd grammar or parity claim.",
-    "No maintained PR32 commit, branch, body, comment or thread write has occurred."
-  ],
-  "final_candidate_tree": "457cd4529dbca9dfb84a258f6a4854b3ce5c6ac2",
-  "final_source_sha256": {
-    "bin/crush/lib/shell_screen.ml": "76f8ed44a22f5f6d022732aa7d92fba00517fee38ed9d4a3cf28e6d5e0fdd1fe",
-    "bin/crush/lib/tools_shell.ml": "dd04f4b372f42d5ad4d64d09168ded0e8939c8263c25693e4704303d00623928",
-    "test/crush/test_tools_shell.ml": "6225ae491aac514cf56594597277cd39e3b53524a53412fc2311444dac65ce77"
   },
   "preparation": {
-    "producer": "54dd715eec83b5f0136e304d522ca0e09aa07c03",
-    "run": "45956779383",
-    "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
-    "original_tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
-    "formatted_tree": "457cd4529dbca9dfb84a258f6a4854b3ce5c6ac2",
-    "native_archives": [
+    "producer": "8dece2aac1d8cc2adb407a676a231d042eecebbe",
+    "run": 45963141716,
+    "job": 140385428457,
+    "conclusion": "success",
+    "artifact": 15182191626,
+    "sha256": "f2d8970d0b9d4b0fca6ed2a1e4b16f6b6eedc316ac13293142ecf831c5d5d490",
+    "log_sha256": "e96a0e0bc35acd4f8f0496feaef831b1e0bc286ab48b47165f5f5d2e004eb636",
+    "cases": 124,
+    "maintained_mismatches": 30,
+    "reconciled_mismatches": 0,
+    "source_restored": true
+  },
+  "native_current_posix": {
+    "producer": "88a5e152a2265678dca327f7b6a37286c382a66a",
+    "run": 45962135575,
+    "job": 140382213249,
+    "conclusion": "success",
+    "artifact": 15181560296,
+    "sha256": "7605405ac76a8eea3907e09af9a1375cfa128b5d23336e91f9537389305122cd",
+    "log_sha256": "bd4828a7a3ed32a7b3d1020605641f50527ca63e4e00d7c1dc02dd7f020fd0fd",
+    "records": 14,
+    "source_restored": true
+  },
+  "windows_production_evidence": {
+    "producer": "0a60a5c81b539444484ffbf596d8a78f179c8cee",
+    "run": 45957479981,
+    "job": 140367202997,
+    "conclusion": "success",
+    "tree": "457cd4529dbca9dfb84a258f6a4854b3ce5c6ac2",
+    "artifact": 15181286677,
+    "sha256": "5459c195bb44cb21a73a43fffa88a67fa67bba8fcd9cfb7575c0806cdd902941",
+    "log_sha256": "557d54877c718096d53267b912053accfc2fa37b25e6a71a46ef143996591a17",
+    "native_records": 55,
+    "selected_shell_permission_tests": 40,
+    "full_format_and_build": true,
+    "full_windows_suite": false,
+    "current_test_only_tree_executed_on_windows": false
+  },
+  "test_preservation": {
+    "external_added_statement_lines": 25,
+    "all_preserved_except": [
+      "({|env GROUP=value - ./brew.exe install fixture|}, \"blocked\");"
+    ],
+    "justified_replacement": "({|env GROUP=value - ./brew.exe install fixture|}, \"clear\");",
+    "native_run": 45962135575,
+    "native_case": "assignment_then_dash"
+  },
+  "review_threads": {
+    "total": 12,
+    "externally_resolved": 10,
+    "unresolved": [
       {
-        "id": 15175765148,
-        "sha256": "ddb69269eed07dcd79c1abd7a83888f17fca287c42f567576e2c685fcfca3d96",
-        "report": "native-baseline.json",
-        "producer": "d3d970b69736556d42c96a6974fca1eb0d040340",
-        "source": "53cdbc3dd32e34cf0ac6769b1fead9c14dad10a5",
-        "records": 37,
-        "failures": [
-          "dynamic_body",
-          "nested_loop",
-          "grouped_body"
+        "id": "PRRT_kwDOUbWGks68r_ro",
+        "comments": [
+          4716843677
         ]
       },
       {
-        "id": 15175727233,
-        "sha256": "e64712b6a5df8b75d12d983d202d72abe8b3e9395a1c089d78e2f843fcf13487",
-        "report": "posix-baseline-result.json",
-        "producer": "a79da117ab77b45fe6adf5d02a6e1e38eb5618f1",
-        "source": "5be8cba8e9150be37b35dec47f2cace5647d704f",
-        "records": 50,
-        "failures": []
-      },
-      {
-        "id": 15178263350,
-        "sha256": "b4602929f39c98eb52826a554890eff70cfd93d49f2b9b5d45756e6ba98239d6",
-        "report": "native-for-options.json",
-        "producer": "2786b929fed8e9f74702a07c6ffceadbebbf6b95",
-        "source": "5be8cba8e9150be37b35dec47f2cace5647d704f",
-        "records": 18,
-        "failure_field": "control_failures",
-        "failures": [],
-        "observed_sha256": "4828864f66e1c3b3b861d1fe2be1b9fd9571c6e92dccbfb4b751114e3c65d638"
+        "id": "PRRT_kwDOUbWGks68r_sx",
+        "comments": [
+          4716843803
+        ]
       }
     ],
-    "native_record_counts": [
-      37,
-      50,
-      18
+    "resolved_by_this_followup": []
+  },
+  "history": {
+    "snapshot": "https://github.com/gosuda/sloplint/blob/297cda65e3078aec9729dc5763b048805d9aa1a7/ci-records/charamel32-current.json",
+    "reconciliation": "https://github.com/gosuda/sloplint/blob/8dece2aac1d8cc2adb407a676a231d042eecebbe/ci-tools/charamel32-cmd/reconciliation-checkpoint.json",
+    "preserve_failed_runs": [
+      45946247831,
+      45947106831,
+      45949463414,
+      45951139556
     ],
-    "baseline_cases": 115,
-    "intermediate_tree": "e4dc56c7aa06c798df5eca42ecad54e2ffe83423",
-    "intermediate_cases": 115,
-    "intermediate_actual_failures": [
-      "for-options-options_5_backtick",
-      "for-options-options_6_backtick"
+    "prior_proof_does_not_certify_external_38d_head": true
+  },
+  "original_external_pr_body": "Follow-up for the unresolved review threads of merged pull requests\n#30, #12 and #3, and for the review of this pull request.\n\nWindows shell screen (Cmd dialect):\n\n- #30: a for header with no do cleared the loop. FOR /F with a command\n  source cleared the loop. Both fixed here; a set that starts with\n  %FILES% is pinned as Review.\n- A bare for with no header no longer opens a pending loop, and the\n  body delimiter is the first do after the loop set closes, so\n  `cmd /c echo ready for review` screens Clear.\n\nPOSIX wrapper parsing:\n\n- `env` skips a lone `-` in every position, as GNU env does, so a\n  refused executable after other options is blocked, not cleared.\n- `command` accepts grouped lookup switches (`command -pv git`).\n- Quoted `${@}`, `${@:n}` and `${!prefix@}` expand to one word per\n  element and stay under review in env assignments and find operands.\n\nRead-only classification:\n\n- `fd` recognizes attached filter values (`fd -tf`, `--type=f`) as\n  data, so plain file searches are read-only while an attached filter\n  followed by an execution action stays mutable.\n\nAlready fixed or carried, no change here: #12 `shell_screen.ml:1240`\n(#30 commit 346ea2c), #3 `test_cli.ml:134` (open #26).\n\nThis branch also contains the head of open #20.\n\nEvidence: each new verdict row fails before its fix and passes after.\n`dune build @fmt`, `dune build --profile release` and\n`dune runtest --profile release` pass (221 tests).\n\nSee also: #30, #12, #3\n",
+  "owned_probe": {
+    "repository": "gosuda/sloplint",
+    "branch": "ci/charamel32-cmd-gates-20261127",
+    "workflows": [
+      ".github/workflows/charamel32-cmd.yml",
+      ".github/workflows/charamel32-cmd-options.yml",
+      ".github/workflows/charamel32-posix-followup.yml"
     ],
-    "baseline_actual_failures": 60,
-    "candidate_cases": 115,
-    "candidate_actual_failures": 0,
-    "candidate_all_pass": true,
-    "source_restored": true,
-    "commands": [
-      {
-        "label": "compiler-version",
-        "argv": [
-          "opam",
-          "exec",
-          "--switch=/home/runner/work/sloplint/sloplint",
-          "--",
-          "ocamlc",
-          "-version"
-        ],
-        "cwd": "/home/runner/work/sloplint/sloplint/source",
-        "actual_exit": 0,
-        "seconds": 0.013312797000025967,
-        "log_sha256": "db74d0caf81f43029fa28ce9888695d0b54d0a99003e6042823c9bc914897865"
-      },
-      {
-        "label": "formatter-version",
-        "argv": [
-          "opam",
-          "exec",
-          "--switch=/home/runner/work/sloplint/sloplint",
-          "--",
-          "ocamlformat",
-          "--version"
-        ],
-        "cwd": "/home/runner/work/sloplint/sloplint/source",
-        "actual_exit": 0,
-        "seconds": 0.016487533999992365,
-        "log_sha256": "a68641c6aacd345c4931a6217331d2bf43398c7bc134666a2f756953eab407aa"
-      },
-      {
-        "label": "baseline-compile",
-        "argv": [
-          "opam",
-          "exec",
-          "--switch=/home/runner/work/sloplint/sloplint",
-          "--",
-          "ocamlc",
-          "-strict-sequence",
-          "-strict-formats",
-          "-short-paths",
-          "-principal",
-          "-warn-error",
-          "+a",
-          "-o",
-          "/tmp/charamel32-compile-rkqujs4z/old/screen-probe",
-          "shell_screen.mli",
-          "shell_screen.ml",
-          "probe.ml"
-        ],
-        "cwd": "/tmp/charamel32-compile-rkqujs4z/old",
-        "actual_exit": 0,
-        "seconds": 0.07841433200002257,
-        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-      },
-      {
-        "label": "previous-candidate-compile",
-        "argv": [
-          "opam",
-          "exec",
-          "--switch=/home/runner/work/sloplint/sloplint",
-          "--",
-          "ocamlc",
-          "-strict-sequence",
-          "-strict-formats",
-          "-short-paths",
-          "-principal",
-          "-warn-error",
-          "+a",
-          "-o",
-          "/tmp/charamel32-compile-rkqujs4z/previous/screen-probe",
-          "shell_screen.mli",
-          "shell_screen.ml",
-          "probe.ml"
-        ],
-        "cwd": "/tmp/charamel32-compile-rkqujs4z/previous",
-        "actual_exit": 0,
-        "seconds": 0.08440021499998807,
-        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-      },
-      {
-        "label": "format-authored-candidate",
-        "argv": [
-          "opam",
-          "exec",
-          "--switch=/home/runner/work/sloplint/sloplint",
-          "--",
-          "ocamlformat",
-          "-i",
-          "bin/crush/lib/shell_screen.ml",
-          "bin/crush/lib/tools_shell.ml",
-          "test/crush/test_tools_shell.ml"
-        ],
-        "cwd": "/home/runner/work/sloplint/sloplint/source",
-        "actual_exit": 0,
-        "seconds": 0.2517715360000068,
-        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-      },
-      {
-        "label": "candidate-compile",
-        "argv": [
-          "opam",
-          "exec",
-          "--switch=/home/runner/work/sloplint/sloplint",
-          "--",
-          "ocamlc",
-          "-strict-sequence",
-          "-strict-formats",
-          "-short-paths",
-          "-principal",
-          "-warn-error",
-          "+a",
-          "-o",
-          "/tmp/charamel32-compile-rkqujs4z/candidate/screen-probe",
-          "shell_screen.mli",
-          "shell_screen.ml",
-          "probe.ml"
-        ],
-        "cwd": "/tmp/charamel32-compile-rkqujs4z/candidate",
-        "actual_exit": 0,
-        "seconds": 0.08538575000000037,
-        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-      },
-      {
-        "label": "restore-original",
-        "argv": [
-          "git",
-          "reset",
-          "--hard",
-          "5be8cba8e9150be37b35dec47f2cace5647d704f"
-        ],
-        "cwd": "/home/runner/work/sloplint/sloplint/source",
-        "actual_exit": 0,
-        "seconds": 0.004322125000015831,
-        "log_sha256": "4012a69cabf599d9232baf21663646a6828eef20d85b7b785832a6091e94a6b3"
-      }
-    ]
+    "retired": false
   },
-  "preparation_artifact": {
-    "id": 15178673535,
-    "sha256": "124c3253d98b7eb187b36ac1d9c1fd73ac4f7681f2cfaa9cafc10031c74a2420",
-    "report": "prepare-result.json",
-    "producer": "54dd715eec83b5f0136e304d522ca0e09aa07c03",
-    "run": 45956779383,
-    "job": 140364978854
-  },
-  "preparation_log_sha256": "c2a8d5b42e50de8e88cc0bc9b935bf1b050d50293bdf77d595fd28cf075a0577",
-  "stage": "Corrected Linux full gates passed; corrected Windows full build and focused native suites pending",
-  "driver_sha256": "5d1bda0bfb19ecd27c38b718347525167b1cc04162ca2395502986c3482207fa",
-  "patch_sha256": "ee668f1b348e2401d33dc3b0c47cfb51aab4d2e73f73384cf4fd3a78d39db81a",
-  "full_proof": {
-    "producer": "0a60a5c81b539444484ffbf596d8a78f179c8cee",
-    "run": 45957479981,
-    "linux": {
-      "job": 140367203387,
-      "result": {
-        "producer": "0a60a5c81b539444484ffbf596d8a78f179c8cee",
-        "run": "45957479981",
-        "lane": "linux",
-        "identity": {
-          "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
-          "original_tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
-          "candidate_tree": "457cd4529dbca9dfb84a258f6a4854b3ce5c6ac2",
-          "source_sha256": {
-            "bin/crush/lib/shell_screen.ml": "76f8ed44a22f5f6d022732aa7d92fba00517fee38ed9d4a3cf28e6d5e0fdd1fe",
-            "bin/crush/lib/tools_shell.ml": "dd04f4b372f42d5ad4d64d09168ded0e8939c8263c25693e4704303d00623928",
-            "test/crush/test_tools_shell.ml": "6225ae491aac514cf56594597277cd39e3b53524a53412fc2311444dac65ce77"
-          },
-          "changed_paths": [
-            "bin/crush/lib/shell_screen.ml",
-            "bin/crush/lib/tools_shell.ml",
-            "test/crush/test_tools_shell.ml"
-          ],
-          "unstaged_clean": true,
-          "unexpected_untracked": [],
-          "index_sha256": "a663a4e0f99b484e4ed4633d9d756469cbcc1ee21e6742584a45a2c9dafb68f4"
-        },
-        "commands": [
-          {
-            "label": "compiler-and-formatter",
-            "script": "test \"$(ocamlc -version)\" = 5.5.1\ntest \"$(ocamlformat --version)\" = 0.29.0\nopam list --installed",
-            "bootstrap": "eval $(opam env --switch=rd --set-switch)",
-            "actual_exit": 0,
-            "timeout": false,
-            "seconds": 0.16398052099998495,
-            "log_sha256": "380d384b5cb72e8aa68600edaeb03228ac298c5f6330d5fed6631aec9305dcb3"
-          },
-          {
-            "label": "format",
-            "script": "dune build @fmt",
-            "bootstrap": "eval $(opam env --switch=rd --set-switch)",
-            "actual_exit": 0,
-            "timeout": false,
-            "seconds": 7.345824359000062,
-            "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-          },
-          {
-            "label": "release-build",
-            "script": "dune build --profile release",
-            "bootstrap": "eval $(opam env --switch=rd --set-switch)",
-            "actual_exit": 0,
-            "timeout": false,
-            "seconds": 21.26281501400001,
-            "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-          },
-          {
-            "label": "release-tests",
-            "script": "dune runtest --profile release",
-            "bootstrap": "eval $(opam env --switch=rd --set-switch)",
-            "actual_exit": 0,
-            "timeout": false,
-            "seconds": 13.73693283600005,
-            "log_sha256": "32a04c0816e92945ec407a8518b6363f4d2f7d58a08beeb3aa913c3aaf8dabb9",
-            "test_summary": [
-              "Test Successful in 0.013s. 89 tests run.",
-              "Test Successful in 0.004s. 15 tests run.",
-              "Test Successful in 0.014s. 15 tests run.",
-              "Test Successful in 0.000s. 5 tests run.",
-              "Test Successful in 0.024s. 38 tests run.",
-              "Test Successful in 0.030s. 34 tests run.",
-              "Test Successful in 0.030s. 13 tests run.",
-              "Test Successful in 0.008s. 7 tests run.",
-              "Test Successful in 0.021s. 62 tests run.",
-              "Test Successful in 0.012s. 16 tests run.",
-              "Test Successful in 0.203s. 78 tests run.",
-              "Test Successful in 0.001s. 18 tests run.",
-              "Test Successful in 0.041s. 26 tests run.",
-              "Test Successful in 0.003s. 15 tests run.",
-              "Test Successful in 0.028s. 13 tests run.",
-              "Test Successful in 0.010s. 8 tests run.",
-              "Test Successful in 0.013s. 7 tests run.",
-              "Test Successful in 0.081s. 25 tests run.",
-              "Test Successful in 0.037s. 395 tests run.",
-              "Test Successful in 0.065s. 143 tests run.",
-              "Test Successful in 0.353s. 103 tests run.",
-              "Test Successful in 0.296s. 28 tests run.",
-              "Test Successful in 0.030s. 16 tests run.",
-              "Test Successful in 0.105s. 22 tests run.",
-              "Test Successful in 0.031s. 89 tests run.",
-              "Test Successful in 2.302s. 66 tests run.",
-              "Test Successful in 0.471s. 77 tests run.",
-              "Test Successful in 0.176s. 87 tests run.",
-              "Test Successful in 8.080s. 42 tests run.",
-              "  [OK]          session                 5   file permissions are enforced.",
-              "  [OK]          permission              0   plan ceiling.",
-              "  [OK]          permission              1   unknown mutation targets.",
-              "  [OK]          permission              2   yolo and plan order.",
-              "  [OK]          permission              3   deny before allow.",
-              "  [OK]          permission              4   deny before session approval.",
-              "  [OK]          permission              5   exact config entries.",
-              "  [OK]          permission              6   exact session grants.",
-              "  [OK]          permission              7   asker session grant.",
-              "  [OK]          permission              8   hook order.",
-              "  [OK]          permission              9   local read-only approval.",
-              "  [OK]          permission             10   read-only plan behavior.",
-              "  [OK]          permission             11   component-aware containment.",
-              "  [OK]          permission             12   decision observability.",
-              "  [OK]          permission             13   policy lock while asking.",
-              "  [OK]          permission             14   entry matching.",
-              "  [OK]          permission             15   review needs explicit approval.",
-              "  [OK]          artifact                6   directory permissions are enforced.",
-              "  [OK]          tools-shell             0   conservative shell classifier.",
-              "  [OK]          tools-shell             1   screen reads shell quoting.",
-              "  [OK]          tools-shell             2   literal here-document boundaries.",
-              "  [OK]          tools-shell             3   ANSI-C NUL screening.",
-              "  [OK]          tools-shell             4   parameter quote context.",
-              "  [OK]          tools-shell             5   command lookup mode.",
-              "  [OK]          tools-shell             6   find data positions.",
-              "  [OK]          tools-shell             7   nested fd actions are screened once.",
-              "  [OK]          tools-shell             8   ANSI-C NUL matches bash.",
-              "  [OK]          tools-shell             9   screen requires review.",
-              "  [OK]          tools-shell            10   screen clears ordinary commands.",
-              "  [OK]          tools-shell            11   screen verdict table.",
-              "  [OK]          tools-shell            12   review argument boundaries.",
-              "  [OK]          tools-shell            13   Cmd loop approval boundary.",
-              "  [OK]          tools-shell            14   wrapper option and argument bound...",
-              "  [OK]          tools-shell            15   xargs replacement positions.",
-              "  [OK]          tools-shell            16   executable suffix positions.",
-              "  [OK]          tools-shell            17   shell information switches.",
-              "  [OK]          tools-shell            18   watch execution mode.",
-              "  [OK]          tools-shell            19   foreground capture.",
-              "  [OK]          tools-shell            20   foreground deadline.",
-              "  [OK]          tools-shell            21   background lifecycle.",
-              "  [OK]          tools-shell            22   permission receives read-only cla...",
-              "  [OK]          tools-shell            23   windows fixtures pin zero exit.",
-              "  [OK]          ui                      2   permission dialog bridge round trip.",
-              "Test Successful in 9.976s. 223 tests run."
-            ]
-          },
-          {
-            "label": "whitespace",
-            "script": "git diff --cached --check",
-            "bootstrap": "eval $(opam env --switch=rd --set-switch)",
-            "actual_exit": 0,
-            "timeout": false,
-            "seconds": 0.017134182999939185,
-            "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-          }
-        ],
-        "accepted": true,
-        "native_windows_full_suite_claim": false
-      },
-      "log_sha256": "7723faff8a1f6dcd038e9350346dc8001519add6add6bc71b0c31e0c3731a14a",
-      "artifact": 15179024318,
-      "zip_sha256": "5d658faf16f2ef6035500ce3b4ca740f6506aea04cd33a880c60f1a72cd20256"
-    },
-    "windows": {
-      "job": 140367202997,
-      "status": "in_progress"
-    }
-  },
-  "earlier_exact_tree_proof": {
-    "producer": "25e678050193b0d7ee92e1335a8d32ab76460fe8",
-    "run": 45953711104,
-    "tree": "e4dc56c7aa06c798df5eca42ecad54e2ffe83423",
-    "conclusion": "success",
-    "linux_artifact": 15178057633,
-    "windows_artifact": 15179852448,
-    "windows_zip_sha256": "044e791e4dfe3765b80c2fc373740ef9c2c46770442d9accc6662b03aaf34c03",
-    "limitation": "This successful earlier tree does not include the attached-keyword correction; current publication remains blocked on corrected Windows proof."
-  },
-  "review_threads": [
-    {
-      "id": "PRRT_kwDOUbWGks68pEjK",
-      "is_resolved": false
-    },
-    {
-      "id": "PRRT_kwDOUbWGks68pEkO",
-      "is_resolved": false
-    },
-    {
-      "id": "PRRT_kwDOUbWGks68pEky",
-      "is_resolved": false
-    },
-    {
-      "id": "PRRT_kwDOUbWGks68pElp",
-      "is_resolved": true
-    },
-    {
-      "id": "PRRT_kwDOUbWGks68qHVK",
-      "is_resolved": false
-    },
-    {
-      "id": "PRRT_kwDOUbWGks68qHWW",
-      "is_resolved": false
-    },
-    {
-      "id": "PRRT_kwDOUbWGks68qHXk",
-      "is_resolved": false
-    },
-    {
-      "id": "PRRT_kwDOUbWGks68qHYe",
-      "is_resolved": false
-    },
-    {
-      "id": "PRRT_kwDOUbWGks68qHZW",
-      "is_resolved": false
-    },
-    {
-      "id": "PRRT_kwDOUbWGks68qHaJ",
-      "is_resolved": false
-    }
+  "limits": [
+    "Current tree runs all Linux AGENTS gates. Windows evidence is carried only after complete non-test blob/mode equality and exact native permission-fixture equality.",
+    "No claim that the merged test-only tree was run on Windows, or that the full Windows suite passed.",
+    "Historical failed native setup/oracle/transport/fd-integration proofs remain unchanged."
+  ],
+  "next": [
+    "Complete exact-tree full Linux gates",
+    "Fresh raw maintained head and actual main checks",
+    "Publish additively only after accepted gates",
+    "Update body and reply/resolve only addressed currently unresolved threads",
+    "Observe ordinary exact-head CI",
+    "Retire all three owned temporary workflows additively"
   ]
 }
