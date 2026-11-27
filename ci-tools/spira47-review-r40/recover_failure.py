@@ -18,19 +18,22 @@ def authenticate(specification: dict[str, object], token: str) -> dict[str, obje
     (prior / "artifact.zip").write_bytes(artifact.data)
     with zipfile.ZipFile(io.BytesIO(artifact.data)) as archive:
         members = archive.infolist()
-        if len(members) > 128 or sum(item.file_size for item in members) > 16 * 1024 * 1024:
-            raise ValueError("failed observer artifact exceeds the frozen bound")
+        inventory = [{"name": item.filename, "bytes": item.file_size,
+                      "compressed_bytes": item.compress_size} for item in members]
+        print("PRIOR_OBSERVER_ARCHIVE_INVENTORY " + json.dumps(inventory), flush=True)
+        if len(members) > 128:
+            raise ValueError("failed observer artifact exceeds its member-count bound")
         names: set[str] = set()
         for item in members:
             path = PurePosixPath(item.filename)
             if (path.is_absolute() or ".." in path.parts or "\\" in item.filename
-                    or item.filename in names or item.file_size > 4 * 1024 * 1024):
+                    or item.filename in names):
                 raise ValueError("invalid failed observer artifact member")
             names.add(item.filename)
         if not {"report.json", "logos-argv.jsonl"} <= names:
             raise ValueError("failed observer artifact is incomplete")
-        report_bytes = archive.read("report.json")
-        argv_bytes = archive.read("logos-argv.jsonl")
+        report_bytes = read_member(archive, "report.json", 4 * 1024 * 1024)
+        argv_bytes = read_member(archive, "logos-argv.jsonl", 128 * 1024)
     report = base.object_value(json.loads(report_bytes))
     expected = base.object_value(json.loads((base.PROOF / "prior-report.json").read_bytes()))
     if report != expected:
@@ -62,3 +65,13 @@ def authenticate(specification: dict[str, object], token: str) -> dict[str, obje
     (prior / "authentication.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print("SPIRA_R40_PRIOR_OBSERVER " + json.dumps(result), flush=True)
     return result
+
+def read_member(archive: zipfile.ZipFile, name: str, limit: int) -> bytes:
+    entry = archive.getinfo(name)
+    if entry.file_size > limit:
+        raise ValueError("selected failed observer member exceeds its read bound: " + name)
+    with archive.open(entry) as stream:
+        data = stream.read(limit + 1)
+    if len(data) > limit or len(data) != entry.file_size:
+        raise ValueError("selected failed observer member size differs: " + name)
+    return data

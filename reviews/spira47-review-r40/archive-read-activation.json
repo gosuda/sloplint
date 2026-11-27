@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "reviewed": "6dc0645b381581b2baeb5e81660d4ef54d4901e0",
+  "review": "Parent bounded review passed; no native result claimed.",
+  "source_repair_applied": false,
+  "prior_failures": [
+    46027118627,
+    46029336371
+  ],
+  "scope": "Authenticate and read only the two consumed prior artifact members; rerun the unchanged-source baseline."
+}
