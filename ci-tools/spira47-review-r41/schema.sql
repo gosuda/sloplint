@@ -1,0 +1,2 @@
+CREATE DOMAIN version AS text;
+CREATE COLLATION version FROM "C";

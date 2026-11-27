@@ -1,0 +1,1368 @@
+package main
+
+import (
+	"bytes"
+	"fmt"
+	"strings"
+	"unicode"
+)
+
+type Model struct {
+	Engine   string
+	Enums    []EnumDef
+	Entities []Entity
+	Queries  []QueryDef
+}
+
+type EnumDef struct {
+	Name   string
+	GoName string
+	Vals   []string
+}
+
+type Entity struct {
+	Table   string
+	Schema  string
+	Struct  string
+	Key     string
+	KeyType string
+	KeyBase string
+	Version string
+	Fields  []Field
+}
+
+type Field struct {
+	Name    string
+	GoName  string
+	GoType  string
+	Table   string
+	Embed   string
+	NotNull bool
+}
+
+type ParamDef struct {
+	Number     int32
+	Name       string
+	ColumnName string
+	GoName     string
+	GoType     string
+	IsSlice    bool
+}
+
+type QueryDef struct {
+	Name       string
+	Cmd        string
+	File       string
+	Text       string
+	InsertInto string
+	Fields     []Field
+	Params     []ParamDef
+	RowGoType  string
+	ArgsName   string
+	Slices     []SliceDef
+	Embeds     []EmbedDef
+}
+
+type SliceDef struct {
+	Marker string
+	GoName string
+	Elem   string
+	Spread bool
+}
+
+type EmbedDef struct {
+	Table  string
+	Field  string
+	Struct string
+}
+
+type tableVersion struct {
+	name    string
+	version string
+}
+
+type claimedBy struct {
+	what string
+	prev string
+}
+
+type catalogTable struct {
+	schema string
+	table  Table
+}
+
+type resolver struct {
+	engine      string
+	opts        *PluginOptions
+	model       *Model
+	enums       map[string]string
+	enumFlat    map[string]string
+	keyed       map[string]string
+	keyedBase   map[string]string
+	refTypes    map[string]string
+	claimed     map[string]claimedBy
+	byTable     map[string][]*Entity
+	versions    map[string]tableVersion
+	seenQueries map[string]bool
+}
+
+var skippedSchemas = map[string]bool{
+	"pg_catalog":          true,
+	"information_schema":  true,
+	"pg_temp":             true,
+	"sys":                 true,
+}
+
+func buildModel(req *Request, opts *PluginOptions) (Model, error) {
+	engine := strings.ToLower(req.Settings.Engine)
+	if !isEngine(engine) {
+		return Model{}, fmt.Errorf("sqlc-gen-spira: unknown engine %q", req.Settings.Engine)
+	}
+	r := &resolver{
+		engine:      engine,
+		opts:        opts,
+		model:       &Model{Engine: engine},
+		enums:       map[string]string{},
+		enumFlat:    map[string]string{},
+		keyed:       map[string]string{},
+		keyedBase:   map[string]string{},
+		refTypes:    map[string]string{},
+		claimed:     map[string]claimedBy{},
+		byTable:     map[string][]*Entity{},
+		versions:    map[string]tableVersion{},
+		seenQueries: map[string]bool{},
+	}
+	if err := r.loadCatalog(&req.Catalog); err != nil {
+		return Model{}, err
+	}
+	if err := r.loadQueries(req.Queries); err != nil {
+		return Model{}, err
+	}
+	return *r.model, nil
+}
+
+
+func isEngine(engine string) bool {
+	switch engine {
+	case "sqlite", "postgresql", "mysql", "mssql":
+		return true
+	}
+	return false
+}
+
+func sortTablesByName(tables []Table) {
+	for i := 1; i < len(tables); i++ {
+		for j := i; j > 0 && tables[j].Rel.Name < tables[j-1].Rel.Name; j-- {
+			tables[j], tables[j-1] = tables[j-1], tables[j]
+		}
+	}
+}
+
+func sortCatalog(cat *Catalog) {
+	for i := range cat.Schemas {
+		sortTablesByName(cat.Schemas[i].Tables)
+	}
+	for i := 1; i < len(cat.Schemas); i++ {
+		for j := i; j > 0 && cat.Schemas[j].Name < cat.Schemas[j-1].Name; j-- {
+			cat.Schemas[j], cat.Schemas[j-1] = cat.Schemas[j-1], cat.Schemas[j]
+		}
+	}
+}
+
+
+func (r *resolver) loadCatalog(cat *Catalog) error {
+	sortCatalog(cat)
+	tables := collectTables(cat)
+	if err := r.indexEnums(cat); err != nil {
+		return err
+	}
+	if err := r.buildKeyed(tables); err != nil {
+		return err
+	}
+	if err := r.buildRefs(tables); err != nil {
+		return err
+	}
+	if err := r.buildVersions(tables); err != nil {
+		return err
+	}
+	for _, ct := range tables {
+		if err := r.addEntity(ct); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func collectTables(cat *Catalog) []catalogTable {
+	var out []catalogTable
+	for _, sc := range cat.Schemas {
+		if skippedSchemas[sc.Name] ?? false {
+			continue
+		}
+		for _, t := range sc.Tables {
+			out = append(out, catalogTable{schema: sc.Name, table: t})
+		}
+	}
+	return out
+}
+
+func (r *resolver) indexEnums(cat *Catalog) error {
+	for _, sc := range cat.Schemas {
+		if skippedSchemas[sc.Name] ?? false {
+			continue
+		}
+		for _, e := range sc.Enums {
+			gname := goName(sc.Name) + goName(e.Name)
+			if err := r.claim(gname, "enum "+sc.Name+"."+e.Name, ""); err != nil {
+				return err
+			}
+			r.enums[strings.ToLower(sc.Name)+"."+strings.ToLower(e.Name)] = gname
+			flat := strings.ToLower(e.Name)
+			if _, dup := r.enumFlat[flat]; !dup {
+				r.enumFlat[flat] = gname
+			} else if (r.enumFlat[flat] ?? "") != gname {
+				r.enumFlat[flat] = ""
+			}
+			r.model.Enums = append(r.model.Enums, EnumDef{Name: e.Name, GoName: gname, Vals: e.Vals})
+		}
+	}
+	return nil
+}
+
+func (r *resolver) claim(name string, what string, prev string) error {
+	if old, dup := r.claimed[name]; dup {
+		return fmt.Errorf("sqlc-gen-spira: type name %q claimed by both %s and %s", name, old.what, what)
+	}
+	r.claimed[name] = claimedBy{what: what, prev: prev}
+	return nil
+}
+
+func (r *resolver) claimTableType(name string, cur string) error {
+	if old, dup := r.claimed[name]; dup {
+		return fmt.Errorf("sqlc-gen-spira: tables %q and %q both map to type %s", cur, old.prev, name)
+	}
+	r.claimed[name] = claimedBy{what: "struct for " + cur, prev: cur}
+	return nil
+}
+
+func (r *resolver) tableOptsFor(tableName string, tables []catalogTable) (TableOpts, catalogTable, error) {
+	ct, err := r.findCatalogTable(tableName, tables)
+	if err != nil {
+		return TableOpts{}, catalogTable{}, fmt.Errorf("sqlc-gen-spira: tables.%s: %w", tableName, err)
+	}
+	opts, ok := r.optsFor(ct)
+	if !ok {
+		return TableOpts{}, catalogTable{}, fmt.Errorf("sqlc-gen-spira: tables.%s has no options entry", tableName)
+	}
+	return opts, ct, nil
+}
+
+func (r *resolver) optsFor(ct catalogTable) (TableOpts, bool) {
+	qualified := strings.ToLower(ct.schema) + "." + strings.ToLower(ct.table.Rel.Name)
+	if opts, ok := r.opts.Tables[qualified]; ok {
+		return opts, true
+	}
+	var unqualified []string
+	for key := range r.opts.Tables {
+		if !strings.Contains(key, ".") {
+			unqualified = append(unqualified, key)
+		}
+	}
+	sortStrings(unqualified)
+	for _, key := range unqualified {
+		if strings.ToLower(ct.table.Rel.Name) == key {
+			if opts, ok := r.opts.Tables[key]; ok {
+				return opts, true
+			}
+		}
+	}
+	return TableOpts{}, false
+}
+
+func (r *resolver) buildKeyed(tables []catalogTable) error {
+	keys := make([]string, 0, len(r.opts.Tables))
+	for name := range r.opts.Tables {
+		keys = append(keys, name)
+	}
+	sortStrings(keys)
+	for _, name := range keys {
+		if err := r.buildKeyedOne(name, tables); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *resolver) buildKeyedOne(name string, tables []catalogTable) error {
+	opts, ct, err := r.tableOptsFor(name, tables)
+	if err != nil {
+		return err
+	}
+	if opts.Key == "" {
+		if opts.KeyType != "" {
+			return fmt.Errorf("sqlc-gen-spira: tables.%s.key_type needs tables.%s.key", name, name)
+		}
+		return nil
+	}
+	col, ok := findColumn(&ct.table, opts.Key)
+	if !ok {
+		return fmt.Errorf("sqlc-gen-spira: tables.%s.key %q is not a column of %s.%s", name, opts.Key, ct.schema, ct.table.Rel.Name)
+	}
+	base, err := r.baseType(ct.schema, &col)
+	if err != nil {
+		return err
+	}
+	keyName, err := r.keyTypeName(name, &ct, opts, base)
+	if err != nil {
+		return err
+	}
+	colKey := strings.ToLower(ct.schema) + "." + strings.ToLower(ct.table.Rel.Name) + "." + strings.ToLower(col.Name)
+	r.keyed[colKey] = keyName
+	r.keyedBase[colKey] = base
+	return nil
+}
+
+func (r *resolver) keyTypeName(name string, ct *catalogTable, opts TableOpts, base string) (string, error) {
+	if opts.KeyType == "" {
+		return base, nil
+	}
+	if !isGoIdent(opts.KeyType) {
+		return "", fmt.Errorf("sqlc-gen-spira: tables.%s.key_type %q is not a Go identifier", name, opts.KeyType)
+	}
+	if err := r.claim(opts.KeyType, "key type of "+ct.table.Rel.Name, ""); err != nil {
+		return "", err
+	}
+	return opts.KeyType, nil
+}
+
+func findColumn(t *Table, name string) (Column, bool) {
+	for _, c := range t.Columns {
+		if c.Name == name || strings.EqualFold(c.Name, name) {
+			return c, true
+		}
+	}
+	return Column{}, false
+}
+
+func (r *resolver) baseType(schema string, col *Column) (string, error) {
+	if col.IsArray {
+		return "", fmt.Errorf("%s: column %s is an array", r.columnContext(schema, col), col.Name)
+	}
+	name := strings.ToLower(col.Type.Name)
+	name = strings.TrimPrefix(name, "pg_catalog.")
+	if typ, ok := r.opts.Overrides[name]; ok {
+		return typ, nil
+	}
+	if col.Unsigned {
+		return "", fmt.Errorf("%s: column %s is unsigned; add an overrides entry for %q", r.columnContext(schema, col), col.Name, name)
+	}
+	if typ, ok := r.enumGoType(schema, name); ok {
+		return typ, nil
+	}
+	if typ, ok := sqlBaseType(r.engine, name, col.Length); ok {
+		return typ, nil
+	}
+	return "", fmt.Errorf("%s: column %s has unmapped type %q", r.columnContext(schema, col), col.Name, name)
+}
+
+func (r *resolver) columnContext(schema string, col *Column) string {
+	if col.Table.Name != "" {
+		return strings.ToLower(schema) + "." + strings.ToLower(col.Table.Name) + "." + strings.ToLower(col.Name)
+	}
+	return strings.ToLower(schema) + "." + strings.ToLower(col.Name)
+}
+
+func (r *resolver) enumGoType(schema string, name string) (string, bool) {
+	if typ, ok := r.enums[strings.ToLower(schema)+"."+name]; ok {
+		return typ, true
+	}
+	if typ, ok := r.enumFlat[name]; ok && typ != "" {
+		return typ, true
+	}
+	return "", false
+}
+
+func sqlBaseType(engine string, name string, length int32) (string, bool) {
+	switch engine {
+	case "sqlite":
+		return sqliteBaseType(name)
+	case "postgresql":
+		return postgresBaseType(name)
+	case "mysql":
+		return mysqlBaseType(name, length)
+	case "mssql":
+		return mssqlBaseType(name)
+	}
+	return "", false
+}
+
+func sqliteBaseType(name string) (string, bool) {
+	switch name {
+	case "integer", "int":
+		return "int64", true
+	case "real":
+		return "float64", true
+	case "text", "varchar", "char":
+		return "string", true
+	case "blob":
+		return "[]byte", true
+	case "boolean", "bool":
+		return "bool", true
+	case "timestamp", "datetime", "date":
+		return "time.Time", true
+	case "numeric", "decimal":
+		return "string", true
+	}
+	return "", false
+}
+
+func postgresBaseType(name string) (string, bool) {
+	switch name {
+	case "bigint", "int8", "bigserial":
+		return "int64", true
+	case "smallint", "int2":
+		return "int16", true
+	case "integer", "int", "int4", "serial":
+		return "int32", true
+	case "boolean", "bool":
+		return "bool", true
+	case "text", "varchar", "char", "bpchar", "uuid", "name":
+		return "string", true
+	case "double precision", "float8":
+		return "float64", true
+	case "real", "float4":
+		return "float32", true
+	case "json", "jsonb", "bytea":
+		return "[]byte", true
+	case "timestamp", "timestamptz", "datetime", "date":
+		return "time.Time", true
+	case "numeric", "decimal":
+		return "string", true
+	}
+	return "", false
+}
+
+func mysqlBaseType(name string, length int32) (string, bool) {
+	if name == "tinyint" && length == 1 {
+		return "bool", true
+	}
+	switch name {
+	case "bigint":
+		return "int64", true
+	case "tinyint":
+		return "int16", true
+	case "mediumint", "int", "integer":
+		return "int32", true
+	case "smallint":
+		return "int16", true
+	case "float":
+		return "float32", true
+	case "double", "double precision":
+		return "float64", true
+	case "decimal", "numeric":
+		return "string", true
+	case "datetime", "timestamp", "date":
+		return "time.Time", true
+	case "json":
+		return "[]byte", true
+	case "text", "tinytext", "mediumtext", "longtext", "char", "varchar":
+		return "string", true
+	case "binary", "varbinary", "tinyblob", "blob", "mediumblob", "longblob":
+		return "[]byte", true
+	case "boolean", "bool":
+		return "bool", true
+	}
+	return "", false
+}
+
+func mssqlBaseType(name string) (string, bool) {
+	switch name {
+	case "bigint":
+		return "int64", true
+	case "tinyint":
+		return "int16", true
+	case "smallint":
+		return "int16", true
+	case "int":
+		return "int32", true
+	case "bit":
+		return "bool", true
+	case "real":
+		return "float32", true
+	case "float":
+		return "float64", true
+	case "decimal", "numeric", "money", "smallmoney":
+		return "string", true
+	case "datetime2", "smalldatetime", "datetime", "datetimeoffset", "date", "time":
+		return "time.Time", true
+	case "nchar", "nvarchar", "ntext", "varchar", "char", "text", "uniqueidentifier":
+		return "string", true
+	case "binary", "varbinary", "image":
+		return "[]byte", true
+	}
+	return "", false
+}
+
+func (r *resolver) buildRefs(tables []catalogTable) error {
+	keys := make([]string, 0, len(r.opts.Refs))
+	for name := range r.opts.Refs {
+		keys = append(keys, name)
+	}
+	sortStrings(keys)
+	for _, name := range keys {
+		if err := r.buildRef(name, r.opts.Refs[name] ?? "", tables); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *resolver) buildRef(name string, target string, tables []catalogTable) error {
+	parts := strings.Split(name, ".")
+	if len(parts) != 2 && len(parts) != 3 {
+		return fmt.Errorf("sqlc-gen-spira: refs: %q is not table.column", name)
+	}
+	srcName := strings.ToLower(parts[0])
+	srcCol := strings.ToLower(parts[len(parts)-1])
+	if len(parts) == 3 {
+		if parts[0] == "" || parts[1] == "" || parts[2] == "" {
+			return fmt.Errorf("sqlc-gen-spira: refs: %q is not table.column", name)
+		}
+		srcName = strings.ToLower(parts[0]) + "." + strings.ToLower(parts[1])
+	} else if parts[0] == "" || parts[1] == "" {
+		return fmt.Errorf("sqlc-gen-spira: refs: %q is not table.column", name)
+	}
+	srcs, err := r.findCatalogTables(srcName, tables)
+	if err != nil {
+		return fmt.Errorf("sqlc-gen-spira: refs.%s: %w", name, err)
+	}
+	src := srcs[0]
+	tgts, err := r.findCatalogTables(strings.ToLower(target), tables)
+	if err != nil {
+		return fmt.Errorf("sqlc-gen-spira: refs.%s: %w", name, err)
+	}
+	tgt := tgts[0]
+	tgtOpts, ok := r.optsFor(tgt)
+	if !ok || tgtOpts.Key == "" {
+		return fmt.Errorf("sqlc-gen-spira: refs.%s: table %s has no key", name, target)
+	}
+	keyCol, ok := findColumn(&tgt.table, tgtOpts.Key)
+	if !ok {
+		return fmt.Errorf("sqlc-gen-spira: refs.%s: key %q is not a column of %s", name, tgtOpts.Key, target)
+	}
+	typ, ok := r.keyed[strings.ToLower(tgt.schema)+"."+strings.ToLower(tgt.table.Rel.Name)+"."+strings.ToLower(keyCol.Name)]
+	if !ok {
+		return fmt.Errorf("sqlc-gen-spira: refs.%s: key column of %s has no resolved type", name, target)
+	}
+	if _, ok := findColumn(&src.table, srcCol); !ok {
+		return fmt.Errorf("sqlc-gen-spira: refs.%s: column %q is not in %s", name, srcCol, src.table.Rel.Name)
+	}
+	r.refTypes[strings.ToLower(src.schema)+"."+strings.ToLower(src.table.Rel.Name)+"."+srcCol] = typ
+	return nil
+}
+
+func (r *resolver) findCatalogTables(name string, tables []catalogTable) ([]catalogTable, error) {
+	parts := strings.Split(strings.ToLower(name), ".")
+	var matches []catalogTable
+	for _, ct := range tables {
+		if len(parts) == 2 {
+			if strings.ToLower(ct.schema) == parts[0] && strings.ToLower(ct.table.Rel.Name) == parts[1] {
+				matches = append(matches, ct)
+			}
+			continue
+		}
+		if strings.ToLower(ct.table.Rel.Name) == strings.ToLower(name) {
+			matches = append(matches, ct)
+		}
+	}
+	if len(matches) > 1 {
+		var schemas []string
+		for _, m := range matches {
+			schemas = append(schemas, strings.ToLower(m.schema))
+		}
+		sortStrings(schemas)
+		return nil, fmt.Errorf("table %q is ambiguous: schemas %s", name, strings.Join(schemas, ", "))
+	}
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("table %q is not in the catalog", name)
+	}
+	return matches, nil
+}
+
+func (r *resolver) findCatalogTable(name string, tables []catalogTable) (catalogTable, error) {
+	matches, err := r.findCatalogTables(name, tables)
+	if err != nil {
+		return catalogTable{}, err
+	}
+	return matches[0], nil
+}
+
+func (r *resolver) addEntity(ct catalogTable) error {
+	tname := ct.table.Rel.Name
+	opts, hasOpts := r.optsFor(ct)
+	if !hasOpts {
+		opts = TableOpts{}
+	}
+	structName := opts.Type
+	if structName == "" {
+		structName = goName(tname)
+	}
+	if !isGoIdent(structName) {
+		return fmt.Errorf("sqlc-gen-spira: tables.%s.type %q is not a Go identifier", tname, structName)
+	}
+	if err := r.claimTableType(structName, ct.schema+"."+tname); err != nil {
+		return err
+	}
+	ent := &Entity{
+		Table:   tname,
+		Schema:  ct.schema,
+		Struct:  structName,
+		Key:     opts.Key,
+		KeyType: opts.KeyType,
+		Version: opts.Version,
+	}
+	if opts.KeyType != "" {
+		colKey := strings.ToLower(ct.schema) + "." + strings.ToLower(tname) + "." + strings.ToLower(opts.Key)
+		ent.KeyBase = r.keyedBase[colKey] ?? ""
+	}
+	seen := map[string]string{}
+	for i := range ct.table.Columns {
+		field, err := r.entityField(ct, &ct.table.Columns[i])
+		if err != nil {
+			return err
+		}
+		if prev, dup := seen[field.GoName]; dup {
+			return fmt.Errorf("sqlc-gen-spira: %s.%s: columns %q and %q both map to field %s", ct.schema, tname, prev, field.Name, field.GoName)
+		}
+		seen[field.GoName] = field.Name
+		ent.Fields = append(ent.Fields, field)
+	}
+	r.model.Entities = append(r.model.Entities, *ent)
+	tnameKey := strings.ToLower(tname)
+	r.byTable[tnameKey] = append(r.byTable[tnameKey] ?? []*Entity{}, &r.model.Entities[len(r.model.Entities)-1])
+	return nil
+}
+
+func (r *resolver) entityField(ct catalogTable, col *Column) (Field, error) {
+	if err := tagSafeName(col.Name); err != nil {
+		return Field{}, fmt.Errorf("sqlc-gen-spira: %s: %w", r.columnContext(ct.schema, col), err)
+	}
+	goType, err := r.goColumnType(ct.schema, ct.table.Rel.Name, col)
+	if err != nil {
+		return Field{}, err
+	}
+	return Field{
+		Name:    col.Name,
+		GoName:  goField(col.Name),
+		GoType:  goType,
+		Table:   ct.table.Rel.Name,
+		NotNull: col.NotNull,
+	}, nil
+}
+
+func tagSafeName(name string) error {
+	if strings.ContainsFunc(name, func(c rune) bool { return c == '`' || unicode.IsControl(c) }) {
+		return fmt.Errorf("column name %q cannot be written into a struct tag", name)
+	}
+	return nil
+}
+
+func (r *resolver) columnBase(schema string, table string, col *Column) (string, error) {
+	key := strings.ToLower(schema) + "." + strings.ToLower(table) + "." + strings.ToLower(col.Name)
+	if typ, ok := r.refTypes[key]; ok {
+		return typ, nil
+	}
+	if typ, ok := r.keyed[key]; ok {
+		return typ, nil
+	}
+	return r.baseType(schema, col)
+}
+
+func (r *resolver) loadQueries(queries []Query) error {
+	for i := range queries {
+		qd, err := r.queryDef(&queries[i])
+		if err != nil {
+			return err
+		}
+		r.model.Queries = append(r.model.Queries, qd)
+	}
+	return nil
+}
+func (r *resolver) queryDef(q *Query) (QueryDef, error) {
+	if !isCommand(q.Cmd) {
+		return QueryDef{}, fmt.Errorf("sqlc-gen-spira: %s: command %s is not supported", q.Name, q.Cmd)
+	}
+	if r.seenQueries[q.Name] ?? false {
+		return QueryDef{}, fmt.Errorf("sqlc-gen-spira: duplicate query %q", q.Name)
+	}
+	r.seenQueries[q.Name] = true
+	qd := QueryDef{
+		Name:       q.Name,
+		Cmd:        q.Cmd,
+		File:       q.Filename,
+		Text:       q.Text,
+		InsertInto: q.InsertIntoTable.Name,
+	}
+	if err := r.queryColumns(q, &qd); err != nil {
+		return QueryDef{}, err
+	}
+	if err := r.queryParams(q, &qd); err != nil {
+		return QueryDef{}, err
+	}
+	if err := r.pairSliceMarkers(q, &qd); err != nil {
+		return QueryDef{}, err
+	}
+	if err := r.refuseVersionedWrite(q); err != nil {
+		return QueryDef{}, err
+	}
+	if err := r.classifyRow(q, &qd); err != nil {
+		return QueryDef{}, err
+	}
+	return qd, nil
+}
+
+func isCommand(cmd string) bool {
+	switch cmd {
+	case ":one", ":many", ":exec", ":execrows", ":execlastid":
+		return true
+	}
+	return false
+}
+
+func (r *resolver) queryColumns(q *Query, qd *QueryDef) error {
+	seen := map[string]bool{}
+	for i := range q.Columns {
+		f, err := r.queryField(q, &q.Columns[i], i)
+		if err != nil {
+			return err
+		}
+		if f.Embed == "" {
+			if seen[f.GoName] ?? false {
+				return fmt.Errorf("sqlc-gen-spira: query %s: duplicate Go field name %q", q.Name, f.GoName)
+			}
+			seen[f.GoName] = true
+		}
+		qd.Fields = append(qd.Fields, f)
+	}
+	return nil
+}
+
+func (r *resolver) queryField(q *Query, col *Column, index int) (Field, error) {
+	if col.Name == "" {
+		return Field{}, fmt.Errorf("sqlc-gen-spira: %s: column %d needs an alias", q.Name, index)
+	}
+	if err := tagSafeName(col.Name); err != nil {
+		return Field{}, fmt.Errorf("sqlc-gen-spira: query %s column %d: %w", q.Name, index, err)
+	}
+	if col.EmbedTable.Name != "" {
+		return r.embedField(q, col)
+	}
+	schema := r.schemaForColumn(col)
+	goType, err := r.goColumnType(schema, col.Table.Name, col)
+	if err != nil {
+		return Field{}, fmt.Errorf("sqlc-gen-spira: query %s column %d: %w", q.Name, index, err)
+	}
+	return Field{
+		Name:    col.Name,
+		GoName:  goField(col.Name),
+		GoType:  goType,
+		Table:   col.Table.Name,
+		NotNull: col.NotNull,
+	}, nil
+}
+
+func (r *resolver) embedField(q *Query, col *Column) (Field, error) {
+	st, err := r.embedStruct(q, col.EmbedTable.Name)
+	if err != nil {
+		return Field{}, err
+	}
+	return Field{
+		Name:    col.Name,
+		GoName:  st,
+		GoType:  st,
+		Table:   col.Table.Name,
+		Embed:   col.EmbedTable.Name,
+		NotNull: true,
+	}, nil
+}
+
+func (r *resolver) schemaForColumn(col *Column) string {
+	ents := r.byTable[strings.ToLower(col.Table.Name)] ?? []*Entity{}
+	if len(ents) == 1 {
+		return ents[0].Schema
+	}
+	return ""
+}
+
+func (r *resolver) queryParams(q *Query, qd *QueryDef) error {
+	used := map[string]bool{}
+	for i := range q.Params {
+		pd, err := r.paramDef(q, &q.Params[i])
+		if err != nil {
+			return err
+		}
+		if used[pd.GoName] ?? false {
+			pd.GoName = fmt.Sprintf("%s%d", pd.GoName, pd.Number)
+		}
+		used[pd.GoName] = true
+		if pd.IsSlice {
+			qd.Slices = append(qd.Slices, SliceDef{Marker: pd.Name, GoName: pd.GoName, Elem: pd.GoType})
+		}
+		qd.Params = append(qd.Params, pd)
+	}
+	if len(qd.Params) > 2 {
+		qd.ArgsName = goName(q.Name) + "Args"
+	}
+	return nil
+}
+
+func (r *resolver) paramDef(q *Query, p *Parameter) (ParamDef, error) {
+	col := p.Column
+	schema := r.schemaForColumn(&col)
+	goType, err := r.goColumnType(schema, col.Table.Name, &col)
+	if err != nil {
+		return ParamDef{}, fmt.Errorf("sqlc-gen-spira: query %s param %d: %w", q.Name, p.Number, err)
+	}
+	if col.IsSQLCSlice {
+		goType = "[]" + goType
+	}
+	name := p.Name
+	if name == "" {
+		name = col.Name
+	}
+	if name == "" {
+		name = fmt.Sprintf("arg%d", p.Number)
+	}
+	return ParamDef{
+		Number:     p.Number,
+		Name:       name,
+		ColumnName: col.Name,
+		GoName:     goField(name),
+		GoType:     goType,
+		IsSlice:    col.IsSQLCSlice,
+	}, nil
+}
+
+func (r *resolver) pairSliceMarkers(q *Query, qd *QueryDef) error {
+	markers := sliceMarkers(q.Text)
+	for i := range qd.Slices {
+		qd.Slices[i].Spread = hasMarker(markers, qd.Slices[i].Marker)
+	}
+	for _, m := range markers {
+		if !hasSliceParam(qd, m) {
+			return fmt.Errorf("sqlc-gen-spira: query %s: slice marker %q has no slice parameter", q.Name, m)
+		}
+	}
+	return nil
+}
+
+func hasMarker(markers []string, name string) bool {
+	for _, m := range markers {
+		if m == name {
+			return true
+		}
+	}
+	return false
+}
+
+func hasSliceParam(qd *QueryDef, name string) bool {
+	for i := range qd.Slices {
+		if qd.Slices[i].Marker == name {
+			return true
+		}
+	}
+	return false
+}
+
+func sliceMarkers(text string) []string {
+	var out []string
+	rest := text
+	for {
+		start := strings.Index(rest, "/*SLICE:")
+		if start < 0 {
+			return out
+		}
+		rest = rest[start+len("/*SLICE:"):]
+		end := strings.Index(rest, "*/?")
+		if end < 0 {
+			return out
+		}
+		out = append(out, rest[:end])
+		rest = rest[end+len("*/?"):]
+	}
+}
+
+func (r *resolver) refuseVersionedWrite(q *Query) error {
+	upper := strings.ToUpper(maskSQLFor(r.engine, q.Text))
+	for _, target := range writeTargets(upper) {
+		versioned, ok := r.versions[strings.ToLower(target)]
+		if !ok || versioned.version == "" {
+			continue
+		}
+		if !strings.Contains(upper, strings.ToUpper(versioned.version)) {
+			return fmt.Errorf("sqlc-gen-spira: %s: writes versioned table %s without %s", q.Name, versioned.name, versioned.version)
+		}
+	}
+	return nil
+}
+
+// maskSQLFor blanks string literals and comments so the write scan sees
+// statements, not text. Quoted identifiers stay: they may name columns.
+// A backslash escapes the next character only in literal forms that support
+// it: MySQL strings and PostgreSQL escape strings. Everywhere else the
+// backslash is an ordinary character, so the literal ends at its quote.
+// PostgreSQL continuation segments keep the first segment's escape mode.
+func maskSQLFor(engine string, text string) string {
+	out := []byte(text)
+	i := 0
+	for i < len(out) {
+		i = maskAtFor(out, i, engine)
+	}
+	return string(out)
+}
+
+func maskAtFor(out []byte, i int, engine string) int {
+	if engine == "postgresql" {
+		if out[i] == '"' {
+			return postgresIdentifierEnd(out, i)
+		}
+		if out[i] == '$' {
+			return maskPostgresDollar(out, i)
+		}
+	}
+	if out[i] == '\'' {
+		return maskStringFor(out, i, engine)
+	}
+	if out[i] == '-' && i+1 < len(out) && out[i+1] == '-' {
+		return maskLine(out, i)
+	}
+	if out[i] == '/' && i+1 < len(out) && out[i+1] == '*' {
+		return maskBlock(out, i)
+	}
+	return i + 1
+}
+
+// postgresIdentifierEnd preserves identifier bytes and skips doubled quotes.
+func postgresIdentifierEnd(out []byte, i int) int {
+	for j := i + 1; j < len(out); j++ {
+		if out[j] != '"' {
+			continue
+		}
+		if j+1 < len(out) && out[j+1] == '"' {
+			j++
+			continue
+		}
+		return j + 1
+	}
+	return len(out)
+}
+
+func maskPostgresDollar(out []byte, i int) int {
+	end := postgresDollarDelimiterEnd(out, i)
+	if end == nil {
+		return i + 1
+	}
+	delimiter := out[i:end]
+	finish := len(out)
+	if close := bytes.Index(out[end:], delimiter); close >= 0 {
+		finish = end + close + len(delimiter)
+	}
+	blank(out, i, finish)
+	return finish
+}
+
+func postgresDollarDelimiterEnd(out []byte, i int) int? {
+	if i > 0 && isPostgresIdentPart(out[i-1]) {
+		return nil
+	}
+	j := i + 1
+	if j < len(out) && out[j] == '$' {
+		return j + 1
+	}
+	if j == len(out) || !isPostgresTagStart(out[j]) {
+		return nil
+	}
+	j++
+	for j < len(out) && (isPostgresTagStart(out[j]) || isASCIIDigit(out[j])) {
+		j++
+	}
+	if j < len(out) && out[j] == '$' {
+		return j + 1
+	}
+	return nil
+}
+
+func isPostgresTagStart(c byte) bool {
+	return isASCIILetter(c) || c == '_' || c >= 0x80
+}
+
+func maskStringFor(out []byte, i int, engine string) int {
+	escape := backslashEscapes(engine, out, i)
+	for {
+		end := maskQuotedFor(out, i, escape)
+		if engine != "postgresql" {
+			return end
+		}
+		next := postgresContinuedQuote(out, end)
+		if next == nil {
+			return end
+		}
+		blank(out, end, next)
+		i = next
+	}
+}
+
+func postgresContinuedQuote(out []byte, i int) int? {
+	newline := false
+	for i < len(out) {
+		if out[i] == '-' && i+1 < len(out) && out[i+1] == '-' {
+			i = postgresLineEnd(out, i+2)
+			continue
+		}
+		switch out[i] {
+		case '\r', '\n':
+			newline = true
+		case ' ', '\t', '\f', '\v':
+		default:
+			if newline && out[i] == '\'' {
+				return i
+			}
+			return nil
+		}
+		i++
+	}
+	return nil
+}
+
+func postgresLineEnd(out []byte, i int) int {
+	for i < len(out) && out[i] != '\r' && out[i] != '\n' {
+		i++
+	}
+	return i
+}
+
+func backslashEscapes(engine string, out []byte, i int) bool {
+	if engine == "mysql" {
+		return true
+	}
+	if engine == "postgresql" && i > 0 && (out[i-1] == 'E' || out[i-1] == 'e') {
+		return i == 1 || !isPostgresIdentPart(out[i-2])
+	}
+	return false
+}
+
+func isPostgresIdentPart(c byte) bool {
+	return isASCIILetter(c) || isASCIIDigit(c) || c == '_' || c == '$' || c >= 0x80
+}
+
+func maskQuotedFor(out []byte, i int, escape bool) int {
+	j := i + 1
+	for j < len(out) {
+		if escape && out[j] == '\\' && j+1 < len(out) {
+			j += 2
+			continue
+		}
+		if out[j] == '\'' {
+			if j+1 < len(out) && out[j+1] == '\'' {
+				j += 2
+				continue
+			}
+			j++
+			break
+		}
+		j++
+	}
+	blank(out, i, j)
+	return j
+}
+
+ func maskLine(out []byte, i int) int {
+ 	j := i + 2
+ 	for j < len(out) && out[j] != '\n' {
+ 		j++
+ 	}
+ 	blank(out, i, j)
+ 	return j
+ }
+
+ func maskBlock(out []byte, i int) int {
+ 	j := i + 2
+ 	for j+1 < len(out) && !(out[j] == '*' && out[j+1] == '/') {
+ 		j++
+ 	}
+ 	if j+1 < len(out) {
+ 		j += 2
+ 	} else {
+ 		j = len(out)
+ 	}
+ 	blank(out, i, j)
+ 	return j
+ }
+
+ func blank(out []byte, from int, to int) {
+ 	for k := from; k < to; k++ {
+ 		out[k] = ' '
+ 	}
+ }
+
+func writeTargets(upper string) []string {
+	var out []string
+	out = append(out, updateTargets(upper)...)
+	out = append(out, deleteTargets(upper)...)
+	return out
+}
+
+func updateTargets(upper string) []string {
+	var out []string
+	pos := 0
+	for {
+		found := keywordAt(upper, pos, "UPDATE")
+		if found < 0 {
+			return out
+		}
+		rest := skipSpaces(upper[found+len("UPDATE"):])
+		if target, ok := firstWord(rest); ok {
+			out = append(out, target)
+		}
+		pos = found + len("UPDATE")
+	}
+}
+
+func deleteTargets(upper string) []string {
+	var out []string
+	pos := 0
+	for {
+		found := keywordAt(upper, pos, "DELETE")
+		if found < 0 {
+			return out
+		}
+		rest := skipSpaces(upper[found+len("DELETE"):])
+		after, ok := cutWord(rest, "FROM")
+		if !ok {
+			pos = found + len("DELETE")
+			continue
+		}
+		rest = skipSpaces(after)
+		if target, ok := firstWord(rest); ok {
+			out = append(out, target)
+		}
+		pos = found + len("DELETE")
+	}
+}
+
+func keywordAt(upper string, pos int, word string) int {
+	offset := 0
+	for {
+		search := upper[pos+offset:]
+		idx := strings.Index(search, word)
+		if idx < 0 {
+			return -1
+		}
+		abs := pos + offset + idx
+		if isWordBoundary(upper, abs, len(word)) {
+			return abs
+		}
+		offset += idx + len(word)
+	}
+}
+
+func isWordBoundary(s string, pos int, length int) bool {
+	if pos > 0 && isWordChar(s[pos-1]) {
+		return false
+	}
+	if pos+length < len(s) && isWordChar(s[pos+length]) {
+		return false
+	}
+	return true
+}
+
+func isWordChar(c byte) bool {
+	if c == '_' {
+		return true
+	}
+	if c >= 'A' && c <= 'Z' {
+		return true
+	}
+	if c >= '0' && c <= '9' {
+		return true
+	}
+	return false
+}
+
+func skipSpaces(s string) string {
+	i := 0
+	for i < len(s) {
+		c := s[i]
+		if c == ' ' || c == '\t' || c == '\n' || c == '\r' {
+			i++
+			continue
+		}
+		break
+	}
+	if i == 0 {
+		return s
+	}
+	return s[i:]
+}
+
+func cutWord(s string, word string) (string, bool) {
+	if len(s) < len(word) {
+		return "", false
+	}
+	if s[:len(word)] != word {
+		return "", false
+	}
+	if len(s) > len(word) && isWordChar(s[len(word)]) {
+		return "", false
+	}
+	return s[len(word):], true
+}
+
+func firstWord(s string) (string, bool) {
+	end := strings.IndexAny(s, " \t\n\r;")
+	word := s
+	if end >= 0 {
+		word = s[:end]
+	}
+	if i := strings.LastIndex(word, "."); i >= 0 {
+		word = word[i+1:]
+	}
+	return word, word != ""
+}
+
+func (r *resolver) buildVersions(tables []catalogTable) error {
+	keys := make([]string, 0, len(r.opts.Tables))
+	for name := range r.opts.Tables {
+		keys = append(keys, name)
+	}
+	sortStrings(keys)
+	for _, name := range keys {
+		version := (r.opts.Tables[name] ?? TableOpts{}).Version
+		if version == "" {
+			continue
+		}
+		ct, err := r.findCatalogTable(name, tables)
+		if err != nil {
+			return fmt.Errorf("sqlc-gen-spira: tables.%s: %w", name, err)
+		}
+		key := strings.ToLower(ct.table.Rel.Name)
+		if _, dup := r.versions[key]; !dup {
+			r.versions[key] = tableVersion{name: ct.table.Rel.Name, version: version}
+		}
+	}
+	return nil
+}
+
+func (r *resolver) classifyRow(q *Query, qd *QueryDef) error {
+	for i := range qd.Fields {
+		if qd.Fields[i].Embed != "" {
+			return r.classifyEmbed(q, qd)
+		}
+	}
+	if len(qd.Fields) == 1 {
+		qd.RowGoType = qd.Fields[0].GoType
+		return nil
+	}
+	if name, ok := r.matchEntity(qd); ok {
+		qd.RowGoType = name
+		return nil
+	}
+	qd.RowGoType = goName(q.Name) + "Row"
+	return nil
+}
+
+func (r *resolver) classifyEmbed(q *Query, qd *QueryDef) error {
+	qd.RowGoType = goName(q.Name) + "Row"
+	flat := map[string]bool{}
+	for i := range qd.Fields {
+		if qd.Fields[i].Embed == "" {
+			flat[qd.Fields[i].GoName] = true
+		}
+	}
+	seen := map[string]bool{}
+	for i := range qd.Fields {
+		table := qd.Fields[i].Embed
+		if table == "" {
+			continue
+		}
+		key := strings.ToLower(table)
+		if seen[key] ?? false {
+			continue
+		}
+		seen[key] = true
+		st, err := r.embedStruct(q, table)
+		if err != nil {
+			return err
+		}
+		if flat[st] ?? false {
+			return fmt.Errorf("sqlc-gen-spira: query %s: embed field %q collides with a column field", q.Name, st)
+		}
+		flat[st] = true
+		qd.Embeds = append(qd.Embeds, EmbedDef{Table: table, Field: st, Struct: st})
+	}
+	return nil
+}
+
+func (r *resolver) embedStruct(q *Query, table string) (string, error) {
+	ents := r.byTable[strings.ToLower(table)] ?? []*Entity{}
+	if len(ents) == 0 {
+		return "", fmt.Errorf("sqlc-gen-spira: query %s: embed table %q is not in the catalog", q.Name, table)
+	}
+	if len(ents) > 1 {
+		return "", fmt.Errorf("sqlc-gen-spira: query %s: embed table %q is ambiguous", q.Name, table)
+	}
+	return ents[0].Struct, nil
+}
+
+func (r *resolver) matchEntity(qd *QueryDef) (string, bool) {
+	for i := range r.model.Entities {
+		if entityMatches(&r.model.Entities[i], qd) {
+			return r.model.Entities[i].Struct, true
+		}
+	}
+	return "", false
+}
+
+func entityMatches(e *Entity, qd *QueryDef) bool {
+	if len(e.Fields) != len(qd.Fields) {
+		return false
+	}
+	for i := range e.Fields {
+		if e.Fields[i].Name != qd.Fields[i].Name {
+			return false
+		}
+		if !strings.EqualFold(qd.Fields[i].Table, e.Table) {
+			return false
+		}
+	}
+	return true
+}
+
+func (r *resolver) goColumnType(schema string, table string, col *Column) (string, error) {
+	base, err := r.columnBase(schema, table, col)
+	if err != nil {
+		return "", err
+	}
+	if col.NotNull {
+		return base, nil
+	}
+	if r.isKeyed(schema, table, col) {
+		under, uerr := r.baseType(schema, col)
+		if uerr != nil {
+			return "", uerr
+		}
+		return under + "?", nil
+	}
+	return base + "?", nil
+}
+
+func (r *resolver) isKeyed(schema string, table string, col *Column) bool {
+	key := strings.ToLower(schema) + "." + strings.ToLower(table) + "." + strings.ToLower(col.Name)
+	if _, ok := r.refTypes[key]; ok {
+		return true
+	}
+	if _, ok := r.keyed[key]; ok {
+		return true
+	}
+	return false
+}
