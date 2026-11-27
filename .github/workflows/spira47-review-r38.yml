@@ -1,4 +1,4 @@
-name: "Spira 47 dollar tokens and compiled query source gates r38"
+name: "Spira 47 complete required source gates r38"
 on:
   push:
     branches: ["ci/spira47-dollar-runtime-20261127-r38"]
@@ -62,6 +62,19 @@ jobs:
         uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39
         with:
           tool: "just@1.59.0"
+      - name: Install pinned ripgrep required by sql-check
+        run: |
+          tool_dir="$RUNNER_TEMP/spira-r38-tools"
+          archive="$RUNNER_TEMP/ripgrep-15.1.0-x86_64-unknown-linux-musl.tar.gz"
+          mkdir -p "$tool_dir"
+          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 \
+            https://github.com/BurntSushi/ripgrep/releases/download/15.1.0/ripgrep-15.1.0-x86_64-unknown-linux-musl.tar.gz \
+            --output "$archive"
+          printf '%s  %s\n' '1c9297be4a084eea7ecaedf93eb03d058d6faae29bbc57ecdaf5063921491599' "$archive" | sha256sum --check --strict
+          tar -xzf "$archive" --directory "$tool_dir" --strip-components=1 \
+            ripgrep-15.1.0-x86_64-unknown-linux-musl/rg
+          test "$("$tool_dir/rg" --version | head -n 1)" = "ripgrep 15.1.0"
+          printf '%s\n' "$tool_dir" >> "$GITHUB_PATH"
       - name: Install the source-pinned package manager
         uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115
         with:
@@ -77,19 +90,19 @@ jobs:
           version: "0.13.9"
           python-version: "3.15"
           enable-cache: false
-      - name: Verify the frozen repair and all required source gates
+      - name: Authenticate focused evidence and complete required source gates
         env:
           SPIRA_ARTIFACT_TOKEN: ${{ github.token }}
         run: |
           export GOENV=off GOCACHEPROG=''
           test -z "$(go env GOCACHEPROG)"
-          uv run --no-project --python 3.15 proof/ci-tools/spira47-review-r38/verify_candidate.py \
-            source proof/ci-tools/spira47-review-r38 "$RUNNER_TEMP/spira47-dollar-runtime-candidate-evidence"
+          uv run --no-project --python 3.15 proof/ci-tools/spira47-review-r38/verify_completion.py \
+            source proof/ci-tools/spira47-review-r38 "$RUNNER_TEMP/spira47-dollar-runtime-completion-evidence"
       - name: Preserve source, baseline and complete gate evidence
         if: always()
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
-          name: spira47-dollar-runtime-candidate-r38
-          path: ${{ runner.temp }}/spira47-dollar-runtime-candidate-evidence
+          name: spira47-dollar-runtime-completion-r38
+          path: ${{ runner.temp }}/spira47-dollar-runtime-completion-evidence
           if-no-files-found: error
           retention-days: 14
