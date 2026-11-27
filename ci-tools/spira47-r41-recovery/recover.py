@@ -56,7 +56,11 @@ def main() -> None:
                     or entry.filename in names):
                 raise ValueError("invalid recovery archive member")
             names.add(entry.filename)
-        report_bytes = read_member(archive, "report.json", 4 * 1024 * 1024)
+        member_rows = [{"name": entry.filename, "bytes": entry.file_size} for entry in entries]
+        (output / "archive-members.json").write_text(json.dumps(member_rows, indent=2) + "\n",
+                                                     encoding="utf-8")
+        print("SPIRA_R41_RECOVERY_MEMBERS " + json.dumps(member_rows), flush=True)
+        report_bytes = read_member(archive, "report.json", 64 * 1024 * 1024)
         report = object_value(json.loads(report_bytes))
         if (report["producer"] != specification["producer"]
                 or str(report["run"]) != str(specification["run"])
@@ -99,12 +103,40 @@ def main() -> None:
                     if re.search(r"--- FAIL:|FAIL\s|error:|panic:|Fatal|fatal|want |mismatch|differs", line)
                 ][:160]
             logs.append(record)
+        projection = dict(report)
+        pipeline = report.get("pipeline", [])
+        if not isinstance(pipeline, list):
+            raise ValueError("frozen pipeline is not an array")
+        projected_pipeline: list[dict[str, object]] = []
+        for raw in pipeline:
+            row = dict(object_value(raw))
+            catalog = row.pop("catalog")
+            catalog_bytes = json.dumps(catalog, sort_keys=True, separators=(",", ":")).encode()
+            row["catalog_projection"] = {
+                "sha256": digest(catalog_bytes), "canonical_bytes": len(catalog_bytes),
+                "encoding": "UTF-8 JSON, sorted keys, compact separators",
+            }
+            generated = row["files"]
+            if not isinstance(generated, list):
+                raise ValueError("generated file records are not an array")
+            projected_files: list[dict[str, object]] = []
+            for item in generated:
+                file = dict(object_value(item))
+                data = text(file.pop("content")).encode()
+                if digest(data) != file["sha256"]:
+                    raise RuntimeError("generated content hash differs")
+                file["content_bytes"] = len(data)
+                projected_files.append(file)
+            row["files"] = projected_files
+            projected_pipeline.append(row)
+        projection["pipeline"] = projected_pipeline
         receipt = {
             "schema": 1, "producer": os.environ["GITHUB_SHA"],
             "recovered_artifact": artifact.receipt,
             "report_sha256": digest(report_bytes), "report_bytes": len(report_bytes),
             "members": [{"name": entry.filename, "bytes": entry.file_size} for entry in entries],
-            "verified_command_logs": logs, "report": report,
+            "verified_command_logs": logs, "report_projection": projection,
+            "projection_scope": "Full report except pipeline catalog objects and generated content; these are bound by exact hashes/lengths. The complete report is preserved separately.",
             "source_executed": False, "publication_eligible": False,
         }
     payload = (json.dumps(receipt, separators=(",", ":")) + "\n").encode()
