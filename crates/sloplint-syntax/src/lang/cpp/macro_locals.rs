@@ -1,7 +1,7 @@
 use sloplint_core::facts::Pos;
 use tree_sitter::Node;
 
-use crate::hooks::{Cx, child_by_field, named_children, pos_of, text};
+use crate::hooks::{Cx, DeclPieces, child_by_field, named_children, pos_of, text};
 use crate::lang::c_family::{self, CPP_DECLARATORS, word};
 
 pub(crate) fn find_decl_from_cx<'t>(cx: &Cx<'t, '_>) -> Option<Node<'t>> {
@@ -120,33 +120,47 @@ pub(crate) fn push_cpp_piece_name<'s>(n: Node<'_>, cx: &Cx<'_, 's>, out: &mut Ve
     } else if decl.kind() != "declaration" {
         return;
     }
-    if word(
-        cx,
-        decl,
-        &["type_qualifier", "storage_class_specifier"],
-        &["const", "constexpr", "extern"],
-    ) {
-        return;
-    }
     let want = pos_of(n);
     let found = cx.members.decl_pieces(
         decl,
         || {
+            if word(
+                cx,
+                decl,
+                &["type_qualifier", "storage_class_specifier"],
+                &["const", "constexpr", "extern"],
+            ) {
+                return DeclPieces {
+                    skipped: true,
+                    names: Vec::new(),
+                };
+            }
             let (all, _) = c_family::decl_info(cx, decl, CPP_DECLARATORS.wrap);
             let base = cx.src.as_ptr() as usize;
             let end = base.wrapping_add(cx.src.len());
-            all.into_iter()
-                .filter_map(|(name, pos)| {
-                    let start = name.as_ptr() as usize;
-                    (start >= base && start + name.len() <= end)
-                        .then(|| (start - base, name.len(), pos))
-                })
-                .collect()
+            DeclPieces {
+                skipped: false,
+                names: all
+                    .into_iter()
+                    .filter_map(|(name, pos)| {
+                        let start = name.as_ptr() as usize;
+                        (start >= base && start + name.len() <= end)
+                            .then(|| (start - base, name.len(), pos))
+                    })
+                    .collect(),
+            }
         },
-        |pieces| {
-            pieces
-                .iter()
-                .find(|(_, _, pos)| *pos == want)
+        |cached| {
+            if cached.skipped {
+                return None;
+            }
+            let at = cached
+                .names
+                .partition_point(|(_, _, pos)| pos.byte < want.byte);
+            cached
+                .names
+                .get(at)
+                .filter(|(_, _, pos)| *pos == want)
                 .and_then(|(from, len, pos)| {
                     cx.src
                         .get(*from..from.checked_add(*len)?)

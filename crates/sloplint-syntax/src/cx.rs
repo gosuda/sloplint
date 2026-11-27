@@ -7,8 +7,12 @@ use sloplint_core::lang::Lang;
 
 use crate::hooks::{Container, slice};
 
-/// One declaration's names as `(start, len, pos)` byte ranges into the file source.
-type DeclPieces = Vec<(usize, usize, Pos)>;
+/// One declaration's cached names: `(start, len, pos)` byte ranges into the
+/// file source, plus whether the declaration is skipped by qualifier.
+pub(crate) struct DeclPieces {
+    pub(crate) skipped: bool,
+    pub(crate) names: Vec<(usize, usize, Pos)>,
+}
 
 #[derive(Default)]
 pub(crate) struct MemberStates {
@@ -32,8 +36,9 @@ impl MemberStates {
     }
 
     /// Names of one declaration as `(start, len, pos)` byte ranges into the
-    /// file source, computed once per declaration. Ranges re-slice the source
-    /// instead of holding `&str` so this per-file state needs no lifetime.
+    /// file source, computed once per declaration, with the qualifier skip
+    /// decided in the same scan. Ranges re-slice the source instead of
+    /// holding `&str` so this per-file state needs no lifetime.
     pub(crate) fn decl_pieces<R>(
         &self,
         decl: Node<'_>,
@@ -351,10 +356,13 @@ mod tests {
         let calls = std::cell::Cell::new(0u32);
         let compute = || {
             calls.set(calls.get() + 1);
-            vec![(4, 1, Pos { line: 1, byte: 4 })]
+            DeclPieces {
+                skipped: false,
+                names: vec![(4, 1, Pos { line: 1, byte: 4 })],
+            }
         };
         for _ in 0..3 {
-            let seen = states.decl_pieces(decl, compute, |pieces| pieces.to_vec());
+            let seen = states.decl_pieces(decl, compute, |pieces| pieces.names.to_vec());
             assert_eq!(seen, vec![(4, 1, Pos { line: 1, byte: 4 })]);
         }
         assert_eq!(calls.get(), 1, "three lookups share one scan");
@@ -373,7 +381,10 @@ mod tests {
                 decl,
                 || {
                     calls.set(calls.get() + 1);
-                    vec![]
+                    DeclPieces {
+                        skipped: false,
+                        names: vec![],
+                    }
                 },
                 |_| {},
             );

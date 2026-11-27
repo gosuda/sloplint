@@ -6,7 +6,9 @@ use sloplint_core::role::{CodeRole, RoleRegion};
 use sloplint_core::suppress::CommentText;
 use tree_sitter::Node;
 
-pub(crate) use crate::cx::{ChainRoots, Cx, FileNameSets, FileSetKind, Link, MemberStates};
+pub(crate) use crate::cx::{
+    ChainRoots, Cx, DeclPieces, FileNameSets, FileSetKind, Link, MemberStates,
+};
 pub(crate) use crate::emit::{attributed_region, region_of};
 pub(crate) use crate::header_comments::{is_directive_segment, preceding_comments};
 pub(crate) use crate::shapes::{binary_concat, string_arg_shape};
