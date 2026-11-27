@@ -63,12 +63,14 @@
     "conclusion": "success"
   },
   "previous_verification": {
-    "report_sha256": "8337d9925f35c55aac6130e07be6803bda972fa5625cbda0354fccce2d64b822",
+    "report_sha256": "ca1bc0848dc98e7541f3d223159112fad80f03fb1b36970e8a8a4bbdbf4a96f5",
     "manifest_sha256": "d9f05b8cb3d764cce6eefcb0247fbbc3971be1e4ad983431355f730f2ed53fa5",
     "command_count": 228,
     "evidence_commit": "4b2f06292446cf44f2857d562d810aae4dab17a5",
     "terminal_commit": "88af1e7b114f90871f65fe88845459442c175fbd",
-    "scope": "Exact prior production/source evidence and original fixture contracts. No old full source gate substitutes for the required gates in this job."
+    "scope": "Exact prior production/source evidence and original fixture contracts. No old full source gate substitutes for the required gates in this job.",
+    "projection_sha256": "8337d9925f35c55aac6130e07be6803bda972fa5625cbda0354fccce2d64b822",
+    "report_serialization": "The artifact uses the immutable native writer json.dumps(report, indent=2) plus LF with default ensure_ascii=True. The durable projection uses literal UTF-8 for six U+00E9 characters. Require both exact byte hashes, parsed equality and native serialization equality."
   },
   "contracts": {
     "role_names": [
@@ -289,7 +291,7 @@
     "schema.sql": "250795d402dca7144e24f33dc51026083c7664385436545bca8762b7a66de6bc",
     "native_support.py": "86a6f751b02d586be4152848b471d1d9fd16cb45ca3d0ec0ac5df9ef184e44a7",
     "proof_support.py": "50e10dc97b3699839cbdbb51013cb2269adc139a2fa51765b7bca1b4eabaa58d",
-    "archive_support.py": "e3400b496e42d217886994136784bec4fe614297c30e1a36d18f6e25846eff3e",
+    "archive_support.py": "ac519a70f5f2d038ce42a891cf7731f10497027a5e13a8299ee91a7defc40579",
     "runtime_observer.py": "f0534f590d548cd78db686037f612bdb225302b30d7cfeb5d3c85814dd496052",
     "verify_candidate.py": "7c13e78f0c28e122359c0c09b1018a3a91385ab585e60da40bb6fc6265318b4f",
     "source-index.json": "b1cbb62290929b0ae90995a686a2890ffe9ea12c3a3fdcabc0de64d5549b7a75",
@@ -300,8 +302,18 @@
     "expected-new-pipeline.json": "f04c67398b266161eb915f29f9d853b8da07870cb743e8e022b1756c66f911f2",
     "previous-native-cases.json": "3440a022d9e46eaddd018926c8700d9230bf7f30148ef0d8ff10e6b6a4d97201",
     "previous-pipeline-cases.json": "f8341c992395a9e0ab1bb74fdf27351f29792b4f510fa4869583b5d3756ee26b",
-    "previous-report.json": "8337d9925f35c55aac6130e07be6803bda972fa5625cbda0354fccce2d64b822"
+    "previous-report.json": "8337d9925f35c55aac6130e07be6803bda972fa5625cbda0354fccce2d64b822",
+    "failed-attempt.json": "ae7b85f646ba3d8e9ac4f2efc7dbc59453ce0c3eb92c85f3255890dd64139a25"
   },
   "workflow_sha256": "c97809ce8359b43395e0064271920a8bafa881f853f359306144d74cd13e35ff",
-  "publication_eligible": false
+  "publication_eligible": false,
+  "preserved_failed_attempt": {
+    "producer": "1694350a47292b483f9a4314d46b43996b843985",
+    "run": 46079109930,
+    "job": 140773675515,
+    "file": "failed-attempt.json",
+    "sha256": "ae7b85f646ba3d8e9ac4f2efc7dbc59453ce0c3eb92c85f3255890dd64139a25",
+    "reason": "Report projection hash was incorrectly used as the Python artifact-file hash. Failure before all new native/test/source phases; exact original source restored.",
+    "gate_reuse": false
+  }
 }
