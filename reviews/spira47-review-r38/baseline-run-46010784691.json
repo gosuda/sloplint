@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "status": "in_progress",
+  "observed_at": "2026-11-27 13:52:30 UTC",
+  "producer": "c95e03f77fe277a4f973ce475e8804dd983fa42b",
+  "producer_tree": "6c225a731d4c2bd132898f0feb620ee2845ce76f",
+  "run": 46010784691,
+  "jobs": [
+    {
+      "id": 140545433373,
+      "status": "in_progress",
+      "conclusion": null
+    }
+  ],
+  "source": {
+    "repository": "gosuda/spira",
+    "head": "593d792bf282f7b7119dafb057a389b04c91fd6d",
+    "tree": "1ec9a3d1e6a53ad1a50723869c6d381cf64d7877",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "blobs": 616,
+    "index_file": "source-index.json"
+  },
+  "current_test_tree": {
+    "tree": "4921be4909780bcd3461701281b141db768b68eb",
+    "blobs": 621,
+    "index_file": "current-tests-index.json"
+  },
+  "previous_prefix_tree": {
+    "tree": "81bd16d6dd73c48d2790b22dec13aaea7fbf56b7",
+    "blobs": 621,
+    "index_file": "previous-prefix-index.json",
+    "selection": "Same unchanged maintained tree plus frozen tests, with only model.lgo restored to pre-r37 content from82ce. This is a counterfactual selected-file comparison, not a claim that the entire old source head ran."
+  },
+  "manifest_sha256": "3ba7b03a93897e49f68e7edb39ddb313a2ceebc3f9011cd78efc278212180ade",
+  "new_threads": [
+    "PRRT_kwDOVpFduc68zFK3",
+    "PRRT_kwDOVpFduc68zFMT"
+  ],
+  "production_modified": false,
+  "baseline_verified": false,
+  "publication_eligible": false,
+  "review": "Parent's initial static review found no concrete blocker; final read-only review of the13-case delta is still pending. No candidate source has been written.",
+  "prior_completed_scope": "r37 remains successful and retired, with source-byte coverage only; these new compiled-value and dollar-token findings remain open."
+}
