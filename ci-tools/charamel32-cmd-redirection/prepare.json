@@ -21,7 +21,7 @@
     "head": "f879b0156aa32a317cb0e29609df53786a09ec78",
     "tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
     "sha256": "76f8ed44a22f5f6d022732aa7d92fba00517fee38ed9d4a3cf28e6d5e0fdd1fe",
-    "observer_sha256": "9be300957a3cc0ed4266c1bc494e4af7910331a4720798461a69f8b3edbd41c4"
+    "observer_sha256": "7069c770bbff78b80d65ee1d7c9144e1da4cae748f02e29c7a3a4a95808bed04"
   },
   "native_archives": [
     {
@@ -1774,12 +1774,20 @@
     "nested_redirect_prefix"
   ],
   "maintained_test_index": 15,
-  "driver_sha256": "16ad7eae83dd1f3377f1f408ce61eaa6c2c71009a52205606bef431594152709",
+  "driver_sha256": "2017c6769a94fb2ed4fe4e8b4c356fb92f17e7bccdacf1b2002c77116a136f26",
   "scope": [
     "Native observations do not establish complete Cmd grammar parity.",
     "The escaped-digit row preserves raw caret spelling in the screen; native parent processing removes that caret. The literal argument and classification are checked separately.",
     "The prior two traces containing outer redirections were actual historical parser observations, not native child-command-line equality. They are explicitly corrected from these new native records.",
     "All POSIX implementation bytes before the Cmd parser remain exact. No permission policy, tools_shell.ml, build workflow, dependency, or ordinary screen signature change is proposed.",
     "The maintained branch is unchanged; native preparation and full source gates remain pending."
-  ]
+  ],
+  "historical_failed_preparation": {
+    "producer": "9a4b67b46de5cab9846808126ec05dff0694766f",
+    "run": 45985935070,
+    "job": 140461437585,
+    "artifact": 15192260402,
+    "sha256": "2035da62e03b6e47ba30ecdd8ccce94d38601900896636a1cc0f819b591f557d",
+    "scope": "Historical observation adapter omitted the trace parameter on the older cmd_char function; candidate was not applied. Original classifier/maintained-test negative controls and source restoration completed."
+  }
 }

@@ -152,7 +152,7 @@ def instrument(source: str) -> str:
     assert source.count(needle) == 1
     start = source.index(needle)
     tail = source[start:]
-    for name in ("parse_cmd", "end_segment", "for_command", "analyze_cmd"):
+    for name in ("parse_cmd", "cmd_char", "end_segment", "for_command", "analyze_cmd"):
         tail = tail.replace(name + " sink ~depth", name + " sink ~trace ~depth")
     needle = "let rec parse_cmd sink ~trace ~depth source =\n"
     assert tail.count(needle) == 1

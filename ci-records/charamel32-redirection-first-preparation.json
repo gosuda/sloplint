@@ -1,0 +1,286 @@
+{
+  "producer": "9a4b67b46de5cab9846808126ec05dff0694766f",
+  "run": 45985935070,
+  "job": 140461437585,
+  "artifact": 15192260402,
+  "sha256": "2035da62e03b6e47ba30ecdd8ccce94d38601900896636a1cc0f819b591f557d",
+  "scope": "Historical observation adapter omitted the trace parameter on the older cmd_char function; candidate was not applied. Original classifier/maintained-test negative controls and source restoration completed.",
+  "actual_conclusion": "failure",
+  "log_sha256": "526d5447df3da4a5354406a2cd1bd819ff8a7dc31e4985ddde808dc2b197d3e2",
+  "log_characters": 264360,
+  "result": {
+    "producer": "9a4b67b46de5cab9846808126ec05dff0694766f",
+    "run": "45985935070",
+    "head": "c00962f26db32a41cfc1c487027a8b6316cb8bf1",
+    "original_tree": "99508a172cd995a72dc9845016324e13a5b88527",
+    "formatted_tree": null,
+    "accepted": false,
+    "native_counts": [
+      31,
+      10,
+      10
+    ],
+    "source_restored": true,
+    "stages": {
+      "observed_original": {
+        "tree": "297e360629fce1df626dc25bc76c6727e409b933",
+        "classifier_cases": 203,
+        "classifier_failures": [
+          "redirect-reported_quoted_outer",
+          "redirect-quoted_outer_stderr",
+          "redirect-quoted_outer_both",
+          "redirect-quoted_outer_append",
+          "redirect-inner_plus_outer",
+          "redirect-two_outer_targets",
+          "redirect-following_command",
+          "redirect-grouped_outer",
+          "redirect-for_body_outer",
+          "redirect-trailing_space_outer"
+        ],
+        "trace_cases": 48,
+        "trace_failures": [
+          "nested_redirect_equal",
+          "nested_redirect_prefix",
+          "reported_quoted_outer",
+          "quoted_outer_stderr",
+          "quoted_outer_both",
+          "quoted_outer_append",
+          "redirect_before_payload",
+          "inner_plus_outer",
+          "two_outer_targets",
+          "following_command",
+          "grouped_outer",
+          "for_body_outer",
+          "trailing_space_outer",
+          "echo_two_spaces",
+          "echo_tab_gap",
+          "echo_argument_between",
+          "echo_duplication_before",
+          "echo_comma_gap",
+          "echo_quoted_digit",
+          "echo_quoted_digits",
+          "echo_two_digits",
+          "echo_escaped_digit",
+          "echo_ordinary_digit"
+        ],
+        "maintained_test": {
+          "actual_exit": 1,
+          "expected_exit": 1,
+          "expected_failure": "nested_redirect_equal",
+          "log_sha256": "d59e8ca196c819a04d14a2d6fdf7f3c7e631e224436cf267f32c12c8f065ce7a"
+        }
+      }
+    },
+    "commands": [
+      {
+        "label": "compiler-version",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlc",
+          "-version"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.011703714999953263,
+        "log_sha256": "db74d0caf81f43029fa28ce9888695d0b54d0a99003e6042823c9bc914897865"
+      },
+      {
+        "label": "formatter-version",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlformat",
+          "--version"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.016707612999994126,
+        "log_sha256": "a68641c6aacd345c4931a6217331d2bf43398c7bc134666a2f756953eab407aa"
+      },
+      {
+        "label": "fetch-legacy-source",
+        "argv": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "--depth=1",
+          "origin",
+          "f879b0156aa32a317cb0e29609df53786a09ec78"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.3786556109999992,
+        "log_sha256": "a89667a2d1313f44f4874271421625b9ba6a6314ee3bdb36b5a9bf28a4e9a9d0"
+      },
+      {
+        "label": "original-compile",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlc",
+          "-strict-sequence",
+          "-strict-formats",
+          "-short-paths",
+          "-principal",
+          "-warn-error",
+          "+a",
+          "-o",
+          "/tmp/charamel32-redirection-compile-yfxmzpz1/original/screen-probe",
+          "shell_screen.mli",
+          "shell_screen.ml",
+          "probe.ml"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.08544207400007053,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "observed_original-compile",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlc",
+          "-strict-sequence",
+          "-strict-formats",
+          "-short-paths",
+          "-principal",
+          "-warn-error",
+          "+a",
+          "-o",
+          "/tmp/charamel32-redirection-compile-yfxmzpz1/observed_original-plain/screen-probe",
+          "shell_screen.mli",
+          "shell_screen.ml",
+          "probe.ml"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.08687240200003998,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "observed_original-trace-compile",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlc",
+          "-strict-sequence",
+          "-strict-formats",
+          "-short-paths",
+          "-principal",
+          "-warn-error",
+          "+a",
+          "-o",
+          "/tmp/charamel32-redirection-compile-yfxmzpz1/observed_original-trace/screen-probe",
+          "shell_screen.mli",
+          "shell_screen.ml",
+          "probe.ml"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.09151922799992462,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "observed_original-maintained-test",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "dune",
+          "exec",
+          "--profile",
+          "release",
+          "test/crush/test_crush.exe",
+          "--",
+          "test",
+          "--show-errors",
+          "^tools-shell$",
+          "15"
+        ],
+        "actual_exit": 1,
+        "timeout": false,
+        "seconds": 7.2482026989999895,
+        "log_sha256": "d59e8ca196c819a04d14a2d6fdf7f3c7e631e224436cf267f32c12c8f065ce7a"
+      },
+      {
+        "label": "old_join-compile",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlc",
+          "-strict-sequence",
+          "-strict-formats",
+          "-short-paths",
+          "-principal",
+          "-warn-error",
+          "+a",
+          "-o",
+          "/tmp/charamel32-redirection-compile-yfxmzpz1/old_join-plain/screen-probe",
+          "shell_screen.mli",
+          "shell_screen.ml",
+          "probe.ml"
+        ],
+        "actual_exit": 2,
+        "timeout": false,
+        "seconds": 0.06380720399999973,
+        "log_sha256": "f5d9523eb5cca183844ab9b9d1a470db758299a3b5ae164bacfe9539a1445109"
+      },
+      {
+        "label": "restore-original",
+        "argv": [
+          "git",
+          "reset",
+          "--hard",
+          "c00962f26db32a41cfc1c487027a8b6316cb8bf1"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.007176811000022099,
+        "log_sha256": "41e9c185d5fe3e49a0158895f2922dacc1d7cf99e97585f9496ff86737d31fd3"
+      }
+    ],
+    "scope": "Original parser and exact historical joining implementation receive only the same local observation adapter and the new maintained test; original classifier outputs are compared before and after that adapter. Two historical outer-redirection traces are explicitly corrected."
+  },
+  "raw_artifacts": {
+    "total_count": 1,
+    "artifacts": [
+      {
+        "id": 15192260402,
+        "node_id": "MDg6QXJ0aWZhY3QxNTE5MjI2MDQwMg==",
+        "name": "charamel32-redirection-preparation",
+        "size_in_bytes": 38045,
+        "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15192260402",
+        "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15192260402/zip",
+        "expired": false,
+        "digest": "sha256:2035da62e03b6e47ba30ecdd8ccce94d38601900896636a1cc0f819b591f557d",
+        "created_at": "2026-11-27T11:03:01Z",
+        "updated_at": "2026-11-27T11:03:01Z",
+        "expires_at": "2026-12-27T11:03:00Z",
+        "workflow_run": {
+          "id": 45985935070,
+          "repository_id": 1424164147,
+          "head_repository_id": 1424164147,
+          "head_branch": "ci/charamel32-cmd-gates-20261127",
+          "head_sha": "9a4b67b46de5cab9846808126ec05dff0694766f"
+        }
+      }
+    ]
+  },
+  "correction": "Add only cmd_char to the historical observation-parameter propagation list. Current-source adapter bytes, all candidate source/test bytes and all native fixtures are unchanged.",
+  "verified_at": "2026-11-27 11:06:19 UTC"
+}
