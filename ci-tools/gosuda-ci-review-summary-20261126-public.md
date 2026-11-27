@@ -1,14 +1,16 @@
 # Gosuda public CI and PR audit
 
-Snapshot R28: 2026-11-27T02:51:15.733Z to 2026-11-27T02:57:57.472Z. This public report omits private repository identities, source revisions and findings. PR titles, branch names and review bodies are omitted from the data projection, including private-origin metadata in the public landing mirror.
+Snapshot R29: broad reads from 2026-11-27 03:46:27 to 03:49:26 UTC, with a targeted public-mirror refresh through 04:13:32 UTC. Individual records retain their observation times. This public report omits private repository identities, source revisions and findings. PR titles, branch names and review bodies are omitted from the data projection, including private-origin metadata in the public landing mirror.
 
 ## Current result
 
-All runner selections on the **150 open public PR heads** use Depot, or the head contains no runner jobs. Every declared macOS runner on those heads is exactly `depot-macos-latest`. No Ubuntu 26.04 runner selection was found.
+All runner selections on the **151 open public PR heads** use Depot, or the head contains no runner jobs. Every declared macOS runner on those heads is exactly `depot-macos-latest`. No Ubuntu 26.04 runner selection was found.
 
-The public scope contains **115 repositories, 150 PRs across 52 repositories, 430 review threads and 958 inline comments**. Canonical open-PR lists were read for every repository. All inline-comment counts agree with GitHub's REST counts. No read failed and no mergeability value is unknown.
+The public scope contains **115 repositories, 151 PRs across 52 repositories, 430 review threads and 958 inline comments**. Canonical open-PR lists were read for every repository. All inline-comment counts agree with GitHub's REST counts. Every required read ultimately succeeded, and no mergeability value is unknown. Initial branch-ref requests with malformed URL encoding were corrected; the receipt does not claim zero request errors.
 
-The runner audit covers **289 immutable source commits, 244 unique YAML blobs and 772 unique job definitions**. It includes current defaults, actual base refs and maintained PR heads. Static labels, finite matrix variants, local reusable workflows and cargo-dist runner mappings are resolved. The report verifies declared selection; it does not claim that every CI run passed or estimate billing savings.
+The runner audit covers **291 immutable source commits, 244 unique YAML blobs and 772 unique job definitions**. It includes current defaults, actual base refs and maintained PR heads. Static labels, finite matrix variants, local reusable workflows and cargo-dist runner mappings are resolved. The report verifies declared selection; it does not claim that every CI run passed or estimate billing savings.
+
+The public delta is one new landing-mirror PR with no review threads. Its head and actual base contain no workflows. All other public PR heads and review states match the preceding broad audit. Private-origin mirror titles, branch names, bodies and repository identities remain omitted.
 
 ## Default branches still awaiting published migrations
 
@@ -61,7 +63,7 @@ One actual public conflict remains: [gosuda/ssh-chat #1](https://github.com/gosu
 
 ## Evidence and limits
 
-The complete public snapshot is `ci-tools/gosuda-pr-audit-20261126-public.json`, SHA-256 `ae37fef792f99741665670790c9df42e3dd8193d8a2cadb34afd82ce274a6127`. It records source heads, actual bases, review resolution, runner declarations and observation times. Files cached from earlier reads are reused only by identical immutable source commit and Git blob SHA.
+The complete public snapshot is `ci-tools/gosuda-pr-audit-20261126-public.json`, SHA-256 `7d3e49846082e179bcbd908e8539c2ef973a022cd0114d77e0875995677d452a`. It records source heads, actual bases, review resolution, runner declarations and observation times. Files cached from earlier reads are reused only by identical immutable source commit and Git blob SHA.
 
 This is a finite, non-atomic read window. Later pushes, comments, closures and merges can change the result. An unstable check state is not treated as a merge conflict. Review resolution is determined by `is_resolved`, including outdated threads.
 
