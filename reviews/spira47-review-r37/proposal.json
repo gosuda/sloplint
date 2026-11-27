@@ -7,7 +7,7 @@
     "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332"
   },
   "candidate": {
-    "tree": "f2719f0eced1f02de5a7eae59270211f37432b47",
+    "tree": "11048bd42c9e73d8542140a2fe5509632b1e68a7",
     "blobs": 616,
     "production_commit_created": false,
     "changed_paths": [
@@ -19,8 +19,8 @@
       "cmd/sqlc-gen-spira/testdata/literal-schema.sql",
       "docs/specs/sqlc-gen-spira.md"
     ],
-    "authored_sha256": "e738cc46ccfb790276c04d8007d68d33c7d4458101b84325d4d091cd3fb01f3e",
-    "index_sha256": "ff3deae0714dc506cd61d4ffc893c9019bbb4f7e62ad7d6241b1025166d3feda"
+    "authored_sha256": "5ba7b7460dc22d47aec57deedaf788c13030c0d9f3431b6700f8c18b047d4f66",
+    "index_sha256": "e7253ae99b4cf4b34a6e07fa69fc0b284aebd9b05f4163da1cef22f22107fd56"
   },
   "native_baseline": {
     "producer": "b1233de9007bdc53a3f64a468d43a831b8bfb96c",
@@ -49,5 +49,12 @@
     "Actual native26andcaptured22 semantics must match; exactsource/bytes/restoration.",
     "Actual justgate,justslop,justeject0."
   ],
-  "publication_eligible": false
+  "publication_eligible": false,
+  "rejected_proposal": {
+    "commit": "247af08677a1351dc5d9a78c72e9baa4b957634e",
+    "tree": "f2719f0eced1f02de5a7eae59270211f37432b47",
+    "executed": false,
+    "finding": "The proposal builder passed a literal dollar-plus-quote sequence to JavaScript replacement-string syntax, duplicating a source suffix.",
+    "correction": "Use a replacement callback. Inverting the one function replacement recovers the entire exact original model blob46cdb6fa. All six other authored files remain byte-identical."
+  }
 }

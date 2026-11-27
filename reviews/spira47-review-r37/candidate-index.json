@@ -1147,7 +1147,7 @@
   {
     "path": "cmd/sqlc-gen-spira/model.lgo",
     "mode": "100644",
-    "sha": "009a37a570e310703c1e7831d6f671ec4376cb63"
+    "sha": "769861a7e11d70f32501d595dd86f2034c41c236"
   },
   {
     "path": "cmd/sqlc-gen-spira/mssql_runtime_engines_test.lgo",
