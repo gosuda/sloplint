@@ -95,11 +95,11 @@
       "relation-array-on-column"
     ],
     "sqlc_upstream": {
-      "relation-column-list": "queries.sql:1:1: column \"x\" does not exist",
-      "relation-column-list-explicit": "queries.sql:1:1: column \"x\" does not exist"
+      "relation-column-list": "queries.sql:2:35: column \"x\" does not exist",
+      "relation-column-list-explicit": "queries.sql:2:35: column \"x\" does not exist"
     },
     "sqlc_experiment": "",
-    "upstream_prediction_note": "These exact native-valid statements still have their direct-generator assertions. Pinned SQLc legacy analysis is predicted to reject their renamed x column before the plugin. The baseline must establish actual raw exit 1, exact diagnostic, absent plugin request, and no emitted .lgo; no runtime observation is claimed by this draft."
+    "upstream_prediction_note": "The first exact column-list input returned the missing-x diagnostic at queries.sql:2:35 in failed run46068178205. The strict observer rejected its earlier location prediction before checking request absence. The repeat must establish exact output, absent request, and empty generated files for both unchanged inputs; the second input has not yet reached SQLc in the preserved run."
   },
   "source_findings": [
     "PRRT_kwDOVpFduc687Ofj",
@@ -116,7 +116,7 @@
     "baseline_support.py": "32676bc6ec68d6dd7091a441b3220606bcc047760f386ef9098bf7b01e5e9bce",
     "proof_support.py": "e59521ce25de634ceea28a6346991a80327fbfbeeeaf4ce520a8ddd0ff57d326",
     "native_support.py": "c5f930b77c049a6ac3f4f5c2e1356e13e59cd5047e2d0ab632e1076efa35e1c5",
-    "observer.py": "9b5add22fab01df0219506edf603b200cfca620cb8bbeccc4436f29accd7c8f3",
+    "observer.py": "fac8dee3073216b2a4af667fdbb84d755da5b9500d25101c073745cdac1fad1c",
     "schema.sql": "250795d402dca7144e24f33dc51026083c7664385436545bca8762b7a66de6bc",
     "source-index.json": "f82cc1851d56d7cc2e42d29f0e31630934bb204de21e2b252cafc02cbc08c55d",
     "test-index.json": "f5fa0c95e9de6c63063f3f9909b356233396545acae46e0467b14b4fa0e41ba9",
@@ -149,6 +149,18 @@
       "path": "internal/cmd/generate.go",
       "blob": "fbdb0844099a43ca2003f4910869e99735bb0f72",
       "sha256": "f91c6ce240b68906e110d4ccdfac2e50db94a02601ebb8352e13cdc550a03167"
+    }
+  ],
+  "preserved_failures": [
+    {
+      "run": 46068178205,
+      "job": 140738456076,
+      "producer": "e5c98bfa622da358c1fd84b25b44b00a3a940814",
+      "artifact": 15231309213,
+      "zip_sha256": "239e3f54a9d9bf6aa339779cd321a02a9b4e59aad5efd5ffdd93894168f6cffa",
+      "record": "reviews/spira47-review-r42/baseline-failure-46068178205.json",
+      "raw_job_log_sha256": "b0fa32464734890336bf364640bf7a87d4cf2b5dfd42f8f372d54ec9b8a578b1",
+      "gate_reuse": false
     }
   ]
 }
