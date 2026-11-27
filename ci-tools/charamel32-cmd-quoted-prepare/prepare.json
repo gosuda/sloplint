@@ -1,0 +1,1999 @@
+{
+  "head": "d19fcb385bf404c2fbc1628d8c090c63a63cdcd1",
+  "tree": "0893090a2132c707279c64879a31694075d60e1b",
+  "draft_tree": "be78e913e2f8666083065e77476d65e372cc65a7",
+  "original_sha256": {
+    "bin/crush/lib/shell_screen.ml": "397a083c017f5d0fea5ada540b4ffbeea4e2da766b0b990f4aa140ba1c5415bc",
+    "bin/crush/lib/shell_screen.mli": "75804126730fb966e6ea4490ed8d650e2966799975518c8492fb0da3a50c93de",
+    "test/crush/test_tools_shell.ml": "489d3012655e8fcdd311ed2a294c9a078f9599691d6dfb5830fd6e81834b3e51"
+  },
+  "candidate_sha256": {
+    "bin/crush/lib/shell_screen.ml": "66af36577313918be01ded984ee3115da9a33e2828e555a9301c9b5a1d732cdc",
+    "bin/crush/lib/shell_screen.mli": "341412aafaebbc354197001bd9373086ee9681ee69cac012df2cf08637212ee9",
+    "test/crush/test_tools_shell.ml": "27bdaa44c928fdd1c7222a875097bac0e96816110287e404f405a8b084105522"
+  },
+  "observer_only_sha256": "de45e371a4ec38b80a1dcac4655ee502b709b7fcab5ec5aca388721e30c7bf38",
+  "first_quote_function_sha256": "63d6fdff9abdaa87f6b7f01e12ce6b69ada92a274b6f98be3fdf99b86eb96530",
+  "native_quotes": {
+    "id": 15196541931,
+    "sha256": "e69cd62041b5cae5b29fb21101f98c7abb16cb70e3ab617f61451f4421005218",
+    "producer": "2c9cf4db2df1c85ccba3c6e7dcea482d803bf5d8",
+    "run": 45997335988
+  },
+  "parser_observation": {
+    "id": 15198071063,
+    "sha256": "db7a2394bcee1ed67df58848753b81217519268856c11b41db2532329d1f2c7b",
+    "producer": "938880bb1388f9c5e903791ddc8496303aee0f28",
+    "run": 45999925649
+  },
+  "retained_preparation": {
+    "id": 15193595379,
+    "sha256": "68f0cfffab6120faa2a8f39c0e6dcda6290cbe64310538bb62d70748aff5502a",
+    "producer": "caa3a43fa5fc409e962d3ac805fd0afece65e434",
+    "run": 45987706404
+  },
+  "retained_tree": "ecea478c6d047d601c8e09826624f62e25b77a91",
+  "cases": [
+    {
+      "id": "cmd-00",
+      "dialect": "cmd",
+      "command": "cmd /c echo ready for review",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-01",
+      "dialect": "cmd",
+      "command": "cmd /c \"echo ready for review\"",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-02",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo do for else",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-03",
+      "dialect": "cmd",
+      "command": "for /r do %i in (*.txt) do echo %i",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-04",
+      "dialect": "cmd",
+      "command": "for /r \"do\" %i in (*.txt) do echo %i",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-05",
+      "dialect": "cmd",
+      "command": "for %i in (do) do echo %i",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-06",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do echo ready for review",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-07",
+      "dialect": "cmd",
+      "command": "for /f %i in (notes.txt) do echo %i",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-08",
+      "dialect": "cmd",
+      "command": "for /f \"tokens=2\" %i in (notes.txt) do echo %i",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-09",
+      "dialect": "cmd",
+      "command": "for /f %i in (\"literal words\") do echo %i",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-10",
+      "dialect": "cmd",
+      "command": "for /f \"usebackq\" %i in (\"notes space.txt\") do echo %i",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-11",
+      "dialect": "cmd",
+      "command": "for /f \"usebackq\" %i in ('literal words') do echo %i",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-12",
+      "dialect": "cmd",
+      "command": "for /f \"usebackq\" %i in (`echo alpha`) do echo %i",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-13",
+      "dialect": "cmd",
+      "command": "for /f \"tokens=* usebackq\" %i in (`echo alpha`) do echo %i",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-14",
+      "dialect": "cmd",
+      "command": "for /f \"delims=usebackq\" %i in ('echo alpha') do echo %i",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-15",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-16",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do   ",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-17",
+      "dialect": "cmd",
+      "command": "for /r do %i in (*.txt) do",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-18",
+      "dialect": "cmd",
+      "command": "for %i in (do) do",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-19",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do ()",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-20",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do (())",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-21",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do & echo after",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-22",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) & for %j in (beta) do echo %j",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-23",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do echo %i & for %j in (beta)",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-24",
+      "dialect": "cmd",
+      "command": "cmd /c for %i in (alpha)",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-25",
+      "dialect": "cmd",
+      "command": "cmd /c \"for %i in (alpha) do\"",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-26",
+      "dialect": "cmd",
+      "command": "for %i in (alpha do echo ready",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-27",
+      "dialect": "cmd",
+      "command": "for in (alpha) do echo ready",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-28",
+      "dialect": "cmd",
+      "command": "for %i (alpha) do echo ready",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-29",
+      "dialect": "cmd",
+      "command": "for unsupported %i in (alpha) do echo ready",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-30",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do %PROGRAM% %i",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-31",
+      "dialect": "cmd",
+      "command": "cmd /c %PROGRAM% ready",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-32",
+      "dialect": "cmd",
+      "command": "cmd /c echo %TEXT%",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-33",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do for %j in (beta) do echo %i %j",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-34",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do (echo %i)",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-35",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do (echo %i & echo ready for review)",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-36",
+      "dialect": "cmd",
+      "command": "for %i in (c^url) do echo %i",
+      "expected": "blocked"
+    },
+    {
+      "id": "cmd-37",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do c^url x",
+      "expected": "blocked"
+    },
+    {
+      "id": "cmd-38",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do %PROGRAM% & c^url x",
+      "expected": "blocked"
+    },
+    {
+      "id": "posix-00",
+      "dialect": "posix",
+      "command": "env A=\"${@}\" true",
+      "expected": "review"
+    },
+    {
+      "id": "posix-01",
+      "dialect": "posix",
+      "command": "env A=\"${@:1}\" true",
+      "expected": "review"
+    },
+    {
+      "id": "posix-02",
+      "dialect": "posix",
+      "command": "env A=\"${@:-fallback}\" true",
+      "expected": "review"
+    },
+    {
+      "id": "posix-03",
+      "dialect": "posix",
+      "command": "env A=\"${!prefix@}\" true",
+      "expected": "review"
+    },
+    {
+      "id": "posix-04",
+      "dialect": "posix",
+      "command": "find . -name \"${@}\" -print",
+      "expected": "review"
+    },
+    {
+      "id": "posix-05",
+      "dialect": "posix",
+      "command": "find . -name \"${@:1}\" -print",
+      "expected": "review"
+    },
+    {
+      "id": "posix-06",
+      "dialect": "posix",
+      "command": "find . -name \"${@:-fallback}\" -print",
+      "expected": "review"
+    },
+    {
+      "id": "posix-07",
+      "dialect": "posix",
+      "command": "find . -name \"${!prefix@}\" -print",
+      "expected": "review"
+    },
+    {
+      "id": "posix-08",
+      "dialect": "posix",
+      "command": "find . -name \"${value:-literal@text}\" -print",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-09",
+      "dialect": "posix",
+      "command": "find . -name \"${value@Q}\" -print",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-10",
+      "dialect": "posix",
+      "command": "find . -name \"${!prefix*}\" -print",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-11",
+      "dialect": "posix",
+      "command": "fd -tf README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-12",
+      "dialect": "posix",
+      "command": "fd --type=f README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-13",
+      "dialect": "posix",
+      "command": "fd -e.rs README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-14",
+      "dialect": "posix",
+      "command": "fd --extension=rs README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-15",
+      "dialect": "posix",
+      "command": "fd -Etarget README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-16",
+      "dialect": "posix",
+      "command": "fd --exclude=target README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-17",
+      "dialect": "posix",
+      "command": "fd -d2 README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-18",
+      "dialect": "posix",
+      "command": "fd --max-depth=2 README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-19",
+      "dialect": "posix",
+      "command": "fd -tf README -x printf '%s'",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-20",
+      "dialect": "posix",
+      "command": "fd --type=f README --exec-batch printf '%s'",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-21",
+      "dialect": "posix",
+      "command": "fd -e-X README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-22",
+      "dialect": "posix",
+      "command": "fd --extension=--exec README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-23",
+      "dialect": "posix",
+      "command": "fd --typefuture=f README",
+      "expected": "review"
+    },
+    {
+      "id": "posix-24",
+      "dialect": "posix",
+      "command": "fd -t\"$kind\" README",
+      "expected": "review"
+    },
+    {
+      "id": "posix-25",
+      "dialect": "posix",
+      "command": "fd -tf README -x \"$PROGRAM\"",
+      "expected": "review"
+    },
+    {
+      "id": "posix-26",
+      "dialect": "posix",
+      "command": "fd -tf README -x ./cu''rl.exe",
+      "expected": "blocked"
+    },
+    {
+      "id": "posix-27",
+      "dialect": "posix",
+      "command": "command -pv git",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-28",
+      "dialect": "posix",
+      "command": "command -pV git",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-29",
+      "dialect": "posix",
+      "command": "command -vp git",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-30",
+      "dialect": "posix",
+      "command": "command -p -v git",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-31",
+      "dialect": "posix",
+      "command": "command -pp printf ready",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-32",
+      "dialect": "posix",
+      "command": "command -pv -p git",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-33",
+      "dialect": "posix",
+      "command": "command -pv -- git",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-34",
+      "dialect": "posix",
+      "command": "command -pz git",
+      "expected": "review"
+    },
+    {
+      "id": "posix-35",
+      "dialect": "posix",
+      "command": "command -v -z git",
+      "expected": "review"
+    },
+    {
+      "id": "posix-36",
+      "dialect": "posix",
+      "command": "command -- -pv",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-37",
+      "dialect": "posix",
+      "command": "command -p ./cu''rl.exe",
+      "expected": "blocked"
+    },
+    {
+      "id": "posix-38",
+      "dialect": "posix",
+      "command": "command -pv ./cu''rl.exe",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-39",
+      "dialect": "posix",
+      "command": "env -i - ./cu''rl.exe",
+      "expected": "blocked"
+    },
+    {
+      "id": "posix-40",
+      "dialect": "posix",
+      "command": "env -u UNUSED - ./cu''rl.exe",
+      "expected": "blocked"
+    },
+    {
+      "id": "posix-41",
+      "dialect": "posix",
+      "command": "env -i -- - ./cu''rl.exe",
+      "expected": "blocked"
+    },
+    {
+      "id": "posix-42",
+      "dialect": "posix",
+      "command": "env - -i ./cu''rl.exe",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-43",
+      "dialect": "posix",
+      "command": "env -i - A=\"$@\" ./cu''rl.exe",
+      "expected": "blocked"
+    },
+    {
+      "id": "posix-44",
+      "dialect": "posix",
+      "command": "env -i - \"$PROGRAM\"",
+      "expected": "review"
+    },
+    {
+      "id": "posix-45",
+      "dialect": "posix",
+      "command": "env -i - A=one printf ready",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-46",
+      "dialect": "posix",
+      "command": "command -v \"$NAME\"",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-retained-0",
+      "dialect": "cmd",
+      "command": "for %f in (a.txt b.txt) do type \"%f\"",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-retained-1",
+      "dialect": "cmd",
+      "command": "for %%f in (a.txt b.txt) do type \"%%f\"",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-retained-2",
+      "dialect": "cmd",
+      "command": "for /l %i in (1,1,10) do @echo hi",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-retained-3",
+      "dialect": "cmd",
+      "command": "for %f in (a.txt b.txt)",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-retained-4",
+      "dialect": "cmd",
+      "command": "for %f in (%FILES%) do type \"%f\"",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-retained-5",
+      "dialect": "cmd",
+      "command": "for /f \"tokens=*\" %i in ('dir') do echo %i",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-retained-6",
+      "dialect": "cmd",
+      "command": "c^url x",
+      "expected": "blocked"
+    },
+    {
+      "id": "cmd-retained-7",
+      "dialect": "cmd",
+      "command": "cu\"\"rl x",
+      "expected": "blocked"
+    },
+    {
+      "id": "cmd-retained-8",
+      "dialect": "cmd",
+      "command": "C:\\Windows\\System32\\curl.exe x",
+      "expected": "blocked"
+    },
+    {
+      "id": "cmd-retained-9",
+      "dialect": "cmd",
+      "command": "cmd /c \"c^url x\"",
+      "expected": "blocked"
+    },
+    {
+      "id": "cmd-retained-10",
+      "dialect": "cmd",
+      "command": "%CMD% x",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_0_single",
+      "dialect": "cmd",
+      "command": "for /f %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_0_backtick",
+      "dialect": "cmd",
+      "command": "for /f %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected": "clear"
+    },
+    {
+      "id": "for-options-options_1_single",
+      "dialect": "cmd",
+      "command": "for /f \"usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected": "clear"
+    },
+    {
+      "id": "for-options-options_1_backtick",
+      "dialect": "cmd",
+      "command": "for /f \"usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_2_single",
+      "dialect": "cmd",
+      "command": "for /f \"delims=usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_2_backtick",
+      "dialect": "cmd",
+      "command": "for /f \"delims=usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected": "clear"
+    },
+    {
+      "id": "for-options-options_3_single",
+      "dialect": "cmd",
+      "command": "for /f \"delims= usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected": "clear"
+    },
+    {
+      "id": "for-options-options_3_backtick",
+      "dialect": "cmd",
+      "command": "for /f \"delims= usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_4_single",
+      "dialect": "cmd",
+      "command": "for /f \"tokens=* delims= usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected": "clear"
+    },
+    {
+      "id": "for-options-options_4_backtick",
+      "dialect": "cmd",
+      "command": "for /f \"tokens=* delims= usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_5_single",
+      "dialect": "cmd",
+      "command": "for /f \"usebackqdelims=\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_5_backtick",
+      "dialect": "cmd",
+      "command": "for /f \"usebackqdelims=\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_6_single",
+      "dialect": "cmd",
+      "command": "for /f \"tokens=*usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_6_backtick",
+      "dialect": "cmd",
+      "command": "for /f \"tokens=*usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_7_single",
+      "dialect": "cmd",
+      "command": "for /f \"usebackq tokens=* delims=\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected": "clear"
+    },
+    {
+      "id": "for-options-options_7_backtick",
+      "dialect": "cmd",
+      "command": "for /f \"usebackq tokens=* delims=\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_8_single",
+      "dialect": "cmd",
+      "command": "for /f \"delims=usebackq tokens=*\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_8_backtick",
+      "dialect": "cmd",
+      "command": "for /f \"delims=usebackq tokens=*\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected": "clear"
+    },
+    {
+      "id": "literal-fallback-braced-at",
+      "dialect": "posix",
+      "command": "find . -name \"${pattern:-{@*.txt}\" -print",
+      "expected": "clear"
+    },
+    {
+      "id": "literal-fallback-indirect-at",
+      "dialect": "posix",
+      "command": "find . -name \"${pattern:-{!CHAR32_PREFIX@*.txt}\" -print",
+      "expected": "clear"
+    },
+    {
+      "id": "literal-fallback-at-control",
+      "dialect": "posix",
+      "command": "find . -name \"${pattern:-literal@text}\" -print",
+      "expected": "clear"
+    },
+    {
+      "id": "env-assignment-dash",
+      "dialect": "posix",
+      "command": "env GROUP=value - ./brew.exe install fixture",
+      "expected": "clear"
+    },
+    {
+      "id": "env-option-assignment-dash",
+      "dialect": "posix",
+      "command": "env -u UNUSED GROUP=value - ./brew.exe install fixture",
+      "expected": "clear"
+    },
+    {
+      "id": "env-option-dash-control",
+      "dialect": "posix",
+      "command": "env -u UNUSED - ./brew.exe install fixture",
+      "expected": "blocked"
+    },
+    {
+      "id": "env-dash-assignment-control",
+      "dialect": "posix",
+      "command": "env - GROUP=value ./brew.exe install fixture",
+      "expected": "blocked"
+    },
+    {
+      "id": "env-assignment-option-spelling",
+      "dialect": "posix",
+      "command": "env GROUP=value -i ./brew.exe install fixture",
+      "expected": "clear"
+    },
+    {
+      "id": "preserved-cmd-missing-do",
+      "dialect": "cmd",
+      "command": "cmd /c for %i in (*)",
+      "expected": "review"
+    },
+    {
+      "id": "echo-echo_blank",
+      "dialect": "cmd",
+      "command": "echo(",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-echo_at_blank",
+      "dialect": "cmd",
+      "command": "@echo(",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-echo_case_blank",
+      "dialect": "cmd",
+      "command": "EcHo(",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-echo_text",
+      "dialect": "cmd",
+      "command": "echo(ready",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-echo_nested_open",
+      "dialect": "cmd",
+      "command": "echo((ready",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-echo_close_data",
+      "dialect": "cmd",
+      "command": "echo(ready)",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-echo_space_open",
+      "dialect": "cmd",
+      "command": "echo (ready",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-echo_quoted_open",
+      "dialect": "cmd",
+      "command": "echo \"(\"",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-echo_escaped_open",
+      "dialect": "cmd",
+      "command": "echo ^(",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-echo_two_commands",
+      "dialect": "cmd",
+      "command": "echo(ready & echo(after",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-echo_literal_parens",
+      "dialect": "cmd",
+      "command": "echo literal(for)",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-group_blank",
+      "dialect": "cmd",
+      "command": "(echo( & echo ready)",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-group_text",
+      "dialect": "cmd",
+      "command": "(echo(ready)",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-group_text_parens",
+      "dialect": "cmd",
+      "command": "(echo foo(bar))",
+      "expected": "review"
+    },
+    {
+      "id": "echo-group_text_escaped_close",
+      "dialect": "cmd",
+      "command": "(echo foo(bar^))",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-loop_blank",
+      "dialect": "cmd",
+      "command": "for %i in (alpha beta) do @echo(",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-loop_group_blank",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do (echo( & echo %i)",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-group_regular",
+      "dialect": "cmd",
+      "command": "(echo ready)",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-loop_regular",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do @echo %i",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-group_loop",
+      "dialect": "cmd",
+      "command": "(for %i in (alpha) do @echo %i)",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-loop_bodyless",
+      "dialect": "cmd",
+      "command": "for %i in (alpha)",
+      "expected": "review"
+    },
+    {
+      "id": "echo-group_unclosed",
+      "dialect": "cmd",
+      "command": "(echo ready",
+      "expected": "review"
+    },
+    {
+      "id": "echo-nested_blank",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo(",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-nested_quoted_blank",
+      "dialect": "cmd",
+      "command": "cmd /d /c \"echo(\"",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-nested_double_blank",
+      "dialect": "cmd",
+      "command": "cmd /d /c cmd /d /c echo(",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-nested_equal",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo key=value",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-nested_equal_spaced",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo key value",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-nested_punctuation",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo first,,second;;third=last",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-nested_punctuation_spaced",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo first second third last",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-nested_tab",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo key\tvalue",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-nested_tab_spaced",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo key value",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-nested_quoted_equal",
+      "dialect": "cmd",
+      "command": "cmd /d /c \"echo key=value\"",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-nested_double_equal",
+      "dialect": "cmd",
+      "command": "cmd /d /c cmd /d /c echo key=value",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-nested_for_equal",
+      "dialect": "cmd",
+      "command": "cmd /d /c for /f \"delims==\" %i in (\"key=value\") do @echo %i",
+      "expected": "review"
+    },
+    {
+      "id": "echo-nested_redirect_equal",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo key=value>capture.txt",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-nested_redirect_prefix",
+      "dialect": "cmd",
+      "command": "cmd /d /c 2>capture.txt echo key=value",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-nested_prefix_separators",
+      "dialect": "cmd",
+      "command": "cmd /d /c =,;echo key=value",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-nested_loop_blank",
+      "dialect": "cmd",
+      "command": "cmd /d /c for %i in (alpha) do @echo(",
+      "expected": "review"
+    },
+    {
+      "id": "echo-echo_operator_escape",
+      "dialect": "cmd",
+      "command": "echo(^&",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-echo_following_group",
+      "dialect": "cmd",
+      "command": "echo(ready & (echo after)",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-trailing_plain",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo key=value  ",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-trailing_trimmed_control",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo key=value",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-leading_plain",
+      "dialect": "cmd",
+      "command": "cmd /d /c   echo key=value",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-quoted_trailing_outside",
+      "dialect": "cmd",
+      "command": "cmd /d /c \"echo key=value\"  ",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-quoted_trailing_inside",
+      "dialect": "cmd",
+      "command": "cmd /d /c \"echo key=value  \"",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-prefix_trailing",
+      "dialect": "cmd",
+      "command": "cmd /d /c =,;echo key=value  ",
+      "expected": "clear"
+    },
+    {
+      "id": "echo-reset-computed",
+      "dialect": "cmd",
+      "command": "echo( & %COMSPEC% /d /c echo reviewed",
+      "expected": "review"
+    },
+    {
+      "id": "echo-group-reset-computed",
+      "dialect": "cmd",
+      "command": "(echo( & %COMSPEC% /d /c echo reviewed)",
+      "expected": "review"
+    },
+    {
+      "id": "echo-loop-reset-computed",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do echo( & %COMSPEC% /d /c echo reviewed",
+      "expected": "review"
+    },
+    {
+      "id": "echo-nested-reset-computed",
+      "dialect": "cmd",
+      "command": "cmd /c echo( & %COMSPEC% /d /c echo reviewed",
+      "expected": "review"
+    },
+    {
+      "id": "echo-reset-refused",
+      "dialect": "cmd",
+      "command": "echo( & curl.exe",
+      "expected": "blocked"
+    },
+    {
+      "id": "echo-group-reset-refused",
+      "dialect": "cmd",
+      "command": "(echo( & curl.exe)",
+      "expected": "blocked"
+    },
+    {
+      "id": "echo-bounded-group-depth",
+      "dialect": "cmd",
+      "command": "(((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((echo()))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))",
+      "expected": "review"
+    },
+    {
+      "id": "redirect-for-body-source-offset",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do cmd /d /c echo key=value",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-group-local-source-offset",
+      "dialect": "cmd",
+      "command": "(cmd /d /c echo key=value)",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-reported_quoted_outer",
+      "dialect": "cmd",
+      "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-quoted_outer_stderr",
+      "dialect": "cmd",
+      "command": "cmd /d /c \"echo ready\" 2> \"capture (sales & support).txt\"",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-quoted_outer_both",
+      "dialect": "cmd",
+      "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>&1",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-quoted_outer_append",
+      "dialect": "cmd",
+      "command": "cmd /d /c \"echo ready\" >> \"capture (sales & support).txt\"",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-redirect_before_payload",
+      "dialect": "cmd",
+      "command": "cmd /d /c > \"capture (sales & support).txt\" \"echo ready\"",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-redirect_before_switch",
+      "dialect": "cmd",
+      "command": "cmd > \"capture (sales & support).txt\" /d /c \"echo ready\"",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-quoted_inner",
+      "dialect": "cmd",
+      "command": "cmd /d /c \"echo ready>capture.txt\"",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-inner_plus_outer",
+      "dialect": "cmd",
+      "command": "cmd /d /c \"echo ready>capture.txt\" > \"capture (sales & support).txt\"",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-quoted_literal_greater",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo \"ready>text\"",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-two_outer_targets",
+      "dialect": "cmd",
+      "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>error.txt",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-following_command",
+      "dialect": "cmd",
+      "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" & echo done",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-grouped_outer",
+      "dialect": "cmd",
+      "command": "(cmd /d /c \"echo ready\" > \"capture (sales & support).txt\")",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-for_body_outer",
+      "dialect": "cmd",
+      "command": "for %I in (1) do cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-trailing_space_outer",
+      "dialect": "cmd",
+      "command": "cmd /d /c \"echo ready\"  > \"capture (sales & support).txt\"  ",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-echo_two_spaces",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo ready >capture.txt  2>\"capture (sales & support).txt\"",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-echo_tab_gap",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo ready >capture.txt\t2>\"capture (sales & support).txt\"",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-echo_argument_between",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo ready >capture.txt tail >\"capture (sales & support).txt\"",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-echo_duplication_before",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo ready 2>&1 >\"capture (sales & support).txt\"",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-echo_comma_gap",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo ready >capture.txt , 2>\"capture (sales & support).txt\"",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-echo_quoted_digit",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo \"2\">capture.txt",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-echo_quoted_digits",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo \"12\">capture.txt",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-echo_two_digits",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo 12>capture.txt",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-echo_escaped_digit",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo ^2>capture.txt",
+      "expected": "clear"
+    },
+    {
+      "id": "redirect-echo_ordinary_digit",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo 2>capture.txt",
+      "expected": "clear"
+    },
+    {
+      "id": "external-echo-parentheses-outer",
+      "dialect": "cmd",
+      "command": "cmd /d /c \"echo (ready)\" > \"cap (x&y).txt\"",
+      "expected": "clear"
+    },
+    {
+      "id": "external-equal-outer",
+      "dialect": "cmd",
+      "command": "cmd /d /c \"echo key=value\" > capture.txt",
+      "expected": "clear"
+    },
+    {
+      "id": "quoted-type_reported",
+      "dialect": "cmd",
+      "command": "cmd /d /s /c \"type \"draft (for review).txt\"\"",
+      "expected": "clear"
+    },
+    {
+      "id": "quoted-type_without_s",
+      "dialect": "cmd",
+      "command": "cmd /d /c \"type \"draft (for review).txt\"\"",
+      "expected": "clear"
+    },
+    {
+      "id": "quoted-type_plain_control",
+      "dialect": "cmd",
+      "command": "cmd /d /s /c \"type plain.txt\"",
+      "expected": "clear"
+    },
+    {
+      "id": "quoted-type_unwrapped_control",
+      "dialect": "cmd",
+      "command": "cmd /d /s /c type \"draft (for review).txt\"",
+      "expected": "clear"
+    },
+    {
+      "id": "quoted-type_spaces",
+      "dialect": "cmd",
+      "command": "cmd /d /s /c \"type \"draft review.txt\"\"",
+      "expected": "clear"
+    },
+    {
+      "id": "quoted-type_outer_redirect",
+      "dialect": "cmd",
+      "command": "cmd /d /s /c \"type \"draft (for review).txt\"\" > \"capture (sales & support).txt\"",
+      "expected": "clear"
+    },
+    {
+      "id": "quoted-type_prefix_redirect",
+      "dialect": "cmd",
+      "command": "cmd > \"capture (sales & support).txt\" /d /s /c \"type \"draft (for review).txt\"\"",
+      "expected": "clear"
+    },
+    {
+      "id": "quoted-type_inner_redirect",
+      "dialect": "cmd",
+      "command": "cmd /d /s /c \"type \"draft (for review).txt\">capture.txt\"",
+      "expected": "clear"
+    },
+    {
+      "id": "quoted-type_for_body",
+      "dialect": "cmd",
+      "command": "for %I in (1) do cmd /d /s /c \"type \"draft (for review).txt\"\"",
+      "expected": "clear"
+    }
+  ],
+  "traces": [
+    {
+      "id": "nested_equal",
+      "command": "cmd /d /c echo key=value",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo key=value",
+        "echo key=value"
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "nested_equal_spaced",
+      "command": "cmd /d /c echo key value",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo key value",
+        "echo key value"
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "nested_punctuation",
+      "command": "cmd /d /c echo first,,second;;third=last",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo first,,second;;third=last",
+        "echo first,,second;;third=last"
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "nested_punctuation_spaced",
+      "command": "cmd /d /c echo first second third last",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo first second third last",
+        "echo first second third last"
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "nested_tab",
+      "command": "cmd /d /c echo key\tvalue",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo key\tvalue",
+        "echo key\tvalue"
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "nested_tab_spaced",
+      "command": "cmd /d /c echo key value",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo key value",
+        "echo key value"
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "nested_blank",
+      "command": "cmd /d /c echo(",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo(",
+        "echo("
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "nested_quoted_blank",
+      "command": "cmd /d /c \"echo(\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c \"echo(\"",
+        "echo("
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "nested_double_blank",
+      "command": "cmd /d /c cmd /d /c echo(",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c cmd /d /c echo(",
+        "cmd /d /c echo(",
+        "echo("
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "nested_quoted_equal",
+      "command": "cmd /d /c \"echo key=value\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c \"echo key=value\"",
+        "echo key=value"
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "nested_double_equal",
+      "command": "cmd /d /c cmd /d /c echo key=value",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c cmd /d /c echo key=value",
+        "cmd /d /c echo key=value",
+        "echo key=value"
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "nested_for_equal",
+      "command": "cmd /d /c for /f \"delims==\" %i in (\"key=value\") do @echo %i",
+      "expected_kind": "review",
+      "expected_sources": [
+        "cmd /d /c for /f \"delims==\" %i in (\"key=value\") do @echo %i",
+        "for /f \"delims==\" %i in (\"key=value\") do @echo %i"
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "nested_redirect_equal",
+      "command": "cmd /d /c echo key=value>capture.txt",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo key=value>capture.txt",
+        "echo key=value"
+      ],
+      "provenance": "corrected by native outer-redirection ownership: primary 45982750445"
+    },
+    {
+      "id": "nested_redirect_prefix",
+      "command": "cmd /d /c 2>capture.txt echo key=value",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c 2>capture.txt echo key=value",
+        "echo key=value"
+      ],
+      "provenance": "corrected by native outer-redirection ownership: primary 45982750445"
+    },
+    {
+      "id": "nested_prefix_separators",
+      "command": "cmd /d /c =,;echo key=value",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c =,;echo key=value",
+        "=,;echo key=value"
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "nested_loop_blank",
+      "command": "cmd /d /c for %i in (alpha) do @echo(",
+      "expected_kind": "review",
+      "expected_sources": [
+        "cmd /d /c for %i in (alpha) do @echo(",
+        "for %i in (alpha) do @echo("
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "trailing_plain",
+      "command": "cmd /d /c echo key=value  ",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo key=value  ",
+        "echo key=value  "
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "trailing_trimmed_control",
+      "command": "cmd /d /c echo key=value",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo key=value",
+        "echo key=value"
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "leading_plain",
+      "command": "cmd /d /c   echo key=value",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c   echo key=value",
+        "echo key=value"
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "quoted_trailing_outside",
+      "command": "cmd /d /c \"echo key=value\"  ",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c \"echo key=value\"  ",
+        "echo key=value  "
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "quoted_trailing_inside",
+      "command": "cmd /d /c \"echo key=value  \"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c \"echo key=value  \"",
+        "echo key=value  "
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "prefix_trailing",
+      "command": "cmd /d /c =,;echo key=value  ",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c =,;echo key=value  ",
+        "=,;echo key=value  "
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "for-body-source-offset",
+      "command": "for %i in (alpha) do cmd /d /c echo key=value",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "for %i in (alpha) do cmd /d /c echo key=value",
+        "echo key=value"
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "group-local-source-offset",
+      "command": "(cmd /d /c echo key=value)",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "(cmd /d /c echo key=value)",
+        "cmd /d /c echo key=value",
+        "echo key=value"
+      ],
+      "provenance": "retained c009 parser trace"
+    },
+    {
+      "id": "reported_quoted_outer",
+      "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
+        "echo ready "
+      ],
+      "provenance": "native primary 45982750445"
+    },
+    {
+      "id": "quoted_outer_stderr",
+      "command": "cmd /d /c \"echo ready\" 2> \"capture (sales & support).txt\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c \"echo ready\" 2> \"capture (sales & support).txt\"",
+        "echo ready "
+      ],
+      "provenance": "native primary 45982750445"
+    },
+    {
+      "id": "quoted_outer_both",
+      "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>&1",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>&1",
+        "echo ready "
+      ],
+      "provenance": "native primary 45982750445"
+    },
+    {
+      "id": "quoted_outer_append",
+      "command": "cmd /d /c \"echo ready\" >> \"capture (sales & support).txt\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c \"echo ready\" >> \"capture (sales & support).txt\"",
+        "echo ready "
+      ],
+      "provenance": "native primary 45982750445"
+    },
+    {
+      "id": "redirect_before_payload",
+      "command": "cmd /d /c > \"capture (sales & support).txt\" \"echo ready\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c > \"capture (sales & support).txt\" \"echo ready\"",
+        "echo ready"
+      ],
+      "provenance": "native primary 45982750445"
+    },
+    {
+      "id": "redirect_before_switch",
+      "command": "cmd > \"capture (sales & support).txt\" /d /c \"echo ready\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd > \"capture (sales & support).txt\" /d /c \"echo ready\"",
+        "echo ready"
+      ],
+      "provenance": "native primary 45982750445"
+    },
+    {
+      "id": "quoted_inner",
+      "command": "cmd /d /c \"echo ready>capture.txt\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c \"echo ready>capture.txt\"",
+        "echo ready>capture.txt"
+      ],
+      "provenance": "native primary 45982750445"
+    },
+    {
+      "id": "inner_plus_outer",
+      "command": "cmd /d /c \"echo ready>capture.txt\" > \"capture (sales & support).txt\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c \"echo ready>capture.txt\" > \"capture (sales & support).txt\"",
+        "echo ready>capture.txt "
+      ],
+      "provenance": "native primary 45982750445"
+    },
+    {
+      "id": "quoted_literal_greater",
+      "command": "cmd /d /c echo \"ready>text\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo \"ready>text\"",
+        "echo \"ready>text\""
+      ],
+      "provenance": "native primary 45982750445"
+    },
+    {
+      "id": "two_outer_targets",
+      "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>error.txt",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>error.txt",
+        "echo ready "
+      ],
+      "provenance": "native primary 45982750445"
+    },
+    {
+      "id": "following_command",
+      "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" & echo done",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" & echo done",
+        "echo ready  "
+      ],
+      "provenance": "native primary 45982750445"
+    },
+    {
+      "id": "grouped_outer",
+      "command": "(cmd /d /c \"echo ready\" > \"capture (sales & support).txt\")",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "(cmd /d /c \"echo ready\" > \"capture (sales & support).txt\")",
+        "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
+        "echo ready "
+      ],
+      "provenance": "native primary 45982750445"
+    },
+    {
+      "id": "for_body_outer",
+      "command": "for %I in (1) do cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "for %I in (1) do cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
+        "echo ready "
+      ],
+      "provenance": "native primary 45982750445"
+    },
+    {
+      "id": "trailing_space_outer",
+      "command": "cmd /d /c \"echo ready\"  > \"capture (sales & support).txt\"  ",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c \"echo ready\"  > \"capture (sales & support).txt\"  ",
+        "echo ready    "
+      ],
+      "provenance": "native primary 45982750445"
+    },
+    {
+      "id": "echo_two_spaces",
+      "command": "cmd /d /c echo ready >capture.txt  2>\"capture (sales & support).txt\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo ready >capture.txt  2>\"capture (sales & support).txt\"",
+        "echo ready "
+      ],
+      "provenance": "native adjacent redirections 45983364759"
+    },
+    {
+      "id": "echo_tab_gap",
+      "command": "cmd /d /c echo ready >capture.txt\t2>\"capture (sales & support).txt\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo ready >capture.txt\t2>\"capture (sales & support).txt\"",
+        "echo ready "
+      ],
+      "provenance": "native adjacent redirections 45983364759"
+    },
+    {
+      "id": "echo_argument_between",
+      "command": "cmd /d /c echo ready >capture.txt tail >\"capture (sales & support).txt\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo ready >capture.txt tail >\"capture (sales & support).txt\"",
+        "echo ready  tail "
+      ],
+      "provenance": "native adjacent redirections 45983364759"
+    },
+    {
+      "id": "echo_duplication_before",
+      "command": "cmd /d /c echo ready 2>&1 >\"capture (sales & support).txt\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo ready 2>&1 >\"capture (sales & support).txt\"",
+        "echo ready "
+      ],
+      "provenance": "native adjacent redirections 45983364759"
+    },
+    {
+      "id": "echo_comma_gap",
+      "command": "cmd /d /c echo ready >capture.txt , 2>\"capture (sales & support).txt\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo ready >capture.txt , 2>\"capture (sales & support).txt\"",
+        "echo ready "
+      ],
+      "provenance": "native adjacent redirections 45983364759"
+    },
+    {
+      "id": "echo_quoted_digit",
+      "command": "cmd /d /c echo \"2\">capture.txt",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo \"2\">capture.txt",
+        "echo \"2\""
+      ],
+      "provenance": "native descriptor ownership 45984034668"
+    },
+    {
+      "id": "echo_quoted_digits",
+      "command": "cmd /d /c echo \"12\">capture.txt",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo \"12\">capture.txt",
+        "echo \"12\""
+      ],
+      "provenance": "native descriptor ownership 45984034668"
+    },
+    {
+      "id": "echo_two_digits",
+      "command": "cmd /d /c echo 12>capture.txt",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo 12>capture.txt",
+        "echo 12"
+      ],
+      "provenance": "native descriptor ownership 45984034668"
+    },
+    {
+      "id": "echo_escaped_digit",
+      "command": "cmd /d /c echo ^2>capture.txt",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo ^2>capture.txt",
+        "echo ^2"
+      ],
+      "provenance": "Native literal-argument control; unchanged raw caret spelling is consumed by the recursive screen, not asserted equal to the native child command line."
+    },
+    {
+      "id": "echo_ordinary_digit",
+      "command": "cmd /d /c echo 2>capture.txt",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c echo 2>capture.txt",
+        "echo "
+      ],
+      "provenance": "native descriptor ownership 45984034668"
+    },
+    {
+      "id": "quoted-type_reported",
+      "command": "cmd /d /s /c \"type \"draft (for review).txt\"\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /s /c \"type \"draft (for review).txt\"\"",
+        "type \"draft (for review).txt\""
+      ],
+      "provenance": "Native owned-file observation run45997335988; exact payload retains inner quotes and excludes only current-level redirections."
+    },
+    {
+      "id": "quoted-type_without_s",
+      "command": "cmd /d /c \"type \"draft (for review).txt\"\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c \"type \"draft (for review).txt\"\"",
+        "type \"draft (for review).txt\""
+      ],
+      "provenance": "Native owned-file observation run45997335988; exact payload retains inner quotes and excludes only current-level redirections."
+    },
+    {
+      "id": "quoted-type_plain_control",
+      "command": "cmd /d /s /c \"type plain.txt\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /s /c \"type plain.txt\"",
+        "type plain.txt"
+      ],
+      "provenance": "Native owned-file observation run45997335988; exact payload retains inner quotes and excludes only current-level redirections."
+    },
+    {
+      "id": "quoted-type_unwrapped_control",
+      "command": "cmd /d /s /c type \"draft (for review).txt\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /s /c type \"draft (for review).txt\"",
+        "type \"draft (for review).txt\""
+      ],
+      "provenance": "Native owned-file observation run45997335988; exact payload retains inner quotes and excludes only current-level redirections."
+    },
+    {
+      "id": "quoted-type_spaces",
+      "command": "cmd /d /s /c \"type \"draft review.txt\"\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /s /c \"type \"draft review.txt\"\"",
+        "type \"draft review.txt\""
+      ],
+      "provenance": "Native owned-file observation run45997335988; exact payload retains inner quotes and excludes only current-level redirections."
+    },
+    {
+      "id": "quoted-type_outer_redirect",
+      "command": "cmd /d /s /c \"type \"draft (for review).txt\"\" > \"capture (sales & support).txt\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /s /c \"type \"draft (for review).txt\"\" > \"capture (sales & support).txt\"",
+        "type \"draft (for review).txt\" "
+      ],
+      "provenance": "Native owned-file observation run45997335988; exact payload retains inner quotes and excludes only current-level redirections."
+    },
+    {
+      "id": "quoted-type_prefix_redirect",
+      "command": "cmd > \"capture (sales & support).txt\" /d /s /c \"type \"draft (for review).txt\"\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd > \"capture (sales & support).txt\" /d /s /c \"type \"draft (for review).txt\"\"",
+        "type \"draft (for review).txt\""
+      ],
+      "provenance": "Native owned-file observation run45997335988; exact payload retains inner quotes and excludes only current-level redirections."
+    },
+    {
+      "id": "quoted-type_inner_redirect",
+      "command": "cmd /d /s /c \"type \"draft (for review).txt\">capture.txt\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /s /c \"type \"draft (for review).txt\">capture.txt\"",
+        "type \"draft (for review).txt\">capture.txt"
+      ],
+      "provenance": "Native owned-file observation run45997335988; exact payload retains inner quotes and excludes only current-level redirections."
+    },
+    {
+      "id": "quoted-type_for_body",
+      "command": "for %I in (1) do cmd /d /s /c \"type \"draft (for review).txt\"\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "for %I in (1) do cmd /d /s /c \"type \"draft (for review).txt\"\"",
+        "type \"draft (for review).txt\""
+      ],
+      "provenance": "Native owned-file observation run45997335988; exact payload retains inner quotes and excludes only current-level redirections."
+    }
+  ],
+  "quoted_traces": [
+    {
+      "id": "quoted-type_reported",
+      "command": "cmd /d /s /c \"type \"draft (for review).txt\"\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /s /c \"type \"draft (for review).txt\"\"",
+        "type \"draft (for review).txt\""
+      ],
+      "provenance": "Native owned-file observation run45997335988; exact payload retains inner quotes and excludes only current-level redirections."
+    },
+    {
+      "id": "quoted-type_without_s",
+      "command": "cmd /d /c \"type \"draft (for review).txt\"\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /c \"type \"draft (for review).txt\"\"",
+        "type \"draft (for review).txt\""
+      ],
+      "provenance": "Native owned-file observation run45997335988; exact payload retains inner quotes and excludes only current-level redirections."
+    },
+    {
+      "id": "quoted-type_plain_control",
+      "command": "cmd /d /s /c \"type plain.txt\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /s /c \"type plain.txt\"",
+        "type plain.txt"
+      ],
+      "provenance": "Native owned-file observation run45997335988; exact payload retains inner quotes and excludes only current-level redirections."
+    },
+    {
+      "id": "quoted-type_unwrapped_control",
+      "command": "cmd /d /s /c type \"draft (for review).txt\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /s /c type \"draft (for review).txt\"",
+        "type \"draft (for review).txt\""
+      ],
+      "provenance": "Native owned-file observation run45997335988; exact payload retains inner quotes and excludes only current-level redirections."
+    },
+    {
+      "id": "quoted-type_spaces",
+      "command": "cmd /d /s /c \"type \"draft review.txt\"\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /s /c \"type \"draft review.txt\"\"",
+        "type \"draft review.txt\""
+      ],
+      "provenance": "Native owned-file observation run45997335988; exact payload retains inner quotes and excludes only current-level redirections."
+    },
+    {
+      "id": "quoted-type_outer_redirect",
+      "command": "cmd /d /s /c \"type \"draft (for review).txt\"\" > \"capture (sales & support).txt\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /s /c \"type \"draft (for review).txt\"\" > \"capture (sales & support).txt\"",
+        "type \"draft (for review).txt\" "
+      ],
+      "provenance": "Native owned-file observation run45997335988; exact payload retains inner quotes and excludes only current-level redirections."
+    },
+    {
+      "id": "quoted-type_prefix_redirect",
+      "command": "cmd > \"capture (sales & support).txt\" /d /s /c \"type \"draft (for review).txt\"\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd > \"capture (sales & support).txt\" /d /s /c \"type \"draft (for review).txt\"\"",
+        "type \"draft (for review).txt\""
+      ],
+      "provenance": "Native owned-file observation run45997335988; exact payload retains inner quotes and excludes only current-level redirections."
+    },
+    {
+      "id": "quoted-type_inner_redirect",
+      "command": "cmd /d /s /c \"type \"draft (for review).txt\">capture.txt\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "cmd /d /s /c \"type \"draft (for review).txt\">capture.txt\"",
+        "type \"draft (for review).txt\">capture.txt"
+      ],
+      "provenance": "Native owned-file observation run45997335988; exact payload retains inner quotes and excludes only current-level redirections."
+    },
+    {
+      "id": "quoted-type_for_body",
+      "command": "for %I in (1) do cmd /d /s /c \"type \"draft (for review).txt\"\"",
+      "expected_kind": "clear",
+      "expected_sources": [
+        "for %I in (1) do cmd /d /s /c \"type \"draft (for review).txt\"\"",
+        "type \"draft (for review).txt\""
+      ],
+      "provenance": "Native owned-file observation run45997335988; exact payload retains inner quotes and excludes only current-level redirections."
+    }
+  ],
+  "driver_sha256": "8497bdca22554deab1b49d12bff8e3b7ff79ddc2423c3136ba142c1eb0b8236a",
+  "scope": [
+    "Preserve all d19f external verdict and native-output assertions; correct only the misleading scanner-output comment.",
+    "Production .ml and documented .mli are byte-identical to the unpublished, fully verified ecea candidate. This new preparation and subsequent full gates bind the combined d19f-based test file.",
+    "Twenty quoted-filename native observations include sixteen exits0 and four exits1. Nine valid TYPE contexts become exact maintained parser-input contracts; foreign helper contexts remain observations.",
+    "Native-valid filenames containing unmatched parentheses remain conservative Review on all three parser versions. Native-invalid ampersand/grouped controls and these pre-existing gaps remain explicitly outside a full Cmd parity claim.",
+    "Original d19f receives only a local observation adapter and candidate tests. Classifier outputs are compared before and after instrumentation. A separate first-quote-only mutant preserves the repaired outer-redirection machinery and must fail the new quoted-filename maintained test while preserving all previous203/48 controls.",
+    "All source edits are restricted to shell_screen.ml, its documented mli, and test_tools_shell.ml. Permission policy, tools_shell.ml, POSIX parser prefix, dependencies, build workflows and every other source entry remain unchanged."
+  ]
+}

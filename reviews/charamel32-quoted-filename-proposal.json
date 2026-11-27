@@ -1,0 +1,71 @@
+{
+  "head": "d19fcb385bf404c2fbc1628d8c090c63a63cdcd1",
+  "base": "84e5ff153f781c7e2d02804a5c24997858f618ab",
+  "draft_tree": "be78e913e2f8666083065e77476d65e372cc65a7",
+  "paths": [
+    {
+      "path": "bin/crush/lib/shell_screen.ml",
+      "sha256": "66af36577313918be01ded984ee3115da9a33e2828e555a9301c9b5a1d732cdc"
+    },
+    {
+      "path": "bin/crush/lib/shell_screen.mli",
+      "sha256": "341412aafaebbc354197001bd9373086ee9681ee69cac012df2cf08637212ee9"
+    },
+    {
+      "path": "test/crush/test_tools_shell.ml",
+      "sha256": "27bdaa44c928fdd1c7222a875097bac0e96816110287e404f405a8b084105522"
+    }
+  ],
+  "production_identical_to_verified_ecea": true,
+  "external_assertions_preserved": true,
+  "native": {
+    "id": 15196541931,
+    "sha256": "e69cd62041b5cae5b29fb21101f98c7abb16cb70e3ab617f61451f4421005218",
+    "producer": "2c9cf4db2df1c85ccba3c6e7dcea482d803bf5d8",
+    "run": 45997335988
+  },
+  "parser": {
+    "id": 15198071063,
+    "sha256": "db7a2394bcee1ed67df58848753b81217519268856c11b41db2532329d1f2c7b",
+    "producer": "938880bb1388f9c5e903791ddc8496303aee0f28",
+    "run": 45999925649
+  },
+  "planned_controls": {
+    "classifier_count": 214,
+    "trace_count": 57,
+    "maintained_indices": [
+      15,
+      17
+    ],
+    "native_permission_indices": [
+      16,
+      18
+    ]
+  },
+  "full_gate_plan": {
+    "linux": [
+      "dune build @fmt",
+      "dune build --profile release",
+      "dune runtest --profile release"
+    ],
+    "windows": [
+      "dune build @fmt",
+      "dune build --profile release",
+      "all tools-shell and permission tests",
+      "101+51+20 native comparisons"
+    ],
+    "switch": "rd",
+    "compiler": "5.5.1",
+    "formatter": "0.29.0",
+    "windows_runner": "depot-windows-2025-8",
+    "resource_scope": "Functional proof only; no fixed-resource performance-bound claim."
+  },
+  "limitations": [
+    "Preserve all d19f external verdict and native-output assertions; correct only the misleading scanner-output comment.",
+    "Production .ml and documented .mli are byte-identical to the unpublished, fully verified ecea candidate. This new preparation and subsequent full gates bind the combined d19f-based test file.",
+    "Twenty quoted-filename native observations include sixteen exits0 and four exits1. Nine valid TYPE contexts become exact maintained parser-input contracts; foreign helper contexts remain observations.",
+    "Native-valid filenames containing unmatched parentheses remain conservative Review on all three parser versions. Native-invalid ampersand/grouped controls and these pre-existing gaps remain explicitly outside a full Cmd parity claim.",
+    "Original d19f receives only a local observation adapter and candidate tests. Classifier outputs are compared before and after instrumentation. A separate first-quote-only mutant preserves the repaired outer-redirection machinery and must fail the new quoted-filename maintained test while preserving all previous203/48 controls.",
+    "All source edits are restricted to shell_screen.ml, its documented mli, and test_tools_shell.ml. Permission policy, tools_shell.ml, POSIX parser prefix, dependencies, build workflows and every other source entry remain unchanged."
+  ]
+}
