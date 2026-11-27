@@ -1,0 +1,167 @@
+{
+  "producer": "29f46344fd1d1c7296246b934af67099d9101faa",
+  "run": 45919672095,
+  "job": 140247135090,
+  "conclusion": "failure",
+  "artifact": 15163982324,
+  "zip_sha256": "67eb18b2aa5df024adfc666bc8ff4b4f293c67808e37e6003c398f9759bcd012",
+  "results": [
+    {
+      "args": [
+        "rustup",
+        "toolchain",
+        "install",
+        "1.100.0",
+        "--profile",
+        "minimal",
+        "--component",
+        "rustfmt,clippy"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source",
+      "exit": 0,
+      "expected": 0,
+      "log_sha256": "5c4a350545b58a7cd7623d96848abeb542cb3374b1e2fd7fa37219ad787a6f5c",
+      "name": "install-rust",
+      "seconds": 6.076267994999995,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "powershell_separator_ownership::comments_before_attached_redirect_words_stay_outside_separators",
+        "--",
+        "--exact",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/baseline",
+      "exit": 0,
+      "expected": 0,
+      "log_sha256": "3d292078f3f17401537940444857c5144ed0ee7ff6f5e09184c118e3f542deb2",
+      "name": "baseline-original-comment-only",
+      "seconds": 19.342717385000014,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "powershell_separator_ownership::comments_before_attached_redirect_words_stay_outside_separators",
+        "--no-run"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/baseline",
+      "exit": 0,
+      "expected": 0,
+      "log_sha256": "d4b93b7b597e0f7f5cb5e252a2792bca1774775eed2acf609a1d6dead8a5a741",
+      "name": "baseline-strengthened-compile",
+      "seconds": 13.89813930599999,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "powershell_separator_ownership::comments_before_attached_redirect_words_stay_outside_separators",
+        "--",
+        "--exact",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/baseline",
+      "exit": 101,
+      "expected": 101,
+      "log_sha256": "4829446668cccb9463b06d985a503e691c7ab8aa91d8ef1a559b913d5d8e884c",
+      "name": "baseline-strengthened-test",
+      "seconds": 13.8933471,
+      "timed_out": false
+    },
+    {
+      "args": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "sloplint-syntax",
+        "--test",
+        "grammar_gaps",
+        "powershell_separator_ownership::comments_before_attached_redirect_words_stay_outside_separators",
+        "--",
+        "--exact",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "cwd": "/home/runner/work/sloplint/sloplint/source",
+      "exit": 101,
+      "expected": 0,
+      "log_sha256": "9207cafaab301a577469ef69b8bb99c7e1b4777a30ad74b169f156f373d56c13",
+      "name": "candidate-exact-test",
+      "seconds": 13.853614900999986,
+      "timed_out": false
+    }
+  ],
+  "identities": [
+    {
+      "head": "e7ee97e84246863766ec7465777a035134533feb",
+      "index_sha256": "149f82ee0bcf0b5a4fd3505b465d8e324df6b09ce48cf4b2221bd66308b824a8",
+      "label": "baseline-before",
+      "overlay_paths": [],
+      "tracked_blobs": 4906,
+      "tree": "5d2a547a693d073ad9739311e7b653baa96a08d6"
+    },
+    {
+      "head": "530519c0040c109173710fb7f0f84bf87fbd750c",
+      "index_sha256": "18643668fdfa87cf0884def10c358eb707829f5fecf68206db5b4f8f6adc97cd",
+      "label": "candidate-before",
+      "overlay_paths": [],
+      "tracked_blobs": 4907,
+      "tree": "912390b51d8a4908a85dd6969b2c5561a933885b"
+    },
+    {
+      "head": "e7ee97e84246863766ec7465777a035134533feb",
+      "index_sha256": "7a5eb59e4316ba8daaba3e61907724f83e5cfe32fcc3dbc23725c7c813fc2f68",
+      "label": "baseline-original-test",
+      "overlay_paths": [
+        "crates/sloplint-syntax/tests/grammar_gaps.rs",
+        "crates/sloplint-syntax/tests/grammar_gaps/powershell_separator_ownership.rs"
+      ],
+      "tracked_blobs": 4907,
+      "tree": "20fd519d8fa3cf9847f0c73cf9046ac1fb073064"
+    },
+    {
+      "head": "e7ee97e84246863766ec7465777a035134533feb",
+      "index_sha256": "77e4e0e3b75e546a6f50b5391bbec02f3aaabf23e34ca3c5ae51bccd68566dbc",
+      "label": "baseline-strengthened-test",
+      "overlay_paths": [
+        "crates/sloplint-syntax/tests/grammar_gaps.rs",
+        "crates/sloplint-syntax/tests/grammar_gaps/powershell_separator_ownership.rs"
+      ],
+      "tracked_blobs": 4907,
+      "tree": "38c195444b1621f47b9f2f59c5861055d5776bdf"
+    },
+    {
+      "head": "e7ee97e84246863766ec7465777a035134533feb",
+      "index_sha256": "149f82ee0bcf0b5a4fd3505b465d8e324df6b09ce48cf4b2221bd66308b824a8",
+      "label": "baseline-restored",
+      "overlay_paths": [],
+      "tracked_blobs": 4906,
+      "tree": "5d2a547a693d073ad9739311e7b653baa96a08d6"
+    }
+  ],
+  "observation": "The candidate test failed with the old redirect '> '. The shared target compiled tree-sitter-powershell only from baseline; candidate test logs replayed the old scanner line74 while current source has that function at170. This run remains a failure; a fresh isolated build is required before attributing the discrepancy to artifact reuse."
+}

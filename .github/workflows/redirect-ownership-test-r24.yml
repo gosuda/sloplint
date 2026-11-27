@@ -7,6 +7,7 @@ on:
       - ci-tools/redirect-ownership-test-r24/**
 permissions:
   contents: read
+  actions: read
 defaults:
   run:
     shell: bash
@@ -22,11 +23,6 @@ jobs:
           sparse-checkout: ci-tools/redirect-ownership-test-r24
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: e7ee97e84246863766ec7465777a035134533feb
-          path: baseline
-          persist-credentials: false
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
           ref: 530519c0040c109173710fb7f0f84bf87fbd750c
           path: source
           fetch-depth: 2
@@ -37,7 +33,15 @@ jobs:
           python-version: "3.15"
           require-checksums: true
           enable-cache: false
-      - name: Verify old-source assertion sensitivity and exact candidate
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          artifact-ids: 15163982324
+          skip-decompress: true
+          digest-mismatch: error
+          run-id: 45919672095
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/redirect-ownership-test-r24/baseline-archive
+      - name: Verify isolated candidate and authenticated old-source assertions
         run: |
           set -euo pipefail
           uv run --no-project --python 3.15 proof/ci-tools/redirect-ownership-test-r24/verify.py

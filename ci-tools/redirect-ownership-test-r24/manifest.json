@@ -36,10 +36,10 @@
   "scope": "Strengthen an existing permanent public query test only. All parser/scanner/grammar/product files remain identical to d972b527.",
   "native_limit": "PowerShell7.7.0 splits the inherited single-dash filename into '-output' plus positional '.log'. The permanent assertions preserve the parser's existing complete-word ownership and do not claim native target-end parity.",
   "proof_phases": [
-    "Exact source identity before and after; only the test file differs from published d972.",
-    "On unmodified e7 product source, compile and run the original comment-only test, expecting one passing test.",
-    "On the same e7 product source, compile the strengthened test successfully, then expect one real assertion failure with exit101. Restore all fixture overlays.",
-    "On exact candidate source, run the strengthened test and all116 permanent PowerShell regressions, formatting, Clippy all workspace targets, full workspace tests, release build, self-lint and whitespace."
+    "Authenticate the complete failed first-run ZIP, every command-log digest and restored baseline identity; preserve its actual weak0/compile0/strong101 and candidate101 outcomes.",
+    "Use an initially absent dedicated candidate target, explicit pinned rustc and system C compilers, with external Rust/ccache/sccache wrappers disabled. Require visible compilation of tree-sitter-powershell from this candidate checkout.",
+    "On unchanged530 candidate source, run the exact strengthened test and116 permanent PowerShell regressions, formatting, Clippy all workspace targets, full workspace tests, release build, self-lint and whitespace.",
+    "Verify every source blob and the exact candidate tree before and after the gates, including after a failure."
   ],
   "remaining_required_ci": "After verified additive publication, ordinary CI must pass native Linux x64 and ARM64 suites/release plus lint. Existing d972 four-job source proof and ordinary success remain bound to that unchanged product source.",
   "independent_review": "Parent reviewed exact530519c test-only diff and accepted both mandatory membership/extent assertions before source publication; gates remain required.",
@@ -53,9 +53,18 @@
     "prior_thread_snapshot": "26 resolved at00:44:38UTC; new analysis thread arrived00:45:31UTC."
   },
   "proof_files_sha256": {
-    "verify.py": "cb47c211d3dcbbb491ca2423e204be57b36fa61cc81ca65cdac9f0ba104265ff",
+    "verify.py": "c4acf911613ffa7e13b8752a528d6c2a33c0885c7292677670e663a903ef7275",
     "original-test.rs": "fa7076bef1b95e4ae8713972020db8287f1add633d712a4cd4e6ea0908a53dc9",
     "candidate-test.rs": "58357128c15623c4888ac629b68b050f680ad4ce4b83362d23d882f9620482d5",
-    "frozen-captures.json": "61fc4aab06ea3ea390864113532b33ff20d994cc121083e24e9312013b60554c"
+    "frozen-captures.json": "61fc4aab06ea3ea390864113532b33ff20d994cc121083e24e9312013b60554c",
+    "failed-probe.json": "e7bb90def013e3e297689496f1c69ce20092882cae190e98bd0e224c3854464c"
+  },
+  "failed_first_run": {
+    "producer": "29f46344fd1d1c7296246b934af67099d9101faa",
+    "run": 45919672095,
+    "job": 140247135090,
+    "artifact": 15163982324,
+    "zip_sha256": "67eb18b2aa5df024adfc666bc8ff4b4f293c67808e37e6003c398f9759bcd012",
+    "conclusion": "failure"
   }
 }

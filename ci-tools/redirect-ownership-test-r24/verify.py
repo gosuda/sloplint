@@ -9,6 +9,7 @@ import re
 import signal
 import subprocess
 import time
+import zipfile
 from typing import cast
 
 WORKSPACE = Path(os.environ["GITHUB_WORKSPACE"])
@@ -26,9 +27,19 @@ ENVIRONMENT.update(
     CARGO_TERM_COLOR="never",
     CARGO_PROFILE_DEV_DEBUG="line-tables-only",
     CARGO_PROFILE_TEST_DEBUG="line-tables-only",
-    CARGO_TARGET_DIR=str(EVIDENCE / "target"),
+    CARGO_TARGET_DIR=str(EVIDENCE / "candidate-fresh-target"),
     CARGO_BUILD_TARGET="x86_64-unknown-linux-gnu",
     SLOPLINT_REQUIRE_FS_CAPS="1",
+    RUSTC_WRAPPER="",
+    RUSTC_WORKSPACE_WRAPPER="",
+    CARGO_BUILD_RUSTC_WRAPPER="",
+    CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER="",
+    CCACHE_DISABLE="1",
+    SCCACHE_DISABLE="1",
+    CC="/usr/bin/cc",
+    CXX="/usr/bin/c++",
+    CC_x86_64_unknown_linux_gnu="/usr/bin/cc",
+    CXX_x86_64_unknown_linux_gnu="/usr/bin/c++",
 )
 TEST_PATH = Path("crates/sloplint-syntax/tests/grammar_gaps/powershell_separator_ownership.rs")
 MODULE_PATH = Path("crates/sloplint-syntax/tests/grammar_gaps.rs")
@@ -140,66 +151,102 @@ def check_one_test(content: str, expected: bool) -> None:
     assert TEST_NAME in content
 
 
+def verified_baseline() -> None:
+    receipt = cast(dict[str, object], json.loads((PROOF / "failed-probe.json").read_text()))
+    archives = [path for path in (EVIDENCE / "baseline-archive").rglob("*") if path.is_file() and zipfile.is_zipfile(path)]
+    assert len(archives) == 1, [str(path) for path in archives]
+    archive = archives[0]
+    actual_zip = hashlib.sha256(archive.read_bytes()).hexdigest()
+    assert actual_zip == receipt["zip_sha256"]
+    with zipfile.ZipFile(archive) as handle:
+        def read(name: str) -> bytes:
+            matches = [member for member in handle.namelist() if Path(member).name == name]
+            assert len(matches) == 1, (name, matches)
+            return handle.read(matches[0])
+        report_bytes = read("results.json")
+        report = json.loads(report_bytes)
+        assert report["manifest"]["candidate"] == MANIFEST["candidate"]
+        assert report["manifest"]["candidate_tree"] == MANIFEST["candidate_tree"]
+        assert report["manifest"]["candidate_test_sha256"] == MANIFEST["candidate_test_sha256"]
+        assert report["results"] == receipt["results"]
+        assert report["identities"] == receipt["identities"]
+        assert [(result["name"], result["exit"]) for result in report["results"]] == [
+            ("install-rust", 0),
+            ("baseline-original-comment-only", 0),
+            ("baseline-strengthened-compile", 0),
+            ("baseline-strengthened-test", 101),
+            ("candidate-exact-test", 101),
+        ]
+        for result in report["results"]:
+            content = read(result["name"] + ".log")
+            assert hashlib.sha256(content).hexdigest() == result["log_sha256"], result["name"]
+        check_one_test(read("baseline-original-comment-only.log").decode(), True)
+        check_one_test(read("baseline-strengthened-test.log").decode(), False)
+        assert report["identities"][-1] == {
+            "label": "baseline-restored",
+            "head": MANIFEST["baseline"],
+            "tree": MANIFEST["baseline_tree"],
+            "tracked_blobs": 4906,
+            "index_sha256": "149f82ee0bcf0b5a4fd3505b465d8e324df6b09ce48cf4b2221bd66308b824a8",
+            "overlay_paths": [],
+        }
+    verified = {
+        "historical_run": receipt["run"], "historical_conclusion": receipt["conclusion"],
+        "artifact": receipt["artifact"], "zip_sha256": actual_zip,
+        "report_sha256": hashlib.sha256(report_bytes).hexdigest(),
+        "baseline_weak_exit": 0, "baseline_compile_exit": 0, "baseline_strong_exit": 101,
+        "historical_candidate_exit": 101,
+    }
+    (EVIDENCE / "verified-baseline.json").write_text(json.dumps(verified, indent=2, sort_keys=True) + "\n")
+    print("AUTHENTICATED_HISTORICAL_RECEIPT " + json.dumps(verified, sort_keys=True), flush=True)
+
+
 def main() -> None:
     expected_files = cast(dict[str, str], MANIFEST["proof_files_sha256"])
     for name, digest in expected_files.items():
         assert hashlib.sha256((PROOF / name).read_bytes()).hexdigest() == digest, name
-    baseline_head = str(MANIFEST["baseline"])
     candidate_head = str(MANIFEST["candidate"])
-    baseline_tree = str(MANIFEST["baseline_tree"])
     candidate_tree = str(MANIFEST["candidate_tree"])
-    identity("baseline-before", BASELINE, baseline_head, baseline_tree, set())
     identity("candidate-before", SOURCE, candidate_head, candidate_tree, set())
     assert output(["git", "diff", "--name-only", str(MANIFEST["published_parent"]), "HEAD"], SOURCE).splitlines() == [str(TEST_PATH)]
-    original = (PROOF / "original-test.rs").read_bytes()
-    candidate = (PROOF / "candidate-test.rs").read_bytes()
-    assert (SOURCE / TEST_PATH).read_bytes() == candidate
-    frozen = json.loads((PROOF / "frozen-captures.json").read_text())
-    assert len(frozen["cases"]) == 3
-    print("FROZEN_HISTORICAL_CAPTURES " + json.dumps(frozen, sort_keys=True), flush=True)
+    assert (SOURCE / TEST_PATH).read_bytes() == (PROOF / "candidate-test.rs").read_bytes()
+    verified_baseline()
+    target = Path(ENVIRONMENT["CARGO_TARGET_DIR"])
+    assert not target.exists(), "Candidate target must be initially absent"
     run("install-rust", ["rustup", "toolchain", "install", "1.100.0", "--profile", "minimal", "--component", "rustfmt,clippy"])
-    assert output(["rustc", "--version"], SOURCE).startswith("rustc 1.100.0 ")
-
-    module = BASELINE / MODULE_PATH
-    module_original = module.read_bytes()
-    test = BASELINE / TEST_PATH
-    assert not test.exists()
-    assert b"mod powershell_separator_ownership;" not in module_original
+    ENVIRONMENT["RUSTC"] = output(["rustup", "which", "--toolchain", "1.100.0", "rustc"], SOURCE)
+    compiler = {
+        key: ENVIRONMENT[key]
+        for key in (
+            "RUSTC", "RUSTC_WRAPPER", "RUSTC_WORKSPACE_WRAPPER",
+            "CARGO_BUILD_RUSTC_WRAPPER", "CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER",
+            "CCACHE_DISABLE", "SCCACHE_DISABLE", "CC", "CXX",
+            "CC_x86_64_unknown_linux_gnu", "CXX_x86_64_unknown_linux_gnu",
+            "CARGO_TARGET_DIR", "CARGO_BUILD_TARGET",
+        )
+    }
+    print("EXPLICIT_COMPILER_SELECTION " + json.dumps(compiler, sort_keys=True), flush=True)
+    (EVIDENCE / "compiler-selection.json").write_text(json.dumps(compiler, indent=2, sort_keys=True) + "\n")
+    run("rustc-identity", [ENVIRONMENT["RUSTC"], "-vV"])
     try:
-        module.write_bytes(module_original + MODULE_SUFFIX.encode())
-        test.write_bytes(original)
-        overlay = {str(MODULE_PATH), str(TEST_PATH)}
-        identity("baseline-original-test", BASELINE, baseline_head, None, overlay)
-        weak = run("baseline-original-comment-only", focused(), BASELINE)
-        check_one_test(weak, True)
-        test.write_bytes(candidate)
-        identity("baseline-strengthened-test", BASELINE, baseline_head, None, overlay)
-        run("baseline-strengthened-compile", focused(["--no-run"]), BASELINE)
-        red = run("baseline-strengthened-test", focused(), BASELINE, expected=101)
-        check_one_test(red, False)
-        assert "assertion \x60left == right\x60 failed" in red
-        assert "> <# note #> -output.log" in red
+        green = run("candidate-exact-test", focused())
+        check_one_test(green, True)
+        expected_compile = "Compiling tree-sitter-powershell v0.26.6 (" + str(SOURCE / "vendor/tree-sitter-powershell") + ")"
+        assert expected_compile in green, "Fresh candidate grammar dependency compilation was not observed"
+        focused_all = run(
+            "candidate-powershell-regressions",
+            ["cargo", "test", "--locked", "-p", "sloplint-syntax", "--test", "grammar_gaps", "powershell", "--", "--nocapture"],
+        )
+        assert re.search(r"test result: ok\. 116 passed; 0 failed;", focused_all)
+        run("candidate-fmt", ["cargo", "fmt", "--all", "--check"])
+        run("candidate-clippy", ["cargo", "clippy", "--workspace", "--all-targets", "--locked", "--", "-D", "warnings"])
+        run("candidate-workspace", ["cargo", "test", "--workspace", "--locked", "--no-fail-fast"])
+        run("candidate-release", ["cargo", "build", "--release", "--locked"])
+        run("candidate-self-lint", [str(target / "x86_64-unknown-linux-gnu/release/sloplint"), "check", "crates", "--format", "agent", "--strictness", "standard", "--mode", "threshold", "--fail-on", "minor"])
+        run("candidate-whitespace", ["git", "diff", "--check"])
     finally:
-        module.write_bytes(module_original)
-        if test.exists():
-            test.unlink()
-        identity("baseline-restored", BASELINE, baseline_head, baseline_tree, set())
-
-    green = run("candidate-exact-test", focused())
-    check_one_test(green, True)
-    focused_all = run(
-        "candidate-powershell-regressions",
-        ["cargo", "test", "--locked", "-p", "sloplint-syntax", "--test", "grammar_gaps", "powershell", "--", "--nocapture"],
-    )
-    assert re.search(r"test result: ok\. 116 passed; 0 failed;", focused_all)
-    run("candidate-fmt", ["cargo", "fmt", "--all", "--check"])
-    run("candidate-clippy", ["cargo", "clippy", "--workspace", "--all-targets", "--locked", "--", "-D", "warnings"])
-    run("candidate-workspace", ["cargo", "test", "--workspace", "--locked", "--no-fail-fast"])
-    run("candidate-release", ["cargo", "build", "--release", "--locked"])
-    run("candidate-self-lint", [str(EVIDENCE / "target/x86_64-unknown-linux-gnu/release/sloplint"), "check", "crates", "--format", "agent", "--strictness", "standard", "--mode", "threshold", "--fail-on", "minor"])
-    run("candidate-whitespace", ["git", "diff", "--check"])
-    identity("candidate-after", SOURCE, candidate_head, candidate_tree, set())
-    save_report()
+        identity("candidate-after", SOURCE, candidate_head, candidate_tree, set())
+        save_report()
     report = (EVIDENCE / "results.json").read_bytes()
     print("FINAL_GATE_RECEIPT " + report.decode(), flush=True)
     print("FINAL_GATE_RECEIPT_SHA256 " + hashlib.sha256(report).hexdigest(), flush=True)
