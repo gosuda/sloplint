@@ -6,6 +6,7 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -47,7 +48,7 @@ class ArtifactRedirect(urllib.request.HTTPRedirectHandler):
         return redirected
 
 
-def authenticated_archive(archive: dict[str, Any]) -> dict[str, Any]:
+def authenticated_archive(archive: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
     request = urllib.request.Request(
         f'https://api.github.com/repos/gosuda/sloplint/actions/artifacts/{archive["id"]}/zip',
         headers={"Authorization": "Bearer " + os.environ["GH_TOKEN"],
@@ -61,9 +62,15 @@ def authenticated_archive(archive: dict[str, Any]) -> dict[str, Any]:
         names = [name for name in contents.namelist() if name.endswith(archive["report"])]
         assert len(names) == 1
         report: dict[str, Any] = json.loads(contents.read(names[0]))
+        formatted_names = [name for name in contents.namelist()
+                           if name.endswith("formatted-candidate.json")]
+        assert len(formatted_names) == 1
+        formatted: dict[str, Any] = json.loads(contents.read(formatted_names[0]))
     assert report["producer"] == archive["producer"]
+    assert formatted["tree"] == report["formatted_tree"]
     save("authenticated-" + archive["report"], report)
-    return report
+    save("authenticated-formatted-candidate.json", formatted)
+    return report, formatted
 
 
 def identity() -> dict[str, Any]:
@@ -91,10 +98,10 @@ def preflight() -> int:
     assert git("status", "--porcelain") == ""
     save("initial-source.json", {"head": MANIFEST["head"], "tree": MANIFEST["original_tree"],
                                 "producer": os.environ["GITHUB_SHA"]})
-    preparation = authenticated_archive(MANIFEST["preparation"])
+    preparation, formatted = authenticated_archive(MANIFEST["preparation"])
     assert preparation["head"] == MANIFEST["head"]
     assert preparation["original_tree"] == MANIFEST["original_tree"]
-    assert preparation["formatted_tree"] == MANIFEST["candidate_tree"]
+    assert preparation["formatted_tree"] == MANIFEST["prepared_tree"]
     assert preparation["candidate_all_pass"] is True
     assert preparation["candidate_cases"] == 97
     assert preparation["source_restored"] is True
@@ -107,6 +114,16 @@ def preflight() -> int:
                        "stderr": applied.stderr.decode("utf-8", errors="backslashreplace")})
     assert applied.returncode == 0
     current = identity()
+    assert {entry["path"] for entry in formatted["elements"]} == set(MANIFEST["source_sha256"])
+    for entry in formatted["elements"]:
+        before = entry["content"]
+        assert sha256(before.encode("utf-8")) == entry["sha256"]
+        if entry["path"] == "bin/crush/lib/tools_shell.ml":
+            old = "[safe_simple_command] still checks every execution option."
+            new = "[safe_simple_command] still checks the execution options."
+            assert before.count(old) == 1
+            before = before.replace(old, new)
+        assert (SOURCE / entry["path"]).read_bytes() == before.encode("utf-8"), entry["path"]
     save("exact-candidate.json", current)
     print("EXACT_CHARAMEL_CANDIDATE " + json.dumps(current), flush=True)
     return 0
@@ -182,8 +199,18 @@ def command(label: str, script: str, timeout: int) -> dict[str, Any]:
               "actual_exit": actual_exit, "timeout": timed_out, "seconds": time.monotonic() - started,
               "log_sha256": sha256(log.read_bytes())}
     print("CHARAMEL_GATE_COMMAND " + json.dumps(record), flush=True)
+    content = log.read_text("utf-8", errors="backslashreplace")
+    if label in ("release-tests", "native-shell-permission-tests"):
+        clean = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", content)
+        selected = [line for line in clean.splitlines()
+                    if (("tools-shell" in line or "permission" in line)
+                        and any(mark in line for mark in ("[OK]", "[SKIP]", "[FAIL]")))
+                    or "tests run" in line]
+        record["test_summary"] = selected
+        for line in selected:
+            print("CHARAMEL_TEST_RESULT " + line, flush=True)
     if actual_exit != 0:
-        print(log.read_text("utf-8", errors="backslashreplace")[-32000:], flush=True)
+        print(content[-32000:], flush=True)
     return record
 
 
@@ -208,6 +235,17 @@ def gates(lane: str) -> int:
     records.append(command("whitespace", "git diff --cached --check", 60))
     exact = identity()
     accepted = all(record["actual_exit"] == 0 and not record["timeout"] for record in records)
+    if lane == "windows":
+        focused = next(record for record in records if record["label"] == "native-shell-permission-tests")
+        summary = focused.get("test_summary", [])
+        required_labels = ["conservative shell classifier", "Cmd loop approval boundary",
+                           "review argument boundaries"]
+        selected = (all(any("[OK]" in line and label in line for line in summary)
+                        for label in required_labels)
+                    and any("[OK]" in line and re.search(r"\bpermission\b", line) for line in summary))
+        save("native-selection.json", {"required_labels": required_labels,
+                                     "selected_and_passed": selected})
+        accepted = accepted and selected
     report = {"producer": os.environ["GITHUB_SHA"], "run": os.environ["GITHUB_RUN_ID"],
               "lane": lane, "identity": exact, "commands": records, "accepted": accepted,
               "native_windows_full_suite_claim": False}

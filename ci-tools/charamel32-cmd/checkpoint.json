@@ -31,11 +31,11 @@
     "windows_scope": "Full release build and formatter, complete frozen native Cmd outputs, tools-shell and permission suites; no full Windows-suite claim."
   },
   "preparation_result": {
-    "producer": "563815851452a16fef28278dc4314e0fb2fa95cb",
-    "run": "45950356366",
+    "producer": "facebadcb99af6a5860a948391cedbca13695b53",
+    "run": "45952872489",
     "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
     "original_tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
-    "formatted_tree": "2dc5be64073c90b88fa0031c0f9b9c07e286831c",
+    "formatted_tree": "0737b1073850ca32dc8639ceb378f0e49cdd9773",
     "native_archives": [
       {
         "id": 15175765148,
@@ -83,7 +83,7 @@
         ],
         "cwd": "/home/runner/work/sloplint/sloplint/source",
         "actual_exit": 0,
-        "seconds": 0.01022793000001343,
+        "seconds": 0.010816721999987067,
         "log_sha256": "db74d0caf81f43029fa28ce9888695d0b54d0a99003e6042823c9bc914897865"
       },
       {
@@ -98,7 +98,7 @@
         ],
         "cwd": "/home/runner/work/sloplint/sloplint/source",
         "actual_exit": 0,
-        "seconds": 0.012810817999991286,
+        "seconds": 0.01334521399999744,
         "log_sha256": "a68641c6aacd345c4931a6217331d2bf43398c7bc134666a2f756953eab407aa"
       },
       {
@@ -116,14 +116,14 @@
           "-warn-error",
           "+a",
           "-o",
-          "/tmp/charamel32-compile-9mq6e0o0/old/screen-probe",
+          "/tmp/charamel32-compile-_ys_enz9/old/screen-probe",
           "shell_screen.mli",
           "shell_screen.ml",
           "probe.ml"
         ],
-        "cwd": "/tmp/charamel32-compile-9mq6e0o0/old",
+        "cwd": "/tmp/charamel32-compile-_ys_enz9/old",
         "actual_exit": 0,
-        "seconds": 0.06636556199998722,
+        "seconds": 0.06173047499999029,
         "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       {
@@ -136,11 +136,12 @@
           "ocamlformat",
           "-i",
           "bin/crush/lib/shell_screen.ml",
+          "bin/crush/lib/tools_shell.ml",
           "test/crush/test_tools_shell.ml"
         ],
         "cwd": "/home/runner/work/sloplint/sloplint/source",
         "actual_exit": 0,
-        "seconds": 0.192663519000007,
+        "seconds": 0.15310892200000126,
         "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       {
@@ -158,14 +159,14 @@
           "-warn-error",
           "+a",
           "-o",
-          "/tmp/charamel32-compile-9mq6e0o0/candidate/screen-probe",
+          "/tmp/charamel32-compile-_ys_enz9/candidate/screen-probe",
           "shell_screen.mli",
           "shell_screen.ml",
           "probe.ml"
         ],
-        "cwd": "/tmp/charamel32-compile-9mq6e0o0/candidate",
+        "cwd": "/tmp/charamel32-compile-_ys_enz9/candidate",
         "actual_exit": 0,
-        "seconds": 0.0669148980000216,
+        "seconds": 0.07013294700001893,
         "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       {
@@ -178,12 +179,12 @@
         ],
         "cwd": "/home/runner/work/sloplint/sloplint/source",
         "actual_exit": 0,
-        "seconds": 0.00312908600000128,
+        "seconds": 0.0031453180000085013,
         "log_sha256": "4012a69cabf599d9232baf21663646a6828eef20d85b7b785832a6091e94a6b3"
       }
     ]
   },
-  "preparation_log_sha256": "a3518bfe55cb0217525da21f83009ec5c1dc0528ac707cb90f671caecbe561d3",
+  "preparation_log_sha256": "bf61eee16ab1fe1b46760ffc473a54c8a9d2d60590e2ad3b50186d387248e15b",
   "driver_sha256": "7cc232dc0e60a1890613b7701557d8db1d67a1a76341216856dfd210bedbd370",
   "workflow_sha256": "a9026ec831f1aab0569b9c9ded4105d0b2cd1923324379da34f4daabff1a2cf9",
   "historical_runs": [
@@ -214,11 +215,11 @@
     }
   ],
   "pending": [
-    "Full Linux prescribed gates with rd switch",
-    "Native Windows complete frozen outputs and real permission/tool tests",
-    "Fresh maintained/base lease and additive publication",
-    "Actual addressed-thread resolutions and PR scope body",
-    "Ordinary CI and owned workflow retirement"
+    "Final exact Linux full prescribed gates",
+    "Final exact Windows replay and native permission/shell suites",
+    "Fresh maintained/main lease and publication",
+    "Thread replies/resolution and body",
+    "Ordinary CI and probe retirement"
   ],
   "review_state": {
     "total": 10,
@@ -228,7 +229,7 @@
     ],
     "read_window": "2026-11-27T05:37Z through candidate preparation"
   },
-  "current_stage": "Prepare narrow fd read-only integration correction",
+  "current_stage": "Final three-file source gates",
   "prior_candidate_tree": "2dc5be64073c90b88fa0031c0f9b9c07e286831c",
   "draft_candidate_tree": "67d7cdfdf0704e3bc15fe2cfab768ffac954dea4",
   "write_paths": [
@@ -311,5 +312,40 @@
     "sha256": "156bdaed52fb0109a79906aa9b20aaf61b2585217b6ceed4806575a5189e1805"
   },
   "correction": "Only screened fd tokens may retain equals signs as literal data; all non-fd equals guards and fd execution-option detection remain. Exact original failure remains recorded.",
-  "windows_prior_candidate": "Run 45951139556 still running; 37 native replay cases already passed."
+  "windows_prior_candidate": "Run 45951139556 still running; 37 native replay cases already passed.",
+  "final_candidate": {
+    "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
+    "original_tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
+    "candidate_tree": "e4dc56c7aa06c798df5eca42ecad54e2ffe83423",
+    "source_sha256": {
+      "bin/crush/lib/shell_screen.ml": "a8e7e443a07c064d76e948b84bfdd75e0d08e88f51bad19bf4064859cc85e888",
+      "bin/crush/lib/tools_shell.ml": "dd04f4b372f42d5ad4d64d09168ded0e8939c8263c25693e4704303d00623928",
+      "test/crush/test_tools_shell.ml": "3ca62e11823c855f28f6f0a0e49818320f4007527d764573a767b902db0fa71a"
+    },
+    "patch_sha256": "ba19111158c1b580274a9cb43fccad91b22cf98fb58563a5393bf38d72d8f56b",
+    "native_observed_sha256": "1db8a4202cc9f0d7e3da4b037bd035f2618c24a445ee1ce88390fb2c433f535d",
+    "preparation": {
+      "id": 15177174328,
+      "sha256": "f4125bbc0df0a98e38bc8e2e7309fea9878bded64054d1a600d47f605ead4cff",
+      "report": "prepare-result.json",
+      "producer": "facebadcb99af6a5860a948391cedbca13695b53",
+      "run": 45952872489,
+      "job": 140352532041
+    },
+    "source_changes": "Three paths: parser, fd-only read-only integration, and tests. The only delta from native formatted preparation is the reviewed comment wording; exact original and corrected text are asserted.",
+    "required_linux": [
+      "dune build @fmt",
+      "dune build --profile release",
+      "dune runtest --profile release"
+    ],
+    "windows_scope": "Full release build and formatter, complete frozen native Cmd outputs, tools-shell and permission suites; no full Windows-suite claim.",
+    "prepared_tree": "0737b1073850ca32dc8639ceb378f0e49cdd9773",
+    "driver_sha256": "49bd613ed1c012c1969d64df695af57d57db7162cc131d8bcfb6cded3864fea5"
+  },
+  "independent_review": {
+    "scope": "Only the tools_shell.ml fd-only integration delta and callers",
+    "reviewer": "/root/bitcoin_round7",
+    "result": "No blocking finding; corrected helper comment to avoid an overclaim",
+    "original_payload_commit": "facebadcb99af6a5860a948391cedbca13695b53"
+  }
 }

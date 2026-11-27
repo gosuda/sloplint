@@ -1,26 +1,29 @@
 {
   "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
   "original_tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
-  "candidate_tree": "2dc5be64073c90b88fa0031c0f9b9c07e286831c",
+  "candidate_tree": "e4dc56c7aa06c798df5eca42ecad54e2ffe83423",
   "source_sha256": {
     "bin/crush/lib/shell_screen.ml": "a8e7e443a07c064d76e948b84bfdd75e0d08e88f51bad19bf4064859cc85e888",
-    "test/crush/test_tools_shell.ml": "4b866dde806696d7658a18b4dec1a867d793d6ce2dfc391cce9ac0ab9532ac87"
+    "bin/crush/lib/tools_shell.ml": "dd04f4b372f42d5ad4d64d09168ded0e8939c8263c25693e4704303d00623928",
+    "test/crush/test_tools_shell.ml": "3ca62e11823c855f28f6f0a0e49818320f4007527d764573a767b902db0fa71a"
   },
-  "patch_sha256": "95fc13396b5ce95ca8b5ace51f3ba51edc01cc5b0cebd8c9c99cd2e9fafe9b2e",
+  "patch_sha256": "ba19111158c1b580274a9cb43fccad91b22cf98fb58563a5393bf38d72d8f56b",
   "native_observed_sha256": "1db8a4202cc9f0d7e3da4b037bd035f2618c24a445ee1ce88390fb2c433f535d",
   "preparation": {
-    "id": 15176985285,
-    "sha256": "bfd9e9e2813b0767bc1628d477f10d1ab7bdcaeda01e7dbfe25bb8e892be6952",
+    "id": 15177174328,
+    "sha256": "f4125bbc0df0a98e38bc8e2e7309fea9878bded64054d1a600d47f605ead4cff",
     "report": "prepare-result.json",
-    "producer": "563815851452a16fef28278dc4314e0fb2fa95cb",
-    "run": 45950356366,
-    "job": 140344510433
+    "producer": "facebadcb99af6a5860a948391cedbca13695b53",
+    "run": 45952872489,
+    "job": 140352532041
   },
-  "source_changes": "Only shell_screen.ml and test_tools_shell.ml; imported external API and tool implementation preserved.",
+  "source_changes": "Three paths: parser, fd-only read-only integration, and tests. The only delta from native formatted preparation is the reviewed comment wording; exact original and corrected text are asserted.",
   "required_linux": [
     "dune build @fmt",
     "dune build --profile release",
     "dune runtest --profile release"
   ],
-  "windows_scope": "Full release build and formatter, complete frozen native Cmd outputs, tools-shell and permission suites; no full Windows-suite claim."
+  "windows_scope": "Full release build and formatter, complete frozen native Cmd outputs, tools-shell and permission suites; no full Windows-suite claim.",
+  "prepared_tree": "0737b1073850ca32dc8639ceb378f0e49cdd9773",
+  "driver_sha256": "49bd613ed1c012c1969d64df695af57d57db7162cc131d8bcfb6cded3864fea5"
 }
