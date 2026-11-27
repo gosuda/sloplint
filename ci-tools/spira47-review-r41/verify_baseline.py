@@ -98,9 +98,9 @@ def main() -> None:
         if module["Version"] != manifest["sqlc_version"]:
             raise RuntimeError("source-pinned SQLc differs")
         catalog = observer.rows_from("version-catalog.json", 10)
-        ctes = observer.rows_from("version-ctes.json", 24)
+        ctes = observer.rows_from("version-ctes.json", 26)
         cases = catalog + ctes
-        if len({base.text(row["name"]) for row in cases}) != 34:
+        if len({base.text(row["name"]) for row in cases}) != 36:
             raise RuntimeError("combined case identities differ")
         with native.postgres(manifest) as (container, version):
             report["postgres_version_num"] = version

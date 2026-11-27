@@ -10,7 +10,7 @@
     "index_file": "source-index.json"
   },
   "tests": {
-    "tree": "327b5178cd1ac9a21a672aa728999cb20be97045",
+    "tree": "ed341eb2920f8a6199823927b10c8ae83df47427",
     "blobs": 628,
     "index_file": "test-index.json",
     "changed_paths": [
@@ -25,7 +25,7 @@
     "production_unchanged": true
   },
   "counterfactual": {
-    "tree": "0f2215d17fa24eb771e1a704daf5388919ebc75c",
+    "tree": "581dab4714740df75fa26ef4ff90883cfb2e4b7d",
     "blobs": 628,
     "index_file": "counterfactual-index.json",
     "model_source_commit": "4bde2ec5e8bf23ffbeca0b4b54e8c9c7c005e33f",
@@ -66,7 +66,8 @@
       "nested-materialized-cte-reference",
       "search-sibling-reference",
       "cycle-sibling-reference",
-      "search-cycle-sibling-reference"
+      "search-cycle-sibling-reference",
+      "explicit-cycle-mark-sibling-reference"
     ],
     "pipeline_names": [
       "escape-lf",
@@ -173,10 +174,12 @@
       "cycle-sibling-reference",
       "cycle-sibling-omission",
       "search-cycle-sibling-reference",
-      "search-cycle-sibling-omission"
+      "search-cycle-sibling-omission",
+      "explicit-cycle-mark-sibling-reference",
+      "explicit-cycle-mark-sibling-omission"
     ],
     "catalog_cases": 10,
-    "cte_cases": 24,
+    "cte_cases": 26,
     "pipeline_cases": 60,
     "source_gates_reused": false,
     "publication_eligible": false,
@@ -189,16 +192,16 @@
     "observer.py": "80eff0bbf8ec85873579fa25acc0a9d48dc2a59a2fba40390c20c59df1044404",
     "schema.sql": "250795d402dca7144e24f33dc51026083c7664385436545bca8762b7a66de6bc",
     "source-index.json": "9172ff6ef0f04168d8c9c0ffbb32612f672beef67af29b7c6b65af107a746615",
-    "test-index.json": "b8d7d9fe6064e324df4b7fb95fcfc27f90d091d9bfa2f8412a4bb0cdf648d566",
-    "counterfactual-index.json": "6af56f575eee29228da9459ca8a701c6eccd3dbcc59409e75b092290a735270d",
-    "authored-tests.json": "483be0d365832398d42db0a9807fdd3f5c77fc09a260d7ab3516c13315def2fc",
+    "test-index.json": "a40825fb926996efffc90aa334f68c9fbd4f50f35a0d5bf991659e663b6d8b7a",
+    "counterfactual-index.json": "47d8c0b5aad113850eb180ce4a8efb9a1c1a42e916fc2f52ebcfe9a3d23064fe",
+    "authored-tests.json": "c12e8ffd771742dccad76f5226c1498ca411faf3fab906ebe0f28280a27e9d85",
     "version-catalog.json": "03a2f563176568cca73172db37dff481635ccb6e2e195220e54a20d05b1f10c4",
-    "version-ctes.json": "e2ffd55b8fc107033ce66c91b7481dd66be2a6a868742daac370f995f9c2c5a2",
+    "version-ctes.json": "3dc4c74efb3eaa8996649ca18b528c47e344608a06d98d8bc9d288d8c0449382",
     "model-before-r40.lgo": "097b8f4a47f905fb8d2cf329358bbdda0e24cdffcbaa1d35028b444bc458fad1",
-    "verify_baseline.py": "fc9168e32ab7fd547bfd2060b1315fe2bc6366e436efcce4552ae29b3d86c063"
+    "verify_baseline.py": "e0ebd63da64c71493ca46ed3603f62033922a5047abdf5a095064477e3ebfe5f"
   },
   "workflow_sha256": "5b1c023551aa49d877d518b2a502a190a823a610532ae13b7c0929148db10519",
   "publication_eligible": false,
-  "native_contract_scope": "34 original statements and 34 actual SQLc-processed statements must produce their frozen native final values. PostgreSQL does not interpret plugin configuration; catalog-option validity is the explicit public Generate contract. Existing 20 role rows join the prior 40 permanent pipeline rows unchanged.",
+  "native_contract_scope": "36 original statements and 36 actual SQLc-processed statements must produce their frozen native final values. PostgreSQL does not interpret plugin configuration; catalog-option validity is the explicit public Generate contract. Existing 20 role rows join the prior 40 permanent pipeline rows unchanged.",
   "production_changes_in_this_baseline": false
 }

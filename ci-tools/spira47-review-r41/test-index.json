@@ -1487,7 +1487,7 @@
   {
     "path": "cmd/sqlc-gen-spira/testdata/version-ctes.json",
     "mode": "100644",
-    "sha": "d4cccfebcb7793c98b067d5b84f75a752e80908c"
+    "sha": "750d7c4a2166607e27ec3ad9c1f6741921e6343d"
   },
   {
     "path": "cmd/sqlc-gen-spira/testdata/version-reference-boundaries.json",
@@ -1522,7 +1522,7 @@
   {
     "path": "cmd/sqlc-gen-spira/version_reference_test.lgo",
     "mode": "100644",
-    "sha": "013ff5d584625f61249e3d1a173b914a1d2c1d3d"
+    "sha": "207e40ee63b048880425fe12dee4723dc949666d"
   },
   {
     "path": "cmd/sqlc-gen-spira/wire.lgo",

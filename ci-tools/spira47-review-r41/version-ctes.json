@@ -166,5 +166,19 @@
     "allow": false,
     "native_name": "changed",
     "native_version": 0
+  },
+  {
+    "name": "explicit-cycle-mark-sibling-reference",
+    "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;",
+    "allow": true,
+    "native_name": "before",
+    "native_version": 1
+  },
+  {
+    "name": "explicit-cycle-mark-sibling-omission",
+    "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
   }
 ]
