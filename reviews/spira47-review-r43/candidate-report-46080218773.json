@@ -1,0 +1,1377 @@
+{
+  "schema": 1,
+  "producer": "b1eda8d382132098028e88d4be9737aac1ff00ce",
+  "run": "46080218773",
+  "manifest": {
+    "schema": 1,
+    "purpose": "Test-only repair of per-fixture schema and version-option consumption, with native controls and required source gates.",
+    "source": {
+      "repository": "gosuda/spira",
+      "head": "6d4f84fc8a1a50603fbdf5c024bdc1966436ea31",
+      "tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0",
+      "blobs": 638,
+      "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+      "index_file": "source-index.json",
+      "native_index_sha256": "a8f431d2319f13259dba66403a2971d30443d26a0c73ab8a2fbc1947c637642c"
+    },
+    "counterfactual": {
+      "tree": "4127fba0afd0daa2cb03f43737e56938ffbdfac9",
+      "blobs": 638,
+      "index_file": "counterfactual-index.json",
+      "description": "The published hardcoded reader with only its exact count adjusted from 30 to 32, plus two appended case records. It retains all 30 original fixtures and unchanged reader logic. This is a count-adjusted test-reader counterfactual, not a production source repair."
+    },
+    "candidate": {
+      "tree": "42ac87ebaf4cad019a5f53bfe61c7d1455f9d041",
+      "blobs": 638,
+      "index_file": "candidate-index.json",
+      "authored_paths": 5,
+      "production_changes": false
+    },
+    "toolchain": {
+      "repository": "gosuda/LoGOs",
+      "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+      "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+      "bootstrap_go": "1.27.4",
+      "fresh_build": true
+    },
+    "postgres_image": "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782",
+    "postgres_version_num": "180007",
+    "sqlc_version": "v1.31.2-0.20261023030206-3ad8b20fb02b",
+    "tools": {
+      "uv": "0.13.9",
+      "python": "3.15",
+      "node": "26.13.1",
+      "pnpm": "12.21.0",
+      "just": "1.59.0",
+      "ripgrep": "15.1.0"
+    },
+    "linter_artifact": {
+      "producer": "bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+      "run": 45765398446,
+      "job": 139724970737,
+      "artifact": 15091303567,
+      "name": "lean-rust-and-cli-bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+      "zip_bytes": 17472007,
+      "zip_sha256": "e362f672d39498374a637a68ded7f57205b415e68006a4dc4a4a882405f5af33",
+      "binary_sha256": "a04c9c3e53c8aae18e2d5f89faaf3ad68b89980218ca9d1fc4af5ce487401024",
+      "conclusion": "success"
+    },
+    "previous_artifact": {
+      "producer": "673f0c39445d4b583c4d3371609ce585c39be87b",
+      "run": 46073659117,
+      "job": 140756258552,
+      "artifact": 15233558976,
+      "name": "spira47-relation-roles-candidate-r42",
+      "zip_bytes": 1622996,
+      "zip_sha256": "88a17b5cfb3a981851d2341641280fb8ac12b13ae59733bc47c4ba76621370b0",
+      "conclusion": "success"
+    },
+    "previous_verification": {
+      "report_sha256": "ca1bc0848dc98e7541f3d223159112fad80f03fb1b36970e8a8a4bbdbf4a96f5",
+      "manifest_sha256": "d9f05b8cb3d764cce6eefcb0247fbbc3971be1e4ad983431355f730f2ed53fa5",
+      "command_count": 228,
+      "evidence_commit": "4b2f06292446cf44f2857d562d810aae4dab17a5",
+      "terminal_commit": "88af1e7b114f90871f65fe88845459442c175fbd",
+      "scope": "Exact prior production/source evidence and original fixture contracts. No old full source gate substitutes for the required gates in this job.",
+      "projection_sha256": "8337d9925f35c55aac6130e07be6803bda972fa5625cbda0354fccce2d64b822",
+      "report_serialization": "The artifact uses the immutable native writer json.dumps(report, indent=2) plus LF with default ensure_ascii=True. The durable projection uses literal UTF-8 for six U+00E9 characters. Require both exact byte hashes, parsed equality and native serialization equality."
+    },
+    "contracts": {
+      "role_names": [
+        "qualified-time-select-alias",
+        "qualified-time-select-quoted-alias",
+        "qualified-time-select-explicit-alias",
+        "qualified-quoted-time-select-alias",
+        "qualified-version-select-time",
+        "qualified-time-select-operand",
+        "qualified-time-returning-alias",
+        "qualified-version-returning-time",
+        "relation-bare-alias",
+        "relation-explicit-alias",
+        "relation-quoted-alias",
+        "relation-qualified-alias",
+        "relation-only-alias",
+        "relation-join-alias",
+        "relation-comma-alias",
+        "relation-derived-alias",
+        "relation-lateral-alias",
+        "relation-function-alias",
+        "relation-ordinality-alias",
+        "relation-column-list",
+        "relation-column-list-explicit",
+        "relation-parenthesized-join-alias",
+        "relation-qualified-column",
+        "relation-join-on-column",
+        "relation-where-column",
+        "relation-function-argument",
+        "relation-distinct-from-column",
+        "relation-function-from-operand",
+        "relation-using-column",
+        "relation-array-on-column",
+        "fixture-option-time-alias",
+        "fixture-counter-column"
+      ],
+      "counterfactual_failed": [
+        "fixture-option-time-alias",
+        "fixture-counter-column"
+      ],
+      "counterfactual_passed": [
+        "qualified-time-select-alias",
+        "qualified-time-select-quoted-alias",
+        "qualified-time-select-explicit-alias",
+        "qualified-quoted-time-select-alias",
+        "qualified-version-select-time",
+        "qualified-time-select-operand",
+        "qualified-time-returning-alias",
+        "qualified-version-returning-time",
+        "relation-bare-alias",
+        "relation-explicit-alias",
+        "relation-quoted-alias",
+        "relation-qualified-alias",
+        "relation-only-alias",
+        "relation-join-alias",
+        "relation-comma-alias",
+        "relation-derived-alias",
+        "relation-lateral-alias",
+        "relation-function-alias",
+        "relation-ordinality-alias",
+        "relation-column-list",
+        "relation-column-list-explicit",
+        "relation-parenthesized-join-alias",
+        "relation-qualified-column",
+        "relation-join-on-column",
+        "relation-where-column",
+        "relation-function-argument",
+        "relation-distinct-from-column",
+        "relation-function-from-operand",
+        "relation-using-column",
+        "relation-array-on-column"
+      ],
+      "pipeline_names": [
+        "lower-option-lower-column",
+        "mixed-option-lower-column",
+        "upper-option-lower-column",
+        "mixed-option-alias-refusal",
+        "quoted-column-exact-option",
+        "quoted-column-folded-option",
+        "quoted-column-alias-refusal",
+        "missing-configured-column",
+        "ambiguous-folded-option",
+        "exact-option-before-fold-collision",
+        "exact-option-rejects-quoted-sibling",
+        "plain-cte-reference",
+        "materialized-cte-reference",
+        "not-materialized-cte-reference",
+        "plain-cte-omission",
+        "materialized-cte-omission",
+        "not-materialized-cte-omission",
+        "mixed-case-materialized-reference",
+        "column-list-materialized-reference",
+        "second-materialized-reference",
+        "recursive-materialized-reference",
+        "quoted-cte-name-reference",
+        "main-alias-list-after-with",
+        "main-cast-after-with",
+        "main-alias-list-without-with",
+        "materialized-cte-output-alias",
+        "ordinality-alias-list-omission",
+        "ordinality-cte-reference",
+        "nested-materialized-cte-reference",
+        "search-sibling-reference",
+        "search-sibling-omission",
+        "cycle-sibling-reference",
+        "cycle-sibling-omission",
+        "search-cycle-sibling-reference",
+        "search-cycle-sibling-omission",
+        "explicit-cycle-mark-sibling-reference",
+        "explicit-cycle-mark-sibling-omission",
+        "qualified-time-select-alias",
+        "qualified-time-select-quoted-alias",
+        "qualified-time-select-explicit-alias",
+        "qualified-quoted-time-select-alias",
+        "qualified-version-select-time",
+        "qualified-time-select-operand",
+        "qualified-time-returning-alias",
+        "qualified-version-returning-time",
+        "relation-bare-alias",
+        "relation-explicit-alias",
+        "relation-quoted-alias",
+        "relation-qualified-alias",
+        "relation-only-alias",
+        "relation-join-alias",
+        "relation-comma-alias",
+        "relation-derived-alias",
+        "relation-lateral-alias",
+        "relation-function-alias",
+        "relation-ordinality-alias",
+        "relation-column-list",
+        "relation-column-list-explicit",
+        "relation-parenthesized-join-alias",
+        "relation-qualified-column",
+        "relation-join-on-column",
+        "relation-where-column",
+        "relation-function-argument",
+        "relation-distinct-from-column",
+        "relation-function-from-operand",
+        "relation-using-column",
+        "relation-array-on-column",
+        "fixture-option-time-alias",
+        "fixture-counter-column"
+      ],
+      "compiled_query_values": {
+        "lower-option-lower-column": "UPDATE items SET version = version + 1",
+        "mixed-option-lower-column": "UPDATE items SET version = version + 1",
+        "upper-option-lower-column": "UPDATE items SET version = version + 1",
+        "quoted-column-exact-option": "UPDATE items SET \"Version\" = \"Version\" + 1",
+        "quoted-column-folded-option": "UPDATE items SET \"Version\" = \"Version\" + 1",
+        "exact-option-before-fold-collision": "UPDATE items SET \"Version\" = \"Version\" + 1",
+        "plain-cte-reference": "WITH bumped AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped",
+        "materialized-cte-reference": "WITH bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped",
+        "not-materialized-cte-reference": "WITH bumped AS NOT MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped",
+        "mixed-case-materialized-reference": "wItH bumped aS mAtErIaLiZeD (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped",
+        "column-list-materialized-reference": "WITH bumped(result_id) AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT result_id FROM bumped",
+        "second-materialized-reference": "WITH seed AS (SELECT 1 AS value), bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped",
+        "recursive-materialized-reference": "WITH RECURSIVE bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped",
+        "quoted-cte-name-reference": "WITH \"materialized\" AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM \"materialized\"",
+        "ordinality-cte-reference": "WITH ordinality AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM ordinality",
+        "search-sibling-reference": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped",
+        "cycle-sibling-reference": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped",
+        "search-cycle-sibling-reference": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped",
+        "explicit-cycle-mark-sibling-reference": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped",
+        "qualified-version-select-time": "WITH seed AS MATERIALIZED (SELECT i.version time FROM items AS i) UPDATE items SET name = 'changed'",
+        "qualified-time-select-operand": "WITH seed AS MATERIALIZED (SELECT i.time + i.version AS value FROM items AS i) UPDATE items SET name = 'changed'",
+        "qualified-version-returning-time": "UPDATE items SET name = 'changed' RETURNING items.version time",
+        "relation-qualified-column": "WITH seed AS MATERIALIZED (SELECT version.version FROM items version) UPDATE items SET name = 'changed'",
+        "relation-join-on-column": "WITH seed AS MATERIALIZED (SELECT i.id FROM items i JOIN items j ON j.version = i.id) UPDATE items SET name = 'changed'",
+        "relation-where-column": "WITH seed AS MATERIALIZED (SELECT id FROM items i WHERE version = 0) UPDATE items SET name = 'changed'",
+        "relation-function-argument": "WITH seed AS MATERIALIZED (SELECT n FROM items i, LATERAL generate_series(0, i.version) seq(n)) UPDATE items SET name = 'changed'",
+        "relation-distinct-from-column": "WITH seed AS MATERIALIZED (SELECT 0 IS DISTINCT FROM version FROM items i) UPDATE items SET name = 'changed'",
+        "relation-function-from-operand": "WITH seed AS MATERIALIZED (SELECT substring('abc' FROM version + 1) AS value FROM items i) UPDATE items SET name = 'changed'",
+        "relation-using-column": "WITH seed AS MATERIALIZED (SELECT i.id FROM items i JOIN items j USING (version)) UPDATE items SET name = 'changed'",
+        "relation-array-on-column": "WITH seed AS MATERIALIZED (SELECT i.id FROM items i JOIN items j ON ARRAY[1, i.version] = ARRAY[1, 0]) UPDATE items SET name = 'changed'",
+        "fixture-counter-column": "WITH seed AS MATERIALIZED (SELECT i.counter time FROM items AS i) UPDATE items SET name = 'changed'"
+      },
+      "pipeline_partition": {
+        "generated": 31,
+        "plugin_refusal": 35,
+        "upstream": 3
+      },
+      "upstream": {
+        "nested-materialized-cte-reference": "queries.sql:1:1: relation \"b\" does not exist",
+        "relation-column-list": "queries.sql:2:35: column \"x\" does not exist",
+        "relation-column-list-explicit": "queries.sql:2:35: column \"x\" does not exist"
+      },
+      "native_controls": 2,
+      "metadata_pipeline": [
+        "plugin-refusal",
+        "generated"
+      ]
+    },
+    "source_review": {
+      "proposal": "e6b9d0a44dec3f9d7637a85852def4c71808008c",
+      "proposal_sha256": "e37a2159921cc9a21ac90d900b5704781009e5640747a56939f6841f90b0f612",
+      "status": "Independent five-file source/index/counterfactual review and two-case native-oracle review accepted for execution. Native results remain pending.",
+      "reviewer_scopes": [
+        "Coordinator: exact source/test/docs and complete tree binding, unchanged production, original fixture prefixes and count-adjusted counterfactual.",
+        "Independent oracle: exact two SQL/schema/option controls and final-state/captured-text predictions."
+      ]
+    },
+    "preservation": {
+      "source_paths": 638,
+      "unchanged_production": true,
+      "old_role_prefix": 30,
+      "old_pipeline_prefix": 67,
+      "original_literal_pipeline_unchanged": true,
+      "limits_and_required_recipes_unchanged": true
+    },
+    "credential_boundary": "The token is popped before any compiler/native/test child and passed only to authenticated artifact reads.",
+    "proof_sha256": {
+      "baseline_support.py": "32676bc6ec68d6dd7091a441b3220606bcc047760f386ef9098bf7b01e5e9bce",
+      "artifact_support.py": "b3f27ccd5d75efea94530f1294d7e0d23d89b46d7d9e5771cc0b3d32a56d1b28",
+      "linter_support.py": "5594ac624c616c8641723dcc710220346117e826b3e59ed5728c016e38fc1ee1",
+      "observer.py": "a1dc217115104228910a0d9cce0f0340a3c49f5f48b821f84466e56d8d1b031a",
+      "capture_logos.py": "e00e719e8eb63b0c3c21889398799c0c0751a54a679a247c8b74d26e1bd77f32",
+      "launch_test.py": "31d90542191330a6be39b61ce5d5dc447dedbbb0b557706ef0a00c9d93a7c733",
+      "schema.sql": "250795d402dca7144e24f33dc51026083c7664385436545bca8762b7a66de6bc",
+      "native_support.py": "86a6f751b02d586be4152848b471d1d9fd16cb45ca3d0ec0ac5df9ef184e44a7",
+      "proof_support.py": "50e10dc97b3699839cbdbb51013cb2269adc139a2fa51765b7bca1b4eabaa58d",
+      "archive_support.py": "ac519a70f5f2d038ce42a891cf7731f10497027a5e13a8299ee91a7defc40579",
+      "runtime_observer.py": "f0534f590d548cd78db686037f612bdb225302b30d7cfeb5d3c85814dd496052",
+      "verify_candidate.py": "7c13e78f0c28e122359c0c09b1018a3a91385ab585e60da40bb6fc6265318b4f",
+      "source-index.json": "b1cbb62290929b0ae90995a686a2890ffe9ea12c3a3fdcabc0de64d5549b7a75",
+      "counterfactual-index.json": "087a13843b22500635b85b3ca67ee3cafef32077496a743d486546638fdd87e1",
+      "candidate-index.json": "84f965d4c060c8b74d5eaca097cd660d5de9e01b0b10629b8fde64d24175649c",
+      "proposal.json": "e37a2159921cc9a21ac90d900b5704781009e5640747a56939f6841f90b0f612",
+      "metadata-cases.json": "bfca558a8c0f9b3d4588501ec8de951f01cc2f127d32611eef1bb8bb5f65e903",
+      "expected-new-pipeline.json": "f04c67398b266161eb915f29f9d853b8da07870cb743e8e022b1756c66f911f2",
+      "previous-native-cases.json": "3440a022d9e46eaddd018926c8700d9230bf7f30148ef0d8ff10e6b6a4d97201",
+      "previous-pipeline-cases.json": "f8341c992395a9e0ab1bb74fdf27351f29792b4f510fa4869583b5d3756ee26b",
+      "previous-report.json": "8337d9925f35c55aac6130e07be6803bda972fa5625cbda0354fccce2d64b822",
+      "failed-attempt.json": "ae7b85f646ba3d8e9ac4f2efc7dbc59453ce0c3eb92c85f3255890dd64139a25"
+    },
+    "workflow_sha256": "c97809ce8359b43395e0064271920a8bafa881f853f359306144d74cd13e35ff",
+    "publication_eligible": false,
+    "preserved_failed_attempt": {
+      "producer": "1694350a47292b483f9a4314d46b43996b843985",
+      "run": 46079109930,
+      "job": 140773675515,
+      "file": "failed-attempt.json",
+      "sha256": "ae7b85f646ba3d8e9ac4f2efc7dbc59453ce0c3eb92c85f3255890dd64139a25",
+      "reason": "Report projection hash was incorrectly used as the Python artifact-file hash. Failure before all new native/test/source phases; exact original source restored.",
+      "gate_reuse": false
+    }
+  },
+  "manifest_sha256": "0f3cc69ace0f7a07961b49d15179dc7bb2d2e78b032cbc685d6034c3e99fbb5c",
+  "native_controls_verified": true,
+  "counterfactual_verified": true,
+  "focused_gates_passed": true,
+  "source_gates_passed": true,
+  "source_restored": true,
+  "publication_eligible": true,
+  "before": {
+    "label": "source",
+    "tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0",
+    "blobs": 638,
+    "index_sha256": "a8f431d2319f13259dba66403a2971d30443d26a0c73ab8a2fbc1947c637642c"
+  },
+  "authenticated_previous": {
+    "producer": "673f0c39445d4b583c4d3371609ce585c39be87b",
+    "run": 46073659117,
+    "job": 140756258552,
+    "artifact": 15233558976,
+    "name": "spira47-relation-roles-candidate-r42",
+    "zip_bytes": 1622996,
+    "zip_sha256": "88a17b5cfb3a981851d2341641280fb8ac12b13ae59733bc47c4ba76621370b0",
+    "producer_conclusion": "success",
+    "download_digest_verified": true,
+    "report_sha256": "ca1bc0848dc98e7541f3d223159112fad80f03fb1b36970e8a8a4bbdbf4a96f5",
+    "report_projection_sha256": "8337d9925f35c55aac6130e07be6803bda972fa5625cbda0354fccce2d64b822",
+    "unique_command_logs_verified": 228,
+    "native_cases": 67,
+    "pipeline_cases": 67,
+    "scope": "Prior production and original fixtures only. New metadata controls and all required source gates execute in this run.",
+    "full_source_gates_reused": false
+  },
+  "authenticated_linter": {
+    "producer": "bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+    "run": 45765398446,
+    "job": 139724970737,
+    "artifact": 15091303567,
+    "name": "lean-rust-and-cli-bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+    "zip_bytes": 17472007,
+    "zip_sha256": "e362f672d39498374a637a68ded7f57205b415e68006a4dc4a4a882405f5af33",
+    "producer_conclusion": "success",
+    "download_digest_verified": true,
+    "binary_sha256": "a04c9c3e53c8aae18e2d5f89faaf3ad68b89980218ca9d1fc4af5ce487401024",
+    "binary_bytes": 191012744,
+    "version": "sloplint 0.1.0",
+    "source": "bc2067d1ec888789e6584dc6a24e8c67d1b0b506"
+  },
+  "unchanged_plugin_sha256": "3e645a03050c970a3757492ef04672a7b927fd07d1ea84c204c94660a9d822c0",
+  "native_original": [
+    {
+      "name": "fixture-option-time-alias",
+      "lane": "original",
+      "sql": "WITH seed AS MATERIALIZED (SELECT i.version time FROM items AS i) UPDATE items SET name = 'changed';",
+      "sql_sha256": "f13d93fbfbe74377b70cae6dc056c199312a4a00ab0db2a0eefe7c85d96400b9",
+      "raw_output": "{\"name\" : \"changed\", \"versions\" : [0,0]}\n",
+      "observed": {
+        "name": "changed",
+        "versions": [
+          0,
+          0
+        ]
+      },
+      "expected": {
+        "name": "changed",
+        "versions": [
+          0,
+          0
+        ]
+      },
+      "matches": true
+    },
+    {
+      "name": "fixture-counter-column",
+      "lane": "original",
+      "sql": "WITH seed AS MATERIALIZED (SELECT i.counter time FROM items AS i) UPDATE items SET name = 'changed';",
+      "sql_sha256": "1d5dac6c00d3c0f9cc8b8d42f95447bab3a3ac17105cb9622f72482079200597",
+      "raw_output": "{\"name\" : \"changed\", \"versions\" : [0,0]}\n",
+      "observed": {
+        "name": "changed",
+        "versions": [
+          0,
+          0
+        ]
+      },
+      "expected": {
+        "name": "changed",
+        "versions": [
+          0,
+          0
+        ]
+      },
+      "matches": true
+    }
+  ],
+  "metadata_pipeline": [
+    {
+      "name": "fixture-option-time-alias",
+      "lane": "metadata",
+      "sql": "WITH seed AS MATERIALIZED (SELECT i.version time FROM items AS i) UPDATE items SET name = 'changed';",
+      "sql_sha256": "f13d93fbfbe74377b70cae6dc056c199312a4a00ab0db2a0eefe7c85d96400b9",
+      "option": "time",
+      "columns": [
+        "version",
+        "time"
+      ],
+      "expected_diagnostic": "writes versioned table items without time",
+      "raw_exit": 1,
+      "request_sha256": "76a93ed398316dab757622d6284f637b42c482d20db2f507e3fac2199c49b29a",
+      "request_present": true,
+      "pipeline_contract": "plugin-refusal",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT i.version time FROM items AS i) UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "7858c41d6a2f415dcd8abe030a32e41a4c920cd1dfb62d17df6a0971593bc0c1",
+      "catalog_sha256": "828d14d0db49d277c926c51784ca76699b2fda292072f3796947bea7ce2e615f",
+      "catalog_canonical_bytes": 995245,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT i.version time FROM items AS i) UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "98531e0bf794372bd724e75545929707d47076b787a86e8440a3c8c22e7af0b6",
+      "files": [],
+      "processed_native": {
+        "name": "fixture-option-time-alias",
+        "lane": "metadata-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT i.version time FROM items AS i) UPDATE items SET name = 'changed'",
+        "sql_sha256": "7858c41d6a2f415dcd8abe030a32e41a4c920cd1dfb62d17df6a0971593bc0c1",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0,0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0,
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0,
+            0
+          ]
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "fixture-counter-column",
+      "lane": "metadata",
+      "sql": "WITH seed AS MATERIALIZED (SELECT i.counter time FROM items AS i) UPDATE items SET name = 'changed';",
+      "sql_sha256": "1d5dac6c00d3c0f9cc8b8d42f95447bab3a3ac17105cb9622f72482079200597",
+      "option": "counter",
+      "columns": [
+        "counter",
+        "time"
+      ],
+      "expected_diagnostic": "",
+      "raw_exit": 0,
+      "request_sha256": "190ee2c05ccdd8e9295a832f3dd5249ebef5ebd22c272effe6388044193370b0",
+      "request_present": true,
+      "pipeline_contract": "generated",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT i.counter time FROM items AS i) UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "99b74a62a9cc4b1d917ca164e21bd43972f3043669dc345ae63b39da401ec3bb",
+      "catalog_sha256": "577608a97e7dc79a8422b2ca8353f3fb02db4bb2a03154be95c190cc2026d3d0",
+      "catalog_canonical_bytes": 995245,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT i.counter time FROM items AS i) UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "2ce22242836d6c7c65cf70fec3c6ceef26fcaf7993a5e385ec972818eed6e4a5",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tCounter int32 `col:\"counter\"`\n\tTime int32 `col:\"time\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"counter\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "2ec02e473c4cef761fa976a18f33a5533eb5c9955a577aa108bc371f46f4b631",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `WITH seed AS MATERIALIZED (SELECT i.counter time FROM items AS i) UPDATE items SET name = 'changed'`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "fixture-counter-column",
+        "lane": "metadata-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT i.counter time FROM items AS i) UPDATE items SET name = 'changed'",
+        "sql_sha256": "99b74a62a9cc4b1d917ca164e21bd43972f3043669dc345ae63b39da401ec3bb",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0,0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0,
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0,
+            0
+          ]
+        },
+        "matches": true
+      }
+    }
+  ],
+  "postgres_version_num": "180007",
+  "after_native": {
+    "label": "source",
+    "tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0",
+    "blobs": 638,
+    "index_sha256": "a8f431d2319f13259dba66403a2971d30443d26a0c73ab8a2fbc1947c637642c"
+  },
+  "counterfactual_before": {
+    "label": "counterfactual",
+    "tree": "4127fba0afd0daa2cb03f43737e56938ffbdfac9",
+    "blobs": 638,
+    "index_sha256": "087a817885d3c210e72865e8fc9add393173c65cf2a60181c1339fd4b328005e"
+  },
+  "counterfactual_roles": {
+    "passed": [
+      "qualified-quoted-time-select-alias",
+      "qualified-time-returning-alias",
+      "qualified-time-select-alias",
+      "qualified-time-select-explicit-alias",
+      "qualified-time-select-operand",
+      "qualified-time-select-quoted-alias",
+      "qualified-version-returning-time",
+      "qualified-version-select-time",
+      "relation-array-on-column",
+      "relation-bare-alias",
+      "relation-column-list",
+      "relation-column-list-explicit",
+      "relation-comma-alias",
+      "relation-derived-alias",
+      "relation-distinct-from-column",
+      "relation-explicit-alias",
+      "relation-function-alias",
+      "relation-function-argument",
+      "relation-function-from-operand",
+      "relation-join-alias",
+      "relation-join-on-column",
+      "relation-lateral-alias",
+      "relation-only-alias",
+      "relation-ordinality-alias",
+      "relation-parenthesized-join-alias",
+      "relation-qualified-alias",
+      "relation-qualified-column",
+      "relation-quoted-alias",
+      "relation-using-column",
+      "relation-where-column"
+    ],
+    "failed": [
+      "fixture-counter-column",
+      "fixture-option-time-alias"
+    ]
+  },
+  "counterfactual_after": {
+    "label": "counterfactual",
+    "tree": "4127fba0afd0daa2cb03f43737e56938ffbdfac9",
+    "blobs": 638,
+    "index_sha256": "087a817885d3c210e72865e8fc9add393173c65cf2a60181c1339fd4b328005e"
+  },
+  "counterfactual_restored": {
+    "label": "source",
+    "tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0",
+    "blobs": 638,
+    "index_sha256": "a8f431d2319f13259dba66403a2971d30443d26a0c73ab8a2fbc1947c637642c"
+  },
+  "candidate_before": {
+    "label": "candidate",
+    "tree": "42ac87ebaf4cad019a5f53bfe61c7d1455f9d041",
+    "blobs": 638,
+    "index_sha256": "57a3f08469b52cffafb3e35b5b15bff2a926df79555e90d238281caa4e652e57"
+  },
+  "candidate_roles": {
+    "passed": [
+      "fixture-counter-column",
+      "fixture-option-time-alias",
+      "qualified-quoted-time-select-alias",
+      "qualified-time-returning-alias",
+      "qualified-time-select-alias",
+      "qualified-time-select-explicit-alias",
+      "qualified-time-select-operand",
+      "qualified-time-select-quoted-alias",
+      "qualified-version-returning-time",
+      "qualified-version-select-time",
+      "relation-array-on-column",
+      "relation-bare-alias",
+      "relation-column-list",
+      "relation-column-list-explicit",
+      "relation-comma-alias",
+      "relation-derived-alias",
+      "relation-distinct-from-column",
+      "relation-explicit-alias",
+      "relation-function-alias",
+      "relation-function-argument",
+      "relation-function-from-operand",
+      "relation-join-alias",
+      "relation-join-on-column",
+      "relation-lateral-alias",
+      "relation-only-alias",
+      "relation-ordinality-alias",
+      "relation-parenthesized-join-alias",
+      "relation-qualified-alias",
+      "relation-qualified-column",
+      "relation-quoted-alias",
+      "relation-using-column",
+      "relation-where-column"
+    ],
+    "failed": []
+  },
+  "real_logos": {
+    "path": "/home/runner/work/sloplint/sloplint/compiler/bin/logos",
+    "sha256": "5a439b6663e758d857480083379be9fac5bff7f28a7d831bf1f3f4449512a378"
+  },
+  "candidate_permanent_pipeline": {
+    "passed": [
+      "ambiguous-folded-option",
+      "column-list-materialized-reference",
+      "cycle-sibling-omission",
+      "cycle-sibling-reference",
+      "exact-option-before-fold-collision",
+      "exact-option-rejects-quoted-sibling",
+      "explicit-cycle-mark-sibling-omission",
+      "explicit-cycle-mark-sibling-reference",
+      "fixture-counter-column",
+      "fixture-option-time-alias",
+      "lower-option-lower-column",
+      "main-alias-list-after-with",
+      "main-alias-list-without-with",
+      "main-cast-after-with",
+      "materialized-cte-omission",
+      "materialized-cte-output-alias",
+      "materialized-cte-reference",
+      "missing-configured-column",
+      "mixed-case-materialized-reference",
+      "mixed-option-alias-refusal",
+      "mixed-option-lower-column",
+      "nested-materialized-cte-reference",
+      "not-materialized-cte-omission",
+      "not-materialized-cte-reference",
+      "ordinality-alias-list-omission",
+      "ordinality-cte-reference",
+      "plain-cte-omission",
+      "plain-cte-reference",
+      "qualified-quoted-time-select-alias",
+      "qualified-time-returning-alias",
+      "qualified-time-select-alias",
+      "qualified-time-select-explicit-alias",
+      "qualified-time-select-operand",
+      "qualified-time-select-quoted-alias",
+      "qualified-version-returning-time",
+      "qualified-version-select-time",
+      "quoted-column-alias-refusal",
+      "quoted-column-exact-option",
+      "quoted-column-folded-option",
+      "quoted-cte-name-reference",
+      "recursive-materialized-reference",
+      "relation-array-on-column",
+      "relation-bare-alias",
+      "relation-column-list",
+      "relation-column-list-explicit",
+      "relation-comma-alias",
+      "relation-derived-alias",
+      "relation-distinct-from-column",
+      "relation-explicit-alias",
+      "relation-function-alias",
+      "relation-function-argument",
+      "relation-function-from-operand",
+      "relation-join-alias",
+      "relation-join-on-column",
+      "relation-lateral-alias",
+      "relation-only-alias",
+      "relation-ordinality-alias",
+      "relation-parenthesized-join-alias",
+      "relation-qualified-alias",
+      "relation-qualified-column",
+      "relation-quoted-alias",
+      "relation-using-column",
+      "relation-where-column",
+      "search-cycle-sibling-omission",
+      "search-cycle-sibling-reference",
+      "search-sibling-omission",
+      "search-sibling-reference",
+      "second-materialized-reference",
+      "upper-option-lower-column"
+    ],
+    "failed": []
+  },
+  "compiled_query_values": {
+    "qualified-version-returning-time": "UPDATE items SET name = 'changed' RETURNING items.version time",
+    "relation-where-column": "WITH seed AS MATERIALIZED (SELECT id FROM items i WHERE version = 0) UPDATE items SET name = 'changed'",
+    "relation-array-on-column": "WITH seed AS MATERIALIZED (SELECT i.id FROM items i JOIN items j ON ARRAY[1, i.version] = ARRAY[1, 0]) UPDATE items SET name = 'changed'",
+    "lower-option-lower-column": "UPDATE items SET version = version + 1",
+    "plain-cte-reference": "WITH bumped AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped",
+    "quoted-cte-name-reference": "WITH \"materialized\" AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM \"materialized\"",
+    "relation-join-on-column": "WITH seed AS MATERIALIZED (SELECT i.id FROM items i JOIN items j ON j.version = i.id) UPDATE items SET name = 'changed'",
+    "relation-function-from-operand": "WITH seed AS MATERIALIZED (SELECT substring('abc' FROM version + 1) AS value FROM items i) UPDATE items SET name = 'changed'",
+    "mixed-option-lower-column": "UPDATE items SET version = version + 1",
+    "column-list-materialized-reference": "WITH bumped(result_id) AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT result_id FROM bumped",
+    "second-materialized-reference": "WITH seed AS (SELECT 1 AS value), bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped",
+    "search-cycle-sibling-reference": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped",
+    "exact-option-before-fold-collision": "UPDATE items SET \"Version\" = \"Version\" + 1",
+    "materialized-cte-reference": "WITH bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped",
+    "recursive-materialized-reference": "WITH RECURSIVE bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped",
+    "explicit-cycle-mark-sibling-reference": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped",
+    "qualified-time-select-operand": "WITH seed AS MATERIALIZED (SELECT i.time + i.version AS value FROM items AS i) UPDATE items SET name = 'changed'",
+    "relation-qualified-column": "WITH seed AS MATERIALIZED (SELECT version.version FROM items version) UPDATE items SET name = 'changed'",
+    "relation-function-argument": "WITH seed AS MATERIALIZED (SELECT n FROM items i, LATERAL generate_series(0, i.version) seq(n)) UPDATE items SET name = 'changed'",
+    "relation-using-column": "WITH seed AS MATERIALIZED (SELECT i.id FROM items i JOIN items j USING (version)) UPDATE items SET name = 'changed'",
+    "not-materialized-cte-reference": "WITH bumped AS NOT MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped",
+    "ordinality-cte-reference": "WITH ordinality AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM ordinality",
+    "fixture-counter-column": "WITH seed AS MATERIALIZED (SELECT i.counter time FROM items AS i) UPDATE items SET name = 'changed'",
+    "upper-option-lower-column": "UPDATE items SET version = version + 1",
+    "quoted-column-exact-option": "UPDATE items SET \"Version\" = \"Version\" + 1",
+    "qualified-version-select-time": "WITH seed AS MATERIALIZED (SELECT i.version time FROM items AS i) UPDATE items SET name = 'changed'",
+    "relation-distinct-from-column": "WITH seed AS MATERIALIZED (SELECT 0 IS DISTINCT FROM version FROM items i) UPDATE items SET name = 'changed'",
+    "cycle-sibling-reference": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped",
+    "quoted-column-folded-option": "UPDATE items SET \"Version\" = \"Version\" + 1",
+    "mixed-case-materialized-reference": "wItH bumped aS mAtErIaLiZeD (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped",
+    "search-sibling-reference": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped"
+  },
+  "nested_test_argv": [
+    {
+      "argv": [
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "."
+      ],
+      "cwd": "/tmp/TestSQLcPostgresVersionPipeline2881581007/001",
+      "module": "module example.com/spira-sqlc-runtime",
+      "pid": 37130
+    }
+  ],
+  "candidate_after": {
+    "label": "candidate",
+    "tree": "42ac87ebaf4cad019a5f53bfe61c7d1455f9d041",
+    "blobs": 638,
+    "index_sha256": "57a3f08469b52cffafb3e35b5b15bff2a926df79555e90d238281caa4e652e57"
+  },
+  "restored": {
+    "label": "source",
+    "tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0",
+    "blobs": 638,
+    "index_sha256": "a8f431d2319f13259dba66403a2971d30443d26a0c73ab8a2fbc1947c637642c"
+  },
+  "commands": [
+    {
+      "name": "proof-head",
+      "command": [
+        "git",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/proof",
+        "rev-parse",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "a173f4388e4837845fd360c79a0f1c4cdbd2053f4a97c5e97b7d7f97a5917b04"
+    },
+    {
+      "name": "source-head",
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "34bbedf77e97c7551a4dde3ea9e11f7319735d1892a0937730544cdf5e6e3b28"
+    },
+    {
+      "name": "logos-version",
+      "command": [
+        "logos",
+        "version"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "3a7b14cf792a79c78a9e42aab8906e0774b54ecddbbbc520ce94651a34aec2f9"
+    },
+    {
+      "name": "go-cache-disabled",
+      "command": [
+        "go",
+        "env",
+        "GOCACHEPROG"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "name": "sqlc-modules",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "mod",
+        "download"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "sqlc-module",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "list",
+        "-m",
+        "-json",
+        "github.com/sqlc-dev/sqlc"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "78fe4571c2a0ec0aca3a70bff3218c5a6e5d56ddc513732f01ecd45fd9717dc6"
+    },
+    {
+      "name": "build-unchanged-plugin",
+      "command": [
+        "logos",
+        "build",
+        "-o",
+        "/home/runner/work/_temp/spira47-baseline-build/unchanged-plugin",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "postgres-image",
+      "command": [
+        "docker",
+        "pull",
+        "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "9fb7423baa2fb8e5fddb24a3f640710e6137eb58304adfd4dd4937a0c3921b32"
+    },
+    {
+      "name": "postgres-image-identity",
+      "command": [
+        "docker",
+        "image",
+        "inspect",
+        "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "bd96646ccb27ea4c54dee8c6f8b672ede9553315ea2743d314a332acb4ff7adc"
+    },
+    {
+      "name": "postgres-start",
+      "command": [
+        "docker",
+        "run",
+        "--detach",
+        "--network",
+        "none",
+        "--name",
+        "spira47-fixture-r43-46080218773-1",
+        "--env",
+        "POSTGRES_HOST_AUTH_METHOD=trust",
+        "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c05e3e9a2e01b739ab43c8bd8ac61f31afc89e0020c7df05c78d166c3754fc94"
+    },
+    {
+      "name": "postgres-version",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-fixture-r43-46080218773-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "SHOW server_version_num;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "23115ea6bcfc1e8cf9bf3b7e201ecf38f5a9c76d337eea137c01265e768d7c31"
+    },
+    {
+      "name": "postgres-schema",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-fixture-r43-46080218773-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "CREATE DOMAIN version AS text;\nCREATE COLLATION version FROM \"C\";\n"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "original-fixture-option-time-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-fixture-r43-46080218773-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.version time FROM items AS i) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "metadata-sqlc-fixture-option-time-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/metadata/fixture-option-time-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "98531e0bf794372bd724e75545929707d47076b787a86e8440a3c8c22e7af0b6"
+    },
+    {
+      "name": "metadata-processed-fixture-option-time-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-fixture-r43-46080218773-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.version time FROM items AS i) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "original-fixture-counter-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-fixture-r43-46080218773-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"counter\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.counter time FROM items AS i) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"counter\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "metadata-sqlc-fixture-counter-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/metadata/fixture-counter-column/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "metadata-processed-fixture-counter-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-fixture-r43-46080218773-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"counter\" integer NOT NULL DEFAULT 0, \"time\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0, 0);\nWITH seed AS MATERIALIZED (SELECT i.counter time FROM items AS i) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"counter\", \"time\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "c4baeebf479b290d4d0d46f61ce2e8a1b399ee1f4d148be1a0305a7bc6e279e5"
+    },
+    {
+      "name": "postgres-cleanup",
+      "command": [
+        "docker",
+        "rm",
+        "-f",
+        "-v",
+        "spira47-fixture-r43-46080218773-1"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "fd98570a7e4d61cc1e45ac7184e3294a74abd336b76436378286c7ed2ae857a5"
+    },
+    {
+      "name": "stage-counterfactual",
+      "command": [
+        "git",
+        "add",
+        "--",
+        "cmd/sqlc-gen-spira/version_relation_test.lgo",
+        "cmd/sqlc-gen-spira/testdata/version-relation-roles.json"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "counterfactual-test-compile",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-run",
+        "^$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "3d6f43d30e00ced2022c6b162e0d78574894f28a6bc994b4fff77f8bc9b1e026"
+    },
+    {
+      "name": "counterfactual-relation-roles",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "-run",
+        "^TestPostgresRelationReferenceRoles$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "bce3a33b9db107a180e8c9e7e46761af5412b45df5b2f22955946050c06d880c"
+    },
+    {
+      "name": "restore-counterfactual-source",
+      "command": [
+        "git",
+        "restore",
+        "--source",
+        "6d4f84fc8a1a50603fbdf5c024bdc1966436ea31",
+        "--staged",
+        "--worktree",
+        "--",
+        "."
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "counterfactual-clean",
+      "command": [
+        "git",
+        "diff",
+        "--exit-code",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "counterfactual-untracked",
+      "command": [
+        "git",
+        "ls-files",
+        "--others",
+        "--exclude-standard"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "stage-candidate",
+      "command": [
+        "git",
+        "add",
+        "--",
+        "cmd/sqlc-gen-spira/version_relation_test.lgo",
+        "cmd/sqlc-gen-spira/testdata/version-relation-roles.json",
+        "cmd/sqlc-gen-spira/sqlc_postgres_version_test.lgo",
+        "cmd/sqlc-gen-spira/testdata/sqlc-version-pipeline.json",
+        "docs/specs/sqlc-gen-spira.md"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-test-compile",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-run",
+        "^$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "3d6f43d30e00ced2022c6b162e0d78574894f28a6bc994b4fff77f8bc9b1e026"
+    },
+    {
+      "name": "candidate-relation-roles",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "-run",
+        "^TestPostgresRelationReferenceRoles$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "d089e616d83120d24597931d6e47ce709dfa032d98a536315d1d90314f8012a4"
+    },
+    {
+      "name": "candidate-permanent-pipeline",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-exec",
+        "/home/runner/work/_temp/spira47-baseline-build/argv-observer/launch-test",
+        "-count=1",
+        "-v",
+        "-run",
+        "^TestSQLcPostgresVersionPipeline$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ae3e68e629f7793b6b692471e098b6f245f36a5eaae9cbf72da4b5fd5ad327c8"
+    },
+    {
+      "name": "just-gate",
+      "command": [
+        "just",
+        "gate"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "874405904d3497b9f5aa276420c4b9a9b22f5a4fc492c43abb82b60bdcd108ad"
+    },
+    {
+      "name": "just-slop",
+      "command": [
+        "just",
+        "slop"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "726d7fbdf59cbe1c13e9700670dd50c6460bf8496bec07d8960b8dd3480a18f8"
+    },
+    {
+      "name": "just-eject",
+      "command": [
+        "just",
+        "eject"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "96668b2b642cb7203371fe44f9d0b1a4beb2e9fbeb25730600dbfe0ffd36a587"
+    },
+    {
+      "name": "candidate-whitespace",
+      "command": [
+        "git",
+        "diff",
+        "--cached",
+        "--check",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-unstaged",
+      "command": [
+        "git",
+        "diff",
+        "--exit-code"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "candidate-untracked",
+      "command": [
+        "git",
+        "ls-files",
+        "--others",
+        "--exclude-standard"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "restore-original-source",
+      "command": [
+        "git",
+        "restore",
+        "--source",
+        "6d4f84fc8a1a50603fbdf5c024bdc1966436ea31",
+        "--staged",
+        "--worktree",
+        "--",
+        "."
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "source-restoration",
+      "command": [
+        "git",
+        "diff",
+        "--exit-code",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "untracked-restoration",
+      "command": [
+        "git",
+        "ls-files",
+        "--others",
+        "--exclude-standard"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "unique_command_names": true
+}

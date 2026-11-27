@@ -1,0 +1,104 @@
+{
+  "source": {
+    "commit": "e6b9d0a44dec3f9d7637a85852def4c71808008c",
+    "reviewer": "/root/bitcoin_round7",
+    "verdict": "No finding. Exact five existing test/docs paths, complete candidate/counterfactual tree binding, unchanged production and raw original 30/67 fixture prefixes; counterfactual changes only reader count and appended data. Static review only."
+  },
+  "oracle": {
+    "commit": "e6b9d0a44dec3f9d7637a85852def4c71808008c",
+    "reviewer": "/root/bitcoin_round7/spira40_oracle_review",
+    "verdict": "No finding. Time-alias refusal and genuine counter-reference generation, exact captured-text predictions grounded in R42 control, unchanged integer values. Static review only."
+  },
+  "driver": {
+    "commit": "ce75747559832e58ceb6f1a37ee96aef3a1a13f6",
+    "reviewer": "/root/bitcoin_round7",
+    "verdict": "No finding",
+    "scope": "Main driver, runtime observer, workflow, source identity and restoration",
+    "bindings": {
+      "proof_blobs": 23,
+      "manifest_bound_content_hashes": 21,
+      "driver_sha256": "7c13e78f0c28e122359c0c09b1018a3a91385ab585e60da40bb6fc6265318b4f",
+      "manifest_sha256": "f67d48ee4093ac63b46f0493a075e01fe5508ac9a1e131416850b3f5098947d2",
+      "workflow_sha256": "c97809ce8359b43395e0064271920a8bafa881f853f359306144d74cd13e35ff"
+    },
+    "reviewed": [
+      "Two original and two processed PostgreSQL/SQLc observations before test application.",
+      "Count-adjusted old reader compile followed by exact two failures and 30 controls, then restoration.",
+      "Corrected direct 32/permanent 69 suites and exact 31 compiled-value map.",
+      "Exactly one actual nested logos test -race -count=1 -v . invocation.",
+      "Credential removed before first child; actual required gate/slop/eject.",
+      "Full candidate and final original 638-blob source identity and restoration."
+    ],
+    "execution": false
+  },
+  "archive": {
+    "commit": "ce75747559832e58ceb6f1a37ee96aef3a1a13f6",
+    "reviewer": "/root/bitcoin_round7/spira40_oracle_review",
+    "verdict": "No finding",
+    "scope": "Archive authentication and previous exact R42 evidence",
+    "archive_sha256": "e3400b496e42d217886994136784bec4fe614297c30e1a36d18f6e25846eff3e",
+    "manifest_sha256": "f67d48ee4093ac63b46f0493a075e01fe5508ac9a1e131416850b3f5098947d2",
+    "report_sha256": "8337d9925f35c55aac6130e07be6803bda972fa5625cbda0354fccce2d64b822",
+    "reviewed": {
+      "unique_command_logs": 228,
+      "native_cases": 67,
+      "pipeline_cases": 67,
+      "captured_requests": 64,
+      "generated": 30,
+      "plugin_refusals": 34,
+      "upstream_refusals": 3,
+      "source_blobs": 638,
+      "source_tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0"
+    },
+    "live_metadata_matched": true,
+    "reviewer_zip_download": false,
+    "execution": false,
+    "full_source_gates_reused": false
+  },
+  "correction": {
+    "reviewer": "/root/bitcoin_round7",
+    "commit": "86dbfc5804104e285d590401100d9443eca12d36",
+    "verdict": "No finding",
+    "archive_sha256": "ac519a70f5f2d038ce42a891cf7731f10497027a5e13a8299ee91a7defc40579",
+    "manifest_sha256": "0f3cc69ace0f7a07961b49d15179dc7bb2d2e78b032cbc685d6034c3e99fbb5c",
+    "changed_gate_paths": [
+      "archive_support.py",
+      "candidate-manifest.json",
+      "failed-attempt.json"
+    ],
+    "driver_workflow_source_tests_oracles_unchanged": true,
+    "first_failure_reconciled": {
+      "raw_log_sha256": "26d5fa624dc154bf63bb4be9ddddbf8212d625b5da9c0e6afaf51390aa4390c0",
+      "commands": 5,
+      "unexpected_command_exits": 0,
+      "run_status": "failure",
+      "source_restored": true,
+      "new_native_tests_reached": false
+    },
+    "native_file_hash_still_requires_actual_read": true,
+    "independent_zip_download": false
+  },
+  "serialization": {
+    "reviewer": "/root/bitcoin_round7/spira40_oracle_review",
+    "commit": "86dbfc5804104e285d590401100d9443eca12d36",
+    "verdict": "No finding",
+    "native_writer": "json.dumps(report, indent=2) + LF",
+    "terminal_serialization": {
+      "bytes": 403407,
+      "sha256": "7f86d0fece70152d0a6f45e2e677ca024986183c61ad5c48b09d678179c34d84",
+      "exact_to_authentic_terminal": true
+    },
+    "projection": {
+      "bytes": 494516,
+      "sha256": "8337d9925f35c55aac6130e07be6803bda972fa5625cbda0354fccce2d64b822"
+    },
+    "predicted_native_file": {
+      "bytes": 494540,
+      "sha256": "ca1bc0848dc98e7541f3d223159112fad80f03fb1b36970e8a8a4bbdbf4a96f5"
+    },
+    "changed_code_points": 6,
+    "parsed_values_unchanged": true,
+    "independent_zip_read": false,
+    "actual_member_hash_pending": true
+  }
+}
