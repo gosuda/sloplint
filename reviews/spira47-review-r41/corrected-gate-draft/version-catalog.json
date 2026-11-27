@@ -1,0 +1,151 @@
+[
+  {
+    "name": "lower-option-lower-column",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "sql": "UPDATE items SET version = version + 1;",
+    "error": "",
+    "native_name": "before",
+    "native_versions": [
+      1
+    ]
+  },
+  {
+    "name": "mixed-option-lower-column",
+    "columns": [
+      "version"
+    ],
+    "option": "Version",
+    "sql": "UPDATE items SET version = version + 1;",
+    "error": "",
+    "native_name": "before",
+    "native_versions": [
+      1
+    ]
+  },
+  {
+    "name": "upper-option-lower-column",
+    "columns": [
+      "version"
+    ],
+    "option": "VERSION",
+    "sql": "UPDATE items SET version = version + 1;",
+    "error": "",
+    "native_name": "before",
+    "native_versions": [
+      1
+    ]
+  },
+  {
+    "name": "mixed-option-alias-refusal",
+    "columns": [
+      "version"
+    ],
+    "option": "Version",
+    "sql": "UPDATE items SET name = 'changed' RETURNING name AS version;",
+    "error": "writes versioned table items without",
+    "native_name": "changed",
+    "native_versions": [
+      0
+    ]
+  },
+  {
+    "name": "quoted-column-exact-option",
+    "columns": [
+      "Version"
+    ],
+    "option": "Version",
+    "sql": "UPDATE items SET \"Version\" = \"Version\" + 1;",
+    "error": "",
+    "native_name": "before",
+    "native_versions": [
+      1
+    ]
+  },
+  {
+    "name": "quoted-column-folded-option",
+    "columns": [
+      "Version"
+    ],
+    "option": "version",
+    "sql": "UPDATE items SET \"Version\" = \"Version\" + 1;",
+    "error": "",
+    "native_name": "before",
+    "native_versions": [
+      1
+    ]
+  },
+  {
+    "name": "quoted-column-alias-refusal",
+    "columns": [
+      "Version"
+    ],
+    "option": "Version",
+    "sql": "UPDATE items SET name = 'changed' RETURNING name AS \"Version\";",
+    "error": "writes versioned table items without",
+    "native_name": "changed",
+    "native_versions": [
+      0
+    ]
+  },
+  {
+    "name": "missing-configured-column",
+    "columns": [
+      "version"
+    ],
+    "option": "missing",
+    "sql": "SELECT id FROM items;",
+    "error": "tables.items.version \"missing\" is not a column of public.items",
+    "native_name": "before",
+    "native_versions": [
+      0
+    ]
+  },
+  {
+    "name": "ambiguous-folded-option",
+    "columns": [
+      "VERSION",
+      "Version"
+    ],
+    "option": "version",
+    "sql": "UPDATE items SET \"Version\" = \"Version\" + 1;",
+    "error": "tables.items.version \"version\" is ambiguous",
+    "native_name": "before",
+    "native_versions": [
+      0,
+      1
+    ]
+  },
+  {
+    "name": "exact-option-before-fold-collision",
+    "columns": [
+      "VERSION",
+      "Version"
+    ],
+    "option": "Version",
+    "sql": "UPDATE items SET \"Version\" = \"Version\" + 1;",
+    "error": "",
+    "native_name": "before",
+    "native_versions": [
+      0,
+      1
+    ]
+  },
+  {
+    "name": "exact-option-rejects-quoted-sibling",
+    "columns": [
+      "VERSION",
+      "Version"
+    ],
+    "option": "Version",
+    "sql": "UPDATE items SET \"VERSION\" = \"VERSION\" + 1;",
+    "error": "writes versioned table items without",
+    "native_name": "before",
+    "native_versions": [
+      1,
+      0
+    ]
+  }
+]

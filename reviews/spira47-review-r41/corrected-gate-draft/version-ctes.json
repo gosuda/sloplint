@@ -1,0 +1,184 @@
+[
+  {
+    "name": "plain-cte-reference",
+    "sql": "WITH bumped AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;",
+    "allow": true,
+    "native_name": "before",
+    "native_version": 1
+  },
+  {
+    "name": "materialized-cte-reference",
+    "sql": "WITH bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;",
+    "allow": true,
+    "native_name": "before",
+    "native_version": 1
+  },
+  {
+    "name": "not-materialized-cte-reference",
+    "sql": "WITH bumped AS NOT MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;",
+    "allow": true,
+    "native_name": "before",
+    "native_version": 1
+  },
+  {
+    "name": "plain-cte-omission",
+    "sql": "WITH bumped AS (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "materialized-cte-omission",
+    "sql": "WITH bumped AS MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "not-materialized-cte-omission",
+    "sql": "WITH bumped AS NOT MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "mixed-case-materialized-reference",
+    "sql": "wItH bumped aS mAtErIaLiZeD (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;",
+    "allow": true,
+    "native_name": "before",
+    "native_version": 1
+  },
+  {
+    "name": "column-list-materialized-reference",
+    "sql": "WITH bumped(result_id) AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT result_id FROM bumped;",
+    "allow": true,
+    "native_name": "before",
+    "native_version": 1
+  },
+  {
+    "name": "second-materialized-reference",
+    "sql": "WITH seed AS (SELECT 1 AS value), bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;",
+    "allow": true,
+    "native_name": "before",
+    "native_version": 1
+  },
+  {
+    "name": "recursive-materialized-reference",
+    "sql": "WITH RECURSIVE bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;",
+    "allow": true,
+    "native_name": "before",
+    "native_version": 1
+  },
+  {
+    "name": "quoted-cte-name-reference",
+    "sql": "WITH \"materialized\" AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM \"materialized\";",
+    "allow": true,
+    "native_name": "before",
+    "native_version": 1
+  },
+  {
+    "name": "main-alias-list-after-with",
+    "sql": "WITH seed AS (SELECT 1 AS value) UPDATE items SET name = 'changed' FROM (VALUES (1)) AS materialized(version);",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "main-cast-after-with",
+    "sql": "WITH seed AS (SELECT 1 AS value) UPDATE items SET name = CAST('changed' AS version);",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "main-alias-list-without-with",
+    "sql": "UPDATE items SET name = 'changed' FROM (VALUES (1)) AS materialized(version);",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "materialized-cte-output-alias",
+    "sql": "WITH bumped AS MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id AS version FROM bumped;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "ordinality-alias-list-omission",
+    "sql": "UPDATE items SET name = 'changed' FROM unnest(ARRAY[1]) WITH ORDINALITY AS materialized(version, position) RETURNING items.id;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "ordinality-cte-reference",
+    "sql": "WITH ordinality AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM ordinality;",
+    "allow": true,
+    "native_name": "before",
+    "native_version": 1
+  },
+  {
+    "name": "nested-materialized-cte-reference",
+    "sql": "WITH a AS MATERIALIZED (WITH b AS MATERIALIZED (SELECT version FROM items) SELECT 1 FROM b) UPDATE items SET name = 'changed' WHERE EXISTS (SELECT 1 FROM a);",
+    "allow": true,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "search-sibling-reference",
+    "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;",
+    "allow": true,
+    "native_name": "before",
+    "native_version": 1
+  },
+  {
+    "name": "search-sibling-omission",
+    "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "cycle-sibling-reference",
+    "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;",
+    "allow": true,
+    "native_name": "before",
+    "native_version": 1
+  },
+  {
+    "name": "cycle-sibling-omission",
+    "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "search-cycle-sibling-reference",
+    "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;",
+    "allow": true,
+    "native_name": "before",
+    "native_version": 1
+  },
+  {
+    "name": "search-cycle-sibling-omission",
+    "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "explicit-cycle-mark-sibling-reference",
+    "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;",
+    "allow": true,
+    "native_name": "before",
+    "native_version": 1
+  },
+  {
+    "name": "explicit-cycle-mark-sibling-omission",
+    "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  }
+]

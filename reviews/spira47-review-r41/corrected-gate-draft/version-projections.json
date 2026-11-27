@@ -1,0 +1,72 @@
+[
+  {
+    "name": "cte-select-quoted-alias",
+    "sql": "WITH seed AS MATERIALIZED (SELECT 1 \"version\") UPDATE items SET name = 'changed';",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "cte-select-explicit-alias",
+    "sql": "WITH seed AS MATERIALIZED (SELECT 1 AS \"version\") UPDATE items SET name = 'changed';",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "cte-select-bare-alias",
+    "sql": "WITH seed AS MATERIALIZED (SELECT 1 version) UPDATE items SET name = 'changed';",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "cte-select-column",
+    "sql": "WITH seed AS MATERIALIZED (SELECT version FROM items) UPDATE items SET name = 'changed';",
+    "allow": true,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "cte-select-all-column",
+    "sql": "WITH seed AS MATERIALIZED (SELECT ALL version FROM items) UPDATE items SET name = 'changed';",
+    "allow": true,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "cte-select-distinct-column",
+    "sql": "WITH seed AS MATERIALIZED (SELECT DISTINCT version FROM items) UPDATE items SET name = 'changed';",
+    "allow": true,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "cte-select-distinct-on-column",
+    "sql": "WITH seed AS MATERIALIZED (SELECT DISTINCT ON (id) version FROM items) UPDATE items SET name = 'changed';",
+    "allow": true,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "cte-select-function-argument",
+    "sql": "WITH seed AS MATERIALIZED (SELECT abs(version) FROM items) UPDATE items SET name = 'changed';",
+    "allow": true,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "cte-select-operator-operand",
+    "sql": "WITH seed AS MATERIALIZED (SELECT 0 OPERATOR(pg_catalog.+) version FROM items) UPDATE items SET name = 'changed';",
+    "allow": true,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "cte-select-sibling-column",
+    "sql": "WITH seed AS MATERIALIZED (SELECT 1 \"version\", version AS value FROM items) UPDATE items SET name = 'changed';",
+    "allow": true,
+    "native_name": "changed",
+    "native_version": 0
+  }
+]
