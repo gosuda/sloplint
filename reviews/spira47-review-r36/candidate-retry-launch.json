@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-11-27 11:15:10 UTC",
+  "status": "in_progress",
+  "producer": "c720b2d4c1638713f93edaf59182209c6e8f2399",
+  "run": 45988490445,
+  "job": 140470048835,
+  "source": {
+    "head": "e422d148ee77e78abad83b993cd4b255c34504bf",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "candidate_tree": "d34e094ffcd7ec2f63727bae30b8bf83582a6767",
+    "blobs": 611,
+    "authored_sha256": "7b85d6e062d8059e2eac853a15380064f67560d1466edf297e8e3ff35cea6e4c"
+  },
+  "review": {
+    "reviewer": "/root/bitcoin_round7",
+    "proposal": "0627ea217a90682206b9cd35110379537ee2703b",
+    "verdict": "No blocking finding: the timer/select extraction exactly preserves every assertion, duration, channel, flag and group ownership; the other six files are unchanged."
+  },
+  "prior_failure": {
+    "run": 45985649688,
+    "evidence_commit": "0627ea217a90682206b9cd35110379537ee2703b",
+    "file": "reviews/spira47-review-r36/failed-run-45985649688.json",
+    "result": "failure",
+    "raw_compile_exit": 1,
+    "reason": "64-line test exceeded unchanged 60-line compiler limit",
+    "source_restored": true
+  },
+  "required_commands": [
+    "compiled focused packages",
+    "fourteen generator race cases",
+    "four migration race controls",
+    "compiled watchdog mutation with required failure",
+    "just gate",
+    "just slop",
+    "just eject",
+    "source identity and restoration"
+  ],
+  "publication_eligible": false,
+  "source_published": false
+}
