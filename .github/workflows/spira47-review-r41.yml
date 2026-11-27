@@ -1,13 +1,12 @@
-name: "Recover frozen Spira r41 evidence"
+name: "Spira 47 catalog, CTE and retained pipeline baseline r41"
 on:
   push:
     branches: ["ci/spira47-catalog-cte-20261127-r41"]
     paths:
       - ".github/workflows/spira47-review-r41.yml"
-      - "ci-tools/spira47-r41-recovery/**"
+      - "ci-tools/spira47-review-r41/**"
 permissions:
   contents: read
-  actions: read
 concurrency:
   group: "spira47-review-r41-${{ github.ref }}"
   cancel-in-progress: false
@@ -15,32 +14,64 @@ defaults:
   run:
     shell: bash --noprofile --norc -euo pipefail {0}
 jobs:
-  archive:
-    runs-on: depot-ubuntu-24.04-4
-    timeout-minutes: 10
+  baseline:
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 90
     steps:
-      - name: Checkout isolated recovery
+      - name: Checkout this isolated proof
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           path: proof
           persist-credentials: false
+      - name: Checkout unchanged Spira source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/spira
+          ref: 6031a63255bc7496e22b38921e10401a2d50c291
+          path: source
+          persist-credentials: false
+      - name: Checkout immutable LoGOs toolchain
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/LoGOs
+          ref: 2cfe17218b4d3311c5746b94a1858bf3fe9a3e45
+          path: compiler
+          persist-credentials: false
+      - name: Install official bootstrap Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: "1.27.4"
+          cache: false
+      - name: Build the immutable LoGOs compiler
+        run: |
+          export GOENV=off GOCACHEPROG='' GOMAXPROCS=4 GOFLAGS=-p=4
+          test -z "$(go env GOCACHEPROG)"
+          export GOROOT_BOOTSTRAP="$(go env GOROOT)"
+          test "$(git -C compiler rev-parse HEAD)" = "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45"
+          test "$(git -C compiler rev-parse HEAD^{tree})" = "27b36e93b40d0e90ef983f4326c01a049b2196c5"
+          cd compiler/src
+          ./make.bash
+          test -z "$(git status --porcelain --untracked-files=no)"
+          sha256sum ../bin/go ../bin/logos
+          echo "LOGOS_ROOT=$GITHUB_WORKSPACE/compiler" >> "$GITHUB_ENV"
+          echo "GOROOT=$GITHUB_WORKSPACE/compiler" >> "$GITHUB_ENV"
+          echo "$GITHUB_WORKSPACE/compiler/bin" >> "$GITHUB_PATH"
       - name: Install uv and Python
         uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
         with:
           version: "0.13.9"
           python-version: "3.15"
           enable-cache: false
-      - name: Authenticate and recover frozen evidence
-        env:
-          SPIRA_ARTIFACT_TOKEN: ${{ github.token }}
+      - name: Freeze authentic native and unchanged-source outcomes
         run: |
-          uv run --no-project --python 3.15 proof/ci-tools/spira47-r41-recovery/recover.py \
-            "$RUNNER_TEMP/spira47-r41-recovered"
-      - name: Preserve recovered evidence
+          export GOENV=off GOCACHEPROG=''
+          uv run --no-project --python 3.15 proof/ci-tools/spira47-review-r41/verify_baseline.py \
+            source proof/ci-tools/spira47-review-r41 "$RUNNER_TEMP/spira47-r41-baseline-evidence"
+      - name: Preserve exact source and native evidence
         if: always()
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
-          name: spira47-r41-recovered-46051338072
-          path: ${{ runner.temp }}/spira47-r41-recovered
+          name: spira47-catalog-cte-baseline-r41
+          path: ${{ runner.temp }}/spira47-r41-baseline-evidence
           if-no-files-found: error
           retention-days: 14

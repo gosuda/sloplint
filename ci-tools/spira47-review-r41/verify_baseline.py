@@ -122,12 +122,23 @@ def main() -> None:
             base.run("build-unchanged-plugin", ["logos", "build", "-o", str(plugin),
                                                "./cmd/sqlc-gen-spira"], timeout=900)
             refusals = observer.names(contracts["catalog_pipeline_refusal"]) | observer.names(contracts["cte_pipeline_refusal"])
+            upstream = base.object_value(contracts["sqlc_upstream"])
+            if set(upstream) != {"nested-materialized-cte-reference"}:
+                raise RuntimeError("frozen upstream identity differs")
             pipeline: list[dict[str, object]] = []
             report["pipeline"] = pipeline
             for case in cases:
+                name = base.text(case["name"])
+                diagnostic = (base.text(upstream[name]) if name in upstream
+                              else baseline_diagnostic(case, refusals))
                 pipeline.append(observer.observe_pipeline(
-                    container, case, plugin, "unchanged", baseline_diagnostic(case, refusals)))
+                    container, case, plugin, "unchanged", diagnostic, upstream=name in upstream))
                 (base.OUTPUT / "pipeline.json").write_text(json.dumps(pipeline, indent=2) + "\n", encoding="utf-8")
+            partition = {kind: sum(row["pipeline_contract"] == kind for row in pipeline)
+                         for kind in ("generated", "plugin-refusal", "upstream")}
+            if partition != {"generated": 7, "plugin-refusal": 29, "upstream": 1}:
+                raise RuntimeError("complete actual pipeline partition differs")
+            report["pipeline_partition"] = partition
         names = observer.names(contracts["pipeline_names"])
         if len(names) != 60:
             raise RuntimeError("permanent pipeline identity set differs")

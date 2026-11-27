@@ -169,7 +169,6 @@
       "materialized-cte-output-alias",
       "ordinality-alias-list-omission",
       "ordinality-cte-reference",
-      "nested-materialized-cte-reference",
       "search-sibling-reference",
       "search-sibling-omission",
       "cycle-sibling-reference",
@@ -184,13 +183,21 @@
     "pipeline_cases": 60,
     "source_gates_reused": false,
     "publication_eligible": false,
-    "counterfactual_scope": "Only model.lgo is replaced by its exact pre-r40 bytes from 4bde2ec5; all other production and new permanent tests remain current. This proves added retained pipeline assertions; it is not an old full-source checkout."
+    "counterfactual_scope": "Only model.lgo is replaced by its exact pre-r40 bytes from 4bde2ec5; all other production and new permanent tests remain current. This proves added retained pipeline assertions; it is not an old full-source checkout.",
+    "sqlc_upstream": {
+      "nested-materialized-cte-reference": "queries.sql:1:1: relation \"b\" does not exist"
+    },
+    "pipeline_partition": {
+      "generated": 7,
+      "plugin-refusal": 29,
+      "upstream": 1
+    }
   },
   "proof_sha256": {
     "baseline_support.py": "c1124b78e01e1cbb8b296c2199240a3f19b2673f2add1b327f2ba2d40b348e38",
     "proof_support.py": "e24d7a897bbafc7f1d29557be3b0dd8fdd2756258b91161b92fb48c4b5df74f5",
     "native_support.py": "70e59aad5436371c7c7e08772b89f797f01755d02ca71214180309cc916afd53",
-    "observer.py": "80eff0bbf8ec85873579fa25acc0a9d48dc2a59a2fba40390c20c59df1044404",
+    "observer.py": "311c6b97c19ff10d1a68f7d186c9de00a27185207bbf9071f5a7430cf2195578",
     "schema.sql": "250795d402dca7144e24f33dc51026083c7664385436545bca8762b7a66de6bc",
     "source-index.json": "9172ff6ef0f04168d8c9c0ffbb32612f672beef67af29b7c6b65af107a746615",
     "test-index.json": "2591e246c6aa5d5818811496c9806e598c183f9af2530446062909144bb10245",
@@ -199,11 +206,11 @@
     "version-catalog.json": "3eb8eb324f1394693ee653772a439b4b742295829c92e137363f8e0ba0f35384",
     "version-ctes.json": "3dc4c74efb3eaa8996649ca18b528c47e344608a06d98d8bc9d288d8c0449382",
     "model-before-r40.lgo": "097b8f4a47f905fb8d2cf329358bbdda0e24cdffcbaa1d35028b444bc458fad1",
-    "verify_baseline.py": "24a55fd0b9912b53401922a9c5d71325952d63d212f5a67531623d8330abf855"
+    "verify_baseline.py": "74effd6fe6cd99dd2b00b37397419e0e8090d72448929540f256ded4225981bf"
   },
   "workflow_sha256": "5b1c023551aa49d877d518b2a502a190a823a610532ae13b7c0929148db10519",
   "publication_eligible": false,
-  "native_contract_scope": "37 original statements and 37 actual SQLc-processed statements must produce their frozen native final values. PostgreSQL does not interpret plugin configuration; catalog-option validity is the explicit public Generate contract. Existing 20 role rows join the prior 40 permanent pipeline rows unchanged.",
+  "native_contract_scope": "37 original statements and 36 actual SQLc-processed statements must produce frozen native final values. The exact nested CTE remains native-valid/direct-allow, but pinned SQLc rejects it upstream with relation b absent; require the recorded diagnostic, no plugin request and no generated files. PostgreSQL does not interpret plugin configuration.",
   "production_changes_in_this_baseline": false,
   "preserved_failed_baselines": [
     {
@@ -244,6 +251,33 @@
       "real_sqlc_pipeline_reached": false,
       "source_restored": true,
       "gate_reuse": false
+    },
+    {
+      "producer": "105fa98dfd8c58107a9a36bb41f05ccc7671251d",
+      "run": 46051338072,
+      "job": 140683124786,
+      "conclusion": "failure",
+      "artifact": 15224512377,
+      "zip_sha256": "2d643bcf9dd38d606df75fd3ef4ac5ef523a40ec74111d1f61a5331331ae796c",
+      "full_report_bytes": 70404886,
+      "full_report_sha256": "023ca00696a1b46bb4abcc58f40137eed47c8617ce4f60dbb0dbd602faac1172",
+      "recovered_projection_sha256": "0a1e672965ac831e127401f10f28486d116438bbafe5119d10985eeddbe06d4c",
+      "recovery_producer": "d43fc1abbbdb3c8c5248ba5f29f3e33c513d11ab",
+      "recovery_run": 46052998288,
+      "recovery_job": 140688657885,
+      "recovery_artifact": 15225431799,
+      "recovery_zip_sha256": "fc023636edf9a2efb1fd1ca8c957caba9aedcbbe2014ae63cb0e5aee46a8280f",
+      "failed_phase": "unexpected SQLc upstream diagnostic",
+      "native_original": 37,
+      "catalog_red": 5,
+      "catalog_controls": 6,
+      "cte_red": 11,
+      "cte_controls": 15,
+      "completed_pipeline": 28,
+      "permanent_pipeline_reached": false,
+      "counterfactual_reached": false,
+      "source_restored": true,
+      "gate_reuse": false
     }
   ],
   "fixture_corrections": [
@@ -261,5 +295,10 @@
       "proposal_commit": "6dee66b15d8e3d9700e0dd2bd8da58c0f414b866",
       "proposal_sha256": "b968c9e1ff2aba0ca586ed9e20d736820c81d360b8ac27c7335f25f3c0a3520c"
     }
-  ]
+  ],
+  "observer_correction": {
+    "case": "nested-materialized-cte-reference",
+    "scope": "Original SQL, native state and positive direct-generator contract are unchanged. Distinguish the exact observed upstream SQLc refusal from a Spira refusal; require actual no-request/no-output behavior in this repeat.",
+    "evidence_size": "Store canonical catalog SHA-256/byte length in each result and keep every complete request.json in the artifact. Generated contents and full query metadata stay exact. No gate is reused."
+  }
 }

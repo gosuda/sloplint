@@ -75,7 +75,7 @@ def observe_native(container: str, case: dict[str, object], sql: str, lane: str)
 
 
 def observe_pipeline(container: str, case: dict[str, object], plugin: Path,
-                     lane: str, diagnostic: str) -> dict[str, object]:
+                     lane: str, diagnostic: str, upstream: bool = False) -> dict[str, object]:
     name, sql = base.text(case["name"]), base.text(case["sql"])
     if re.fullmatch("[a-z0-9-]+", name) is None:
         raise ValueError("invalid case identity")
@@ -110,6 +110,23 @@ def observe_pipeline(container: str, case: dict[str, object], plugin: Path,
         raise RuntimeError("actual generated file set differs: " + name)
     if diagnostic and diagnostic not in output:
         raise RuntimeError("pipeline refused for a different reason: " + name)
+    if upstream:
+        if name != "nested-materialized-cte-reference":
+            raise ValueError("unfrozen upstream case")
+        if request.exists() or generated:
+            raise RuntimeError("upstream refusal unexpectedly invoked the plugin or produced files")
+        expected_output = '# package spira\nqueries.sql:1:1: relation "b" does not exist\n'
+        if output != expected_output or diagnostic != expected_output.strip().splitlines()[-1]:
+            raise RuntimeError("upstream diagnostic differs from the frozen observation")
+        row: dict[str, object] = {
+            "name": name, "lane": lane, "sql": sql, "sql_sha256": base.digest(sql.encode()),
+            "option": option, "columns": columns(case), "expected_diagnostic": diagnostic,
+            "raw_exit": base.RECEIPTS[-1].raw_exit, "pipeline_contract": "upstream",
+            "raw_output": output, "log_sha256": base.digest(output.encode()),
+            "request_present": False, "files": [], "processed_native": None,
+        }
+        print("SPIRA_R41_PIPELINE " + json.dumps(row), flush=True)
+        return row
     captured = base.object_value(json.loads(request.read_bytes()))
     queries = captured["queries"]
     if not isinstance(queries, list) or len(queries) != 1:
@@ -118,12 +135,16 @@ def observe_pipeline(container: str, case: dict[str, object], plugin: Path,
     if query["name"] != "ContinueItem" or query["cmd"] != ":exec" or query["filename"] != "queries.sql":
         raise RuntimeError("actual SQLc query identity differs")
     processed = base.text(query["text"])
+    catalog_bytes = json.dumps(captured["catalog"], sort_keys=True, separators=(",", ":")).encode()
     row: dict[str, object] = {
         "name": name, "lane": lane, "sql": sql, "sql_sha256": base.digest(sql.encode()),
         "option": option, "columns": columns(case), "expected_diagnostic": diagnostic,
         "raw_exit": base.RECEIPTS[-1].raw_exit, "request_sha256": base.digest(request.read_bytes()),
+        "request_present": True,
+        "pipeline_contract": "plugin-refusal" if diagnostic else "generated",
         "processed_sql": processed, "processed_sql_sha256": base.digest(processed.encode()),
-        "catalog": captured["catalog"], "query_metadata": query,
+        "catalog_sha256": base.digest(catalog_bytes), "catalog_canonical_bytes": len(catalog_bytes),
+        "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators", "query_metadata": query,
         "log_sha256": base.digest(output.encode()),
         "files": [{"path": path.name, "sha256": base.digest(path.read_bytes()),
                    "content": path.read_text(encoding="utf-8")} for path in generated],
