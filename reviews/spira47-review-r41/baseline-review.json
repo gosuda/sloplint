@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "source": "6031a63255bc7496e22b38921e10401a2d50c291",
+  "draft": "e37639312f0d0e12d8d018aaf2101c6b2cea3c35",
+  "manifest_sha256": "93bf9d3dbe45be71582dca7ddbd037ec1e8f20920e0a2b2f10f8d0916aa44745",
+  "driver_sha256": "24a55fd0b9912b53401922a9c5d71325952d63d212f5a67531623d8330abf855",
+  "workflow_sha256": "5b1c023551aa49d877d518b2a502a190a823a610532ae13b7c0929148db10519",
+  "coordinator_review": {
+    "outcome": "no remaining finding",
+    "scope": "All proof/workflow bindings, all source/test/counterfactual tree identities, seven authored test paths, preservation of previous cases, named outcome partitions, credentials and exact restoration."
+  },
+  "independent_oracle_review": {
+    "outcome": "no concrete oracle/observer defect",
+    "scope": "11 catalog and26 CTE native final states, final-line state JSON observation, quoted schema/config parity and actual SQLc-processed statement observation."
+  },
+  "native_outcome": "not yet executed",
+  "source_gates_passed": false,
+  "publication_eligible": false,
+  "refs": [
+    {
+      "name": "owned",
+      "sha": "e37639312f0d0e12d8d018aaf2101c6b2cea3c35"
+    },
+    {
+      "name": "main",
+      "sha": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332"
+    },
+    {
+      "name": "head",
+      "sha": "6031a63255bc7496e22b38921e10401a2d50c291"
+    },
+    {
+      "name": "hostMain",
+      "sha": "dc99ed955cf78862a6f8811289f606de1fb50dfa"
+    }
+  ]
+}
