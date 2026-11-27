@@ -1,0 +1,221 @@
+{
+  "schema": 1,
+  "kind": "complete unchanged-source baseline",
+  "producer": "1e3727f8611f3548727b25534e0f534b3f754cf6",
+  "run": 46070228650,
+  "job": 140745126134,
+  "conclusion": "success",
+  "artifact": {
+    "id": 15232697489,
+    "name": "spira47-relation-roles-baseline-r42",
+    "size_in_bytes": 706825,
+    "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15232697489",
+    "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15232697489/zip",
+    "expired": false,
+    "created_at": "2026-11-27T21:30:39Z",
+    "expires_at": "2026-12-11T21:30:39Z",
+    "updated_at": "2026-11-27T21:30:39Z",
+    "digest": "sha256:d77ca9b5011526a574548896be1f519043257f5c7da2aaa1b699f31f4de4907a",
+    "workflow_run": {
+      "id": 46070228650,
+      "repository_id": 1424164147,
+      "head_repository_id": 1424164147,
+      "head_branch": "ci/spira47-relation-roles-20261127-r42",
+      "head_sha": "1e3727f8611f3548727b25534e0f534b3f754cf6"
+    }
+  },
+  "raw_job_log_sha256": "4fa657f9d3fce51bd71caf0420a3e5fc01b3ad17ceeb7420dc4132a61456919b",
+  "report_sha256": "9e1c4ce2a1bd9d57b65ccd0877555be35da6c2a9c44cba3c6aad955678821ffb",
+  "manifest_sha256": "c338c41f9c9dae2325312d6d2725e0ccaa33ed306292e452e78989f56afc3604",
+  "command_count": 110,
+  "unique_command_names": 110,
+  "stdout_hashes_reconciled": 110,
+  "unexpected_command_outcomes": [],
+  "native_original": 30,
+  "native_processed": 28,
+  "pipeline": {
+    "generated": 25,
+    "plugin-refusal": 3,
+    "upstream": 2
+  },
+  "current_roles": {
+    "passed": [
+      "qualified-quoted-time-select-alias",
+      "qualified-time-select-explicit-alias",
+      "qualified-time-select-operand",
+      "qualified-version-returning-time",
+      "qualified-version-select-time",
+      "relation-array-on-column",
+      "relation-column-list-explicit",
+      "relation-distinct-from-column",
+      "relation-explicit-alias",
+      "relation-function-argument",
+      "relation-function-from-operand",
+      "relation-join-on-column",
+      "relation-qualified-column",
+      "relation-using-column",
+      "relation-where-column"
+    ],
+    "failed": [
+      "qualified-time-returning-alias",
+      "qualified-time-select-alias",
+      "qualified-time-select-quoted-alias",
+      "relation-bare-alias",
+      "relation-column-list",
+      "relation-comma-alias",
+      "relation-derived-alias",
+      "relation-function-alias",
+      "relation-join-alias",
+      "relation-lateral-alias",
+      "relation-only-alias",
+      "relation-ordinality-alias",
+      "relation-parenthesized-join-alias",
+      "relation-qualified-alias",
+      "relation-quoted-alias"
+    ]
+  },
+  "counterfactual_roles": {
+    "passed": [
+      "qualified-quoted-time-select-alias",
+      "qualified-time-select-alias",
+      "qualified-time-select-explicit-alias",
+      "qualified-time-select-quoted-alias",
+      "qualified-version-returning-time",
+      "relation-bare-alias",
+      "relation-column-list",
+      "relation-column-list-explicit",
+      "relation-comma-alias",
+      "relation-derived-alias",
+      "relation-explicit-alias",
+      "relation-function-alias",
+      "relation-join-alias",
+      "relation-lateral-alias",
+      "relation-only-alias",
+      "relation-ordinality-alias",
+      "relation-parenthesized-join-alias",
+      "relation-qualified-alias",
+      "relation-quoted-alias"
+    ],
+    "failed": [
+      "qualified-time-returning-alias",
+      "qualified-time-select-operand",
+      "qualified-version-select-time",
+      "relation-array-on-column",
+      "relation-distinct-from-column",
+      "relation-function-argument",
+      "relation-function-from-operand",
+      "relation-join-on-column",
+      "relation-qualified-column",
+      "relation-using-column",
+      "relation-where-column"
+    ]
+  },
+  "before": {
+    "label": "source",
+    "tree": "cae17384cce41647b686a80932833cf5a7b09b19",
+    "blobs": 633,
+    "index_sha256": "ad55ead6076d79ebc984cdc089a352b5eb054f0b6ebda1602236579fb0141d85"
+  },
+  "restored": {
+    "label": "source",
+    "tree": "cae17384cce41647b686a80932833cf5a7b09b19",
+    "blobs": 633,
+    "index_sha256": "ad55ead6076d79ebc984cdc089a352b5eb054f0b6ebda1602236579fb0141d85"
+  },
+  "tests_before": {
+    "label": "tests",
+    "tree": "7c48c078922ebf058525d773617576f2e7e00f04",
+    "blobs": 635,
+    "index_sha256": "1725e602becdb1c9c7e57e4db4527823d4e7de9cd414e1480656679ed3e01c98"
+  },
+  "tests_after": {
+    "label": "tests",
+    "tree": "7c48c078922ebf058525d773617576f2e7e00f04",
+    "blobs": 635,
+    "index_sha256": "1725e602becdb1c9c7e57e4db4527823d4e7de9cd414e1480656679ed3e01c98"
+  },
+  "counterfactual_before": {
+    "label": "counterfactual",
+    "tree": "d5114a6f2b47eff83334dd0b114daff3d1e3c1b9",
+    "blobs": 635,
+    "index_sha256": "56383540af4c97f4896fd45100a25496275800dee786ac0f108b4f3a1f47b3a0"
+  },
+  "counterfactual_after": {
+    "label": "counterfactual",
+    "tree": "d5114a6f2b47eff83334dd0b114daff3d1e3c1b9",
+    "blobs": 635,
+    "index_sha256": "56383540af4c97f4896fd45100a25496275800dee786ac0f108b4f3a1f47b3a0"
+  },
+  "upstream_rows": [
+    {
+      "name": "relation-column-list",
+      "lane": "unchanged",
+      "sql": "WITH seed AS MATERIALIZED (SELECT x FROM items i(version, x, y, z)) UPDATE items SET name = 'changed';",
+      "sql_sha256": "398a903dd4a2c54a5c5f4ee28adf8264d84f9ecc63a694b257c1e4023d19a25a",
+      "option": "version",
+      "columns": [
+        "version",
+        "time"
+      ],
+      "expected_diagnostic": "queries.sql:2:35: column \"x\" does not exist",
+      "raw_exit": 1,
+      "pipeline_contract": "upstream",
+      "raw_output": "# package spira\nqueries.sql:2:35: column \"x\" does not exist\n",
+      "log_sha256": "6459437501d664b065f0c3eb2c46bd0a52ee9d45a9a436e3faf89d27abec5c46",
+      "request_present": false,
+      "files": [],
+      "processed_native": null
+    },
+    {
+      "name": "relation-column-list-explicit",
+      "lane": "unchanged",
+      "sql": "WITH seed AS MATERIALIZED (SELECT x FROM items AS i(version, x, y, z)) UPDATE items SET name = 'changed';",
+      "sql_sha256": "8b62cee0fc12bf9e403e556cf5e0436bf2f81d5d79f46e39771db99e466f16f1",
+      "option": "version",
+      "columns": [
+        "version",
+        "time"
+      ],
+      "expected_diagnostic": "queries.sql:2:35: column \"x\" does not exist",
+      "raw_exit": 1,
+      "pipeline_contract": "upstream",
+      "raw_output": "# package spira\nqueries.sql:2:35: column \"x\" does not exist\n",
+      "log_sha256": "6459437501d664b065f0c3eb2c46bd0a52ee9d45a9a436e3faf89d27abec5c46",
+      "request_present": false,
+      "files": [],
+      "processed_native": null
+    }
+  ],
+  "baseline_verified": true,
+  "source_restored": true,
+  "source_gates_passed": false,
+  "publication_eligible": false,
+  "preserved_failure": {
+    "run": 46068178205,
+    "commit": "ac4c7a4dc91f7cc0f7eea2b52ea5a9d54b8d7670",
+    "gate_reuse": false
+  },
+  "new_permanent_expectations": {
+    "count": 30,
+    "combined_count": 67,
+    "compiled_before_source_change": false,
+    "predicted_unchanged_failures": [
+      "qualified-time-select-alias",
+      "qualified-time-select-quoted-alias",
+      "qualified-time-returning-alias",
+      "relation-bare-alias",
+      "relation-quoted-alias",
+      "relation-qualified-alias",
+      "relation-only-alias",
+      "relation-join-alias",
+      "relation-comma-alias",
+      "relation-derived-alias",
+      "relation-lateral-alias",
+      "relation-function-alias",
+      "relation-ordinality-alias",
+      "relation-parenthesized-join-alias"
+    ],
+    "sha256": "f8341c992395a9e0ab1bb74fdf27351f29792b4f510fa4869583b5d3756ee26b"
+  },
+  "verification_scope": "All raw job-log stdout occurrences were independently reconstructed by hash. Artifact digest matches API and upload log; no local ZIP download is claimed. A future native gate will authenticate and read the ZIP."
+}
