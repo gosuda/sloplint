@@ -111,11 +111,11 @@ def observe_pipeline(container: str, case: dict[str, object], plugin: Path,
     if diagnostic and diagnostic not in output:
         raise RuntimeError("pipeline refused for a different reason: " + name)
     if upstream:
-        if name != "nested-materialized-cte-reference":
+        if name not in {"relation-column-list", "relation-column-list-explicit"}:
             raise ValueError("unfrozen upstream case")
         if request.exists() or generated:
             raise RuntimeError("upstream refusal unexpectedly invoked the plugin or produced files")
-        expected_output = '# package spira\nqueries.sql:1:1: relation "b" does not exist\n'
+        expected_output = '# package spira\nqueries.sql:1:1: column "x" does not exist\n'
         if output != expected_output or diagnostic != expected_output.strip().splitlines()[-1]:
             raise RuntimeError("upstream diagnostic differs from the frozen observation")
         row: dict[str, object] = {

@@ -42,7 +42,7 @@
   "contracts": {
     "cases": 30,
     "native_original": 30,
-    "native_processed": 30,
+    "native_processed": 28,
     "current_failed": [
       "qualified-time-select-alias",
       "qualified-time-select-quoted-alias",
@@ -63,12 +63,12 @@
     "current_pipeline_refusals": [
       "qualified-time-select-explicit-alias",
       "qualified-quoted-time-select-alias",
-      "relation-explicit-alias",
-      "relation-column-list-explicit"
+      "relation-explicit-alias"
     ],
     "current_pipeline_partition": {
-      "generated": 26,
-      "plugin-refusal": 4
+      "generated": 25,
+      "plugin-refusal": 3,
+      "upstream": 2
     },
     "counterfactual_failed": [
       "qualified-version-select-time",
@@ -93,7 +93,13 @@
     "appended_controls": [
       "relation-using-column",
       "relation-array-on-column"
-    ]
+    ],
+    "sqlc_upstream": {
+      "relation-column-list": "queries.sql:1:1: column \"x\" does not exist",
+      "relation-column-list-explicit": "queries.sql:1:1: column \"x\" does not exist"
+    },
+    "sqlc_experiment": "",
+    "upstream_prediction_note": "These exact native-valid statements still have their direct-generator assertions. Pinned SQLc legacy analysis is predicted to reject their renamed x column before the plugin. The baseline must establish actual raw exit 1, exact diagnostic, absent plugin request, and no emitted .lgo; no runtime observation is claimed by this draft."
   },
   "source_findings": [
     "PRRT_kwDOVpFduc687Ofj",
@@ -107,10 +113,10 @@
     "overall_pr_work_complete": false
   },
   "proof_sha256": {
-    "baseline_support.py": "c1124b78e01e1cbb8b296c2199240a3f19b2673f2add1b327f2ba2d40b348e38",
+    "baseline_support.py": "32676bc6ec68d6dd7091a441b3220606bcc047760f386ef9098bf7b01e5e9bce",
     "proof_support.py": "e59521ce25de634ceea28a6346991a80327fbfbeeeaf4ce520a8ddd0ff57d326",
     "native_support.py": "c5f930b77c049a6ac3f4f5c2e1356e13e59cd5047e2d0ab632e1076efa35e1c5",
-    "observer.py": "288df11fda25bf164ed03820d178fe89f32cca11171830b72a98fcf84b5ca124",
+    "observer.py": "9b5add22fab01df0219506edf603b200cfca620cb8bbeccc4436f29accd7c8f3",
     "schema.sql": "250795d402dca7144e24f33dc51026083c7664385436545bca8762b7a66de6bc",
     "source-index.json": "f82cc1851d56d7cc2e42d29f0e31630934bb204de21e2b252cafc02cbc08c55d",
     "test-index.json": "f5fa0c95e9de6c63063f3f9909b356233396545acae46e0467b14b4fa0e41ba9",
@@ -118,8 +124,31 @@
     "authored-tests.json": "8fb12d993493a4d0aa4227905ba5926e3ef4ca7efb3789c3ac712ba35c9eeaab",
     "version-relation-roles.json": "2f28a9bf7f5bfa33b9e7f863b8661484c24dae2a803fe4e493ec439938ad85c1",
     "reference-before-r41.lgo": "f3c2fb8217abe06f16b9e0651e045d2da72af695b5cf288c8e9d17a042e3fefb",
-    "verify_baseline.py": "2832c4f76ef7588bacba703aef8d000df43e20a3fa0038ce9cbc0503565fc7ca"
+    "verify_baseline.py": "56a540d03742c76004160961ef49d48752ea57f59b5234804a12b60b23f66b51"
   },
   "workflow_sha256": "43e436145e6c962384a40239720f4ec057a1e54b49192c02dbfb16603c24db0c",
-  "publication_eligible": false
+  "publication_eligible": false,
+  "primary_source_prediction": [
+    {
+      "repository": "sqlc-dev/sqlc",
+      "ref": "3ad8b20fb02b",
+      "path": "internal/compiler/output_columns.go",
+      "blob": "557fb7d5752940936ba75d1f15304198bc1258f5",
+      "sha256": "33f2c7058f90498bc862f087d7e39eba147d483b61633a07e3747682fed9a7ce"
+    },
+    {
+      "repository": "sqlc-dev/sqlc",
+      "ref": "3ad8b20fb02b",
+      "path": "internal/opts/experiment.go",
+      "blob": "8d4b1c1ea0f5681b06b2d6000b5d7e240b3cb9eb",
+      "sha256": "c0cf38f5b2c0ec744a3fc278bf10449defa1e03d73517f1d5b0b9883d26e1626"
+    },
+    {
+      "repository": "sqlc-dev/sqlc",
+      "ref": "3ad8b20fb02b",
+      "path": "internal/cmd/generate.go",
+      "blob": "fbdb0844099a43ca2003f4910869e99735bb0f72",
+      "sha256": "f91c6ce240b68906e110d4ccdfac2e50db94a02601ebb8352e13cdc550a03167"
+    }
+  ]
 }

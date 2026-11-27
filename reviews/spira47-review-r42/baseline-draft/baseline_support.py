@@ -57,6 +57,7 @@ def environment() -> dict[str, str]:
     env.update({
         "GOENV": "off", "GOCACHEPROG": "", "GOTOOLCHAIN": "local",
         "GOCACHE": str(BUILD / "cache"), "GOMAXPROCS": "4", "GOFLAGS": "-p=4",
+        "SQLCEXPERIMENT": "",
     })
     return env
 

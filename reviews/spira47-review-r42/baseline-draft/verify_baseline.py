@@ -109,15 +109,21 @@ def main() -> None:
             base.run("build-unchanged-plugin", ["logos", "build", "-o", str(plugin),
                                                "./cmd/sqlc-gen-spira"], timeout=900)
             refusals = observer.names(contracts["current_pipeline_refusals"])
+            upstream = base.object_value(contracts["sqlc_upstream"])
+            if set(upstream) != {"relation-column-list", "relation-column-list-explicit"}:
+                raise RuntimeError("frozen upstream identities differ")
             pipeline: list[dict[str, object]] = []
             report["pipeline"] = pipeline
             for case in cases:
-                diagnostic = ("sqlc-gen-spira: ContinueItem: writes versioned table items without version"
-                              if base.text(case["name"]) in refusals else "")
-                pipeline.append(observer.observe_pipeline(container, case, plugin, "unchanged", diagnostic))
+                name = base.text(case["name"])
+                diagnostic = (base.text(upstream[name]) if name in upstream else
+                              "sqlc-gen-spira: ContinueItem: writes versioned table items without version"
+                              if name in refusals else "")
+                pipeline.append(observer.observe_pipeline(container, case, plugin, "unchanged", diagnostic,
+                                                          upstream=name in upstream))
                 (base.OUTPUT / "pipeline.json").write_text(json.dumps(pipeline, indent=2) + "\n", encoding="utf-8")
             partition = {kind: sum(row["pipeline_contract"] == kind for row in pipeline)
-                         for kind in ("generated", "plugin-refusal")}
+                         for kind in ("generated", "plugin-refusal", "upstream")}
             if partition != contracts["current_pipeline_partition"]:
                 raise RuntimeError("complete actual pipeline partition differs")
             report["pipeline_partition"] = partition
