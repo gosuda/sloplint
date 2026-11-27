@@ -1,96 +1,1051 @@
 {
-  "recorded_utc": "2026-11-27 12:15:31 UTC",
+  "schema_version": 1,
+  "recorded_at": "2026-11-27 12:53:51 UTC",
   "repository": "gosuda/Charamel",
-  "pull_request": 32,
+  "pr": 32,
   "branch": "followup/merged-threads-1127",
+  "phase": "fresh_reconciled_full_gates_running",
+  "published": false,
   "maintained_head": "d19fcb385bf404c2fbc1628d8c090c63a63cdcd1",
   "actual_main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-  "phase": "New native quoted-filename observation prepared after external source movement; no maintained write.",
-  "previous_verified_candidate": {
-    "tree": "ecea478c6d047d601c8e09826624f62e25b77a91",
-    "source_head": "c00962f26db32a41cfc1c487027a8b6316cb8bf1",
-    "published": false,
-    "run": 45989805076,
-    "linux_artifact": {
-      "id": 15193469116,
-      "node_id": "MDg6QXJ0aWZhY3QxNTE5MzQ2OTExNg==",
-      "name": "charamel32-redirection-gates-linux",
-      "size_in_bytes": 69722,
-      "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15193469116",
-      "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15193469116/zip",
-      "expired": false,
-      "digest": "sha256:5aaa7f27811ec121fa0b821a44586461e2e0151b322d062687bb73e8905949b9",
-      "created_at": "2026-11-27T11:31:23Z",
-      "updated_at": "2026-11-27T11:31:23Z",
-      "expires_at": "2026-12-27T11:31:23Z",
-      "workflow_run": {
-        "id": 45989805076,
-        "repository_id": 1424164147,
-        "head_repository_id": 1424164147,
-        "head_branch": "ci/charamel32-cmd-gates-20261127",
-        "head_sha": "40bf1bf60309f7a5ee2a5c1a0dded2315df0ebef"
-      }
+  "original_tree": "0893090a2132c707279c64879a31694075d60e1b",
+  "candidate_tree": "4a6a0cea4a41bc86db7fe8c6a513bdaa86561025",
+  "candidate_source": [
+    {
+      "path": "bin/crush/lib/shell_screen.ml",
+      "sha256": "66af36577313918be01ded984ee3115da9a33e2828e555a9301c9b5a1d732cdc"
     },
-    "windows_artifact": {
-      "id": 15195113982,
-      "node_id": "MDg6QXJ0aWZhY3QxNTE5NTExMzk4Mg==",
-      "name": "charamel32-redirection-gates-windows",
-      "size_in_bytes": 70095,
-      "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15195113982",
-      "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15195113982/zip",
-      "expired": false,
-      "digest": "sha256:e4b9d2d60d67e7f20b0410525988a3e77b31d6e0cc30f6b4fb8cfbc97a43461e",
-      "created_at": "2026-11-27T12:04:35Z",
-      "updated_at": "2026-11-27T12:04:35Z",
-      "expires_at": "2026-12-27T12:04:34Z",
-      "workflow_run": {
-        "id": 45989805076,
-        "repository_id": 1424164147,
-        "head_repository_id": 1424164147,
-        "head_branch": "ci/charamel32-cmd-gates-20261127",
-        "head_sha": "40bf1bf60309f7a5ee2a5c1a0dded2315df0ebef"
-      }
+    {
+      "path": "bin/crush/lib/shell_screen.mli",
+      "sha256": "341412aafaebbc354197001bd9373086ee9681ee69cac012df2cf08637212ee9"
     },
-    "receipt": "ci-records/charamel32-redirection-terminal.json"
-  },
-  "external_drift": {
-    "maintained_head": "d19fcb385bf404c2fbc1628d8c090c63a63cdcd1",
-    "tree": "0893090a2132c707279c64879a31694075d60e1b",
-    "parents": [
-      "6779c4ea5e432a5bdc236cb435bf99671108d8ec"
+    {
+      "path": "test/crush/test_tools_shell.ml",
+      "sha256": "33b748ca0a7744d0b29270e98b0c776ef0d498770cdc3b6d268e5ba1fb95c749"
+    }
+  ],
+  "source_inventory": {
+    "tracked": 1094,
+    "unchanged_entries_and_modes": 1091,
+    "changed_paths": [
+      "bin/crush/lib/shell_screen.ml",
+      "bin/crush/lib/shell_screen.mli",
+      "test/crush/test_tools_shell.ml"
     ],
-    "ancestor": "c00962f26db32a41cfc1c487027a8b6316cb8bf1",
-    "actual_main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-    "delta": {
-      "tree": "0893090a2132c707279c64879a31694075d60e1b",
-      "entries": 1094,
-      "changed": [
+    "production_and_interface_identical_to_historical_verified_ecea": true,
+    "external_d19f_assertions_preserved": true
+  },
+  "instructions": {
+    "url": "https://github.com/gosuda/Charamel/blob/d19fcb385bf404c2fbc1628d8c090c63a63cdcd1/AGENTS.md",
+    "sole_applicable_instruction_file": true,
+    "required": [
+      "eval $(opam env --switch=rd --set-switch)",
+      "dune build @fmt",
+      "dune build --profile release",
+      "dune runtest --profile release"
+    ],
+    "ocaml": "5.5.1",
+    "formatter": "0.29.0"
+  },
+  "preparation": {
+    "producer": "f08ee19bc31ba462135dd1668434684f4a1dedc5",
+    "run": 46000723787,
+    "job": 140511369678,
+    "conclusion": "success",
+    "artifact": 15197693858,
+    "zip_sha256": "c34917e8bb51d26d86dc8bc4ad96d786a20d15c2fc3155363f5b3c64fbfd9e8a",
+    "result": {
+      "producer": "f08ee19bc31ba462135dd1668434684f4a1dedc5",
+      "run": "46000723787",
+      "head": "d19fcb385bf404c2fbc1628d8c090c63a63cdcd1",
+      "original_tree": "0893090a2132c707279c64879a31694075d60e1b",
+      "formatted_tree": "4a6a0cea4a41bc86db7fe8c6a513bdaa86561025",
+      "accepted": true,
+      "native_quotes_count": 20,
+      "source_restored": true,
+      "stages": {
+        "observed_original": {
+          "tree": "adc91f70f017c3298d785c02c3108262ed863766",
+          "classifier_cases": 214,
+          "classifier_failures": [
+            "quoted-type_reported",
+            "quoted-type_without_s",
+            "quoted-type_outer_redirect",
+            "quoted-type_prefix_redirect",
+            "quoted-type_inner_redirect",
+            "quoted-type_for_body"
+          ],
+          "trace_cases": 57,
+          "trace_failures": [
+            "nested_redirect_equal",
+            "nested_redirect_prefix",
+            "reported_quoted_outer",
+            "quoted_outer_stderr",
+            "quoted_outer_both",
+            "quoted_outer_append",
+            "redirect_before_payload",
+            "inner_plus_outer",
+            "two_outer_targets",
+            "following_command",
+            "grouped_outer",
+            "for_body_outer",
+            "trailing_space_outer",
+            "echo_two_spaces",
+            "echo_tab_gap",
+            "echo_argument_between",
+            "echo_duplication_before",
+            "echo_comma_gap",
+            "echo_quoted_digit",
+            "echo_quoted_digits",
+            "echo_two_digits",
+            "echo_escaped_digit",
+            "echo_ordinary_digit",
+            "quoted-type_reported",
+            "quoted-type_without_s",
+            "quoted-type_spaces",
+            "quoted-type_outer_redirect",
+            "quoted-type_prefix_redirect",
+            "quoted-type_inner_redirect",
+            "quoted-type_for_body"
+          ],
+          "maintained_tests": [
+            {
+              "name": "Cmd payload source bytes",
+              "index": 15,
+              "actual_exit": 1,
+              "expected_exit": 1,
+              "expected_failure": "nested_redirect_equal",
+              "log_sha256": "63ab4740b2667b5877978cd8da716f902a2b3fddd38987c57716009bfb0327b6"
+            },
+            {
+              "name": "Cmd quoted filename source bytes",
+              "index": 17,
+              "actual_exit": 1,
+              "expected_exit": 1,
+              "expected_failure": "quoted-type_reported",
+              "log_sha256": "99bc443f830dccbeb223f7c93aa7bec75b0939ba24af5fa9c05719737b4b56c9"
+            }
+          ]
+        },
+        "candidate": {
+          "tree": "4a6a0cea4a41bc86db7fe8c6a513bdaa86561025",
+          "classifier_cases": 214,
+          "classifier_failures": [],
+          "trace_cases": 57,
+          "trace_failures": [],
+          "maintained_tests": [
+            {
+              "name": "Cmd payload source bytes",
+              "index": 15,
+              "actual_exit": 0,
+              "expected_exit": 0,
+              "expected_failure": null,
+              "log_sha256": "c56e585f30a2f4e2d4a40ce51483f8a173edafd6747e6a880fdddc81a6eee620"
+            },
+            {
+              "name": "Cmd quoted filename source bytes",
+              "index": 17,
+              "actual_exit": 0,
+              "expected_exit": 0,
+              "expected_failure": null,
+              "log_sha256": "e3a91ff9dfc72ca6f14ad71ae7528eb37eeb148713f8108241c5ecd2c30be9ee"
+            }
+          ]
+        },
+        "first_quote_mutant": {
+          "tree": "bc2aef8eddec46b57226a4d832408e267ad48cbf",
+          "classifier_cases": 214,
+          "classifier_failures": [
+            "quoted-type_reported",
+            "quoted-type_without_s",
+            "quoted-type_outer_redirect",
+            "quoted-type_prefix_redirect",
+            "quoted-type_inner_redirect",
+            "quoted-type_for_body"
+          ],
+          "trace_cases": 57,
+          "trace_failures": [
+            "quoted-type_reported",
+            "quoted-type_without_s",
+            "quoted-type_spaces",
+            "quoted-type_outer_redirect",
+            "quoted-type_prefix_redirect",
+            "quoted-type_inner_redirect",
+            "quoted-type_for_body"
+          ],
+          "maintained_tests": [
+            {
+              "name": "Cmd payload source bytes",
+              "index": 15,
+              "actual_exit": 0,
+              "expected_exit": 0,
+              "expected_failure": null,
+              "log_sha256": "acb2c6d57471f3a777a8b3f725cb6ca465ccd7263fa9e8b923c01a1e2b5ddfd1"
+            },
+            {
+              "name": "Cmd quoted filename source bytes",
+              "index": 17,
+              "actual_exit": 1,
+              "expected_exit": 1,
+              "expected_failure": "quoted-type_reported",
+              "log_sha256": "6f83ba795e24faaa6b1685ecdccfbbe039cf657927aa45837361587003ef3028"
+            }
+          ]
+        },
+        "restored": {
+          "tree": "4a6a0cea4a41bc86db7fe8c6a513bdaa86561025",
+          "classifier_cases": 214,
+          "classifier_failures": [],
+          "trace_cases": 57,
+          "trace_failures": [],
+          "maintained_tests": [
+            {
+              "name": "Cmd payload source bytes",
+              "index": 15,
+              "actual_exit": 0,
+              "expected_exit": 0,
+              "expected_failure": null,
+              "log_sha256": "e445e554c1e6d3fb9612b6aa92fd87c8677331e38cf1fd84501a1dbcc1b4ffdd"
+            },
+            {
+              "name": "Cmd quoted filename source bytes",
+              "index": 17,
+              "actual_exit": 0,
+              "expected_exit": 0,
+              "expected_failure": null,
+              "log_sha256": "5b06cbb63ec4d5289656ad64eb1da44d14f80d094726ddeb904779d5f918b6f6"
+            }
+          ]
+        }
+      },
+      "commands": [
         {
-          "path": "bin/crush/lib/shell_screen.ml",
-          "before": "428bdb18cea1f06de52824ed8c07f8ef1da8a47a",
-          "after": "d4c446f7f7c34a8907ffccb5a1e3295a0808c25e"
+          "label": "compiler-version",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "ocamlc",
+            "-version"
+          ],
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.012131938000010223,
+          "log_sha256": "db74d0caf81f43029fa28ce9888695d0b54d0a99003e6042823c9bc914897865"
         },
         {
-          "path": "test/crush/test_tools_shell.ml",
-          "before": "b2502db9e4134bfe20839620ee134de169156b9d",
-          "after": "91ea187837847b6551b88739db639efeff41a0d8"
+          "label": "formatter-version",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "ocamlformat",
+            "--version"
+          ],
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.014315038000006552,
+          "log_sha256": "a68641c6aacd345c4931a6217331d2bf43398c7bc134666a2f756953eab407aa"
+        },
+        {
+          "label": "original-compile",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "ocamlc",
+            "-strict-sequence",
+            "-strict-formats",
+            "-short-paths",
+            "-principal",
+            "-warn-error",
+            "+a",
+            "-o",
+            "/tmp/charamel32-quotes-prepare-uqin67k2/original/screen-probe",
+            "shell_screen.mli",
+            "shell_screen.ml",
+            "probe.ml"
+          ],
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.07932089100000894,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "observed_original-compile",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "ocamlc",
+            "-strict-sequence",
+            "-strict-formats",
+            "-short-paths",
+            "-principal",
+            "-warn-error",
+            "+a",
+            "-o",
+            "/tmp/charamel32-quotes-prepare-uqin67k2/observed_original-plain/screen-probe",
+            "shell_screen.mli",
+            "shell_screen.ml",
+            "probe.ml"
+          ],
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.08292714899999964,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "observed_original-trace-compile",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "ocamlc",
+            "-strict-sequence",
+            "-strict-formats",
+            "-short-paths",
+            "-principal",
+            "-warn-error",
+            "+a",
+            "-o",
+            "/tmp/charamel32-quotes-prepare-uqin67k2/observed_original-trace/screen-probe",
+            "shell_screen.mli",
+            "shell_screen.ml",
+            "probe.ml"
+          ],
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.08090125199998965,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "observed_original-15-maintained-test",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "dune",
+            "exec",
+            "--profile",
+            "release",
+            "test/crush/test_crush.exe",
+            "--",
+            "test",
+            "--show-errors",
+            "^tools-shell$",
+            "15"
+          ],
+          "actual_exit": 1,
+          "timeout": false,
+          "seconds": 4.042668888000009,
+          "log_sha256": "63ab4740b2667b5877978cd8da716f902a2b3fddd38987c57716009bfb0327b6"
+        },
+        {
+          "label": "observed_original-17-maintained-test",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "dune",
+            "exec",
+            "--profile",
+            "release",
+            "test/crush/test_crush.exe",
+            "--",
+            "test",
+            "--show-errors",
+            "^tools-shell$",
+            "17"
+          ],
+          "actual_exit": 1,
+          "timeout": false,
+          "seconds": 0.10599765599999955,
+          "log_sha256": "99bc443f830dccbeb223f7c93aa7bec75b0939ba24af5fa9c05719737b4b56c9"
+        },
+        {
+          "label": "format-candidate",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "ocamlformat",
+            "-i",
+            "bin/crush/lib/shell_screen.ml",
+            "bin/crush/lib/shell_screen.mli",
+            "test/crush/test_tools_shell.ml"
+          ],
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.16436946900000748,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "candidate-compile",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "ocamlc",
+            "-strict-sequence",
+            "-strict-formats",
+            "-short-paths",
+            "-principal",
+            "-warn-error",
+            "+a",
+            "-o",
+            "/tmp/charamel32-quotes-prepare-uqin67k2/candidate-plain/screen-probe",
+            "shell_screen.mli",
+            "shell_screen.ml",
+            "probe.ml"
+          ],
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.08079397400001653,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "candidate-trace-compile",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "ocamlc",
+            "-strict-sequence",
+            "-strict-formats",
+            "-short-paths",
+            "-principal",
+            "-warn-error",
+            "+a",
+            "-o",
+            "/tmp/charamel32-quotes-prepare-uqin67k2/candidate-trace/screen-probe",
+            "shell_screen.mli",
+            "shell_screen.ml",
+            "probe.ml"
+          ],
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.08290046799999118,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "candidate-15-maintained-test",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "dune",
+            "exec",
+            "--profile",
+            "release",
+            "test/crush/test_crush.exe",
+            "--",
+            "test",
+            "--show-errors",
+            "^tools-shell$",
+            "15"
+          ],
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 1.2674438779999946,
+          "log_sha256": "c56e585f30a2f4e2d4a40ce51483f8a173edafd6747e6a880fdddc81a6eee620"
+        },
+        {
+          "label": "candidate-17-maintained-test",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "dune",
+            "exec",
+            "--profile",
+            "release",
+            "test/crush/test_crush.exe",
+            "--",
+            "test",
+            "--show-errors",
+            "^tools-shell$",
+            "17"
+          ],
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.10937867299998061,
+          "log_sha256": "e3a91ff9dfc72ca6f14ad71ae7528eb37eeb148713f8108241c5ecd2c30be9ee"
+        },
+        {
+          "label": "first_quote_mutant-compile",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "ocamlc",
+            "-strict-sequence",
+            "-strict-formats",
+            "-short-paths",
+            "-principal",
+            "-warn-error",
+            "+a",
+            "-o",
+            "/tmp/charamel32-quotes-prepare-uqin67k2/first_quote_mutant-plain/screen-probe",
+            "shell_screen.mli",
+            "shell_screen.ml",
+            "probe.ml"
+          ],
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.07951886999998692,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "first_quote_mutant-trace-compile",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "ocamlc",
+            "-strict-sequence",
+            "-strict-formats",
+            "-short-paths",
+            "-principal",
+            "-warn-error",
+            "+a",
+            "-o",
+            "/tmp/charamel32-quotes-prepare-uqin67k2/first_quote_mutant-trace/screen-probe",
+            "shell_screen.mli",
+            "shell_screen.ml",
+            "probe.ml"
+          ],
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.08409008099999937,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "first_quote_mutant-15-maintained-test",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "dune",
+            "exec",
+            "--profile",
+            "release",
+            "test/crush/test_crush.exe",
+            "--",
+            "test",
+            "--show-errors",
+            "^tools-shell$",
+            "15"
+          ],
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 1.3198191429999895,
+          "log_sha256": "acb2c6d57471f3a777a8b3f725cb6ca465ccd7263fa9e8b923c01a1e2b5ddfd1"
+        },
+        {
+          "label": "first_quote_mutant-17-maintained-test",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "dune",
+            "exec",
+            "--profile",
+            "release",
+            "test/crush/test_crush.exe",
+            "--",
+            "test",
+            "--show-errors",
+            "^tools-shell$",
+            "17"
+          ],
+          "actual_exit": 1,
+          "timeout": false,
+          "seconds": 0.10495859400000995,
+          "log_sha256": "6f83ba795e24faaa6b1685ecdccfbbe039cf657927aa45837361587003ef3028"
+        },
+        {
+          "label": "restored-compile",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "ocamlc",
+            "-strict-sequence",
+            "-strict-formats",
+            "-short-paths",
+            "-principal",
+            "-warn-error",
+            "+a",
+            "-o",
+            "/tmp/charamel32-quotes-prepare-uqin67k2/restored-plain/screen-probe",
+            "shell_screen.mli",
+            "shell_screen.ml",
+            "probe.ml"
+          ],
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.08028949799998486,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "restored-trace-compile",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "ocamlc",
+            "-strict-sequence",
+            "-strict-formats",
+            "-short-paths",
+            "-principal",
+            "-warn-error",
+            "+a",
+            "-o",
+            "/tmp/charamel32-quotes-prepare-uqin67k2/restored-trace/screen-probe",
+            "shell_screen.mli",
+            "shell_screen.ml",
+            "probe.ml"
+          ],
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.08073217300000124,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "restored-15-maintained-test",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "dune",
+            "exec",
+            "--profile",
+            "release",
+            "test/crush/test_crush.exe",
+            "--",
+            "test",
+            "--show-errors",
+            "^tools-shell$",
+            "15"
+          ],
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 1.278049115000016,
+          "log_sha256": "e445e554c1e6d3fb9612b6aa92fd87c8677331e38cf1fd84501a1dbcc1b4ffdd"
+        },
+        {
+          "label": "restored-17-maintained-test",
+          "argv": [
+            "opam",
+            "exec",
+            "--switch=rd",
+            "--",
+            "dune",
+            "exec",
+            "--profile",
+            "release",
+            "test/crush/test_crush.exe",
+            "--",
+            "test",
+            "--show-errors",
+            "^tools-shell$",
+            "17"
+          ],
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.10337532700000907,
+          "log_sha256": "5b06cbb63ec4d5289656ad64eb1da44d14f80d094726ddeb904779d5f918b6f6"
+        },
+        {
+          "label": "candidate-whitespace",
+          "argv": [
+            "git",
+            "diff",
+            "--cached",
+            "--check"
+          ],
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.002121402999989641,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "restore-original",
+          "argv": [
+            "git",
+            "reset",
+            "--hard",
+            "d19fcb385bf404c2fbc1628d8c090c63a63cdcd1"
+          ],
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.0030339930000025106,
+          "log_sha256": "b630637f6bd014e19b908c4d033962065cc428735c6585a36025916e99e760cc"
         }
       ],
-      "instruction_paths": [
-        {
-          "path": "AGENTS.md",
-          "sha": "4f5165ef811bf15d7f1dddfbe382ebb44f200e9c"
-        }
+      "scope": [
+        "Preserve all d19f external verdict and native-output assertions; correct only the misleading scanner-output comment.",
+        "Production .ml and documented .mli are byte-identical to the unpublished, fully verified ecea candidate. This new preparation and subsequent full gates bind the combined d19f-based test file.",
+        "Twenty quoted-filename native observations include sixteen exits0 and four exits1. Nine valid TYPE contexts become exact maintained parser-input contracts; foreign helper contexts remain observations.",
+        "Native-valid filenames containing unmatched parentheses remain conservative Review on all three parser versions. Native-invalid ampersand/grouped controls and these pre-existing gaps remain explicitly outside a full Cmd parity claim.",
+        "Original d19f receives only a local observation adapter and candidate tests. Classifier outputs are compared before and after instrumentation. A separate first-quote-only mutant preserves the repaired outer-redirection machinery and must fail the new quoted-filename maintained test while preserving all previous203/48 controls.",
+        "All source edits are restricted to shell_screen.ml, its documented mli, and test_tools_shell.ml. Permission policy, tools_shell.ml, POSIX parser prefix, dependencies, build workflows and every other source entry remain unchanged."
       ]
     },
-    "externally_resolved_threads": [
-      "PRRT_kwDOUbWGks68u3UC",
-      "PRRT_kwDOUbWGks68u3WO"
-    ],
-    "new_unresolved_thread": "PRRT_kwDOUbWGks68xZH1",
-    "comment": 4719154286
+    "receipt": "https://github.com/gosuda/sloplint/blob/d328d60e471410f477a539e69e3d275376f5192b/ci-records/charamel32-quotes-preparation.json"
   },
-  "new_observation_manifest": "ci-tools/charamel32-cmd-quotes/observations.json",
-  "source_write_scope": "Preserve external verdict rows and native Echo execution assertions. Replace the faulty first-subsequent-quote shortcut only after new native evidence; retain the already verified outer-redirection span design and discriminating parser-input tests.",
-  "all_current_findings_resolved": false
+  "full_proof": {
+    "producer": "d328d60e471410f477a539e69e3d275376f5192b",
+    "producer_tree": "b7154d8936bd26e66e46b0b8518249ca19645b83",
+    "branch": "ci/charamel32-cmd-gates-20261127",
+    "run": 46001784187,
+    "jobs": [
+      {
+        "id": 140514989607,
+        "name": "native (windows, depot-windows-2025-8)",
+        "status": "in_progress",
+        "conclusion": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-11-27T12:50:13Z",
+            "completed_at": "2026-11-27T12:50:14Z"
+          },
+          {
+            "name": "Preserve source bytes on Windows",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-11-27T12:50:14Z",
+            "completed_at": "2026-11-27T12:50:20Z"
+          },
+          {
+            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-11-27T12:50:20Z",
+            "completed_at": "2026-11-27T12:50:28Z"
+          },
+          {
+            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-11-27T12:50:28Z",
+            "completed_at": "2026-11-27T12:50:30Z"
+          },
+          {
+            "name": "Run astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-11-27T12:50:30Z",
+            "completed_at": "2026-11-27T12:50:33Z"
+          },
+          {
+            "name": "Authenticate preparation and apply the exact candidate",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-11-27T12:50:33Z",
+            "completed_at": "2026-11-27T12:50:38Z"
+          },
+          {
+            "name": "Replay complete frozen native Cmd observations",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-11-27T12:50:38Z",
+            "completed_at": "2026-11-27T12:50:47Z"
+          },
+          {
+            "name": "Run ocaml/setup-ocaml@ff66428f72b64472e749b22e0ad4dded4b2ddca6",
+            "status": "in_progress",
+            "conclusion": null,
+            "number": 8,
+            "started_at": "2026-11-27T12:50:47Z",
+            "completed_at": null
+          },
+          {
+            "name": "Create the required rd switch and install repository dependencies",
+            "status": "pending",
+            "conclusion": null,
+            "number": 9,
+            "started_at": null,
+            "completed_at": null
+          },
+          {
+            "name": "Run prescribed source gates and native permissions",
+            "status": "pending",
+            "conclusion": null,
+            "number": 10,
+            "started_at": null,
+            "completed_at": null
+          },
+          {
+            "name": "Verify final candidate identity",
+            "status": "pending",
+            "conclusion": null,
+            "number": 11,
+            "started_at": null,
+            "completed_at": null
+          },
+          {
+            "name": "Run actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+            "status": "pending",
+            "conclusion": null,
+            "number": 12,
+            "started_at": null,
+            "completed_at": null
+          },
+          {
+            "name": "Post Run ocaml/setup-ocaml@ff66428f72b64472e749b22e0ad4dded4b2ddca6",
+            "status": "pending",
+            "conclusion": null,
+            "number": 21,
+            "started_at": null,
+            "completed_at": null
+          },
+          {
+            "name": "Post Run astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d",
+            "status": "pending",
+            "conclusion": null,
+            "number": 22,
+            "started_at": null,
+            "completed_at": null
+          },
+          {
+            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "status": "pending",
+            "conclusion": null,
+            "number": 23,
+            "started_at": null,
+            "completed_at": null
+          },
+          {
+            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "status": "pending",
+            "conclusion": null,
+            "number": 24,
+            "started_at": null,
+            "completed_at": null
+          }
+        ]
+      },
+      {
+        "id": 140514990060,
+        "name": "native (linux, depot-ubuntu-24.04-4)",
+        "status": "in_progress",
+        "conclusion": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-11-27T12:48:58Z",
+            "completed_at": "2026-11-27T12:48:58Z"
+          },
+          {
+            "name": "Preserve source bytes on Windows",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 2,
+            "started_at": "2026-11-27T12:48:58Z",
+            "completed_at": "2026-11-27T12:48:58Z"
+          },
+          {
+            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-11-27T12:48:58Z",
+            "completed_at": "2026-11-27T12:48:59Z"
+          },
+          {
+            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-11-27T12:48:59Z",
+            "completed_at": "2026-11-27T12:49:00Z"
+          },
+          {
+            "name": "Run astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-11-27T12:49:00Z",
+            "completed_at": "2026-11-27T12:49:00Z"
+          },
+          {
+            "name": "Authenticate preparation and apply the exact candidate",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-11-27T12:49:00Z",
+            "completed_at": "2026-11-27T12:49:01Z"
+          },
+          {
+            "name": "Replay complete frozen native Cmd observations",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 7,
+            "started_at": "2026-11-27T12:49:01Z",
+            "completed_at": "2026-11-27T12:49:01Z"
+          },
+          {
+            "name": "Run ocaml/setup-ocaml@ff66428f72b64472e749b22e0ad4dded4b2ddca6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-11-27T12:49:01Z",
+            "completed_at": "2026-11-27T12:51:36Z"
+          },
+          {
+            "name": "Create the required rd switch and install repository dependencies",
+            "status": "in_progress",
+            "conclusion": null,
+            "number": 9,
+            "started_at": "2026-11-27T12:51:36Z",
+            "completed_at": null
+          },
+          {
+            "name": "Run prescribed source gates and native permissions",
+            "status": "pending",
+            "conclusion": null,
+            "number": 10,
+            "started_at": null,
+            "completed_at": null
+          },
+          {
+            "name": "Verify final candidate identity",
+            "status": "pending",
+            "conclusion": null,
+            "number": 11,
+            "started_at": null,
+            "completed_at": null
+          },
+          {
+            "name": "Run actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+            "status": "pending",
+            "conclusion": null,
+            "number": 12,
+            "started_at": null,
+            "completed_at": null
+          },
+          {
+            "name": "Post Run ocaml/setup-ocaml@ff66428f72b64472e749b22e0ad4dded4b2ddca6",
+            "status": "pending",
+            "conclusion": null,
+            "number": 21,
+            "started_at": null,
+            "completed_at": null
+          },
+          {
+            "name": "Post Run astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d",
+            "status": "pending",
+            "conclusion": null,
+            "number": 22,
+            "started_at": null,
+            "completed_at": null
+          },
+          {
+            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "status": "pending",
+            "conclusion": null,
+            "number": 23,
+            "started_at": null,
+            "completed_at": null
+          },
+          {
+            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "status": "pending",
+            "conclusion": null,
+            "number": 24,
+            "started_at": null,
+            "completed_at": null
+          }
+        ]
+      }
+    ],
+    "path": "ci-tools/charamel32-cmd-quoted-gates",
+    "driver_sha256": "1bc80c998f55e71a7be21b962073b9e3c988605fcfbc45942e7e2bd4ef26949d",
+    "manifest_sha256": "85902c889625e4a9c31c85993504fb311f066ededdc00b5f9d5031422d5846b2",
+    "workflow_sha256": "bac29ab635f28b7ac6676ee25f168c6d4bfe84b8ddbca0d404ce2e19bdc46afb",
+    "full_success_claim": false
+  },
+  "native_quotes": {
+    "producer": "2c9cf4db2df1c85ccba3c6e7dcea482d803bf5d8",
+    "run": 45997335988,
+    "job": 140499922464,
+    "artifact": 15196541931,
+    "zip_sha256": "e69cd62041b5cae5b29fb21101f98c7abb16cb70e3ab617f61451f4421005218",
+    "exit_counts": {
+      "0": 16,
+      "1": 4
+    },
+    "all_20_native_valid_claim": false
+  },
+  "parser_observation": {
+    "producer": "938880bb1388f9c5e903791ddc8496303aee0f28",
+    "run": 45999925649,
+    "job": 140508646860,
+    "artifact": 15198071063,
+    "zip_sha256": "db7a2394bcee1ed67df58848753b81217519268856c11b41db2532329d1f2c7b",
+    "receipt": "https://github.com/gosuda/sloplint/blob/f08ee19bc31ba462135dd1668434684f4a1dedc5/ci-records/charamel32-quotes-parser-terminal.json",
+    "before_after_unchanged": true,
+    "all_source_adapters_classifier_equivalent": true
+  },
+  "active_review": {
+    "thread_id": "PRRT_kwDOUbWGks68xZH1",
+    "comment_id": 4719154286,
+    "total": 17,
+    "resolved": 16,
+    "unresolved": 1,
+    "as_of_head": "d19fcb385bf404c2fbc1628d8c090c63a63cdcd1"
+  },
+  "publication_drafts": "https://github.com/gosuda/sloplint/blob/d328d60e471410f477a539e69e3d275376f5192b/reviews/charamel32-quoted-filename-publication-draft.md",
+  "historical_unpublished_green": "https://github.com/gosuda/sloplint/blob/2c9cf4db2df1c85ccba3c6e7dcea482d803bf5d8/ci-records/charamel32-redirection-terminal.json",
+  "owned_active_workflow": ".github/workflows/charamel32-cmd-quoted-gates.yml",
+  "limitations": [
+    "Preserve all d19f external verdict and native-output assertions; correct only the misleading scanner-output comment.",
+    "Production .ml and documented .mli are byte-identical to the unpublished, fully verified ecea candidate. This new preparation and subsequent full gates bind the combined d19f-based test file.",
+    "Twenty quoted-filename native observations include sixteen exits0 and four exits1. Nine valid TYPE contexts become exact maintained parser-input contracts; foreign helper contexts remain observations.",
+    "Native-valid filenames containing unmatched parentheses remain conservative Review on all three parser versions. Native-invalid ampersand/grouped controls and these pre-existing gaps remain explicitly outside a full Cmd parity claim.",
+    "Original d19f receives only a local observation adapter and candidate tests. Classifier outputs are compared before and after instrumentation. A separate first-quote-only mutant preserves the repaired outer-redirection machinery and must fail the new quoted-filename maintained test while preserving all previous203/48 controls.",
+    "All source edits are restricted to shell_screen.ml, its documented mli, and test_tools_shell.ml. Permission policy, tools_shell.ml, POSIX parser prefix, dependencies, build workflows and every other source entry remain unchanged."
+  ],
+  "next_steps": [
+    "Verify terminal Linux and Windows logs, actual exits, exact source tree and artifact API/upload digests; preserve every failure honestly.",
+    "After all required gates pass, freshly read maintained head, actual main and current is_resolved states. Publish only if exact d19f/84e lease remains valid; otherwise reconcile external source before publication.",
+    "Create a genuine one-parent source commit at exact tested tree4a6a and update maintained ref additively with expected head. No force, amend, PR merge or auto-merge.",
+    "Update the reviewed draft with actual source/gate/receipt links, reply to and resolve only the addressed open thread. Do not reopen externally resolved prior threads.",
+    "Observe ordinary PR CI separately; earlier c009 had no Actions runs/check-runs, so absence must never be described as green.",
+    "Retire only the owned active workflow after disposition and preserve final receipts outside its trigger paths; verify record-only retirement creates no run."
+  ]
 }
