@@ -1,0 +1,139 @@
+{
+  "source": "5be8cba8e9150be37b35dec47f2cace5647d704f",
+  "tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
+  "candidate_tree": "e4dc56c7aa06c798df5eca42ecad54e2ffe83423",
+  "candidate_screen_sha256": "a8e7e443a07c064d76e948b84bfdd75e0d08e88f51bad19bf4064859cc85e888",
+  "cases": [
+    {
+      "id": "options_0_single",
+      "options": "",
+      "quote": "single",
+      "command": "for /f %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected_lines": [
+        "RESULT:[9173]"
+      ]
+    },
+    {
+      "id": "options_0_backtick",
+      "options": "",
+      "quote": "backtick",
+      "command": "for /f %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected_lines": null
+    },
+    {
+      "id": "options_1_single",
+      "options": "usebackq",
+      "quote": "single",
+      "command": "for /f \"usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected_lines": null
+    },
+    {
+      "id": "options_1_backtick",
+      "options": "usebackq",
+      "quote": "backtick",
+      "command": "for /f \"usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected_lines": [
+        "RESULT:[9173]"
+      ]
+    },
+    {
+      "id": "options_2_single",
+      "options": "delims=usebackq",
+      "quote": "single",
+      "command": "for /f \"delims=usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected_lines": null
+    },
+    {
+      "id": "options_2_backtick",
+      "options": "delims=usebackq",
+      "quote": "backtick",
+      "command": "for /f \"delims=usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected_lines": null
+    },
+    {
+      "id": "options_3_single",
+      "options": "delims= usebackq",
+      "quote": "single",
+      "command": "for /f \"delims= usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected_lines": null
+    },
+    {
+      "id": "options_3_backtick",
+      "options": "delims= usebackq",
+      "quote": "backtick",
+      "command": "for /f \"delims= usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected_lines": null
+    },
+    {
+      "id": "options_4_single",
+      "options": "tokens=* delims= usebackq",
+      "quote": "single",
+      "command": "for /f \"tokens=* delims= usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected_lines": null
+    },
+    {
+      "id": "options_4_backtick",
+      "options": "tokens=* delims= usebackq",
+      "quote": "backtick",
+      "command": "for /f \"tokens=* delims= usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected_lines": null
+    },
+    {
+      "id": "options_5_single",
+      "options": "usebackqdelims=",
+      "quote": "single",
+      "command": "for /f \"usebackqdelims=\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected_lines": null
+    },
+    {
+      "id": "options_5_backtick",
+      "options": "usebackqdelims=",
+      "quote": "backtick",
+      "command": "for /f \"usebackqdelims=\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected_lines": null
+    },
+    {
+      "id": "options_6_single",
+      "options": "tokens=*usebackq",
+      "quote": "single",
+      "command": "for /f \"tokens=*usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected_lines": null
+    },
+    {
+      "id": "options_6_backtick",
+      "options": "tokens=*usebackq",
+      "quote": "backtick",
+      "command": "for /f \"tokens=*usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected_lines": null
+    },
+    {
+      "id": "options_7_single",
+      "options": "usebackq tokens=* delims=",
+      "quote": "single",
+      "command": "for /f \"usebackq tokens=* delims=\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected_lines": null
+    },
+    {
+      "id": "options_7_backtick",
+      "options": "usebackq tokens=* delims=",
+      "quote": "backtick",
+      "command": "for /f \"usebackq tokens=* delims=\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected_lines": null
+    },
+    {
+      "id": "options_8_single",
+      "options": "delims=usebackq tokens=*",
+      "quote": "single",
+      "command": "for /f \"delims=usebackq tokens=*\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected_lines": null
+    },
+    {
+      "id": "options_8_backtick",
+      "options": "delims=usebackq tokens=*",
+      "quote": "backtick",
+      "command": "for /f \"delims=usebackq tokens=*\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected_lines": null
+    }
+  ],
+  "purpose": "Observe exact native FOR /F option/delimiter boundaries before any source change. Only two already established native controls have required stdout; other rows are observations."
+}
