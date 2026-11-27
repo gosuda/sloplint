@@ -1,0 +1,830 @@
+{
+  "native": {
+    "producer": "2c9cf4db2df1c85ccba3c6e7dcea482d803bf5d8",
+    "run": "45997335988",
+    "before": {
+      "head": "d19fcb385bf404c2fbc1628d8c090c63a63cdcd1",
+      "tree": "0893090a2132c707279c64879a31694075d60e1b",
+      "source_sha256": {
+        "bin/crush/lib/shell_screen.ml": "397a083c017f5d0fea5ada540b4ffbeea4e2da766b0b990f4aa140ba1c5415bc",
+        "bin/crush/lib/shell_screen.mli": "75804126730fb966e6ea4490ed8d650e2966799975518c8492fb0da3a50c93de",
+        "test/crush/test_tools_shell.ml": "489d3012655e8fcdd311ed2a294c9a078f9599691d6dfb5830fd6e81834b3e51"
+      },
+      "source_clean": true,
+      "index_sha256": "25d5b49f4c069d8a8ec28e7efcf470155b47cd120c3ee9f31623cba4a40f6ebf"
+    },
+    "after": {
+      "head": "d19fcb385bf404c2fbc1628d8c090c63a63cdcd1",
+      "tree": "0893090a2132c707279c64879a31694075d60e1b",
+      "source_sha256": {
+        "bin/crush/lib/shell_screen.ml": "397a083c017f5d0fea5ada540b4ffbeea4e2da766b0b990f4aa140ba1c5415bc",
+        "bin/crush/lib/shell_screen.mli": "75804126730fb966e6ea4490ed8d650e2966799975518c8492fb0da3a50c93de",
+        "test/crush/test_tools_shell.ml": "489d3012655e8fcdd311ed2a294c9a078f9599691d6dfb5830fd6e81834b3e51"
+      },
+      "source_clean": true,
+      "index_sha256": "25d5b49f4c069d8a8ec28e7efcf470155b47cd120c3ee9f31623cba4a40f6ebf"
+    },
+    "system": {
+      "python": "3.13.17 (tags/v3.13.17:64e080d, Oct 21 2026, 14:08:53) [MSC v.1944 64 bit (AMD64)]",
+      "windows": [
+        "2025Server",
+        "10.0.26100",
+        "SP0",
+        "Multiprocessor Free"
+      ],
+      "comspec": "C:\\Windows\\system32\\cmd.exe"
+    },
+    "inputs": {
+      "observe.py": "c2ec4e4e6172940477f049416fec77e5e5ca3faa7cd0eee0618651b4d642f17e",
+      "observe-child.ps1": "042679e664738b3fc8ac05a5c2d02593e7fc268b4355334c05761d24853094ef",
+      "observations.json": "5fe35a7ea3b0df260a49949d4429bda6107cf79f7f846e6d00a65410bdaa30a0"
+    },
+    "records": [
+      {
+        "id": "type_reported",
+        "kind": "read",
+        "command": "cmd /d /s /c \"type \"draft (for review).txt\"\"",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /s /c \"type \"draft (for review).txt\"\"",
+        "outer_pid": 1264,
+        "actual_exit": 0,
+        "seconds": 0.024124999999997954,
+        "timeout": false,
+        "stdout": {
+          "bytes": 31,
+          "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+          "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+          "text": "owned quoted filename fixture\r\n"
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "files": {
+          "draft (for review).txt": {
+            "bytes": 31,
+            "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+            "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+            "text": "owned quoted filename fixture\r\n"
+          }
+        },
+        "owned_children": [],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Native exit zero and the stated output/owned child are required."
+      },
+      {
+        "id": "type_without_s",
+        "kind": "read",
+        "command": "cmd /d /c \"type \"draft (for review).txt\"\"",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /c \"type \"draft (for review).txt\"\"",
+        "outer_pid": 3308,
+        "actual_exit": 0,
+        "seconds": 0.011393499999996948,
+        "timeout": false,
+        "stdout": {
+          "bytes": 31,
+          "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+          "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+          "text": "owned quoted filename fixture\r\n"
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "files": {
+          "draft (for review).txt": {
+            "bytes": 31,
+            "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+            "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+            "text": "owned quoted filename fixture\r\n"
+          }
+        },
+        "owned_children": [],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+      },
+      {
+        "id": "type_plain_control",
+        "kind": "read",
+        "command": "cmd /d /s /c \"type plain.txt\"",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /s /c \"type plain.txt\"",
+        "outer_pid": 4636,
+        "actual_exit": 0,
+        "seconds": 0.011673099999995884,
+        "timeout": false,
+        "stdout": {
+          "bytes": 31,
+          "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+          "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+          "text": "owned quoted filename fixture\r\n"
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "files": {
+          "plain.txt": {
+            "bytes": 31,
+            "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+            "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+            "text": "owned quoted filename fixture\r\n"
+          }
+        },
+        "owned_children": [],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Native exit zero and the stated output/owned child are required."
+      },
+      {
+        "id": "type_unwrapped_control",
+        "kind": "read",
+        "command": "cmd /d /s /c type \"draft (for review).txt\"",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /s /c type \"draft (for review).txt\"",
+        "outer_pid": 648,
+        "actual_exit": 0,
+        "seconds": 0.011362900000008835,
+        "timeout": false,
+        "stdout": {
+          "bytes": 31,
+          "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+          "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+          "text": "owned quoted filename fixture\r\n"
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "files": {
+          "draft (for review).txt": {
+            "bytes": 31,
+            "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+            "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+            "text": "owned quoted filename fixture\r\n"
+          }
+        },
+        "owned_children": [],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+      },
+      {
+        "id": "type_spaces",
+        "kind": "read",
+        "command": "cmd /d /s /c \"type \"draft review.txt\"\"",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /s /c \"type \"draft review.txt\"\"",
+        "outer_pid": 2600,
+        "actual_exit": 0,
+        "seconds": 0.011377900000013597,
+        "timeout": false,
+        "stdout": {
+          "bytes": 31,
+          "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+          "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+          "text": "owned quoted filename fixture\r\n"
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "files": {
+          "draft review.txt": {
+            "bytes": 31,
+            "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+            "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+            "text": "owned quoted filename fixture\r\n"
+          }
+        },
+        "owned_children": [],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+      },
+      {
+        "id": "type_ampersand",
+        "kind": "read",
+        "command": "cmd /d /s /c \"type \"draft (sales & support).txt\"\"",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /s /c \"type \"draft (sales & support).txt\"\"",
+        "outer_pid": 2780,
+        "actual_exit": 1,
+        "seconds": 0.0417909000000094,
+        "timeout": false,
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "stderr": {
+          "bytes": 276,
+          "sha256": "51eb0fc8a838e819f039c97085c9206641f2a71b0723066b1afcc8491c8b5300",
+          "base64": "VGhlIHN5c3RlbSBjYW5ub3QgZmluZCB0aGUgZmlsZSBzcGVjaWZpZWQuDQpFcnJvciBvY2N1cnJlZCB3aGlsZSBwcm9jZXNzaW5nOiBkcmFmdC4NClRoZSBzeXN0ZW0gY2Fubm90IGZpbmQgdGhlIGZpbGUgc3BlY2lmaWVkLg0KRXJyb3Igb2NjdXJyZWQgd2hpbGUgcHJvY2Vzc2luZzogKHNhbGVzLg0KJ3N1cHBvcnQpLnR4dCIiJyBpcyBub3QgcmVjb2duaXplZCBhcyBhbiBpbnRlcm5hbCBvciBleHRlcm5hbCBjb21tYW5kLA0Kb3BlcmFibGUgcHJvZ3JhbSBvciBiYXRjaCBmaWxlLg0K",
+          "text": "The system cannot find the file specified.\r\nError occurred while processing: draft.\r\nThe system cannot find the file specified.\r\nError occurred while processing: (sales.\r\n'support).txt\"\"' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n"
+        },
+        "files": {
+          "draft (sales & support).txt": {
+            "bytes": 31,
+            "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+            "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+            "text": "owned quoted filename fixture\r\n"
+          }
+        },
+        "owned_children": [],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+      },
+      {
+        "id": "type_open_parenthesis",
+        "kind": "read",
+        "command": "cmd /d /s /c \"type \"draft (for review.txt\"\"",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /s /c \"type \"draft (for review.txt\"\"",
+        "outer_pid": 704,
+        "actual_exit": 0,
+        "seconds": 0.011510499999999979,
+        "timeout": false,
+        "stdout": {
+          "bytes": 31,
+          "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+          "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+          "text": "owned quoted filename fixture\r\n"
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "files": {
+          "draft (for review.txt": {
+            "bytes": 31,
+            "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+            "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+            "text": "owned quoted filename fixture\r\n"
+          }
+        },
+        "owned_children": [],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+      },
+      {
+        "id": "type_close_parenthesis",
+        "kind": "read",
+        "command": "cmd /d /s /c \"type \"draft for review).txt\"\"",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /s /c \"type \"draft for review).txt\"\"",
+        "outer_pid": 3472,
+        "actual_exit": 0,
+        "seconds": 0.011156399999990185,
+        "timeout": false,
+        "stdout": {
+          "bytes": 31,
+          "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+          "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+          "text": "owned quoted filename fixture\r\n"
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "files": {
+          "draft for review).txt": {
+            "bytes": 31,
+            "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+            "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+            "text": "owned quoted filename fixture\r\n"
+          }
+        },
+        "owned_children": [],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+      },
+      {
+        "id": "type_outer_redirect",
+        "kind": "read",
+        "command": "cmd /d /s /c \"type \"draft (for review).txt\"\" > \"capture (sales & support).txt\"",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /s /c \"type \"draft (for review).txt\"\" > \"capture (sales & support).txt\"",
+        "outer_pid": 6628,
+        "actual_exit": 0,
+        "seconds": 0.01253329999998698,
+        "timeout": false,
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "files": {
+          "capture (sales & support).txt": {
+            "bytes": 31,
+            "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+            "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+            "text": "owned quoted filename fixture\r\n"
+          },
+          "draft (for review).txt": {
+            "bytes": 31,
+            "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+            "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+            "text": "owned quoted filename fixture\r\n"
+          }
+        },
+        "owned_children": [],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+      },
+      {
+        "id": "type_prefix_redirect",
+        "kind": "read",
+        "command": "cmd > \"capture (sales & support).txt\" /d /s /c \"type \"draft (for review).txt\"\"",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd > \"capture (sales & support).txt\" /d /s /c \"type \"draft (for review).txt\"\"",
+        "outer_pid": 6488,
+        "actual_exit": 0,
+        "seconds": 0.0128581999999966,
+        "timeout": false,
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "files": {
+          "capture (sales & support).txt": {
+            "bytes": 31,
+            "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+            "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+            "text": "owned quoted filename fixture\r\n"
+          },
+          "draft (for review).txt": {
+            "bytes": 31,
+            "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+            "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+            "text": "owned quoted filename fixture\r\n"
+          }
+        },
+        "owned_children": [],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+      },
+      {
+        "id": "type_inner_redirect",
+        "kind": "read",
+        "command": "cmd /d /s /c \"type \"draft (for review).txt\">capture.txt\"",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /s /c \"type \"draft (for review).txt\">capture.txt\"",
+        "outer_pid": 6564,
+        "actual_exit": 0,
+        "seconds": 0.014476999999999407,
+        "timeout": false,
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "files": {
+          "capture.txt": {
+            "bytes": 31,
+            "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+            "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+            "text": "owned quoted filename fixture\r\n"
+          },
+          "draft (for review).txt": {
+            "bytes": 31,
+            "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+            "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+            "text": "owned quoted filename fixture\r\n"
+          }
+        },
+        "owned_children": [],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+      },
+      {
+        "id": "type_grouped",
+        "kind": "read",
+        "command": "(cmd /d /s /c \"type \"draft (for review).txt\"\")",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c (cmd /d /s /c \"type \"draft (for review).txt\"\")",
+        "outer_pid": 2736,
+        "actual_exit": 1,
+        "seconds": 0.005351599999997347,
+        "timeout": false,
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "stderr": {
+          "bytes": 38,
+          "sha256": "4a9a495320cc775b2df590eec55cf8715c06594c04a3f80eac6474a12e7ece33",
+          "base64": "LnR4dCIiKSB3YXMgdW5leHBlY3RlZCBhdCB0aGlzIHRpbWUuDQo=",
+          "text": ".txt\"\") was unexpected at this time.\r\n"
+        },
+        "files": {
+          "draft (for review).txt": {
+            "bytes": 31,
+            "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+            "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+            "text": "owned quoted filename fixture\r\n"
+          }
+        },
+        "owned_children": [],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+      },
+      {
+        "id": "type_for_body",
+        "kind": "read",
+        "command": "for %I in (1) do cmd /d /s /c \"type \"draft (for review).txt\"\"",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c for %I in (1) do cmd /d /s /c \"type \"draft (for review).txt\"\"",
+        "outer_pid": 5396,
+        "actual_exit": 0,
+        "seconds": 0.011524299999990717,
+        "timeout": false,
+        "stdout": {
+          "bytes": 158,
+          "sha256": "a8075c02ad57b6119d76dc5f98c338055697ff8c035e73bb836b5c1d5d2e4ae9",
+          "base64": "DQpDOlxVc2Vyc1xBRE1JTkl+MVxBcHBEYXRhXExvY2FsXFRlbXBcY2hhcmFtZWwzMi1xdW90ZWQtbml6N2treDNcdHlwZV9mb3JfYm9keT5jbWQgL2QgL3MgL2MgInR5cGUgImRyYWZ0IChmb3IgcmV2aWV3KS50eHQiIiANCm93bmVkIHF1b3RlZCBmaWxlbmFtZSBmaXh0dXJlDQo=",
+          "text": "\r\nC:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\charamel32-quoted-niz7kkx3\\type_for_body>cmd /d /s /c \"type \"draft (for review).txt\"\" \r\nowned quoted filename fixture\r\n"
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "files": {
+          "draft (for review).txt": {
+            "bytes": 31,
+            "sha256": "eb19932a4188fb74b5b1c349c860d915138b4786c25e58e0b6a7ecfbd267c0b7",
+            "base64": "b3duZWQgcXVvdGVkIGZpbGVuYW1lIGZpeHR1cmUNCg==",
+            "text": "owned quoted filename fixture\r\n"
+          }
+        },
+        "owned_children": [],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+      },
+      {
+        "id": "child_reported",
+        "kind": "child",
+        "command": "cmd /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (for review).txt\"\"",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (for review).txt\"\"",
+        "outer_pid": 6036,
+        "actual_exit": 0,
+        "seconds": 1.8454413999999986,
+        "timeout": false,
+        "stdout": {
+          "bytes": 239,
+          "sha256": "c5f3e17214b8cf05760596284f7811ca203e7d0d8491b5ac56a92061b14a3082",
+          "base64": "eyJvYnNlcnZlcl9waWQiOjYzMjgsInBhcmVudF9waWQiOjU5NzIsInBhcmVudF9uYW1lIjoiY21kLmV4ZSIsInBhcmVudF9jb21tYW5kX2xpbmUiOiJjbWQgIC9kIC9zIC9jIFwicG93ZXJzaGVsbC5leGUgLU5vUHJvZmlsZSAtTm9uSW50ZXJhY3RpdmUgLUZpbGUgb2JzZXJ2ZS1jaGlsZC5wczEgXCJkcmFmdCAoZm9yIHJldmlldykudHh0XCJcIiIsImFyZ3VtZW50cyI6WyJkcmFmdCAoZm9yIHJldmlldykudHh0Il19DQo=",
+          "text": "{\"observer_pid\":6328,\"parent_pid\":5972,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /s /c \\\"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \\\"draft (for review).txt\\\"\\\"\",\"arguments\":[\"draft (for review).txt\"]}\r\n"
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "files": {},
+        "owned_children": [
+          {
+            "observer_pid": 6328,
+            "parent_pid": 5972,
+            "parent_name": "cmd.exe",
+            "parent_command_line": "cmd  /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (for review).txt\"\"",
+            "arguments": [
+              "draft (for review).txt"
+            ]
+          }
+        ],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Native exit zero and the stated output/owned child are required."
+      },
+      {
+        "id": "child_spaces",
+        "kind": "child",
+        "command": "cmd /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft review.txt\"\"",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft review.txt\"\"",
+        "outer_pid": 3744,
+        "actual_exit": 0,
+        "seconds": 0.28119039999999984,
+        "timeout": false,
+        "stdout": {
+          "bytes": 227,
+          "sha256": "647b081f509802e211801ca68674400de73c106a6fd8bb78cd67515510a1a9f1",
+          "base64": "eyJvYnNlcnZlcl9waWQiOjMyNDQsInBhcmVudF9waWQiOjM0NDgsInBhcmVudF9uYW1lIjoiY21kLmV4ZSIsInBhcmVudF9jb21tYW5kX2xpbmUiOiJjbWQgIC9kIC9zIC9jIFwicG93ZXJzaGVsbC5leGUgLU5vUHJvZmlsZSAtTm9uSW50ZXJhY3RpdmUgLUZpbGUgb2JzZXJ2ZS1jaGlsZC5wczEgXCJkcmFmdCByZXZpZXcudHh0XCJcIiIsImFyZ3VtZW50cyI6WyJkcmFmdCByZXZpZXcudHh0Il19DQo=",
+          "text": "{\"observer_pid\":3244,\"parent_pid\":3448,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /s /c \\\"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \\\"draft review.txt\\\"\\\"\",\"arguments\":[\"draft review.txt\"]}\r\n"
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "files": {},
+        "owned_children": [
+          {
+            "observer_pid": 3244,
+            "parent_pid": 3448,
+            "parent_name": "cmd.exe",
+            "parent_command_line": "cmd  /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft review.txt\"\"",
+            "arguments": [
+              "draft review.txt"
+            ]
+          }
+        ],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+      },
+      {
+        "id": "child_ampersand",
+        "kind": "child",
+        "command": "cmd /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (sales & support).txt\"\"",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (sales & support).txt\"\"",
+        "outer_pid": 6216,
+        "actual_exit": 1,
+        "seconds": 0.290361400000009,
+        "timeout": false,
+        "stdout": {
+          "bytes": 218,
+          "sha256": "d7ab948eea46f5de78ae86b79b1dcabe404808ac93399924d5d8a764ce6efcdb",
+          "base64": "eyJvYnNlcnZlcl9waWQiOjcwMDQsInBhcmVudF9waWQiOjYyMjAsInBhcmVudF9uYW1lIjoiY21kLmV4ZSIsInBhcmVudF9jb21tYW5kX2xpbmUiOiJjbWQgIC9kIC9zIC9jIFwicG93ZXJzaGVsbC5leGUgLU5vUHJvZmlsZSAtTm9uSW50ZXJhY3RpdmUgLUZpbGUgb2JzZXJ2ZS1jaGlsZC5wczEgXCJkcmFmdCAoc2FsZXMgIiwiYXJndW1lbnRzIjpbImRyYWZ0IiwiKHNhbGVzIl19DQo=",
+          "text": "{\"observer_pid\":7004,\"parent_pid\":6220,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /s /c \\\"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \\\"draft (sales \",\"arguments\":[\"draft\",\"(sales\"]}\r\n"
+        },
+        "stderr": {
+          "bytes": 105,
+          "sha256": "570bee5c0b974dde712a73664a9f6b39f0555fce355b0616520cd0f4d97fb954",
+          "base64": "J3N1cHBvcnQpLnR4dCIiJyBpcyBub3QgcmVjb2duaXplZCBhcyBhbiBpbnRlcm5hbCBvciBleHRlcm5hbCBjb21tYW5kLA0Kb3BlcmFibGUgcHJvZ3JhbSBvciBiYXRjaCBmaWxlLg0K",
+          "text": "'support).txt\"\"' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n"
+        },
+        "files": {},
+        "owned_children": [
+          {
+            "observer_pid": 7004,
+            "parent_pid": 6220,
+            "parent_name": "cmd.exe",
+            "parent_command_line": "cmd  /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (sales ",
+            "arguments": [
+              "draft",
+              "(sales"
+            ]
+          }
+        ],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+      },
+      {
+        "id": "child_outer_redirect",
+        "kind": "child",
+        "command": "cmd /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (for review).txt\"\" > \"capture (sales & support).txt\"",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (for review).txt\"\" > \"capture (sales & support).txt\"",
+        "outer_pid": 7020,
+        "actual_exit": 0,
+        "seconds": 0.281141599999998,
+        "timeout": false,
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "files": {
+          "capture (sales & support).txt": {
+            "bytes": 240,
+            "sha256": "aa8183fb2dc04967d38385c4dea57eea3c0562e6e2db4bbf000f733be606cbad",
+            "base64": "eyJvYnNlcnZlcl9waWQiOjUyMjgsInBhcmVudF9waWQiOjEyNjQsInBhcmVudF9uYW1lIjoiY21kLmV4ZSIsInBhcmVudF9jb21tYW5kX2xpbmUiOiJjbWQgIC9kIC9zIC9jIFwicG93ZXJzaGVsbC5leGUgLU5vUHJvZmlsZSAtTm9uSW50ZXJhY3RpdmUgLUZpbGUgb2JzZXJ2ZS1jaGlsZC5wczEgXCJkcmFmdCAoZm9yIHJldmlldykudHh0XCJcIiAiLCJhcmd1bWVudHMiOlsiZHJhZnQgKGZvciByZXZpZXcpLnR4dCJdfQ0K",
+            "text": "{\"observer_pid\":5228,\"parent_pid\":1264,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /s /c \\\"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \\\"draft (for review).txt\\\"\\\" \",\"arguments\":[\"draft (for review).txt\"]}\r\n"
+          }
+        },
+        "owned_children": [
+          {
+            "observer_pid": 5228,
+            "parent_pid": 1264,
+            "parent_name": "cmd.exe",
+            "parent_command_line": "cmd  /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (for review).txt\"\" ",
+            "arguments": [
+              "draft (for review).txt"
+            ]
+          }
+        ],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+      },
+      {
+        "id": "child_prefix_redirect",
+        "kind": "child",
+        "command": "cmd > \"capture (sales & support).txt\" /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (for review).txt\"\"",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd > \"capture (sales & support).txt\" /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (for review).txt\"\"",
+        "outer_pid": 700,
+        "actual_exit": 0,
+        "seconds": 0.28394980000000203,
+        "timeout": false,
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "files": {
+          "capture (sales & support).txt": {
+            "bytes": 240,
+            "sha256": "c26f6f3a59769b63bf66e2a1e8e6e14ee00f4638b7e5ea13282697e584d872a3",
+            "base64": "eyJvYnNlcnZlcl9waWQiOjU3OTIsInBhcmVudF9waWQiOjU4NzIsInBhcmVudF9uYW1lIjoiY21kLmV4ZSIsInBhcmVudF9jb21tYW5kX2xpbmUiOiJjbWQgICAvZCAvcyAvYyBcInBvd2Vyc2hlbGwuZXhlIC1Ob1Byb2ZpbGUgLU5vbkludGVyYWN0aXZlIC1GaWxlIG9ic2VydmUtY2hpbGQucHMxIFwiZHJhZnQgKGZvciByZXZpZXcpLnR4dFwiXCIiLCJhcmd1bWVudHMiOlsiZHJhZnQgKGZvciByZXZpZXcpLnR4dCJdfQ0K",
+            "text": "{\"observer_pid\":5792,\"parent_pid\":5872,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd   /d /s /c \\\"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \\\"draft (for review).txt\\\"\\\"\",\"arguments\":[\"draft (for review).txt\"]}\r\n"
+          }
+        },
+        "owned_children": [
+          {
+            "observer_pid": 5792,
+            "parent_pid": 5872,
+            "parent_name": "cmd.exe",
+            "parent_command_line": "cmd   /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (for review).txt\"\"",
+            "arguments": [
+              "draft (for review).txt"
+            ]
+          }
+        ],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+      },
+      {
+        "id": "child_inner_redirect",
+        "kind": "child",
+        "command": "cmd /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (for review).txt\">capture.txt\"",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c cmd /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (for review).txt\">capture.txt\"",
+        "outer_pid": 3472,
+        "actual_exit": 0,
+        "seconds": 0.27864350000000115,
+        "timeout": false,
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "files": {
+          "capture.txt": {
+            "bytes": 255,
+            "sha256": "b819b68e07101820972c3386789a03039df4966ba8a5bdf4dfe5bacb7a1dc924",
+            "base64": "eyJvYnNlcnZlcl9waWQiOjY2MjgsInBhcmVudF9waWQiOjc1MiwicGFyZW50X25hbWUiOiJjbWQuZXhlIiwicGFyZW50X2NvbW1hbmRfbGluZSI6ImNtZCAgL2QgL3MgL2MgXCJwb3dlcnNoZWxsLmV4ZSAtTm9Qcm9maWxlIC1Ob25JbnRlcmFjdGl2ZSAtRmlsZSBvYnNlcnZlLWNoaWxkLnBzMSBcImRyYWZ0IChmb3IgcmV2aWV3KS50eHRcIlx1MDAzZWNhcHR1cmUudHh0XCIiLCJhcmd1bWVudHMiOlsiZHJhZnQgKGZvciByZXZpZXcpLnR4dCJdfQ0K",
+            "text": "{\"observer_pid\":6628,\"parent_pid\":752,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /s /c \\\"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \\\"draft (for review).txt\\\"\\u003ecapture.txt\\\"\",\"arguments\":[\"draft (for review).txt\"]}\r\n"
+          }
+        },
+        "owned_children": [
+          {
+            "observer_pid": 6628,
+            "parent_pid": 752,
+            "parent_name": "cmd.exe",
+            "parent_command_line": "cmd  /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (for review).txt\">capture.txt\"",
+            "arguments": [
+              "draft (for review).txt"
+            ]
+          }
+        ],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+      },
+      {
+        "id": "child_grouped",
+        "kind": "child",
+        "command": "(cmd /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (for review).txt\"\")",
+        "outer_command_line": "\"C:\\Windows\\system32\\cmd.exe\" /d /c (cmd /d /s /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 \"draft (for review).txt\"\")",
+        "outer_pid": 2736,
+        "actual_exit": 1,
+        "seconds": 0.006318300000003774,
+        "timeout": false,
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "base64": "",
+          "text": ""
+        },
+        "stderr": {
+          "bytes": 38,
+          "sha256": "4a9a495320cc775b2df590eec55cf8715c06594c04a3f80eac6474a12e7ece33",
+          "base64": "LnR4dCIiKSB3YXMgdW5leHBlY3RlZCBhdCB0aGlzIHRpbWUuDQo=",
+          "text": ".txt\"\") was unexpected at this time.\r\n"
+        },
+        "files": {},
+        "owned_children": [],
+        "cleanup": null,
+        "required_pass": true,
+        "assertion_scope": "Observation only; actual exit/output and owned-child records determine native behavior after this frozen run."
+      }
+    ],
+    "record_count": 20,
+    "failures": [],
+    "scope": "Twenty harmless native observations of quoted filenames under nested Cmd. Only type_reported, type_plain_control and child_reported have predeclared required validity/output or owned-child assertions; the other seventeen cases are observational, with raw exits/output/files retained. No Charamel source is built or modified. Inputs and outputs live only in owned temporary directories; the helper observes only its own process and immediate Cmd parent.",
+    "required_cases": [
+      "type_reported",
+      "type_plain_control",
+      "child_reported"
+    ],
+    "observation_only_cases": [
+      "type_without_s",
+      "type_unwrapped_control",
+      "type_spaces",
+      "type_ampersand",
+      "type_open_parenthesis",
+      "type_close_parenthesis",
+      "type_outer_redirect",
+      "type_prefix_redirect",
+      "type_inner_redirect",
+      "type_grouped",
+      "type_for_body",
+      "child_spaces",
+      "child_ampersand",
+      "child_outer_redirect",
+      "child_prefix_redirect",
+      "child_inner_redirect",
+      "child_grouped"
+    ]
+  },
+  "artifact": {
+    "total_count": 1,
+    "artifacts": [
+      {
+        "id": 15196541931,
+        "node_id": "MDg6QXJ0aWZhY3QxNTE5NjU0MTkzMQ==",
+        "name": "charamel32-native-quotes",
+        "size_in_bytes": 4923,
+        "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15196541931",
+        "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15196541931/zip",
+        "expired": false,
+        "digest": "sha256:e69cd62041b5cae5b29fb21101f98c7abb16cb70e3ab617f61451f4421005218",
+        "created_at": "2026-11-27T12:19:08Z",
+        "updated_at": "2026-11-27T12:19:08Z",
+        "expires_at": "2026-12-27T12:19:07Z",
+        "workflow_run": {
+          "id": 45997335988,
+          "repository_id": 1424164147,
+          "head_repository_id": 1424164147,
+          "head_branch": "ci/charamel32-cmd-gates-20261127",
+          "head_sha": "2c9cf4db2df1c85ccba3c6e7dcea482d803bf5d8"
+        }
+      }
+    ]
+  },
+  "log_sha256": "886e05c1ab7e3b43668cc2c0972fa71b1a71888a36b78776f803ed69f9a2ff38",
+  "published": false
+}
