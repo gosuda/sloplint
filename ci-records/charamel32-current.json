@@ -1,1051 +1,930 @@
 {
   "schema_version": 1,
-  "recorded_at": "2026-11-27 12:53:51 UTC",
+  "recorded_at": "2026-11-27 13:10:59 UTC",
   "repository": "gosuda/Charamel",
   "pr": 32,
-  "branch": "followup/merged-threads-1127",
-  "phase": "fresh_reconciled_full_gates_running",
-  "published": false,
-  "maintained_head": "d19fcb385bf404c2fbc1628d8c090c63a63cdcd1",
-  "actual_main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-  "original_tree": "0893090a2132c707279c64879a31694075d60e1b",
-  "candidate_tree": "4a6a0cea4a41bc86db7fe8c6a513bdaa86561025",
-  "candidate_source": [
-    {
-      "path": "bin/crush/lib/shell_screen.ml",
-      "sha256": "66af36577313918be01ded984ee3115da9a33e2828e555a9301c9b5a1d732cdc"
-    },
-    {
-      "path": "bin/crush/lib/shell_screen.mli",
-      "sha256": "341412aafaebbc354197001bd9373086ee9681ee69cac012df2cf08637212ee9"
-    },
-    {
-      "path": "test/crush/test_tools_shell.ml",
-      "sha256": "33b748ca0a7744d0b29270e98b0c776ef0d498770cdc3b6d268e5ba1fb95c749"
-    }
-  ],
-  "source_inventory": {
-    "tracked": 1094,
-    "unchanged_entries_and_modes": 1091,
+  "url": "https://github.com/gosuda/Charamel/pull/32",
+  "phase": "published_verified_and_owned_probes_retired",
+  "source": {
+    "head": "379fd70de420375a1ece3d3d4999d38e096c1da8",
+    "tree": "4a6a0cea4a41bc86db7fe8c6a513bdaa86561025",
+    "parent": "d19fcb385bf404c2fbc1628d8c090c63a63cdcd1",
+    "branch": "followup/merged-threads-1127",
+    "actual_main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
+    "additive": true,
+    "force": false,
+    "merged": false,
+    "auto_merge": false,
     "changed_paths": [
-      "bin/crush/lib/shell_screen.ml",
-      "bin/crush/lib/shell_screen.mli",
-      "test/crush/test_tools_shell.ml"
-    ],
-    "production_and_interface_identical_to_historical_verified_ecea": true,
-    "external_d19f_assertions_preserved": true
-  },
-  "instructions": {
-    "url": "https://github.com/gosuda/Charamel/blob/d19fcb385bf404c2fbc1628d8c090c63a63cdcd1/AGENTS.md",
-    "sole_applicable_instruction_file": true,
-    "required": [
-      "eval $(opam env --switch=rd --set-switch)",
-      "dune build @fmt",
-      "dune build --profile release",
-      "dune runtest --profile release"
-    ],
-    "ocaml": "5.5.1",
-    "formatter": "0.29.0"
-  },
-  "preparation": {
-    "producer": "f08ee19bc31ba462135dd1668434684f4a1dedc5",
-    "run": 46000723787,
-    "job": 140511369678,
-    "conclusion": "success",
-    "artifact": 15197693858,
-    "zip_sha256": "c34917e8bb51d26d86dc8bc4ad96d786a20d15c2fc3155363f5b3c64fbfd9e8a",
-    "result": {
-      "producer": "f08ee19bc31ba462135dd1668434684f4a1dedc5",
-      "run": "46000723787",
-      "head": "d19fcb385bf404c2fbc1628d8c090c63a63cdcd1",
-      "original_tree": "0893090a2132c707279c64879a31694075d60e1b",
-      "formatted_tree": "4a6a0cea4a41bc86db7fe8c6a513bdaa86561025",
-      "accepted": true,
-      "native_quotes_count": 20,
-      "source_restored": true,
-      "stages": {
-        "observed_original": {
-          "tree": "adc91f70f017c3298d785c02c3108262ed863766",
-          "classifier_cases": 214,
-          "classifier_failures": [
-            "quoted-type_reported",
-            "quoted-type_without_s",
-            "quoted-type_outer_redirect",
-            "quoted-type_prefix_redirect",
-            "quoted-type_inner_redirect",
-            "quoted-type_for_body"
-          ],
-          "trace_cases": 57,
-          "trace_failures": [
-            "nested_redirect_equal",
-            "nested_redirect_prefix",
-            "reported_quoted_outer",
-            "quoted_outer_stderr",
-            "quoted_outer_both",
-            "quoted_outer_append",
-            "redirect_before_payload",
-            "inner_plus_outer",
-            "two_outer_targets",
-            "following_command",
-            "grouped_outer",
-            "for_body_outer",
-            "trailing_space_outer",
-            "echo_two_spaces",
-            "echo_tab_gap",
-            "echo_argument_between",
-            "echo_duplication_before",
-            "echo_comma_gap",
-            "echo_quoted_digit",
-            "echo_quoted_digits",
-            "echo_two_digits",
-            "echo_escaped_digit",
-            "echo_ordinary_digit",
-            "quoted-type_reported",
-            "quoted-type_without_s",
-            "quoted-type_spaces",
-            "quoted-type_outer_redirect",
-            "quoted-type_prefix_redirect",
-            "quoted-type_inner_redirect",
-            "quoted-type_for_body"
-          ],
-          "maintained_tests": [
-            {
-              "name": "Cmd payload source bytes",
-              "index": 15,
-              "actual_exit": 1,
-              "expected_exit": 1,
-              "expected_failure": "nested_redirect_equal",
-              "log_sha256": "63ab4740b2667b5877978cd8da716f902a2b3fddd38987c57716009bfb0327b6"
-            },
-            {
-              "name": "Cmd quoted filename source bytes",
-              "index": 17,
-              "actual_exit": 1,
-              "expected_exit": 1,
-              "expected_failure": "quoted-type_reported",
-              "log_sha256": "99bc443f830dccbeb223f7c93aa7bec75b0939ba24af5fa9c05719737b4b56c9"
-            }
-          ]
-        },
-        "candidate": {
-          "tree": "4a6a0cea4a41bc86db7fe8c6a513bdaa86561025",
-          "classifier_cases": 214,
-          "classifier_failures": [],
-          "trace_cases": 57,
-          "trace_failures": [],
-          "maintained_tests": [
-            {
-              "name": "Cmd payload source bytes",
-              "index": 15,
-              "actual_exit": 0,
-              "expected_exit": 0,
-              "expected_failure": null,
-              "log_sha256": "c56e585f30a2f4e2d4a40ce51483f8a173edafd6747e6a880fdddc81a6eee620"
-            },
-            {
-              "name": "Cmd quoted filename source bytes",
-              "index": 17,
-              "actual_exit": 0,
-              "expected_exit": 0,
-              "expected_failure": null,
-              "log_sha256": "e3a91ff9dfc72ca6f14ad71ae7528eb37eeb148713f8108241c5ecd2c30be9ee"
-            }
-          ]
-        },
-        "first_quote_mutant": {
-          "tree": "bc2aef8eddec46b57226a4d832408e267ad48cbf",
-          "classifier_cases": 214,
-          "classifier_failures": [
-            "quoted-type_reported",
-            "quoted-type_without_s",
-            "quoted-type_outer_redirect",
-            "quoted-type_prefix_redirect",
-            "quoted-type_inner_redirect",
-            "quoted-type_for_body"
-          ],
-          "trace_cases": 57,
-          "trace_failures": [
-            "quoted-type_reported",
-            "quoted-type_without_s",
-            "quoted-type_spaces",
-            "quoted-type_outer_redirect",
-            "quoted-type_prefix_redirect",
-            "quoted-type_inner_redirect",
-            "quoted-type_for_body"
-          ],
-          "maintained_tests": [
-            {
-              "name": "Cmd payload source bytes",
-              "index": 15,
-              "actual_exit": 0,
-              "expected_exit": 0,
-              "expected_failure": null,
-              "log_sha256": "acb2c6d57471f3a777a8b3f725cb6ca465ccd7263fa9e8b923c01a1e2b5ddfd1"
-            },
-            {
-              "name": "Cmd quoted filename source bytes",
-              "index": 17,
-              "actual_exit": 1,
-              "expected_exit": 1,
-              "expected_failure": "quoted-type_reported",
-              "log_sha256": "6f83ba795e24faaa6b1685ecdccfbbe039cf657927aa45837361587003ef3028"
-            }
-          ]
-        },
-        "restored": {
-          "tree": "4a6a0cea4a41bc86db7fe8c6a513bdaa86561025",
-          "classifier_cases": 214,
-          "classifier_failures": [],
-          "trace_cases": 57,
-          "trace_failures": [],
-          "maintained_tests": [
-            {
-              "name": "Cmd payload source bytes",
-              "index": 15,
-              "actual_exit": 0,
-              "expected_exit": 0,
-              "expected_failure": null,
-              "log_sha256": "e445e554c1e6d3fb9612b6aa92fd87c8677331e38cf1fd84501a1dbcc1b4ffdd"
-            },
-            {
-              "name": "Cmd quoted filename source bytes",
-              "index": 17,
-              "actual_exit": 0,
-              "expected_exit": 0,
-              "expected_failure": null,
-              "log_sha256": "5b06cbb63ec4d5289656ad64eb1da44d14f80d094726ddeb904779d5f918b6f6"
-            }
-          ]
-        }
-      },
-      "commands": [
-        {
-          "label": "compiler-version",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "ocamlc",
-            "-version"
-          ],
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 0.012131938000010223,
-          "log_sha256": "db74d0caf81f43029fa28ce9888695d0b54d0a99003e6042823c9bc914897865"
-        },
-        {
-          "label": "formatter-version",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "ocamlformat",
-            "--version"
-          ],
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 0.014315038000006552,
-          "log_sha256": "a68641c6aacd345c4931a6217331d2bf43398c7bc134666a2f756953eab407aa"
-        },
-        {
-          "label": "original-compile",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "ocamlc",
-            "-strict-sequence",
-            "-strict-formats",
-            "-short-paths",
-            "-principal",
-            "-warn-error",
-            "+a",
-            "-o",
-            "/tmp/charamel32-quotes-prepare-uqin67k2/original/screen-probe",
-            "shell_screen.mli",
-            "shell_screen.ml",
-            "probe.ml"
-          ],
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 0.07932089100000894,
-          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        },
-        {
-          "label": "observed_original-compile",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "ocamlc",
-            "-strict-sequence",
-            "-strict-formats",
-            "-short-paths",
-            "-principal",
-            "-warn-error",
-            "+a",
-            "-o",
-            "/tmp/charamel32-quotes-prepare-uqin67k2/observed_original-plain/screen-probe",
-            "shell_screen.mli",
-            "shell_screen.ml",
-            "probe.ml"
-          ],
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 0.08292714899999964,
-          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        },
-        {
-          "label": "observed_original-trace-compile",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "ocamlc",
-            "-strict-sequence",
-            "-strict-formats",
-            "-short-paths",
-            "-principal",
-            "-warn-error",
-            "+a",
-            "-o",
-            "/tmp/charamel32-quotes-prepare-uqin67k2/observed_original-trace/screen-probe",
-            "shell_screen.mli",
-            "shell_screen.ml",
-            "probe.ml"
-          ],
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 0.08090125199998965,
-          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        },
-        {
-          "label": "observed_original-15-maintained-test",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "dune",
-            "exec",
-            "--profile",
-            "release",
-            "test/crush/test_crush.exe",
-            "--",
-            "test",
-            "--show-errors",
-            "^tools-shell$",
-            "15"
-          ],
-          "actual_exit": 1,
-          "timeout": false,
-          "seconds": 4.042668888000009,
-          "log_sha256": "63ab4740b2667b5877978cd8da716f902a2b3fddd38987c57716009bfb0327b6"
-        },
-        {
-          "label": "observed_original-17-maintained-test",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "dune",
-            "exec",
-            "--profile",
-            "release",
-            "test/crush/test_crush.exe",
-            "--",
-            "test",
-            "--show-errors",
-            "^tools-shell$",
-            "17"
-          ],
-          "actual_exit": 1,
-          "timeout": false,
-          "seconds": 0.10599765599999955,
-          "log_sha256": "99bc443f830dccbeb223f7c93aa7bec75b0939ba24af5fa9c05719737b4b56c9"
-        },
-        {
-          "label": "format-candidate",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "ocamlformat",
-            "-i",
-            "bin/crush/lib/shell_screen.ml",
-            "bin/crush/lib/shell_screen.mli",
-            "test/crush/test_tools_shell.ml"
-          ],
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 0.16436946900000748,
-          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        },
-        {
-          "label": "candidate-compile",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "ocamlc",
-            "-strict-sequence",
-            "-strict-formats",
-            "-short-paths",
-            "-principal",
-            "-warn-error",
-            "+a",
-            "-o",
-            "/tmp/charamel32-quotes-prepare-uqin67k2/candidate-plain/screen-probe",
-            "shell_screen.mli",
-            "shell_screen.ml",
-            "probe.ml"
-          ],
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 0.08079397400001653,
-          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        },
-        {
-          "label": "candidate-trace-compile",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "ocamlc",
-            "-strict-sequence",
-            "-strict-formats",
-            "-short-paths",
-            "-principal",
-            "-warn-error",
-            "+a",
-            "-o",
-            "/tmp/charamel32-quotes-prepare-uqin67k2/candidate-trace/screen-probe",
-            "shell_screen.mli",
-            "shell_screen.ml",
-            "probe.ml"
-          ],
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 0.08290046799999118,
-          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        },
-        {
-          "label": "candidate-15-maintained-test",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "dune",
-            "exec",
-            "--profile",
-            "release",
-            "test/crush/test_crush.exe",
-            "--",
-            "test",
-            "--show-errors",
-            "^tools-shell$",
-            "15"
-          ],
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 1.2674438779999946,
-          "log_sha256": "c56e585f30a2f4e2d4a40ce51483f8a173edafd6747e6a880fdddc81a6eee620"
-        },
-        {
-          "label": "candidate-17-maintained-test",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "dune",
-            "exec",
-            "--profile",
-            "release",
-            "test/crush/test_crush.exe",
-            "--",
-            "test",
-            "--show-errors",
-            "^tools-shell$",
-            "17"
-          ],
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 0.10937867299998061,
-          "log_sha256": "e3a91ff9dfc72ca6f14ad71ae7528eb37eeb148713f8108241c5ecd2c30be9ee"
-        },
-        {
-          "label": "first_quote_mutant-compile",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "ocamlc",
-            "-strict-sequence",
-            "-strict-formats",
-            "-short-paths",
-            "-principal",
-            "-warn-error",
-            "+a",
-            "-o",
-            "/tmp/charamel32-quotes-prepare-uqin67k2/first_quote_mutant-plain/screen-probe",
-            "shell_screen.mli",
-            "shell_screen.ml",
-            "probe.ml"
-          ],
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 0.07951886999998692,
-          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        },
-        {
-          "label": "first_quote_mutant-trace-compile",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "ocamlc",
-            "-strict-sequence",
-            "-strict-formats",
-            "-short-paths",
-            "-principal",
-            "-warn-error",
-            "+a",
-            "-o",
-            "/tmp/charamel32-quotes-prepare-uqin67k2/first_quote_mutant-trace/screen-probe",
-            "shell_screen.mli",
-            "shell_screen.ml",
-            "probe.ml"
-          ],
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 0.08409008099999937,
-          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        },
-        {
-          "label": "first_quote_mutant-15-maintained-test",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "dune",
-            "exec",
-            "--profile",
-            "release",
-            "test/crush/test_crush.exe",
-            "--",
-            "test",
-            "--show-errors",
-            "^tools-shell$",
-            "15"
-          ],
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 1.3198191429999895,
-          "log_sha256": "acb2c6d57471f3a777a8b3f725cb6ca465ccd7263fa9e8b923c01a1e2b5ddfd1"
-        },
-        {
-          "label": "first_quote_mutant-17-maintained-test",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "dune",
-            "exec",
-            "--profile",
-            "release",
-            "test/crush/test_crush.exe",
-            "--",
-            "test",
-            "--show-errors",
-            "^tools-shell$",
-            "17"
-          ],
-          "actual_exit": 1,
-          "timeout": false,
-          "seconds": 0.10495859400000995,
-          "log_sha256": "6f83ba795e24faaa6b1685ecdccfbbe039cf657927aa45837361587003ef3028"
-        },
-        {
-          "label": "restored-compile",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "ocamlc",
-            "-strict-sequence",
-            "-strict-formats",
-            "-short-paths",
-            "-principal",
-            "-warn-error",
-            "+a",
-            "-o",
-            "/tmp/charamel32-quotes-prepare-uqin67k2/restored-plain/screen-probe",
-            "shell_screen.mli",
-            "shell_screen.ml",
-            "probe.ml"
-          ],
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 0.08028949799998486,
-          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        },
-        {
-          "label": "restored-trace-compile",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "ocamlc",
-            "-strict-sequence",
-            "-strict-formats",
-            "-short-paths",
-            "-principal",
-            "-warn-error",
-            "+a",
-            "-o",
-            "/tmp/charamel32-quotes-prepare-uqin67k2/restored-trace/screen-probe",
-            "shell_screen.mli",
-            "shell_screen.ml",
-            "probe.ml"
-          ],
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 0.08073217300000124,
-          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        },
-        {
-          "label": "restored-15-maintained-test",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "dune",
-            "exec",
-            "--profile",
-            "release",
-            "test/crush/test_crush.exe",
-            "--",
-            "test",
-            "--show-errors",
-            "^tools-shell$",
-            "15"
-          ],
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 1.278049115000016,
-          "log_sha256": "e445e554c1e6d3fb9612b6aa92fd87c8677331e38cf1fd84501a1dbcc1b4ffdd"
-        },
-        {
-          "label": "restored-17-maintained-test",
-          "argv": [
-            "opam",
-            "exec",
-            "--switch=rd",
-            "--",
-            "dune",
-            "exec",
-            "--profile",
-            "release",
-            "test/crush/test_crush.exe",
-            "--",
-            "test",
-            "--show-errors",
-            "^tools-shell$",
-            "17"
-          ],
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 0.10337532700000907,
-          "log_sha256": "5b06cbb63ec4d5289656ad64eb1da44d14f80d094726ddeb904779d5f918b6f6"
-        },
-        {
-          "label": "candidate-whitespace",
-          "argv": [
-            "git",
-            "diff",
-            "--cached",
-            "--check"
-          ],
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 0.002121402999989641,
-          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        },
-        {
-          "label": "restore-original",
-          "argv": [
-            "git",
-            "reset",
-            "--hard",
-            "d19fcb385bf404c2fbc1628d8c090c63a63cdcd1"
-          ],
-          "actual_exit": 0,
-          "timeout": false,
-          "seconds": 0.0030339930000025106,
-          "log_sha256": "b630637f6bd014e19b908c4d033962065cc428735c6585a36025916e99e760cc"
-        }
-      ],
-      "scope": [
-        "Preserve all d19f external verdict and native-output assertions; correct only the misleading scanner-output comment.",
-        "Production .ml and documented .mli are byte-identical to the unpublished, fully verified ecea candidate. This new preparation and subsequent full gates bind the combined d19f-based test file.",
-        "Twenty quoted-filename native observations include sixteen exits0 and four exits1. Nine valid TYPE contexts become exact maintained parser-input contracts; foreign helper contexts remain observations.",
-        "Native-valid filenames containing unmatched parentheses remain conservative Review on all three parser versions. Native-invalid ampersand/grouped controls and these pre-existing gaps remain explicitly outside a full Cmd parity claim.",
-        "Original d19f receives only a local observation adapter and candidate tests. Classifier outputs are compared before and after instrumentation. A separate first-quote-only mutant preserves the repaired outer-redirection machinery and must fail the new quoted-filename maintained test while preserving all previous203/48 controls.",
-        "All source edits are restricted to shell_screen.ml, its documented mli, and test_tools_shell.ml. Permission policy, tools_shell.ml, POSIX parser prefix, dependencies, build workflows and every other source entry remain unchanged."
-      ]
-    },
-    "receipt": "https://github.com/gosuda/sloplint/blob/d328d60e471410f477a539e69e3d275376f5192b/ci-records/charamel32-quotes-preparation.json"
-  },
-  "full_proof": {
-    "producer": "d328d60e471410f477a539e69e3d275376f5192b",
-    "producer_tree": "b7154d8936bd26e66e46b0b8518249ca19645b83",
-    "branch": "ci/charamel32-cmd-gates-20261127",
-    "run": 46001784187,
-    "jobs": [
       {
-        "id": 140514989607,
-        "name": "native (windows, depot-windows-2025-8)",
-        "status": "in_progress",
-        "conclusion": null,
-        "steps": [
+        "path": "bin/crush/lib/shell_screen.ml",
+        "mode": "100644",
+        "sha256": "66af36577313918be01ded984ee3115da9a33e2828e555a9301c9b5a1d732cdc"
+      },
+      {
+        "path": "bin/crush/lib/shell_screen.mli",
+        "mode": "100644",
+        "sha256": "341412aafaebbc354197001bd9373086ee9681ee69cac012df2cf08637212ee9"
+      },
+      {
+        "path": "test/crush/test_tools_shell.ml",
+        "mode": "100644",
+        "sha256": "33b748ca0a7744d0b29270e98b0c776ef0d498770cdc3b6d268e5ba1fb95c749"
+      }
+    ],
+    "unchanged_other_index_entries": 1091,
+    "synthetic_merge": {
+      "sha": "0ce39eecb7e6014855c340e19ff41cd48fd2dd0b",
+      "tree": "4a6a0cea4a41bc86db7fe8c6a513bdaa86561025",
+      "parents": [
+        "84e5ff153f781c7e2d02804a5c24997858f618ab",
+        "379fd70de420375a1ece3d3d4999d38e096c1da8"
+      ]
+    }
+  },
+  "required_proof": {
+    "producer": "d328d60e471410f477a539e69e3d275376f5192b",
+    "run": 46001784187,
+    "conclusion": "success",
+    "url": "https://github.com/gosuda/sloplint/actions/runs/46001784187",
+    "preparation": {
+      "producer": "f08ee19bc31ba462135dd1668434684f4a1dedc5",
+      "run": 46000723787,
+      "job": 140511369678,
+      "conclusion": "success",
+      "classifier_cases": 214,
+      "recursive_input_cases": 57,
+      "old_quote_mutant": "Older 203 classifier and 48 recursive-input controls pass; new quoted-filename maintained regression fails; candidate/restored pass."
+    },
+    "linux": {
+      "job": 140514990060,
+      "runner": "depot-ubuntu-24.04-4",
+      "conclusion": "success",
+      "fmt_exit": 0,
+      "release_build_exit": 0,
+      "full_release_tests_exit": 0,
+      "test_count": 1780,
+      "suites": 30,
+      "artifact": 15198208017,
+      "artifact_zip_sha256": "a7c21c5023f219ac5a8490d6153a158e89bdcb3f3262461aee3060a35a91515e",
+      "log_sha256": "07db687a176c3102b2bbaf3a04b3dbd43432a9e40cb164be57a6cad448c6f473"
+    },
+    "windows": {
+      "job": 140514989607,
+      "runner": "depot-windows-2025-8",
+      "conclusion": "success",
+      "fmt_exit": 0,
+      "release_build_exit": 0,
+      "selected_tests_exit": 0,
+      "test_count": 45,
+      "shell_indices": [
+        0,
+        28
+      ],
+      "permission_indices": [
+        0,
+        15
+      ],
+      "native_comparisons": {
+        "retained": 101,
+        "redirection": 51,
+        "quoted_filename": 20,
+        "total": 172,
+        "failures": 0
+      },
+      "quoted_native_exits": {
+        "zero": 16,
+        "expected_invalid_one": 4
+      },
+      "artifact": 15198968090,
+      "artifact_zip_sha256": "4be7f98850ec379b97d7208a9127cb19395f1e04fdc6b6c61e143b680012d6e3",
+      "log_sha256": "d9156f11ed0b1fe2fde67fd3d10d4f005fc0516302c403ffe575c02781acc187",
+      "full_windows_suite_claim": false,
+      "selection_note": "The original Windows selection check passed with full printed labels. Linux's truncated long Alcotest display label was not a Windows failure and no evidence-only follow-up was launched."
+    },
+    "source_clean": true,
+    "terminal_receipt": {
+      "commit": "1403195306c444adea74196949543f7dbfbe43eb",
+      "path": "ci-records/charamel32-quoted-terminal.json",
+      "sha256": "fa41528040d63b5d929b11e9c6561f77f2fc41a73707374dba2d9845e493b9ba",
+      "url": "https://github.com/gosuda/sloplint/blob/1403195306c444adea74196949543f7dbfbe43eb/ci-records/charamel32-quoted-terminal.json"
+    }
+  },
+  "review": {
+    "total": 18,
+    "unresolved": 0,
+    "states": [
+      {
+        "id": "PRRT_kwDOUbWGks68pEjK",
+        "is_resolved": true,
+        "is_outdated": true,
+        "path": "bin/crush/lib/shell_screen.ml",
+        "top_comment_id": 4715589949,
+        "resolved_by": "metaphoric-dev",
+        "comments": [
           {
-            "name": "Set up job",
-            "status": "completed",
-            "conclusion": "success",
-            "number": 1,
-            "started_at": "2026-11-27T12:50:13Z",
-            "completed_at": "2026-11-27T12:50:14Z"
+            "id": 4715589949,
+            "created_at": "2026-11-27T04:09:30Z"
           },
           {
-            "name": "Preserve source bytes on Windows",
-            "status": "completed",
-            "conclusion": "success",
-            "number": 2,
-            "started_at": "2026-11-27T12:50:14Z",
-            "completed_at": "2026-11-27T12:50:20Z"
-          },
-          {
-            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
-            "status": "completed",
-            "conclusion": "success",
-            "number": 3,
-            "started_at": "2026-11-27T12:50:20Z",
-            "completed_at": "2026-11-27T12:50:28Z"
-          },
-          {
-            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
-            "status": "completed",
-            "conclusion": "success",
-            "number": 4,
-            "started_at": "2026-11-27T12:50:28Z",
-            "completed_at": "2026-11-27T12:50:30Z"
-          },
-          {
-            "name": "Run astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d",
-            "status": "completed",
-            "conclusion": "success",
-            "number": 5,
-            "started_at": "2026-11-27T12:50:30Z",
-            "completed_at": "2026-11-27T12:50:33Z"
-          },
-          {
-            "name": "Authenticate preparation and apply the exact candidate",
-            "status": "completed",
-            "conclusion": "success",
-            "number": 6,
-            "started_at": "2026-11-27T12:50:33Z",
-            "completed_at": "2026-11-27T12:50:38Z"
-          },
-          {
-            "name": "Replay complete frozen native Cmd observations",
-            "status": "completed",
-            "conclusion": "success",
-            "number": 7,
-            "started_at": "2026-11-27T12:50:38Z",
-            "completed_at": "2026-11-27T12:50:47Z"
-          },
-          {
-            "name": "Run ocaml/setup-ocaml@ff66428f72b64472e749b22e0ad4dded4b2ddca6",
-            "status": "in_progress",
-            "conclusion": null,
-            "number": 8,
-            "started_at": "2026-11-27T12:50:47Z",
-            "completed_at": null
-          },
-          {
-            "name": "Create the required rd switch and install repository dependencies",
-            "status": "pending",
-            "conclusion": null,
-            "number": 9,
-            "started_at": null,
-            "completed_at": null
-          },
-          {
-            "name": "Run prescribed source gates and native permissions",
-            "status": "pending",
-            "conclusion": null,
-            "number": 10,
-            "started_at": null,
-            "completed_at": null
-          },
-          {
-            "name": "Verify final candidate identity",
-            "status": "pending",
-            "conclusion": null,
-            "number": 11,
-            "started_at": null,
-            "completed_at": null
-          },
-          {
-            "name": "Run actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
-            "status": "pending",
-            "conclusion": null,
-            "number": 12,
-            "started_at": null,
-            "completed_at": null
-          },
-          {
-            "name": "Post Run ocaml/setup-ocaml@ff66428f72b64472e749b22e0ad4dded4b2ddca6",
-            "status": "pending",
-            "conclusion": null,
-            "number": 21,
-            "started_at": null,
-            "completed_at": null
-          },
-          {
-            "name": "Post Run astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d",
-            "status": "pending",
-            "conclusion": null,
-            "number": 22,
-            "started_at": null,
-            "completed_at": null
-          },
-          {
-            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
-            "status": "pending",
-            "conclusion": null,
-            "number": 23,
-            "started_at": null,
-            "completed_at": null
-          },
-          {
-            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
-            "status": "pending",
-            "conclusion": null,
-            "number": 24,
-            "started_at": null,
-            "completed_at": null
+            "id": 4716825008,
+            "created_at": "2026-11-27T07:44:53Z"
           }
         ]
       },
       {
-        "id": 140514990060,
-        "name": "native (linux, depot-ubuntu-24.04-4)",
-        "status": "in_progress",
-        "conclusion": null,
-        "steps": [
+        "id": "PRRT_kwDOUbWGks68pEkO",
+        "is_resolved": true,
+        "is_outdated": true,
+        "path": "bin/crush/lib/shell_screen.ml",
+        "top_comment_id": 4715590060,
+        "resolved_by": "metaphoric-dev",
+        "comments": [
           {
-            "name": "Set up job",
-            "status": "completed",
-            "conclusion": "success",
-            "number": 1,
-            "started_at": "2026-11-27T12:48:58Z",
-            "completed_at": "2026-11-27T12:48:58Z"
+            "id": 4715590060,
+            "created_at": "2026-11-27T04:09:32Z"
           },
           {
-            "name": "Preserve source bytes on Windows",
-            "status": "completed",
-            "conclusion": "skipped",
-            "number": 2,
-            "started_at": "2026-11-27T12:48:58Z",
-            "completed_at": "2026-11-27T12:48:58Z"
+            "id": 4716825738,
+            "created_at": "2026-11-27T07:44:59Z"
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOUbWGks68pEky",
+        "is_resolved": true,
+        "is_outdated": true,
+        "path": "bin/crush/lib/shell_screen.ml",
+        "top_comment_id": 4715590141,
+        "resolved_by": "metaphoric-dev",
+        "comments": [
+          {
+            "id": 4715590141,
+            "created_at": "2026-11-27T04:09:33Z"
           },
           {
-            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
-            "status": "completed",
-            "conclusion": "success",
-            "number": 3,
-            "started_at": "2026-11-27T12:48:58Z",
-            "completed_at": "2026-11-27T12:48:59Z"
+            "id": 4716826424,
+            "created_at": "2026-11-27T07:45:06Z"
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOUbWGks68pElp",
+        "is_resolved": true,
+        "is_outdated": true,
+        "path": "bin/crush/lib/shell_screen.ml",
+        "top_comment_id": 4715590231,
+        "resolved_by": "devin-ai-integration[bot]",
+        "comments": [
+          {
+            "id": 4715590231,
+            "created_at": "2026-11-27T04:09:34Z"
           },
           {
-            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
-            "status": "completed",
-            "conclusion": "success",
-            "number": 4,
-            "started_at": "2026-11-27T12:48:59Z",
-            "completed_at": "2026-11-27T12:49:00Z"
+            "id": 4716036327,
+            "created_at": "2026-11-27T05:37:27Z"
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOUbWGks68qHVK",
+        "is_resolved": true,
+        "is_outdated": true,
+        "path": "bin/crush/lib/shell_screen.ml",
+        "top_comment_id": 4716036754,
+        "resolved_by": "metaphoric-dev",
+        "comments": [
+          {
+            "id": 4716036754,
+            "created_at": "2026-11-27T05:37:32Z"
           },
           {
-            "name": "Run astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d",
-            "status": "completed",
-            "conclusion": "success",
-            "number": 5,
-            "started_at": "2026-11-27T12:49:00Z",
-            "completed_at": "2026-11-27T12:49:00Z"
+            "id": 4716827046,
+            "created_at": "2026-11-27T07:45:12Z"
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOUbWGks68qHWW",
+        "is_resolved": true,
+        "is_outdated": false,
+        "path": "bin/crush/lib/shell_screen.ml",
+        "top_comment_id": 4716036873,
+        "resolved_by": "metaphoric-dev",
+        "comments": [
+          {
+            "id": 4716036873,
+            "created_at": "2026-11-27T05:37:33Z"
           },
           {
-            "name": "Authenticate preparation and apply the exact candidate",
-            "status": "completed",
-            "conclusion": "success",
-            "number": 6,
-            "started_at": "2026-11-27T12:49:00Z",
-            "completed_at": "2026-11-27T12:49:01Z"
+            "id": 4716827661,
+            "created_at": "2026-11-27T07:45:18Z"
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOUbWGks68qHXk",
+        "is_resolved": true,
+        "is_outdated": true,
+        "path": "bin/crush/lib/shell_screen.ml",
+        "top_comment_id": 4716037000,
+        "resolved_by": "metaphoric-dev",
+        "comments": [
+          {
+            "id": 4716037000,
+            "created_at": "2026-11-27T05:37:34Z"
           },
           {
-            "name": "Replay complete frozen native Cmd observations",
-            "status": "completed",
-            "conclusion": "skipped",
-            "number": 7,
-            "started_at": "2026-11-27T12:49:01Z",
-            "completed_at": "2026-11-27T12:49:01Z"
+            "id": 4716828336,
+            "created_at": "2026-11-27T07:45:24Z"
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOUbWGks68qHYe",
+        "is_resolved": true,
+        "is_outdated": false,
+        "path": "test/crush/test_tools_shell.ml",
+        "top_comment_id": 4716037087,
+        "resolved_by": "metaphoric-dev",
+        "comments": [
+          {
+            "id": 4716037087,
+            "created_at": "2026-11-27T05:37:35Z"
           },
           {
-            "name": "Run ocaml/setup-ocaml@ff66428f72b64472e749b22e0ad4dded4b2ddca6",
-            "status": "completed",
-            "conclusion": "success",
-            "number": 8,
-            "started_at": "2026-11-27T12:49:01Z",
-            "completed_at": "2026-11-27T12:51:36Z"
+            "id": 4716828942,
+            "created_at": "2026-11-27T07:45:29Z"
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOUbWGks68qHZW",
+        "is_resolved": true,
+        "is_outdated": false,
+        "path": "bin/crush/lib/tools_shell.ml",
+        "top_comment_id": 4716037196,
+        "resolved_by": "metaphoric-dev",
+        "comments": [
+          {
+            "id": 4716037196,
+            "created_at": "2026-11-27T05:37:37Z"
           },
           {
-            "name": "Create the required rd switch and install repository dependencies",
-            "status": "in_progress",
-            "conclusion": null,
-            "number": 9,
-            "started_at": "2026-11-27T12:51:36Z",
-            "completed_at": null
+            "id": 4716829611,
+            "created_at": "2026-11-27T07:45:36Z"
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOUbWGks68qHaJ",
+        "is_resolved": true,
+        "is_outdated": true,
+        "path": "bin/crush/lib/shell_screen.ml",
+        "top_comment_id": 4716037287,
+        "resolved_by": "metaphoric-dev",
+        "comments": [
+          {
+            "id": 4716037287,
+            "created_at": "2026-11-27T05:37:38Z"
           },
           {
-            "name": "Run prescribed source gates and native permissions",
-            "status": "pending",
-            "conclusion": null,
-            "number": 10,
-            "started_at": null,
-            "completed_at": null
+            "id": 4716830231,
+            "created_at": "2026-11-27T07:45:41Z"
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOUbWGks68r_ro",
+        "is_resolved": true,
+        "is_outdated": true,
+        "path": "bin/crush/lib/shell_screen.ml",
+        "top_comment_id": 4716843677,
+        "resolved_by": "metaphoric-dev",
+        "comments": [
+          {
+            "id": 4716843677,
+            "created_at": "2026-11-27T07:47:34Z"
           },
           {
-            "name": "Verify final candidate identity",
-            "status": "pending",
-            "conclusion": null,
-            "number": 11,
-            "started_at": null,
-            "completed_at": null
+            "id": 4717171713,
+            "created_at": "2026-11-27T08:29:51Z"
           },
           {
-            "name": "Run actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
-            "status": "pending",
-            "conclusion": null,
-            "number": 12,
-            "started_at": null,
-            "completed_at": null
+            "id": 4717172674,
+            "created_at": "2026-11-27T08:29:59Z"
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOUbWGks68r_sx",
+        "is_resolved": true,
+        "is_outdated": true,
+        "path": "bin/crush/lib/shell_screen.ml",
+        "top_comment_id": 4716843803,
+        "resolved_by": "metaphoric-dev",
+        "comments": [
+          {
+            "id": 4716843803,
+            "created_at": "2026-11-27T07:47:35Z"
           },
           {
-            "name": "Post Run ocaml/setup-ocaml@ff66428f72b64472e749b22e0ad4dded4b2ddca6",
-            "status": "pending",
-            "conclusion": null,
-            "number": 21,
-            "started_at": null,
-            "completed_at": null
+            "id": 4717173233,
+            "created_at": "2026-11-27T08:30:03Z"
           },
           {
-            "name": "Post Run astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d",
-            "status": "pending",
-            "conclusion": null,
-            "number": 22,
-            "started_at": null,
-            "completed_at": null
+            "id": 4717175096,
+            "created_at": "2026-11-27T08:30:18Z"
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOUbWGks68sxKM",
+        "is_resolved": true,
+        "is_outdated": true,
+        "path": "bin/crush/lib/shell_screen.ml",
+        "top_comment_id": 4717173833,
+        "resolved_by": "metaphoric-dev",
+        "comments": [
+          {
+            "id": 4717173833,
+            "created_at": "2026-11-27T08:30:09Z"
           },
           {
-            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
-            "status": "pending",
-            "conclusion": null,
-            "number": 23,
-            "started_at": null,
-            "completed_at": null
+            "id": 4718069908,
+            "created_at": "2026-11-27T10:09:48Z"
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOUbWGks68sxLw",
+        "is_resolved": true,
+        "is_outdated": true,
+        "path": "bin/crush/lib/shell_screen.ml",
+        "top_comment_id": 4717173991,
+        "resolved_by": "metaphoric-dev",
+        "comments": [
+          {
+            "id": 4717173991,
+            "created_at": "2026-11-27T08:30:10Z"
           },
           {
-            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
-            "status": "pending",
-            "conclusion": null,
-            "number": 24,
-            "started_at": null,
-            "completed_at": null
+            "id": 4718070464,
+            "created_at": "2026-11-27T10:09:52Z"
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOUbWGks68u3UC",
+        "is_resolved": true,
+        "is_outdated": true,
+        "path": "bin/crush/lib/shell_screen.ml",
+        "top_comment_id": 4718073202,
+        "resolved_by": "metaphoric-dev",
+        "comments": [
+          {
+            "id": 4718073202,
+            "created_at": "2026-11-27T10:10:11Z"
+          },
+          {
+            "id": 4719126419,
+            "created_at": "2026-11-27T12:02:27Z"
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOUbWGks68u3WO",
+        "is_resolved": true,
+        "is_outdated": false,
+        "path": "test/crush/test_tools_shell.ml",
+        "top_comment_id": 4718073404,
+        "resolved_by": "metaphoric-dev",
+        "comments": [
+          {
+            "id": 4718073404,
+            "created_at": "2026-11-27T10:10:12Z"
+          },
+          {
+            "id": 4719127615,
+            "created_at": "2026-11-27T12:02:33Z"
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOUbWGks68xZH1",
+        "is_resolved": true,
+        "is_outdated": true,
+        "path": "bin/crush/lib/shell_screen.ml",
+        "top_comment_id": 4719154286,
+        "resolved_by": "devin-ai-integration[bot]",
+        "comments": [
+          {
+            "id": 4719154286,
+            "created_at": "2026-11-27T12:05:22Z"
+          },
+          {
+            "id": 4719738752,
+            "created_at": "2026-11-27T13:05:35Z"
+          },
+          {
+            "id": 4719789253,
+            "created_at": "2026-11-27T13:10:34Z"
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOUbWGks68yv97",
+        "is_resolved": true,
+        "is_outdated": false,
+        "path": "test/crush/test_tools_shell.ml",
+        "top_comment_id": 4719739444,
+        "resolved_by": "metaphoric-dev",
+        "comments": [
+          {
+            "id": 4719739444,
+            "created_at": "2026-11-27T13:05:40Z"
+          },
+          {
+            "id": 4719790083,
+            "created_at": "2026-11-27T13:10:39Z"
           }
         ]
       }
     ],
-    "path": "ci-tools/charamel32-cmd-quoted-gates",
-    "driver_sha256": "1bc80c998f55e71a7be21b962073b9e3c988605fcfbc45942e7e2bd4ef26949d",
-    "manifest_sha256": "85902c889625e4a9c31c85993504fb311f066ededdc00b5f9d5031422d5846b2",
-    "workflow_sha256": "bac29ab635f28b7ac6676ee25f168c6d4bfe84b8ddbca0d404ce2e19bdc46afb",
-    "full_success_claim": false
-  },
-  "native_quotes": {
-    "producer": "2c9cf4db2df1c85ccba3c6e7dcea482d803bf5d8",
-    "run": 45997335988,
-    "job": 140499922464,
-    "artifact": 15196541931,
-    "zip_sha256": "e69cd62041b5cae5b29fb21101f98c7abb16cb70e3ab617f61451f4421005218",
-    "exit_counts": {
-      "0": 16,
-      "1": 4
+    "quoted_filename": {
+      "thread": "PRRT_kwDOUbWGks68xZH1",
+      "top_comment": 4719154286,
+      "resolved_externally": true,
+      "evidence_reply": 4719789253
     },
-    "all_20_native_valid_claim": false
+    "spacing_descriptor": {
+      "thread": "PRRT_kwDOUbWGks68yv97",
+      "top_comment": 4719739444,
+      "evidence_reply": 4719790083,
+      "resolved": true,
+      "disposition": "Existing authenticated native Windows evidence directly covers the alleged unverified cases. No source change or new run.",
+      "records": [
+        {
+          "group": "adjacent",
+          "id": "echo_two_spaces",
+          "command": "cmd /d /c echo ready >capture.txt  2>\"capture (sales & support).txt\"",
+          "exit": 0,
+          "timeout": false,
+          "stdout": "",
+          "stderr": "",
+          "files": {
+            "capture (sales & support).txt": {
+              "text": "",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "bytes": 0
+            },
+            "capture.txt": {
+              "text": "ready \r\n",
+              "sha256": "012d762deb8bae3ea78503242a6d138d53e267a7829b85fc806c0ae32291b062",
+              "bytes": 8
+            }
+          },
+          "children": [],
+          "accepted": true,
+          "error": null,
+          "expected_exit": 0
+        },
+        {
+          "group": "adjacent",
+          "id": "child_two_spaces",
+          "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value >capture.txt  2>\"capture (sales & support).txt\"",
+          "exit": 0,
+          "timeout": false,
+          "stdout": "",
+          "stderr": "",
+          "files": {
+            "capture (sales & support).txt": {
+              "text": "",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "bytes": 0
+            },
+            "capture.txt": {
+              "text": "{\"observer_pid\":1108,\"parent_pid\":5936,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value \",\"arguments\":[\"key=value\"]}\r\n",
+              "sha256": "1eb96f98a943b899861322d9ac92cfd55769cf786945996685d61a60a11743b1",
+              "bytes": 203
+            }
+          },
+          "children": [
+            {
+              "parent_command_line": "cmd  /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value ",
+              "arguments": [
+                "key=value"
+              ]
+            }
+          ],
+          "accepted": true,
+          "error": null,
+          "expected_exit": 0
+        },
+        {
+          "group": "adjacent",
+          "id": "echo_tab_gap",
+          "command": "cmd /d /c echo ready >capture.txt\t2>\"capture (sales & support).txt\"",
+          "exit": 0,
+          "timeout": false,
+          "stdout": "",
+          "stderr": "",
+          "files": {
+            "capture (sales & support).txt": {
+              "text": "",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "bytes": 0
+            },
+            "capture.txt": {
+              "text": "ready \r\n",
+              "sha256": "012d762deb8bae3ea78503242a6d138d53e267a7829b85fc806c0ae32291b062",
+              "bytes": 8
+            }
+          },
+          "children": [],
+          "accepted": true,
+          "error": null,
+          "expected_exit": 0
+        },
+        {
+          "group": "adjacent",
+          "id": "child_tab_gap",
+          "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value >capture.txt\t2>\"capture (sales & support).txt\"",
+          "exit": 0,
+          "timeout": false,
+          "stdout": "",
+          "stderr": "",
+          "files": {
+            "capture (sales & support).txt": {
+              "text": "",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "bytes": 0
+            },
+            "capture.txt": {
+              "text": "{\"observer_pid\":1884,\"parent_pid\":5656,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value \",\"arguments\":[\"key=value\"]}\r\n",
+              "sha256": "5e41da6684853e2f7cae2f2b1ea36723439f769b21e8f5e21b1535bea55648a5",
+              "bytes": 203
+            }
+          },
+          "children": [
+            {
+              "parent_command_line": "cmd  /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value ",
+              "arguments": [
+                "key=value"
+              ]
+            }
+          ],
+          "accepted": true,
+          "error": null,
+          "expected_exit": 0
+        },
+        {
+          "group": "adjacent",
+          "id": "echo_comma_gap",
+          "command": "cmd /d /c echo ready >capture.txt , 2>\"capture (sales & support).txt\"",
+          "exit": 0,
+          "timeout": false,
+          "stdout": "",
+          "stderr": "",
+          "files": {
+            "capture (sales & support).txt": {
+              "text": "",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "bytes": 0
+            },
+            "capture.txt": {
+              "text": "ready \r\n",
+              "sha256": "012d762deb8bae3ea78503242a6d138d53e267a7829b85fc806c0ae32291b062",
+              "bytes": 8
+            }
+          },
+          "children": [],
+          "accepted": true,
+          "error": null,
+          "expected_exit": 0
+        },
+        {
+          "group": "adjacent",
+          "id": "child_comma_gap",
+          "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value >capture.txt , 2>\"capture (sales & support).txt\"",
+          "exit": 0,
+          "timeout": false,
+          "stdout": "",
+          "stderr": "",
+          "files": {
+            "capture (sales & support).txt": {
+              "text": "",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "bytes": 0
+            },
+            "capture.txt": {
+              "text": "{\"observer_pid\":4208,\"parent_pid\":4796,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value \",\"arguments\":[\"key=value\"]}\r\n",
+              "sha256": "ae8765f882f55ad7abe018cee16a1550b339b3f8623903b1685846289a10fd2b",
+              "bytes": 203
+            }
+          },
+          "children": [
+            {
+              "parent_command_line": "cmd  /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value ",
+              "arguments": [
+                "key=value"
+              ]
+            }
+          ],
+          "accepted": true,
+          "error": null,
+          "expected_exit": 0
+        },
+        {
+          "group": "descriptor",
+          "id": "echo_quoted_digit",
+          "command": "cmd /d /c echo \"2\">capture.txt",
+          "exit": 0,
+          "timeout": false,
+          "stdout": "",
+          "stderr": "",
+          "files": {
+            "capture.txt": {
+              "text": "\"2\"\r\n",
+              "sha256": "d45b184018330531c89c69d0705f98ae8281a167c1c0ccb384a3369d8540835b",
+              "bytes": 5
+            }
+          },
+          "children": [],
+          "accepted": true,
+          "error": null,
+          "expected_exit": 0
+        },
+        {
+          "group": "descriptor",
+          "id": "child_quoted_digit",
+          "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value \"2\">capture.txt",
+          "exit": 0,
+          "timeout": false,
+          "stdout": "",
+          "stderr": "",
+          "files": {
+            "capture.txt": {
+              "text": "{\"observer_pid\":6776,\"parent_pid\":7980,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value \\\"2\\\"\",\"arguments\":[\"key=value\",\"2\"]}\r\n",
+              "sha256": "fe46ad24859a790f30059c8484c55a3d742b8eb9798d97cde5f64d798e3712f4",
+              "bytes": 212
+            }
+          },
+          "children": [
+            {
+              "parent_command_line": "cmd  /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value \"2\"",
+              "arguments": [
+                "key=value",
+                "2"
+              ]
+            }
+          ],
+          "accepted": true,
+          "error": null,
+          "expected_exit": 0
+        },
+        {
+          "group": "descriptor",
+          "id": "echo_quoted_digits",
+          "command": "cmd /d /c echo \"12\">capture.txt",
+          "exit": 0,
+          "timeout": false,
+          "stdout": "",
+          "stderr": "",
+          "files": {
+            "capture.txt": {
+              "text": "\"12\"\r\n",
+              "sha256": "cb29a681cc1d92cd0c364c0dc5cfe44d4916aa8b545ed5d1c1ef6c2645c4121d",
+              "bytes": 6
+            }
+          },
+          "children": [],
+          "accepted": true,
+          "error": null,
+          "expected_exit": 0
+        },
+        {
+          "group": "descriptor",
+          "id": "child_quoted_digits",
+          "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value \"12\">capture.txt",
+          "exit": 0,
+          "timeout": false,
+          "stdout": "",
+          "stderr": "",
+          "files": {
+            "capture.txt": {
+              "text": "{\"observer_pid\":2932,\"parent_pid\":7800,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value \\\"12\\\"\",\"arguments\":[\"key=value\",\"12\"]}\r\n",
+              "sha256": "3822d0bcf4d31126e72379ab6bd807e540ab5bbac194fab901ef51a77b9c212c",
+              "bytes": 214
+            }
+          },
+          "children": [
+            {
+              "parent_command_line": "cmd  /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value \"12\"",
+              "arguments": [
+                "key=value",
+                "12"
+              ]
+            }
+          ],
+          "accepted": true,
+          "error": null,
+          "expected_exit": 0
+        },
+        {
+          "group": "descriptor",
+          "id": "echo_two_digits",
+          "command": "cmd /d /c echo 12>capture.txt",
+          "exit": 0,
+          "timeout": false,
+          "stdout": "",
+          "stderr": "",
+          "files": {
+            "capture.txt": {
+              "text": "12\r\n",
+              "sha256": "f2bf6cb915ec521520920f625e9a641f22bae7808a5f5db7867c431c1a79440f",
+              "bytes": 4
+            }
+          },
+          "children": [],
+          "accepted": true,
+          "error": null,
+          "expected_exit": 0
+        },
+        {
+          "group": "descriptor",
+          "id": "child_two_digits",
+          "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value 12>capture.txt",
+          "exit": 0,
+          "timeout": false,
+          "stdout": "",
+          "stderr": "",
+          "files": {
+            "capture.txt": {
+              "text": "{\"observer_pid\":5452,\"parent_pid\":7748,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value 12\",\"arguments\":[\"key=value\",\"12\"]}\r\n",
+              "sha256": "78b86463a586f5633db5078011be8b4ac514b88205542316e8c088ec6d73880c",
+              "bytes": 210
+            }
+          },
+          "children": [
+            {
+              "parent_command_line": "cmd  /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value 12",
+              "arguments": [
+                "key=value",
+                "12"
+              ]
+            }
+          ],
+          "accepted": true,
+          "error": null,
+          "expected_exit": 0
+        },
+        {
+          "group": "descriptor",
+          "id": "echo_escaped_digit",
+          "command": "cmd /d /c echo ^2>capture.txt",
+          "exit": 0,
+          "timeout": false,
+          "stdout": "",
+          "stderr": "",
+          "files": {
+            "capture.txt": {
+              "text": "2\r\n",
+              "sha256": "df4e26a04a444901b95afef44e4a96cfae34690fff2ad2c66389c70079cdff2b",
+              "bytes": 3
+            }
+          },
+          "children": [],
+          "accepted": true,
+          "error": null,
+          "expected_exit": 0
+        },
+        {
+          "group": "descriptor",
+          "id": "child_escaped_digit",
+          "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value ^2>capture.txt",
+          "exit": 0,
+          "timeout": false,
+          "stdout": "",
+          "stderr": "",
+          "files": {
+            "capture.txt": {
+              "text": "{\"observer_pid\":1436,\"parent_pid\":3648,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value 2\",\"arguments\":[\"key=value\",\"2\"]}\r\n",
+              "sha256": "cbc97631b27fb228c6e14a5c6f1ac5e70ca2374bcbefd007e5038f9a5707a892",
+              "bytes": 208
+            }
+          },
+          "children": [
+            {
+              "parent_command_line": "cmd  /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value 2",
+              "arguments": [
+                "key=value",
+                "2"
+              ]
+            }
+          ],
+          "accepted": true,
+          "error": null,
+          "expected_exit": 0
+        },
+        {
+          "group": "descriptor",
+          "id": "echo_ordinary_digit",
+          "command": "cmd /d /c echo 2>capture.txt",
+          "exit": 0,
+          "timeout": false,
+          "stdout": "ECHO is on.\r\n",
+          "stderr": "",
+          "files": {
+            "capture.txt": {
+              "text": "",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "bytes": 0
+            }
+          },
+          "children": [],
+          "accepted": true,
+          "error": null,
+          "expected_exit": 0
+        },
+        {
+          "group": "descriptor",
+          "id": "child_ordinary_digit",
+          "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value 2>capture.txt",
+          "exit": 0,
+          "timeout": false,
+          "stdout": "{\"observer_pid\":1844,\"parent_pid\":3372,\"parent_name\":\"cmd.exe\",\"parent_command_line\":\"cmd  /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value \",\"arguments\":[\"key=value\"]}\r\n",
+          "stderr": "",
+          "files": {
+            "capture.txt": {
+              "text": "",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "bytes": 0
+            }
+          },
+          "children": [
+            {
+              "parent_command_line": "cmd  /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value ",
+              "arguments": [
+                "key=value"
+              ]
+            }
+          ],
+          "accepted": true,
+          "error": null,
+          "expected_exit": 0
+        }
+      ]
+    },
+    "body_sha256": "15b96634d2735ad3c7d40a983dac8b921fea243a28f8710ed2269dd520660d24",
+    "reply_sha256": {
+      "quoted_filename": "46caeb298d73b5d3af2cdd930b10ea1c10a321360bbdf8368d22e5e12ee9e0fb",
+      "spacing_descriptor": "bea43bb8fad26a62ba2a8bc41a67bd6db4003c7dfe7607e7a87c928e53cf134f"
+    }
   },
-  "parser_observation": {
-    "producer": "938880bb1388f9c5e903791ddc8496303aee0f28",
-    "run": 45999925649,
-    "job": 140508646860,
-    "artifact": 15198071063,
-    "zip_sha256": "db7a2394bcee1ed67df58848753b81217519268856c11b41db2532329d1f2c7b",
-    "receipt": "https://github.com/gosuda/sloplint/blob/f08ee19bc31ba462135dd1668434684f4a1dedc5/ci-records/charamel32-quotes-parser-terminal.json",
-    "before_after_unchanged": true,
-    "all_source_adapters_classifier_equivalent": true
+  "ordinary_ci": {
+    "at": "2026-11-27 13:10:59 UTC",
+    "actions_run_count": 0,
+    "check_run_count": 0,
+    "statuses": [
+      {
+        "context": "Devin Review",
+        "state": "success",
+        "target_url": "https://app.devin.ai/review/gosuda/charamel/pull/32"
+      }
+    ],
+    "interpretation": "No ordinary Actions or check-run success is claimed. The exact-source Depot proof is successful and reported separately."
   },
-  "active_review": {
-    "thread_id": "PRRT_kwDOUbWGks68xZH1",
-    "comment_id": 4719154286,
-    "total": 17,
-    "resolved": 16,
-    "unresolved": 1,
-    "as_of_head": "d19fcb385bf404c2fbc1628d8c090c63a63cdcd1"
+  "mergeability": {
+    "mergeable": true,
+    "mergeable_state": "clean"
   },
-  "publication_drafts": "https://github.com/gosuda/sloplint/blob/d328d60e471410f477a539e69e3d275376f5192b/reviews/charamel32-quoted-filename-publication-draft.md",
-  "historical_unpublished_green": "https://github.com/gosuda/sloplint/blob/2c9cf4db2df1c85ccba3c6e7dcea482d803bf5d8/ci-records/charamel32-redirection-terminal.json",
-  "owned_active_workflow": ".github/workflows/charamel32-cmd-quoted-gates.yml",
+  "probe_retirement": {
+    "repository": "gosuda/sloplint",
+    "branch": "ci/charamel32-cmd-gates-20261127",
+    "commit": "1403195306c444adea74196949543f7dbfbe43eb",
+    "tree": "54d353ba57a7d2fbae5ef30451b6e1ec752bd13c",
+    "removed_workflow": ".github/workflows/charamel32-cmd-quoted-gates.yml",
+    "remaining_workflows": [
+      {
+        "path": ".github/workflows/ci.yml",
+        "sha": "318af336a730492b08e20ec84b4c62568ec48bab"
+      },
+      {
+        "path": ".github/workflows/release.yml",
+        "sha": "de1e7d15549b146df23409451844860e931a74f2"
+      }
+    ],
+    "owned_workflows_remaining": 0,
+    "runs_on_retirement": 0,
+    "final_checkpoint_record_only": true
+  },
   "limitations": [
-    "Preserve all d19f external verdict and native-output assertions; correct only the misleading scanner-output comment.",
-    "Production .ml and documented .mli are byte-identical to the unpublished, fully verified ecea candidate. This new preparation and subsequent full gates bind the combined d19f-based test file.",
-    "Twenty quoted-filename native observations include sixteen exits0 and four exits1. Nine valid TYPE contexts become exact maintained parser-input contracts; foreign helper contexts remain observations.",
-    "Native-valid filenames containing unmatched parentheses remain conservative Review on all three parser versions. Native-invalid ampersand/grouped controls and these pre-existing gaps remain explicitly outside a full Cmd parity claim.",
-    "Original d19f receives only a local observation adapter and candidate tests. Classifier outputs are compared before and after instrumentation. A separate first-quote-only mutant preserves the repaired outer-redirection machinery and must fail the new quoted-filename maintained test while preserving all previous203/48 controls.",
-    "All source edits are restricted to shell_screen.ml, its documented mli, and test_tools_shell.ml. Permission policy, tools_shell.ml, POSIX parser prefix, dependencies, build workflows and every other source entry remain unchanged."
-  ],
-  "next_steps": [
-    "Verify terminal Linux and Windows logs, actual exits, exact source tree and artifact API/upload digests; preserve every failure honestly.",
-    "After all required gates pass, freshly read maintained head, actual main and current is_resolved states. Publish only if exact d19f/84e lease remains valid; otherwise reconcile external source before publication.",
-    "Create a genuine one-parent source commit at exact tested tree4a6a and update maintained ref additively with expected head. No force, amend, PR merge or auto-merge.",
-    "Update the reviewed draft with actual source/gate/receipt links, reply to and resolve only the addressed open thread. Do not reopen externally resolved prior threads.",
-    "Observe ordinary PR CI separately; earlier c009 had no Actions runs/check-runs, so absence must never be described as green.",
-    "Retire only the owned active workflow after disposition and preserve final receipts outside its trigger paths; verify record-only retirement creates no run."
+    "This verifies the stated Cmd contracts, not all Cmd grammar.",
+    "Native-valid quoted filenames with unmatched parentheses remain conservatively reviewed in all three observed parser versions.",
+    "Four native-invalid ampersand/grouped quoted observations remain separate from native-valid contracts.",
+    "Windows verification covers formatting, release build and selected shell/permission tests, not the unrelated full Windows suite.",
+    "The observation interface records actual recursive screening input, not a claim of equality to the native process command line.",
+    "Historical successful unpublished ecea proof and two setup-only failed observation runs remain explicitly distinguished in the terminal receipt."
   ]
 }
