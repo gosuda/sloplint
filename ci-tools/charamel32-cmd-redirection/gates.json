@@ -1,0 +1,56 @@
+{
+  "head": "c00962f26db32a41cfc1c487027a8b6316cb8bf1",
+  "original_tree": "99508a172cd995a72dc9845016324e13a5b88527",
+  "candidate_tree": "ecea478c6d047d601c8e09826624f62e25b77a91",
+  "prepared_tree": "ecea478c6d047d601c8e09826624f62e25b77a91",
+  "source_sha256": {
+    "bin/crush/lib/shell_screen.ml": "66af36577313918be01ded984ee3115da9a33e2828e555a9301c9b5a1d732cdc",
+    "bin/crush/lib/shell_screen.mli": "341412aafaebbc354197001bd9373086ee9681ee69cac012df2cf08637212ee9",
+    "test/crush/test_tools_shell.ml": "94038233ffbec8ce1611f6780004a29ac756c7359bbf2f163bc5c1f57f02b54f"
+  },
+  "patch_sha256": "a561b786039f194fc238671f3d72721c6a4af0eb7531a967e2d4379a75b1ce13",
+  "native_observed_sha256": "1db8a4202cc9f0d7e3da4b037bd035f2618c24a445ee1ce88390fb2c433f535d",
+  "native_options_sha256": "4828864f66e1c3b3b861d1fe2be1b9fd9571c6e92dccbfb4b751114e3c65d638",
+  "echo_native_sha256": {
+    "6": "e461e1ead713c8b4425eae968ab84a257f1bec90b795b4d95fb00afccb054c58",
+    "40": "ad4b16c059929119f0a55649696c3eb7308fbe0304d3fb6bf7ecb4dfddfd27d7"
+  },
+  "preparation": {
+    "id": 15193595379,
+    "sha256": "68f0cfffab6120faa2a8f39c0e6dcda6290cbe64310538bb62d70748aff5502a",
+    "producer": "caa3a43fa5fc409e962d3ac805fd0afece65e434",
+    "run": 45987706404,
+    "job": 140467437327,
+    "report": "prepare-result.json"
+  },
+  "native_redirection_sha256": {
+    "primary": "075155d1107509b3c5ab23833b58851780480c9c6814e46d0ed8b1a18f72f99e",
+    "adjacent": "b10ece2c3a30a7ba9f99998da49eac6557f2c9b332d0b89cba8b531d3c2b30fc",
+    "descriptor": "a320dc11f07c5a008ad583b7da158447c7e230f0d9965302617e3ea2bb1f2fbe"
+  },
+  "observer_driver_sha256": "1719172f7052e657ed3ec57917b719fdad0d23e1e52844cbdb844f8b34d17b8e",
+  "observer_sha256": "042679e664738b3fc8ac05a5c2d02593e7fc268b4355334c05761d24853094ef",
+  "posix_prefix": {
+    "bytes": 50402,
+    "sha256": "7273be9ed98c7635de1e5d64e044abfeb47bef9dcbd4dbf49be6115c027d043e",
+    "marker": "(* A word retains"
+  },
+  "source_changes": "Only shell_screen.ml, its documented shell_screen.mli test observation entry point, and test_tools_shell.ml. Exact native formatter output; unchanged POSIX prefix, tools_shell.ml, permission policy, dependency files and maintained workflows.",
+  "required_linux": [
+    "dune build @fmt",
+    "dune build --profile release",
+    "dune runtest --profile release"
+  ],
+  "windows_scope": "Fresh formatting and full release build, all shell/permission cases including payload-source and redirection approval tests, 101 retained Cmd observations and 51 new redirection observations. No full Windows suite claim.",
+  "trace_scope": "For_test.screen_cmd records actual recursive screening input strings, including the root. It is not a claim that every traced spelling equals the native child command line; native caret processing and screening recursion remain separate.",
+  "historical_preparation_failure": {
+    "producer": "9a4b67b46de5cab9846808126ec05dff0694766f",
+    "run": 45985935070,
+    "job": 140461437585,
+    "artifact": 15192260402,
+    "sha256": "2035da62e03b6e47ba30ecdd8ccce94d38601900896636a1cc0f819b591f557d",
+    "conclusion": "failure",
+    "reason": "Historical f879 observation adapter omitted trace argument through its older mutually recursive cmd_char path. Candidate was not applied; original source restored. Retry corrects only that harness adapter."
+  },
+  "driver_sha256": "78d823c9e7bd13af90847230482a9ce0a4e8ca2015028030ed5fd380eb871d03"
+}

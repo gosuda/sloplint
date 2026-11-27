@@ -1,0 +1,598 @@
+diff --git a/bin/crush/lib/shell_screen.ml b/bin/crush/lib/shell_screen.ml
+--- a/bin/crush/lib/shell_screen.ml
++++ b/bin/crush/lib/shell_screen.ml
+@@ -1722,7 +1722,8 @@
+   chars : Buffer.t;
+   mutable computed : bool;
+   mutable started : bool;
+-  mutable awaiting_target : bool;
++  mutable redirect_start : int option;
++  mutable redirects : (int * int) list;
+   mutable in_quotes : bool;
+   mutable start : int;
+   mutable segment : cmd_item list;
+@@ -1734,7 +1735,8 @@
+     chars = Buffer.create 16;
+     computed = false;
+     started = false;
+-    awaiting_target = false;
++    redirect_start = None;
++    redirects = [];
+     in_quotes = false;
+     start = 0;
+     segment = [];
+@@ -1771,34 +1773,55 @@
+         else if List.mem program [ "do"; "else" ] then Cmd_start
+         else Cmd_arguments
+ 
++(* Consecutive redirects consume the separator gap between them as well. *)
++let cmd_redirect_span st source start stop =
++  let rec only_space index =
++    index >= start || (cmd_space source.[index] && only_space (index + 1))
++  in
++  st.redirects <-
++    (match st.redirects with
++    | (first, last) :: rest when last <= start && only_space last -> (first, stop) :: rest
++    | spans -> (start, stop) :: spans)
++
+ let end_cmd_word sink st source index =
+   if st.started || Buffer.length st.chars > 0 then (
+     let value = Buffer.contents st.chars in
+     sink.words <- value :: sink.words;
+-    if st.awaiting_target then st.awaiting_target <- false
+-    else
+-      let raw = String.sub source st.start (index - st.start) in
+-      let word =
+-        {
+-          value;
+-          fixed = not st.computed;
+-          unquoted = not (String.contains raw '"');
+-          assignment = false;
+-          single = not st.computed;
+-        }
+-      in
+-      st.context <- cmd_context_word st.context word;
+-      st.segment <- Cmd_word (word, index) :: st.segment);
++    match st.redirect_start with
++    | Some start ->
++        cmd_redirect_span st source start index;
++        st.redirect_start <- None
++    | None ->
++        let raw = String.sub source st.start (index - st.start) in
++        let word =
++          {
++            value;
++            fixed = not st.computed;
++            unquoted = not (String.contains raw '"');
++            assignment = false;
++            single = not st.computed;
++          }
++        in
++        st.context <- cmd_context_word st.context word;
++        st.segment <- Cmd_word (word, index) :: st.segment);
+   Buffer.clear st.chars;
+   st.computed <- false;
+   st.started <- false
+ 
+ let cmd_redirect sink st source index =
+-  if is_all_digits (Buffer.contents st.chars) && not st.computed then (
++  (* Quoted, escaped and multi-digit words remain arguments. *)
++  let descriptor =
++    Option.is_none st.redirect_start
++    && index - st.start = 1
++    && is_all_digits (Buffer.contents st.chars)
++    && not st.computed
++  in
++  let start = if descriptor then st.start else index in
++  if descriptor then (
+     Buffer.clear st.chars;
+     st.started <- false)
+   else end_cmd_word sink st source index;
+-  st.awaiting_target <- true;
++  st.redirect_start <- Some start;
+   let length = String.length source in
+   let next = index + 1 in
+   let next = if next < length && source.[next] = '>' then next + 1 else next in
+@@ -1904,6 +1927,22 @@
+   loop 0 false;
+   sink.words <- Buffer.contents chars :: sink.words
+ 
++(* Redirections already consumed by this Cmd level are absent from its child
++   command line. Keep every other byte, including spaces around those spans. *)
++let cmd_source_without_redirects source ~start ~end_pos redirects =
++  let output = Buffer.create (end_pos - start) in
++  let rec copy index = function
++    | [] -> Buffer.add_substring output source index (end_pos - index)
++    | (_, stop) :: rest when stop <= index -> copy index rest
++    | (first, _) :: _ when first >= end_pos -> copy index []
++    | (first, stop) :: rest ->
++        let first = max index first in
++        Buffer.add_substring output source index (first - index);
++        copy (min end_pos stop) rest
++  in
++  copy start redirects;
++  Buffer.contents output
++
+ let cmd_payload source =
+   let length = String.length source in
+   let rec first index =
+@@ -1937,7 +1976,8 @@
+     let discard index =
+       end_cmd_word ignored st source index;
+       st.segment <- [];
+-      st.awaiting_target <- false;
++      st.redirect_start <- None;
++      st.redirects <- [];
+       st.context <- Cmd_start;
+       false
+     in
+@@ -2019,7 +2059,8 @@
+       Buffer.add_char st.chars c;
+       (index + 1, false)
+ 
+-let rec parse_cmd sink ~depth source =
++let rec parse_cmd sink ~trace ~depth source =
++  trace source;
+   if depth > max_depth then (
+     review sink too_deep;
+     false)
+@@ -2029,7 +2070,7 @@
+     let rec loop index any =
+       if index >= length then (
+         if st.in_quotes then review sink (unreadable "an unclosed Cmd quote");
+-        let found = end_segment sink ~depth st source length in
++        let found = end_segment sink ~trace ~depth st source length in
+         any || found)
+       else if st.in_quotes then (
+         cmd_quoted st source.[index];
+@@ -2037,23 +2078,26 @@
+       else
+         let next, found =
+           cmd_char sink ~nesting:0
+-            ~finish:(end_segment sink ~depth st source)
++            ~finish:(end_segment sink ~trace ~depth st source)
+             st source index
+         in
+         loop next (any || found)
+     in
+     loop 0 false
+ 
+-and end_segment sink ~depth st source index =
++and end_segment sink ~trace ~depth st source index =
+   end_cmd_word sink st source index;
+   let items = List.rev st.segment in
+   st.segment <- [];
+   st.context <- Cmd_start;
+-  if st.awaiting_target then review sink (unreadable "a missing Cmd redirection target");
+-  st.awaiting_target <- false;
+-  analyze_cmd sink ~depth ~source ~end_pos:index items
++  if Option.is_some st.redirect_start then
++    review sink (unreadable "a missing Cmd redirection target");
++  st.redirect_start <- None;
++  let redirects = List.rev st.redirects in
++  st.redirects <- [];
++  analyze_cmd sink ~trace ~depth ~source ~end_pos:index ~redirects items
+ 
+-and for_command sink ~depth ~source ~end_pos args =
++and for_command sink ~trace ~depth ~source ~end_pos ~redirects args =
+   let rec split header = function
+     | Cmd_group source :: body -> Some (List.rev header, source, body)
+     | item :: rest -> split (item :: header) rest
+@@ -2096,7 +2140,10 @@
+           match body with
+           | Cmd_word (word, _) :: rest
+             when word.fixed && word.unquoted && String.equal (cmd_lower word) "do" ->
+-              if analyze_cmd sink ~depth:(depth + 1) ~source ~end_pos rest then true
++              if
++                analyze_cmd sink ~trace ~depth:(depth + 1) ~source ~end_pos ~redirects
++                  rest
++              then true
+               else (
+                 review sink (unreadable "a for loop without a body");
+                 false)
+@@ -2104,7 +2151,7 @@
+               review sink for_without_do;
+               false))
+ 
+-and analyze_cmd sink ~depth ~source ~end_pos items =
++and analyze_cmd sink ~trace ~depth ~source ~end_pos ~redirects items =
+   if depth > max_depth then (
+     review sink too_deep;
+     false)
+@@ -2112,8 +2159,8 @@
+     match items with
+     | [] -> false
+     | Cmd_group group_source :: rest ->
+-        let found = parse_cmd sink ~depth:(depth + 1) group_source in
+-        let following = analyze_cmd sink ~depth ~source ~end_pos rest in
++        let found = parse_cmd sink ~trace ~depth:(depth + 1) group_source in
++        let following = analyze_cmd sink ~trace ~depth ~source ~end_pos ~redirects rest in
+         found || following
+     | Cmd_word (name, _) :: args ->
+         if not name.fixed then (
+@@ -2123,7 +2170,8 @@
+           let base = basename (drop_leading '@' name.value) in
+           let prog = strip_executable_suffix base in
+           check_executable sink base prog (List.filter_map cmd_value args);
+-          if String.equal prog "for" then for_command sink ~depth ~source ~end_pos args
++          if String.equal prog "for" then
++            for_command sink ~trace ~depth ~source ~end_pos ~redirects args
+           else if String.equal prog "cmd" then
+             let rec payload = function
+               | [] -> None
+@@ -2142,38 +2190,42 @@
+                     | Cmd_word (word, _) when not word.fixed -> review sink computed_code
+                     | Cmd_word _ | Cmd_group _ -> ())
+                   rest;
+-                let payload = String.sub source start (end_pos - start) in
+-                if not (parse_cmd sink ~depth:(depth + 1) (cmd_payload payload)) then
+-                  review sink (unreadable "an empty Cmd payload");
++                let payload =
++                  cmd_source_without_redirects source ~start ~end_pos redirects
++                in
++                if not (parse_cmd sink ~trace ~depth:(depth + 1) (cmd_payload payload))
++                then review sink (unreadable "an empty Cmd payload");
+                 true
+             | None -> true
+           else if List.mem prog [ "do"; "else" ] then
+-            analyze_cmd sink ~depth:(depth + 1) ~source ~end_pos args
++            analyze_cmd sink ~trace ~depth:(depth + 1) ~source ~end_pos ~redirects args
+           else (
+             if List.mem prog cmd_runners then
+               List.iter
+                 (function
+                   | Cmd_word (word, _) ->
+                       if word.fixed then
+-                        ignore (parse_cmd sink ~depth:(depth + 1) word.value)
++                        ignore (parse_cmd sink ~trace ~depth:(depth + 1) word.value)
+                       else review sink computed_program
+-                  | Cmd_group source -> ignore (parse_cmd sink ~depth:(depth + 1) source))
++                  | Cmd_group source ->
++                      ignore (parse_cmd sink ~trace ~depth:(depth + 1) source))
+                 args
+             else
+               List.iter
+                 (function
+-                  | Cmd_group source -> ignore (parse_cmd sink ~depth:(depth + 1) source)
++                  | Cmd_group source ->
++                      ignore (parse_cmd sink ~trace ~depth:(depth + 1) source)
+                   | Cmd_word _ -> ())
+                 args;
+             true)
+ 
+-let screen dialect command =
++let screen_with_cmd_trace ~trace dialect command =
+   let sink = { words = []; commands = []; reviews = []; refused_executable = None } in
+   (match dialect with
+   | Posix ->
+       parse_source sink ~depth:0 command;
+       drain sink
+-  | Cmd -> ignore (parse_cmd sink ~depth:0 command));
++  | Cmd -> ignore (parse_cmd sink ~trace ~depth:0 command));
+   let names text = List.map basename (fragments dialect text) in
+   match refused (names command) with
+   | Some program -> Blocked program
+@@ -2187,3 +2239,13 @@
+               match List.rev sink.reviews with
+               | reason :: _ -> Review reason
+               | [] -> Clear)))
++
++let screen dialect command = screen_with_cmd_trace ~trace:ignore dialect command
++
++module For_test = struct
++  let screen_cmd command =
++    let sources = ref [] in
++    let trace source = sources := source :: !sources in
++    let verdict = screen_with_cmd_trace ~trace Cmd command in
++    (verdict, List.rev !sources)
++end
+diff --git a/bin/crush/lib/shell_screen.mli b/bin/crush/lib/shell_screen.mli
+--- a/bin/crush/lib/shell_screen.mli
++++ b/bin/crush/lib/shell_screen.mli
+@@ -45,3 +45,11 @@
+ (** [fd_executes args] recognizes execution actions in literal [fd] arguments that have
+     already passed {!screen} as {!Clear}. Known data operands and arguments after [--] are
+     not options. The argument list excludes the program name. *)
++
++module For_test : sig
++  val screen_cmd : string -> verdict * string list
++  (** [screen_cmd command] returns the same verdict as [screen Cmd command] and the exact
++      source strings submitted to the Cmd parser in traversal order, starting with
++      [command]. This is an observation of the screen's recursive inputs, not a record of
++      commands executed by a native shell. *)
++end
+diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
+--- a/test/crush/test_tools_shell.ml
++++ b/test/crush/test_tools_shell.ml
+@@ -560,6 +560,258 @@
+   in
+   Alcotest.(check (list string)) "every command gets its expected verdict" [] mismatched
+ 
++let cmd_payload_cases =
++  [
++    ( "nested_equal",
++      "cmd /d /c echo key=value",
++      "clear",
++      [ "cmd /d /c echo key=value"; "echo key=value" ] );
++    ( "nested_equal_spaced",
++      "cmd /d /c echo key value",
++      "clear",
++      [ "cmd /d /c echo key value"; "echo key value" ] );
++    ( "nested_punctuation",
++      "cmd /d /c echo first,,second;;third=last",
++      "clear",
++      [ "cmd /d /c echo first,,second;;third=last"; "echo first,,second;;third=last" ] );
++    ( "nested_punctuation_spaced",
++      "cmd /d /c echo first second third last",
++      "clear",
++      [ "cmd /d /c echo first second third last"; "echo first second third last" ] );
++    ( "nested_tab",
++      "cmd /d /c echo key\tvalue",
++      "clear",
++      [ "cmd /d /c echo key\tvalue"; "echo key\tvalue" ] );
++    ( "nested_tab_spaced",
++      "cmd /d /c echo key value",
++      "clear",
++      [ "cmd /d /c echo key value"; "echo key value" ] );
++    ("nested_blank", "cmd /d /c echo(", "clear", [ "cmd /d /c echo("; "echo(" ]);
++    ( "nested_quoted_blank",
++      "cmd /d /c \"echo(\"",
++      "clear",
++      [ "cmd /d /c \"echo(\""; "echo(" ] );
++    ( "nested_double_blank",
++      "cmd /d /c cmd /d /c echo(",
++      "clear",
++      [ "cmd /d /c cmd /d /c echo("; "cmd /d /c echo("; "echo(" ] );
++    ( "nested_quoted_equal",
++      "cmd /d /c \"echo key=value\"",
++      "clear",
++      [ "cmd /d /c \"echo key=value\""; "echo key=value" ] );
++    ( "nested_double_equal",
++      "cmd /d /c cmd /d /c echo key=value",
++      "clear",
++      [
++        "cmd /d /c cmd /d /c echo key=value"; "cmd /d /c echo key=value"; "echo key=value";
++      ] );
++    ( "nested_for_equal",
++      "cmd /d /c for /f \"delims==\" %i in (\"key=value\") do @echo %i",
++      "review",
++      [
++        "cmd /d /c for /f \"delims==\" %i in (\"key=value\") do @echo %i";
++        "for /f \"delims==\" %i in (\"key=value\") do @echo %i";
++      ] );
++    ( "nested_redirect_equal",
++      "cmd /d /c echo key=value>capture.txt",
++      "clear",
++      [ "cmd /d /c echo key=value>capture.txt"; "echo key=value" ] );
++    ( "nested_redirect_prefix",
++      "cmd /d /c 2>capture.txt echo key=value",
++      "clear",
++      [ "cmd /d /c 2>capture.txt echo key=value"; "echo key=value" ] );
++    ( "nested_prefix_separators",
++      "cmd /d /c =,;echo key=value",
++      "clear",
++      [ "cmd /d /c =,;echo key=value"; "=,;echo key=value" ] );
++    ( "nested_loop_blank",
++      "cmd /d /c for %i in (alpha) do @echo(",
++      "review",
++      [ "cmd /d /c for %i in (alpha) do @echo("; "for %i in (alpha) do @echo(" ] );
++    ( "trailing_plain",
++      "cmd /d /c echo key=value  ",
++      "clear",
++      [ "cmd /d /c echo key=value  "; "echo key=value  " ] );
++    ( "trailing_trimmed_control",
++      "cmd /d /c echo key=value",
++      "clear",
++      [ "cmd /d /c echo key=value"; "echo key=value" ] );
++    ( "leading_plain",
++      "cmd /d /c   echo key=value",
++      "clear",
++      [ "cmd /d /c   echo key=value"; "echo key=value" ] );
++    ( "quoted_trailing_outside",
++      "cmd /d /c \"echo key=value\"  ",
++      "clear",
++      [ "cmd /d /c \"echo key=value\"  "; "echo key=value  " ] );
++    ( "quoted_trailing_inside",
++      "cmd /d /c \"echo key=value  \"",
++      "clear",
++      [ "cmd /d /c \"echo key=value  \""; "echo key=value  " ] );
++    ( "prefix_trailing",
++      "cmd /d /c =,;echo key=value  ",
++      "clear",
++      [ "cmd /d /c =,;echo key=value  "; "=,;echo key=value  " ] );
++    ( "for-body-source-offset",
++      "for %i in (alpha) do cmd /d /c echo key=value",
++      "clear",
++      [ "for %i in (alpha) do cmd /d /c echo key=value"; "echo key=value" ] );
++    ( "group-local-source-offset",
++      "(cmd /d /c echo key=value)",
++      "clear",
++      [ "(cmd /d /c echo key=value)"; "cmd /d /c echo key=value"; "echo key=value" ] );
++    ( "reported_quoted_outer",
++      "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
++      "clear",
++      [ "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\""; "echo ready " ] );
++    ( "quoted_outer_stderr",
++      "cmd /d /c \"echo ready\" 2> \"capture (sales & support).txt\"",
++      "clear",
++      [ "cmd /d /c \"echo ready\" 2> \"capture (sales & support).txt\""; "echo ready " ]
++    );
++    ( "quoted_outer_both",
++      "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>&1",
++      "clear",
++      [
++        "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>&1"; "echo ready ";
++      ] );
++    ( "quoted_outer_append",
++      "cmd /d /c \"echo ready\" >> \"capture (sales & support).txt\"",
++      "clear",
++      [ "cmd /d /c \"echo ready\" >> \"capture (sales & support).txt\""; "echo ready " ]
++    );
++    ( "redirect_before_payload",
++      "cmd /d /c > \"capture (sales & support).txt\" \"echo ready\"",
++      "clear",
++      [ "cmd /d /c > \"capture (sales & support).txt\" \"echo ready\""; "echo ready" ] );
++    ( "redirect_before_switch",
++      "cmd > \"capture (sales & support).txt\" /d /c \"echo ready\"",
++      "clear",
++      [ "cmd > \"capture (sales & support).txt\" /d /c \"echo ready\""; "echo ready" ] );
++    ( "quoted_inner",
++      "cmd /d /c \"echo ready>capture.txt\"",
++      "clear",
++      [ "cmd /d /c \"echo ready>capture.txt\""; "echo ready>capture.txt" ] );
++    ( "inner_plus_outer",
++      "cmd /d /c \"echo ready>capture.txt\" > \"capture (sales & support).txt\"",
++      "clear",
++      [
++        "cmd /d /c \"echo ready>capture.txt\" > \"capture (sales & support).txt\"";
++        "echo ready>capture.txt ";
++      ] );
++    ( "quoted_literal_greater",
++      "cmd /d /c echo \"ready>text\"",
++      "clear",
++      [ "cmd /d /c echo \"ready>text\""; "echo \"ready>text\"" ] );
++    ( "two_outer_targets",
++      "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>error.txt",
++      "clear",
++      [
++        "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>error.txt";
++        "echo ready ";
++      ] );
++    ( "following_command",
++      "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" & echo done",
++      "clear",
++      [
++        "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" & echo done";
++        "echo ready  ";
++      ] );
++    ( "grouped_outer",
++      "(cmd /d /c \"echo ready\" > \"capture (sales & support).txt\")",
++      "clear",
++      [
++        "(cmd /d /c \"echo ready\" > \"capture (sales & support).txt\")";
++        "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"";
++        "echo ready ";
++      ] );
++    ( "for_body_outer",
++      "for %I in (1) do cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
++      "clear",
++      [
++        "for %I in (1) do cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"";
++        "echo ready ";
++      ] );
++    ( "trailing_space_outer",
++      "cmd /d /c \"echo ready\"  > \"capture (sales & support).txt\"  ",
++      "clear",
++      [
++        "cmd /d /c \"echo ready\"  > \"capture (sales & support).txt\"  ";
++        "echo ready    ";
++      ] );
++    ( "echo_two_spaces",
++      "cmd /d /c echo ready >capture.txt  2>\"capture (sales & support).txt\"",
++      "clear",
++      [
++        "cmd /d /c echo ready >capture.txt  2>\"capture (sales & support).txt\"";
++        "echo ready ";
++      ] );
++    ( "echo_tab_gap",
++      "cmd /d /c echo ready >capture.txt\t2>\"capture (sales & support).txt\"",
++      "clear",
++      [
++        "cmd /d /c echo ready >capture.txt\t2>\"capture (sales & support).txt\"";
++        "echo ready ";
++      ] );
++    ( "echo_argument_between",
++      "cmd /d /c echo ready >capture.txt tail >\"capture (sales & support).txt\"",
++      "clear",
++      [
++        "cmd /d /c echo ready >capture.txt tail >\"capture (sales & support).txt\"";
++        "echo ready  tail ";
++      ] );
++    ( "echo_duplication_before",
++      "cmd /d /c echo ready 2>&1 >\"capture (sales & support).txt\"",
++      "clear",
++      [ "cmd /d /c echo ready 2>&1 >\"capture (sales & support).txt\""; "echo ready " ] );
++    ( "echo_comma_gap",
++      "cmd /d /c echo ready >capture.txt , 2>\"capture (sales & support).txt\"",
++      "clear",
++      [
++        "cmd /d /c echo ready >capture.txt , 2>\"capture (sales & support).txt\"";
++        "echo ready ";
++      ] );
++    ( "echo_quoted_digit",
++      "cmd /d /c echo \"2\">capture.txt",
++      "clear",
++      [ "cmd /d /c echo \"2\">capture.txt"; "echo \"2\"" ] );
++    ( "echo_quoted_digits",
++      "cmd /d /c echo \"12\">capture.txt",
++      "clear",
++      [ "cmd /d /c echo \"12\">capture.txt"; "echo \"12\"" ] );
++    ( "echo_two_digits",
++      "cmd /d /c echo 12>capture.txt",
++      "clear",
++      [ "cmd /d /c echo 12>capture.txt"; "echo 12" ] );
++    ( "echo_escaped_digit",
++      "cmd /d /c echo ^2>capture.txt",
++      "clear",
++      [ "cmd /d /c echo ^2>capture.txt"; "echo ^2" ] );
++    ( "echo_ordinary_digit",
++      "cmd /d /c echo 2>capture.txt",
++      "clear",
++      [ "cmd /d /c echo 2>capture.txt"; "echo " ] );
++  ]
++
++let test_cmd_payload_sources () =
++  let kind = function
++    | Shell_screen.Clear -> "clear"
++    | Shell_screen.Blocked _ -> "blocked"
++    | Shell_screen.Review _ -> "review"
++  in
++  List.iter
++    (fun (label, command, expected_kind, expected_sources) ->
++      let verdict, sources = Shell_screen.For_test.screen_cmd command in
++      Alcotest.(check (list string))
++        ("exact Cmd parser inputs: " ^ label)
++        expected_sources sources;
++      Alcotest.(check string) ("Cmd verdict: " ^ label) expected_kind (kind verdict);
++      Alcotest.(check bool)
++        ("observation keeps the public verdict: " ^ label)
++        true
++        (verdict = Shell_screen.screen Shell_screen.Cmd command))
++    cmd_payload_cases
++
+ let test_wrapper_operands () =
+   check_posix_verdicts
+     [
+@@ -822,6 +1074,21 @@
+         "echo( & %COMSPEC% /d /c echo reviewed"; "(echo( & %COMSPEC% /d /c echo reviewed)";
+       ])
+ 
++let test_cmd_redirection_permissions () =
++  if Sys.win32 then
++    await @@ with_ctx
++    @@ fun ctx ->
++    let capture = Filename.temp_file "capture (sales & support)" ".txt" in
++    Fun.protect
++      ~finally:(fun () -> Sys.remove capture)
++      (fun () ->
++        let command = Printf.sprintf "cmd /d /c \"echo ready\" > \"%s\"" capture in
++        let output = output_or_fail (run_command ctx command) in
++        Alcotest.(check bool) "literal redirection exits" false output.Tool.is_error;
++        let text = In_channel.with_open_bin capture In_channel.input_all in
++        Alcotest.(check string)
++          "outer redirection keeps the native trailing space" "ready \r\n" text)
++
+ let test_foreground_capture () =
+   await @@ with_ctx
+   @@ fun ctx ->
+@@ -921,6 +1188,10 @@
+       test_cmd_loop_permissions;
+     Test_tools_test_support.case "Cmd echo approval boundary" `Quick
+       test_cmd_echo_permissions;
++    Test_tools_test_support.case "Cmd payload source bytes" `Quick
++      test_cmd_payload_sources;
++    Test_tools_test_support.case "Cmd redirection approval boundary" `Quick
++      test_cmd_redirection_permissions;
+     Test_tools_test_support.case "wrapper option and argument boundaries" `Quick
+       test_wrapper_operands;
+     Test_tools_test_support.case "xargs replacement positions" `Quick

@@ -1,0 +1,137 @@
+{
+  "producer": "c28c14270bd2bf2a4896b8ff66072f14969ea9e0",
+  "run": "45969232238",
+  "identity": {
+    "head": "f879b0156aa32a317cb0e29609df53786a09ec78",
+    "tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
+    "source_sha256": {
+      "bin/crush/lib/shell_screen.ml": "76f8ed44a22f5f6d022732aa7d92fba00517fee38ed9d4a3cf28e6d5e0fdd1fe",
+      "bin/crush/lib/tools_shell.ml": "dd04f4b372f42d5ad4d64d09168ded0e8939c8263c25693e4704303d00623928",
+      "test/crush/test_tools_shell.ml": "5ce61e22f1d031bc43a2375a80f5240589e073e41eee6f592b08d97e26a28e8c"
+    },
+    "source_clean": true,
+    "index_sha256": "568f161f004546db7a6419966a6e9e55d4c8de94df15930fc146ab3e47c97251"
+  },
+  "before": {
+    "head": "f879b0156aa32a317cb0e29609df53786a09ec78",
+    "tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
+    "source_sha256": {
+      "bin/crush/lib/shell_screen.ml": "76f8ed44a22f5f6d022732aa7d92fba00517fee38ed9d4a3cf28e6d5e0fdd1fe",
+      "bin/crush/lib/tools_shell.ml": "dd04f4b372f42d5ad4d64d09168ded0e8939c8263c25693e4704303d00623928",
+      "test/crush/test_tools_shell.ml": "5ce61e22f1d031bc43a2375a80f5240589e073e41eee6f592b08d97e26a28e8c"
+    },
+    "source_clean": true,
+    "index_sha256": "568f161f004546db7a6419966a6e9e55d4c8de94df15930fc146ab3e47c97251"
+  },
+  "records": [
+    {
+      "id": "trailing_plain",
+      "command": "cmd /d /c echo key=value  ",
+      "actual_exit": 0,
+      "timeout": false,
+      "seconds": 0.017011799999991695,
+      "stdout": "key=value  \r\n",
+      "stderr": "",
+      "stdout_sha256": "f6fb1f11ce5e77969a8ee34fb2bbcda1cd55c8097e3331b554bfd2b649a4faca",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "capture": null,
+      "capture_sha256": null,
+      "required": {
+        "actual_exit": 0,
+        "stdout": "key=value  \r\n"
+      },
+      "required_pass": true
+    },
+    {
+      "id": "trailing_trimmed_control",
+      "command": "cmd /d /c echo key=value",
+      "actual_exit": 0,
+      "timeout": false,
+      "seconds": 0.012618000000003349,
+      "stdout": "key=value\r\n",
+      "stderr": "",
+      "stdout_sha256": "bc8b83921fe8837968cf179a52dc5f026d718a38e74a33c9c0c163178ec83eb0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "capture": null,
+      "capture_sha256": null,
+      "required": {
+        "actual_exit": 0,
+        "stdout": "key=value\r\n"
+      },
+      "required_pass": true
+    },
+    {
+      "id": "leading_plain",
+      "command": "cmd /d /c   echo key=value",
+      "actual_exit": 0,
+      "timeout": false,
+      "seconds": 0.012547300000008477,
+      "stdout": "key=value\r\n",
+      "stderr": "",
+      "stdout_sha256": "bc8b83921fe8837968cf179a52dc5f026d718a38e74a33c9c0c163178ec83eb0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "capture": null,
+      "capture_sha256": null,
+      "required": {
+        "actual_exit": 0,
+        "stdout": "key=value\r\n"
+      },
+      "required_pass": true
+    },
+    {
+      "id": "quoted_trailing_outside",
+      "command": "cmd /d /c \"echo key=value\"  ",
+      "actual_exit": 0,
+      "timeout": false,
+      "seconds": 0.014545600000005265,
+      "stdout": "key=value  \r\n",
+      "stderr": "",
+      "stdout_sha256": "f6fb1f11ce5e77969a8ee34fb2bbcda1cd55c8097e3331b554bfd2b649a4faca",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "capture": null,
+      "capture_sha256": null,
+      "required": {},
+      "required_pass": true
+    },
+    {
+      "id": "quoted_trailing_inside",
+      "command": "cmd /d /c \"echo key=value  \"",
+      "actual_exit": 0,
+      "timeout": false,
+      "seconds": 0.014889699999997674,
+      "stdout": "key=value  \r\n",
+      "stderr": "",
+      "stdout_sha256": "f6fb1f11ce5e77969a8ee34fb2bbcda1cd55c8097e3331b554bfd2b649a4faca",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "capture": null,
+      "capture_sha256": null,
+      "required": {},
+      "required_pass": true
+    },
+    {
+      "id": "prefix_trailing",
+      "command": "cmd /d /c =,;echo key=value  ",
+      "actual_exit": 0,
+      "timeout": false,
+      "seconds": 0.012496200000001068,
+      "stdout": "key=value  \r\n",
+      "stderr": "",
+      "stdout_sha256": "f6fb1f11ce5e77969a8ee34fb2bbcda1cd55c8097e3331b554bfd2b649a4faca",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "capture": null,
+      "capture_sha256": null,
+      "required": {},
+      "required_pass": true
+    }
+  ],
+  "pairs": [
+    {
+      "original": "trailing_plain",
+      "spaced": "trailing_trimmed_control",
+      "different_stdout": true
+    }
+  ],
+  "failures": [],
+  "record_count": 6,
+  "scope": "Native observation; only explicit required fields and three output distinctions are acceptance requirements."
+}
