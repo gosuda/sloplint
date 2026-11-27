@@ -9,7 +9,7 @@
     "blobs": 611
   },
   "candidate": {
-    "tree": "497c679c6e56ce8cd1abbf1004d9e5938503bbd5",
+    "tree": "1ec9a3d1e6a53ad1a50723869c6d381cf64d7877",
     "blobs": 616,
     "changed_paths": [
       "cmd/sqlc-gen-spira/model.lgo",
@@ -20,8 +20,8 @@
       "cmd/sqlc-gen-spira/testdata/literal-schema.sql",
       "docs/specs/sqlc-gen-spira.md"
     ],
-    "authored_sha256": "71b61c076184beec1726da9a36ef2c8cf0dbd8aa63f1fb3ca1c35af919d6ead3",
-    "index_sha256": "9cf8c72727e8485dd1a3cc566010448be109b47c98acd56b91f3d57d899618c5",
+    "authored_sha256": "2313ee547e4bf76f44b6963aa253980412dc78a092808a53c6cf6045792db875",
+    "index_sha256": "8db1a56dbe2e97087478a3e25b5a7298cb2c75f42607d2ffb51def942834b2b6",
     "production_commit_created": false
   },
   "proof_sha256": {
@@ -29,8 +29,8 @@
     "baseline_support.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
     "pipeline_support.py": "bb43e9b905feec0cb47116785fc25143be1dbaaf0f7d7bfec9cd087905f045d9",
     "artifact_support.py": "b3f27ccd5d75efea94530f1294d7e0d23d89b46d7d9e5771cc0b3d32a56d1b28",
-    "authored-candidate.json": "71b61c076184beec1726da9a36ef2c8cf0dbd8aa63f1fb3ca1c35af919d6ead3",
-    "candidate-index.json": "9cf8c72727e8485dd1a3cc566010448be109b47c98acd56b91f3d57d899618c5",
+    "authored-candidate.json": "2313ee547e4bf76f44b6963aa253980412dc78a092808a53c6cf6045792db875",
+    "candidate-index.json": "8db1a56dbe2e97087478a3e25b5a7298cb2c75f42607d2ffb51def942834b2b6",
     "source-index.json": "03b61679c1b341b74acce34d37348444e80caa8b3f8ea3238a4ca63cf9b28777",
     "baseline-failure.json": "b043a89bad7144811cf6033fd1d33aa811b2ae2afaafc3081553724ce0bf81f5",
     "typed_literal_test.lgo": "c5435f53affa2c19a5864e0bbcc7bfc731ee9cd0d66f92d70fe1fd8ea88e34a3",
@@ -117,8 +117,25 @@
   "source_review": {
     "accepted_commit": "247e61d985cacec22710752ba6a74cd564b23ddc",
     "rejected_unexecuted": "247af08677a1351dc5d9a78c72e9baa4b957634e",
-    "subsequent_delta": "Only two documentation phrases qualify native-validated fixtures and request-model tests; compiled/test bytes unchanged."
+    "subsequent_delta": "Two documentation qualifications, then a test-only case struct reduces helper arity5to4 after the authentic compiler rejection. Production and every test assertion remain unchanged."
   },
   "publication_eligible": false,
-  "proof_review_delta": "Before writing a temporary permanent-test fixture, register its path for cleanup. A failed partial write is therefore removed by the same finally block; source/assertions/gate order unchanged."
+  "proof_review_delta": "Before writing a temporary permanent-test fixture, register its path for cleanup. A failed partial write is therefore removed by the same finally block; source/assertions/gate order unchanged.",
+  "prior_candidate_failure": {
+    "producer": "308a5da565a0bfb90a0063545af98ea1e64d6335",
+    "run": 46002462860,
+    "job": 140517304276,
+    "artifact": 15198378141,
+    "zip_sha256": "11754dbcdd05dc52e5ebbc29693f29c141ce0f14010b1f41f5ada8889ae7d3ba",
+    "raw_log_sha256": "0256bdb42fdbcd0098b577e19bda68083989a72cfce533ef134df3dc8d29b873",
+    "status": "failure",
+    "command": "permanent-pipeline-compile",
+    "raw_exit": 1,
+    "expected": 0,
+    "diagnostic": "function exerciseSQLcPostgresLiteral is too complex: parameter count5 exceeds4",
+    "source_restored": true,
+    "candidate_applied": false,
+    "gate_reuse": false,
+    "correction": "Pair each input with its frozen expected observation in a test-case struct. The helper takes4parameters; the exact prior test is recovered by undoing only this pairing. Every assertion, SQL/result/diagnostic byte and configured limit remains unchanged."
+  }
 }

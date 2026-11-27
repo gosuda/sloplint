@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "reviewer": "elegant_mermaid_followup",
+  "verdict": "Accepted for native execution; no additional blocker.",
+  "reviewed_commit": "bef7a13cc9c67b4a538a9576d9542ec3d63afcd7",
+  "candidate_tree": "1ec9a3d1e6a53ad1a50723869c6d381cf64d7877",
+  "source_blobs": 616,
+  "sole_path": "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo",
+  "new_sha256": "8e3f97188f37e03fc5d48ffee069238aa1a99ba310eb3456d869188fd72fc0cc",
+  "other615_blob_modes_identical": true,
+  "exact_inverse_to_prior_test": true,
+  "assertions_timeouts_expected_bytes_unchanged": true,
+  "driver_sha256": "4ed9377fb48917faca003840e1537bce6292802f04696dc38e4746254164de35",
+  "prior_failed_run": 46002462860,
+  "prior_failed_command": "permanent-pipeline-compile",
+  "prior_test_executed": false,
+  "prior_production_applied": false,
+  "independent_log_and_api_digest_verified": true,
+  "reviewer_jobs_or_writes": false,
+  "source_gates_passed": false,
+  "publication_eligible": false
+}
