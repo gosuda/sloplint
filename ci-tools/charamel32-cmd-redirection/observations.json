@@ -1,0 +1,204 @@
+{
+  "schema": 1,
+  "purpose": "Native observation of current-level Cmd redirection removal and the actual command line of an owned nested Cmd process.",
+  "head": "c00962f26db32a41cfc1c487027a8b6316cb8bf1",
+  "tree": "99508a172cd995a72dc9845016324e13a5b88527",
+  "source_sha256": {
+    "bin/crush/lib/shell_screen.ml": "792c5754d9829cdc4af9c644e9c51f44f52ba38f10b300076df73aa9b745a82f",
+    "test/crush/test_tools_shell.ml": "1853053b04e708dc02983b8c1ad18a5c9858f87743d6c6c5916cc818caad4480"
+  },
+  "observer_sha256": "042679e664738b3fc8ac05a5c2d02593e7fc268b4355334c05761d24853094ef",
+  "cases": [
+    {
+      "id": "quoted_control",
+      "command": "cmd /d /c \"echo ready\"",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "reported_quoted_outer",
+      "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "quoted_outer_stderr",
+      "command": "cmd /d /c \"echo ready\" 2> \"capture (sales & support).txt\"",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "quoted_outer_both",
+      "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>&1",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "quoted_outer_append",
+      "command": "cmd /d /c \"echo ready\" >> \"capture (sales & support).txt\"",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "redirect_before_payload",
+      "command": "cmd /d /c > \"capture (sales & support).txt\" \"echo ready\"",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "redirect_before_switch",
+      "command": "cmd > \"capture (sales & support).txt\" /d /c \"echo ready\"",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "unquoted_attached",
+      "command": "cmd /d /c echo key=value>capture.txt",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "unquoted_prefix",
+      "command": "cmd /d /c 2>capture.txt echo key=value",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "quoted_inner",
+      "command": "cmd /d /c \"echo ready>capture.txt\"",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "inner_plus_outer",
+      "command": "cmd /d /c \"echo ready>capture.txt\" > \"capture (sales & support).txt\"",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "quoted_literal_greater",
+      "command": "cmd /d /c echo \"ready>text\"",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "two_outer_targets",
+      "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" 2>error.txt",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "following_command",
+      "command": "cmd /d /c \"echo ready\" > \"capture (sales & support).txt\" & echo done",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "grouped_outer",
+      "command": "(cmd /d /c \"echo ready\" > \"capture (sales & support).txt\")",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "for_body_outer",
+      "command": "for %I in (1) do cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "exact_separator_control",
+      "command": "cmd /d /c echo key=value",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "spaced_separator_control",
+      "command": "cmd /d /c echo key value",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "multiple_equals_control",
+      "command": "cmd /d /c echo key==value",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "trailing_space_outer",
+      "command": "cmd /d /c \"echo ready\"  > \"capture (sales & support).txt\"  ",
+      "kind": "echo",
+      "require_exit": 0
+    },
+    {
+      "id": "child_quoted_control",
+      "command": "cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\"",
+      "kind": "child",
+      "require_exit": 0
+    },
+    {
+      "id": "child_quoted_outer",
+      "command": "cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\" > \"capture (sales & support).txt\"",
+      "kind": "child",
+      "require_exit": 0
+    },
+    {
+      "id": "child_quoted_outer_stderr",
+      "command": "cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\" 2> \"capture (sales & support).txt\"",
+      "kind": "child",
+      "require_exit": 0
+    },
+    {
+      "id": "child_quoted_outer_both",
+      "command": "cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\" > \"capture (sales & support).txt\" 2>&1",
+      "kind": "child",
+      "require_exit": 0
+    },
+    {
+      "id": "child_before_payload",
+      "command": "cmd /d /c > \"capture (sales & support).txt\" \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\"",
+      "kind": "child",
+      "require_exit": 0
+    },
+    {
+      "id": "child_before_switch",
+      "command": "cmd > \"capture (sales & support).txt\" /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\"",
+      "kind": "child",
+      "require_exit": 0
+    },
+    {
+      "id": "child_unquoted_attached",
+      "command": "cmd /d /c powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value>capture.txt",
+      "kind": "child",
+      "require_exit": 0
+    },
+    {
+      "id": "child_unquoted_prefix",
+      "command": "cmd /d /c 2>capture.txt powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value",
+      "kind": "child",
+      "require_exit": 0
+    },
+    {
+      "id": "child_quoted_inner",
+      "command": "cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value>capture.txt\"",
+      "kind": "child",
+      "require_exit": 0
+    },
+    {
+      "id": "child_inner_plus_outer",
+      "command": "cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value>capture.txt\" > \"capture (sales & support).txt\"",
+      "kind": "child",
+      "require_exit": 0
+    },
+    {
+      "id": "child_grouped_outer",
+      "command": "(cmd /d /c \"powershell.exe -NoProfile -NonInteractive -File observe-child.ps1 key=value\" > \"capture (sales & support).txt\")",
+      "kind": "child",
+      "require_exit": 0
+    }
+  ],
+  "scope": "All rows require a bounded exit zero; child rows additionally require one JSON record from their own observer and immediate Cmd parent. Exact text and file bytes are observations, not guessed expected values. No production source is modified.",
+  "docs": [
+    "https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-process",
+    "https://learn.microsoft.com/en-us/powershell/module/cimcmdlets/get-ciminstance?view=powershell-5.1"
+  ]
+}
