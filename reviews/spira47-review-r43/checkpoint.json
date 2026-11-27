@@ -1,0 +1,109 @@
+{
+  "schema": 1,
+  "round": 43,
+  "status": "native proof in progress; no source publication",
+  "repository": "gosuda/spira",
+  "pull_request": 47,
+  "thread": "PRRT_kwDOVpFduc688xES",
+  "source_head": "6d4f84fc8a1a50603fbdf5c024bdc1966436ea31",
+  "source_tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0",
+  "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+  "proposal": "e6b9d0a44dec3f9d7637a85852def4c71808008c",
+  "reviewed_gate": "ce75747559832e58ceb6f1a37ee96aef3a1a13f6",
+  "proof": {
+    "repository": "gosuda/sloplint",
+    "branch": "ci/spira47-fixture-metadata-20261127-r43",
+    "producer": "1694350a47292b483f9a4314d46b43996b843985",
+    "tree": "f243a9b76c5067b903cfbef82972b5cfe8a986d8",
+    "run": 46079109930,
+    "job": 140773675515
+  },
+  "candidate": {
+    "tree": "42ac87ebaf4cad019a5f53bfe61c7d1455f9d041",
+    "blobs": 638,
+    "changed_paths": 5,
+    "production_changes": false
+  },
+  "reviews": {
+    "source": {
+      "commit": "e6b9d0a44dec3f9d7637a85852def4c71808008c",
+      "reviewer": "/root/bitcoin_round7",
+      "verdict": "No finding. Exact five existing test/docs paths, complete candidate/counterfactual tree binding, unchanged production and raw original 30/67 fixture prefixes; counterfactual changes only reader count and appended data. Static review only."
+    },
+    "oracle": {
+      "commit": "e6b9d0a44dec3f9d7637a85852def4c71808008c",
+      "reviewer": "/root/bitcoin_round7/spira40_oracle_review",
+      "verdict": "No finding. Time-alias refusal and genuine counter-reference generation, exact captured-text predictions grounded in R42 control, unchanged integer values. Static review only."
+    },
+    "driver": {
+      "commit": "ce75747559832e58ceb6f1a37ee96aef3a1a13f6",
+      "reviewer": "/root/bitcoin_round7",
+      "verdict": "No finding",
+      "scope": "Main driver, runtime observer, workflow, source identity and restoration",
+      "bindings": {
+        "proof_blobs": 23,
+        "manifest_bound_content_hashes": 21,
+        "driver_sha256": "7c13e78f0c28e122359c0c09b1018a3a91385ab585e60da40bb6fc6265318b4f",
+        "manifest_sha256": "f67d48ee4093ac63b46f0493a075e01fe5508ac9a1e131416850b3f5098947d2",
+        "workflow_sha256": "c97809ce8359b43395e0064271920a8bafa881f853f359306144d74cd13e35ff"
+      },
+      "reviewed": [
+        "Two original and two processed PostgreSQL/SQLc observations before test application.",
+        "Count-adjusted old reader compile followed by exact two failures and 30 controls, then restoration.",
+        "Corrected direct 32/permanent 69 suites and exact 31 compiled-value map.",
+        "Exactly one actual nested logos test -race -count=1 -v . invocation.",
+        "Credential removed before first child; actual required gate/slop/eject.",
+        "Full candidate and final original 638-blob source identity and restoration."
+      ],
+      "execution": false
+    },
+    "archive": {
+      "commit": "ce75747559832e58ceb6f1a37ee96aef3a1a13f6",
+      "reviewer": "/root/bitcoin_round7/spira40_oracle_review",
+      "verdict": "No finding",
+      "scope": "Archive authentication and previous exact R42 evidence",
+      "archive_sha256": "e3400b496e42d217886994136784bec4fe614297c30e1a36d18f6e25846eff3e",
+      "manifest_sha256": "f67d48ee4093ac63b46f0493a075e01fe5508ac9a1e131416850b3f5098947d2",
+      "report_sha256": "8337d9925f35c55aac6130e07be6803bda972fa5625cbda0354fccce2d64b822",
+      "reviewed": {
+        "unique_command_logs": 228,
+        "native_cases": 67,
+        "pipeline_cases": 67,
+        "captured_requests": 64,
+        "generated": 30,
+        "plugin_refusals": 34,
+        "upstream_refusals": 3,
+        "source_blobs": 638,
+        "source_tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0"
+      },
+      "live_metadata_matched": true,
+      "reviewer_zip_download": false,
+      "execution": false,
+      "full_source_gates_reused": false
+    }
+  },
+  "source_gates_passed": false,
+  "publication_eligible": false,
+  "observed_at": "2026-11-27 22:53:48 UTC",
+  "raw_ref_guards": [
+    {
+      "ref": "refs/heads/ci/spira47-fixture-metadata-20261127-r43",
+      "sha": "1694350a47292b483f9a4314d46b43996b843985"
+    },
+    {
+      "ref": "refs/heads/main",
+      "sha": "dc99ed955cf78862a6f8811289f606de1fb50dfa"
+    },
+    {
+      "ref": "refs/heads/followup/merged-threads-1127",
+      "sha": "6d4f84fc8a1a50603fbdf5c024bdc1966436ea31"
+    },
+    {
+      "ref": "refs/heads/main",
+      "sha": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332"
+    }
+  ],
+  "native_status": "In progress: checkouts and setup passed, immutable compiler build running. No R43 test results claimed.",
+  "manifest_sha256": "f67d48ee4093ac63b46f0493a075e01fe5508ac9a1e131416850b3f5098947d2",
+  "reviewed_active_files": 23
+}
