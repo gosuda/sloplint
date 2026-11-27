@@ -1,0 +1,82 @@
+name: "Spira 47 version reference and nested race baseline r40"
+on:
+  push:
+    branches: ["ci/spira47-version-refs-20261127-r40"]
+    paths:
+      - ".github/workflows/spira47-review-r40.yml"
+      - "ci-tools/spira47-review-r40/**"
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: "spira47-review-r40-${{ github.ref }}"
+  cancel-in-progress: false
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+jobs:
+  verify:
+    runs-on: depot-ubuntu-24.04-8
+    timeout-minutes: 75
+    steps:
+      - name: Checkout this isolated proof
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: proof
+          persist-credentials: false
+      - name: Checkout unchanged Spira base
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/Spira
+          ref: 4bde2ec5e8bf23ffbeca0b4b54e8c9c7c005e33f
+          path: source
+          persist-credentials: false
+      - name: Checkout immutable LoGOs toolchain
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: gosuda/LoGOs
+          ref: 2cfe17218b4d3311c5746b94a1858bf3fe9a3e45
+          path: compiler
+          persist-credentials: false
+      - name: Install official bootstrap Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: "1.27.4"
+          cache: false
+      - name: Build the immutable LoGOs compiler
+        run: |
+          export GOENV=off GOCACHEPROG='' GOMAXPROCS=4 GOFLAGS=-p=4
+          test -z "$(go env GOCACHEPROG)"
+          echo "UPSTREAM_GO=$(command -v go)" >> "$GITHUB_ENV"
+          export GOROOT_BOOTSTRAP="$(go env GOROOT)"
+          test "$(git -C compiler rev-parse HEAD)" = "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45"
+          test "$(git -C compiler rev-parse HEAD^{tree})" = "27b36e93b40d0e90ef983f4326c01a049b2196c5"
+          cd compiler/src
+          ./make.bash
+          test -z "$(git status --porcelain --untracked-files=no)"
+          sha256sum ../bin/go ../bin/logos
+          echo "LOGOS_ROOT=$GITHUB_WORKSPACE/compiler" >> "$GITHUB_ENV"
+          echo "GOROOT=$GITHUB_WORKSPACE/compiler" >> "$GITHUB_ENV"
+          echo "$GITHUB_WORKSPACE/compiler/bin" >> "$GITHUB_PATH"
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+        with:
+          version: "0.13.9"
+          python-version: "3.15"
+          enable-cache: false
+      - name: Freeze native reference and nested race observations
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          export GOENV=off GOCACHEPROG=''
+          test -z "$(go env GOCACHEPROG)"
+          uv run --no-project --python 3.15 proof/ci-tools/spira47-review-r40/verify_baseline.py \
+            source proof/ci-tools/spira47-review-r40 "$RUNNER_TEMP/spira47-version-reference-baseline-evidence"
+      - name: Preserve unchanged-source baseline evidence
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        with:
+          name: spira47-version-reference-baseline-r40
+          path: ${{ runner.temp }}/spira47-version-reference-baseline-evidence
+          if-no-files-found: error
+          retention-days: 14

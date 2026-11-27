@@ -1,0 +1,142 @@
+[
+  {
+    "name": "reported-alias",
+    "sql": "UPDATE items SET name = 'changed' RETURNING name AS \"item's version\";",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "alias-exact",
+    "sql": "UPDATE items SET name = 'changed' RETURNING name AS version;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "alias-quoted",
+    "sql": "UPDATE items SET name = 'changed' RETURNING name AS \"version\";",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "alias-bare",
+    "sql": "UPDATE items SET name = 'changed' RETURNING name version;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "alias-bare-quoted",
+    "sql": "UPDATE items SET name = 'changed' RETURNING name \"version\";",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "qualifier-only",
+    "sql": "UPDATE items AS version SET name = 'changed' RETURNING version.name;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "function-name",
+    "sql": "UPDATE items SET name = left(version(), 0) || 'changed';",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "cast-type",
+    "sql": "UPDATE items SET name = CAST('changed' AS version);",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "postfix-type",
+    "sql": "UPDATE items SET name = 'changed'::version;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "typed-literal",
+    "sql": "UPDATE items SET name = version 'changed';",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "collation-name",
+    "sql": "UPDATE items SET name = 'changed' COLLATE version;",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "longer-identifier",
+    "sql": "UPDATE items AS conversion SET name = 'changed';",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "quoted-assignment",
+    "sql": "UPDATE items SET \"version\" = \"version\" + 1;",
+    "allow": true,
+    "native_name": "before",
+    "native_version": 1
+  },
+  {
+    "name": "unquoted-assignment",
+    "sql": "UPDATE items SET version = version + 1;",
+    "allow": true,
+    "native_name": "before",
+    "native_version": 1
+  },
+  {
+    "name": "predicate-only",
+    "sql": "UPDATE items SET name = 'changed' WHERE version = 0;",
+    "allow": true,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "qualified-predicate",
+    "sql": "UPDATE items AS i SET name = 'changed' WHERE i.\"version\" = 0;",
+    "allow": true,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "returned-reference",
+    "sql": "UPDATE items SET name = 'changed' RETURNING \"version\" AS v;",
+    "allow": true,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "function-argument",
+    "sql": "UPDATE items SET name = 'changed' RETURNING abs(version);",
+    "allow": true,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "delete-reference",
+    "sql": "DELETE FROM items WHERE \"version\" = -1;",
+    "allow": true,
+    "native_name": "before",
+    "native_version": 0
+  },
+  {
+    "name": "qualified-returned",
+    "sql": "UPDATE items SET name = 'changed' RETURNING items.\"version\";",
+    "allow": true,
+    "native_name": "changed",
+    "native_version": 0
+  }
+]
