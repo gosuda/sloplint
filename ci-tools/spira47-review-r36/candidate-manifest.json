@@ -1,0 +1,83 @@
+{
+  "schema": 1,
+  "purpose": "Exact Spira47 continuation and migration review repair with all required gates",
+  "source": {
+    "repository": "gosuda/Spira",
+    "head": "e422d148ee77e78abad83b993cd4b255c34504bf",
+    "tree": "9ca31a701e9d51fb857c969328c0c7f43f656cb1",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "blobs": 609
+  },
+  "candidate": {
+    "tree": "eb9547a9b5a884bfaf5b29cc968859906399ec8d",
+    "blobs": 611,
+    "changed_paths": [
+      "cmd/sqlc-gen-spira/model.lgo",
+      "db/db.lgo",
+      "migrate/serial_test.lgo",
+      "docs/specs/migrate.md",
+      "docs/specs/sqlc-gen-spira.md",
+      "cmd/sqlc-gen-spira/continued_escape_test.lgo",
+      "cmd/sqlc-gen-spira/testdata/continued-strings.json"
+    ],
+    "authored_sha256": "d9f7440fbbc042ab860f350c6d40e4e9ac62fd6148ca02994e226d0417e99ca2",
+    "index_sha256": "988145852070d88c2ad01ee37c64c1674d675e985352c76541709763845b5c49",
+    "production_commit_created": false
+  },
+  "proof_sha256": {
+    "baseline_support.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
+    "artifact_support.py": "8e9b1dc135988293262eb373358637b47c0a390672bd5628753a9caf8a68ee29",
+    "verify_candidate.py": "ce246daad380488a6a64babf0ac5f4b9f50eb023c2ad7ae7a880356b30af177b",
+    "source-index.json": "6543e3d7b335754d5c99a31666fc35f1d872949d15beebfd10d6b0ef8717a717",
+    "candidate-index.json": "988145852070d88c2ad01ee37c64c1674d675e985352c76541709763845b5c49",
+    "authored-candidate.json": "d9f7440fbbc042ab860f350c6d40e4e9ac62fd6148ca02994e226d0417e99ca2",
+    "baseline-manifest.json": "591e6bfae160fe70b8735cd56a459274994afb9573ceab958ef9458ec5d3f435",
+    "baseline-report.json": "8b9f91bd02dafda3a736ddaa85ebe7d9bb07cd4588eef2d04ce9ab421167106d",
+    "continued-strings.json": "5bdccdcb30ee68ac6d9ffd3f32a31324cb44ac51ccc12a356894f8e3218a028e",
+    "continued_escape_test.lgo": "6c4b73100f578fcb4bc8a5b0d22b2a1e1ca710893a617df60bfeab57d53dadf8"
+  },
+  "workflow_sha256": "f61e7c5d8d34df228ebaf43f3f6d3dff9c511e5fac84325beb44ea7db371d907",
+  "toolchain": {
+    "repository": "gosuda/LoGOs",
+    "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+    "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+    "bootstrap_go": "1.27.4",
+    "fresh_build": true
+  },
+  "baseline_artifact": {
+    "producer": "f6c6b396f0ca8143a6dead92fc41470fce4d2c57",
+    "run": 45980151731,
+    "job": 140441701012,
+    "artifact": 15189556101,
+    "name": "spira47-review-r36",
+    "zip_bytes": 11775,
+    "zip_sha256": "502862af3201a32661e16b71ef56d0643100b01ff461c9ce88ba3e24018a9204"
+  },
+  "linter_artifact": {
+    "producer": "bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+    "run": 45765398446,
+    "job": 139724970737,
+    "artifact": 15091303567,
+    "name": "lean-rust-and-cli-bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+    "zip_bytes": 17472007,
+    "zip_sha256": "e362f672d39498374a637a68ded7f57205b415e68006a4dc4a4a882405f5af33",
+    "binary_sha256": "a04c9c3e53c8aae18e2d5f89faaf3ad68b89980218ca9d1fc4af5ce487401024"
+  },
+  "tools": {
+    "bootstrap_go": "1.27.4",
+    "node": "26.13.1",
+    "pnpm": "12.21.0",
+    "just": "1.59.0",
+    "uv": "0.13.9",
+    "python": "3.15"
+  },
+  "required_source_gates": [
+    "just gate",
+    "just slop",
+    "just eject"
+  ],
+  "frozen_generator_case_count": 14,
+  "reused_native_evidence": "Only the identical fourteen-query PostgreSQL180007 observations and the authentic unchanged-source RED/control receipt are reused after ZIP, source and command-log verification.",
+  "mutation": "Compile the temporary Apply acquisition-context mutation, require the watchdog-specific failure, restore exact bytes before the full source gates.",
+  "publication_eligible": false
+}

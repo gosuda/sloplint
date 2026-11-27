@@ -1,4 +1,4 @@
-name: "Spira 47 PostgreSQL continuation baseline r36"
+name: "Spira 47 exact review repair and required gates r36"
 on:
   push:
     branches: ["ci/spira47-review-20261127-r36"]
@@ -7,6 +7,7 @@ on:
       - "ci-tools/spira47-review-r36/**"
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: "spira47-review-r36-${{ github.ref }}"
   cancel-in-progress: false
@@ -14,16 +15,16 @@ defaults:
   run:
     shell: bash --noprofile --norc -euo pipefail {0}
 jobs:
-  baseline:
+  verify:
     runs-on: depot-ubuntu-24.04-8
-    timeout-minutes: 45
+    timeout-minutes: 120
     steps:
       - name: Checkout this isolated proof
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           path: proof
           persist-credentials: false
-      - name: Checkout unchanged Spira source
+      - name: Checkout unchanged Spira base
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: gosuda/Spira
@@ -46,6 +47,7 @@ jobs:
         run: |
           export GOENV=off GOCACHEPROG='' GOMAXPROCS=4 GOFLAGS=-p=4
           test -z "$(go env GOCACHEPROG)"
+          echo "UPSTREAM_GO=$(command -v go)" >> "$GITHUB_ENV"
           export GOROOT_BOOTSTRAP="$(go env GOROOT)"
           test "$(git -C compiler rev-parse HEAD)" = "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45"
           test "$(git -C compiler rev-parse HEAD^{tree})" = "27b36e93b40d0e90ef983f4326c01a049b2196c5"
@@ -56,23 +58,38 @@ jobs:
           echo "LOGOS_ROOT=$GITHUB_WORKSPACE/compiler" >> "$GITHUB_ENV"
           echo "GOROOT=$GITHUB_WORKSPACE/compiler" >> "$GITHUB_ENV"
           echo "$GITHUB_WORKSPACE/compiler/bin" >> "$GITHUB_PATH"
+      - name: Install required recipe runner
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39
+        with:
+          tool: "just@1.59.0"
+      - name: Install the source-pinned package manager
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115
+        with:
+          version: "12.21.0"
+      - name: Install pinned Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: "26.13.1"
+          package-manager-cache: false
       - name: Install uv and Python
         uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
         with:
           version: "0.13.9"
           python-version: "3.15"
           enable-cache: false
-      - name: Verify native semantics and unchanged generator failure
+      - name: Verify the frozen repair and every required source gate
+        env:
+          SPIRA_ARTIFACT_TOKEN: ${{ github.token }}
         run: |
           export GOENV=off GOCACHEPROG=''
           test -z "$(go env GOCACHEPROG)"
-          uv run --no-project --python 3.15 proof/ci-tools/spira47-review-r36/verify.py \
-            source proof/ci-tools/spira47-review-r36 "$RUNNER_TEMP/spira47-baseline-evidence"
-      - name: Preserve native and source evidence
+          uv run --no-project --python 3.15 proof/ci-tools/spira47-review-r36/verify_candidate.py \
+            source proof/ci-tools/spira47-review-r36 "$RUNNER_TEMP/spira47-candidate-evidence"
+      - name: Preserve source, gate and mutation evidence
         if: always()
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
-          name: spira47-review-r36
-          path: ${{ runner.temp }}/spira47-baseline-evidence
+          name: spira47-candidate-r36
+          path: ${{ runner.temp }}/spira47-candidate-evidence
           if-no-files-found: error
           retention-days: 14

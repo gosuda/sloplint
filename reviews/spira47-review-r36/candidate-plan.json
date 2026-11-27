@@ -9,7 +9,7 @@
     "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
     "blobs": 609
   },
-  "authored_sha256": "bc627ed7ca6d50e5ea6d8399cca87c98097ac6e534ab1cdfd9fa0ebd61aefcf0",
+  "authored_sha256": "d9f7440fbbc042ab860f350c6d40e4e9ac62fd6148ca02994e226d0417e99ca2",
   "authored_files": [
     {
       "path": "cmd/sqlc-gen-spira/model.lgo",
@@ -21,7 +21,7 @@
     },
     {
       "path": "migrate/serial_test.lgo",
-      "sha256": "c97190014aad9090fe503454dd84ae9c7de0d9b76466ceb9b07e700066f55eb7"
+      "sha256": "727d51ec9fa4e1d521b406200da052694fbf812d4cce6b28c55d06b0d858c460"
     },
     {
       "path": "docs/specs/migrate.md",
@@ -104,5 +104,12 @@
   ],
   "watchdog_negative_control": "Temporarily replace only Apply's acquisition context with context.Background, compile first, require TestQueuedApplyHonorsContext to fail with its watchdog diagnostic within the bounded command deadline, then restore the exact candidate.",
   "native_reuse": "Reuse only the authenticated unchanged fourteen-query PostgreSQL receipt and unchanged baseline source/test contract; the candidate generator and all prescribed source gates execute anew.",
-  "scope": "No compiler, linter, dependency, configuration, limit or baseline change."
+  "scope": "No compiler, linter, dependency, configuration, limit or baseline change.",
+  "candidate_tree": "eb9547a9b5a884bfaf5b29cc968859906399ec8d",
+  "candidate_blobs": 611,
+  "source_correction_since_d6dcc": "Only canonical import ordering: logos/sync precedes slices in migrate/serial_test.lgo. No behavior or frozen assertion changed.",
+  "driver_sha256": "ce246daad380488a6a64babf0ac5f4b9f50eb023c2ad7ae7a880356b30af177b",
+  "artifact_helper_sha256": "8e9b1dc135988293262eb373358637b47c0a390672bd5628753a9caf8a68ee29",
+  "workflow_sha256": "f61e7c5d8d34df228ebaf43f3f6d3dff9c511e5fac84325beb44ea7db371d907",
+  "manifest_sha256": "02fb2445d9ec25f72514684429ece75276447b95462edd48b66e817029c91ff5"
 }
