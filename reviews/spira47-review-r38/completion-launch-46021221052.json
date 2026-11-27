@@ -1,0 +1,73 @@
+{
+  "schema": 1,
+  "phase": "source-gate-completion-running",
+  "producer": "e168a19f2ace42724d73932297f16b65fa0f9d84",
+  "tree": "2c07fcc7b9beed7bba31578e0cf2d8eeb243d1be",
+  "run": 46021221052,
+  "job": 140581049752,
+  "url": "https://github.com/gosuda/sloplint/actions/runs/46021221052",
+  "source": {
+    "repository": "gosuda/spira",
+    "head": "593d792bf282f7b7119dafb057a389b04c91fd6d",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332"
+  },
+  "candidate": {
+    "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+    "blobs": 621,
+    "index_sha256": "3ac9074f7cdce055c9d99c656ea683e5323921dc8beee595debf175b6f80e7a1",
+    "authored_sha256": "ba4813fb7bcae07979f275f59441c7b1ea5daaa4ad425f8a410f224d735a1139"
+  },
+  "review": {
+    "reviewer": "/root/bitcoin_round7/bamti_relation_followup/elegant_mermaid_followup",
+    "commit": "e168a19f2ace42724d73932297f16b65fa0f9d84",
+    "verdict": "No concrete blocker. Exact display-format-only driver change, installer evidence/order change and all21 other proof identities independently checked; source/gates/authentication/restoration unchanged.",
+    "driver_sha256": "70c71a8fce9caff5e720811937c83522b955f3a5182be4eb072b3737ffa96d59",
+    "workflow_sha256": "94ab4aa3f5fa311e8ed25c722abf51be4310f1092bdf67dbe16270851c9e9b3a",
+    "manifest_sha256": "82344175ae01e29589bfcd5705e195f4075fe61e002119d92baa7befb203fcd7",
+    "native_execution": false
+  },
+  "base_completion_review": {
+    "reviewer": "/root/bitcoin_round7/bamti_relation_followup/elegant_mermaid_followup",
+    "commit": "52ed94cd9bc8152c515419134d82d1584cad8a8a",
+    "verdict": "No concrete blocker. All22 proof hashes/transitive imports,10 source paths,actual195 receipts/report and official ripgrep asset digest independently matched.",
+    "native_execution": false,
+    "artifact_zip_download": false,
+    "source": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+    "driver_sha256": "e4964d090832d64e8820aeecdc270a786647922fdb8d0cb34ad28b0fa183f540",
+    "support_sha256": "26e7f6822ff3299959c47468c7ff87ba0cb6734603140b9039a106fa822f30de",
+    "manifest_sha256": "f269bc4c0859be44aa02bb668032804ce104ac3983d92dc8941b7043721d351a",
+    "workflow_sha256": "00147aa0e080dbede628bb795bbf70b90807cd5b8bfa441ede0ca7a61940d80d"
+  },
+  "ripgrep_setup_api_conclusion": "success",
+  "version_output_readback_pending": true,
+  "prior_failed_runs": [
+    {
+      "run": 46016220487,
+      "raw_full_gate_exit": 127,
+      "source_restored": true,
+      "focused_evidence": "Complete; authenticated before reuse."
+    },
+    {
+      "run": 46019378430,
+      "raw_setup_exit": 1,
+      "source_driver_started": false,
+      "artifact_created": false
+    }
+  ],
+  "required_actual_gates": [
+    [
+      "just",
+      "gate"
+    ],
+    [
+      "just",
+      "slop"
+    ],
+    [
+      "just",
+      "eject"
+    ]
+  ],
+  "source_gates_passed": false,
+  "publication_eligible": false
+}
