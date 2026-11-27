@@ -5,44 +5,14 @@
     "sha": "4f7382e398b860367ed335cd0cca9de419da66c1"
   },
   {
-    "path": "AGENTS.md",
+    "path": "admin/admin_test.lgo",
     "mode": "100644",
-    "sha": "2e863efa86374c2e22a9819dcdb23bcc3e9639e0"
-  },
-  {
-    "path": "CONTRIBUTE.md",
-    "mode": "100644",
-    "sha": "d477ca0fdf458a75656476ca4ea16ca5fe2d3dde"
-  },
-  {
-    "path": "LICENSE",
-    "mode": "100644",
-    "sha": "d645695673349e3947e8e5ae42332d0ac3164cd7"
-  },
-  {
-    "path": "NOTICE",
-    "mode": "100644",
-    "sha": "9fe62e0b4c1cea3d0041eca48a1d47b4fe59a638"
-  },
-  {
-    "path": "README.md",
-    "mode": "100644",
-    "sha": "208706cd617dc57bb8b6c1acb8a802267406e0c5"
-  },
-  {
-    "path": "REVIEW.md",
-    "mode": "100644",
-    "sha": "ef5f2d0c4f68a924e8630557fe2ecd9a79ac97cd"
+    "sha": "620842fc083f1e206ded89a2574bd1a9bdaf3042"
   },
   {
     "path": "admin/admin.lgo",
     "mode": "100644",
     "sha": "5db2c028a55f60ecc39b575384430e663121d305"
-  },
-  {
-    "path": "admin/admin_test.lgo",
-    "mode": "100644",
-    "sha": "620842fc083f1e206ded89a2574bd1a9bdaf3042"
   },
   {
     "path": "admin/export_test.lgo",
@@ -60,9 +30,9 @@
     "sha": "3a8377026bbea4a2146c7297c2e6c1ba840ecf80"
   },
   {
-    "path": "ai/ai.lgo",
+    "path": "AGENTS.md",
     "mode": "100644",
-    "sha": "90a3082a845c5cd032051da3f360e4b004287f39"
+    "sha": "2e863efa86374c2e22a9819dcdb23bcc3e9639e0"
   },
   {
     "path": "ai/ai_test.lgo",
@@ -70,9 +40,9 @@
     "sha": "18c1db7c4936ce3a98e2ecfab4eb2f09535d5630"
   },
   {
-    "path": "ai/anthropic/anthropic.lgo",
+    "path": "ai/ai.lgo",
     "mode": "100644",
-    "sha": "3630aa801824b1a07287f944ad95a2497a8c7c13"
+    "sha": "90a3082a845c5cd032051da3f360e4b004287f39"
   },
   {
     "path": "ai/anthropic/anthropic_test.lgo",
@@ -80,14 +50,14 @@
     "sha": "da5ca9f02d1d6020ddbf87e662c6f3c6998e4c67"
   },
   {
+    "path": "ai/anthropic/anthropic.lgo",
+    "mode": "100644",
+    "sha": "3630aa801824b1a07287f944ad95a2497a8c7c13"
+  },
+  {
     "path": "ai/anthropic/export_test.lgo",
     "mode": "100644",
     "sha": "8e1df98003184024d0c380d8b57f598c2e2a5ce6"
-  },
-  {
-    "path": "ai/anthropic/faults.lgo",
-    "mode": "100644",
-    "sha": "4f070e863733dad1f56edff6469f2377bdb9f63f"
   },
   {
     "path": "ai/anthropic/faults_test.lgo",
@@ -95,9 +65,9 @@
     "sha": "86f76d95feedc44e849706ebe69a9eb03add27cb"
   },
   {
-    "path": "ai/anthropic/testdata/SOURCES",
+    "path": "ai/anthropic/faults.lgo",
     "mode": "100644",
-    "sha": "5e9e7dad480ec482165be7aad5964ca1aab375e4"
+    "sha": "4f070e863733dad1f56edff6469f2377bdb9f63f"
   },
   {
     "path": "ai/anthropic/testdata/message-error.json",
@@ -108,6 +78,11 @@
     "path": "ai/anthropic/testdata/message-response.json",
     "mode": "100644",
     "sha": "381f3850393a10fb166af0a4f7c379a7f216c219"
+  },
+  {
+    "path": "ai/anthropic/testdata/SOURCES",
+    "mode": "100644",
+    "sha": "5e9e7dad480ec482165be7aad5964ca1aab375e4"
   },
   {
     "path": "ai/anthropic/testdata/stream-plain.txt",
@@ -125,19 +100,14 @@
     "sha": "65f66e94bbf880bd76b3cc911df583500f1dbf6c"
   },
   {
-    "path": "ai/collect.lgo",
-    "mode": "100644",
-    "sha": "2d944711e526fc891524630e82083723dacd0e32"
-  },
-  {
     "path": "ai/collect_test.lgo",
     "mode": "100644",
     "sha": "193ad61345fe963215983fd94179e2a841d544d6"
   },
   {
-    "path": "ai/faults.lgo",
+    "path": "ai/collect.lgo",
     "mode": "100644",
-    "sha": "cae647f000fbe5f7bbfb20eda6b064ad63a3a928"
+    "sha": "2d944711e526fc891524630e82083723dacd0e32"
   },
   {
     "path": "ai/faults_test.lgo",
@@ -145,9 +115,9 @@
     "sha": "fefe3b5faf7433be12e05b83a338614843cd5072"
   },
   {
-    "path": "ai/internal/bounded/bounded.lgo",
+    "path": "ai/faults.lgo",
     "mode": "100644",
-    "sha": "8fd18d70f519f5c199197dbdc603ccd57bf6fd08"
+    "sha": "cae647f000fbe5f7bbfb20eda6b064ad63a3a928"
   },
   {
     "path": "ai/internal/bounded/bounded_test.lgo",
@@ -155,14 +125,14 @@
     "sha": "a26dda133efff9d944c16c670c97352880d494d6"
   },
   {
+    "path": "ai/internal/bounded/bounded.lgo",
+    "mode": "100644",
+    "sha": "8fd18d70f519f5c199197dbdc603ccd57bf6fd08"
+  },
+  {
     "path": "ai/mcp/client.lgo",
     "mode": "100644",
     "sha": "bf8573958e6b71333ded51fe9622457e2302b84b"
-  },
-  {
-    "path": "ai/mcp/faults.lgo",
-    "mode": "100644",
-    "sha": "5b4174ec5226115465595e816b19c23ff227d23a"
   },
   {
     "path": "ai/mcp/faults_test.lgo",
@@ -170,14 +140,19 @@
     "sha": "08ba31f694d9d1bc0bc8d40c58b882b475af357b"
   },
   {
-    "path": "ai/mcp/http.lgo",
+    "path": "ai/mcp/faults.lgo",
     "mode": "100644",
-    "sha": "111e3a9534851155ce7b831bf8c6c30312d21abf"
+    "sha": "5b4174ec5226115465595e816b19c23ff227d23a"
   },
   {
     "path": "ai/mcp/http_test.lgo",
     "mode": "100644",
     "sha": "c39537fc10b7ca7403e11b014a73624d14dac0e8"
+  },
+  {
+    "path": "ai/mcp/http.lgo",
+    "mode": "100644",
+    "sha": "111e3a9534851155ce7b831bf8c6c30312d21abf"
   },
   {
     "path": "ai/mcp/jsonrpc_boundary_test.lgo",
@@ -195,14 +170,14 @@
     "sha": "6d17afee84ffbe3783b93325c3fc9863d69a2241"
   },
   {
-    "path": "ai/mcp/server.lgo",
-    "mode": "100644",
-    "sha": "6aaefffe040ef135748e3e692b2dac8ef1881dee"
-  },
-  {
     "path": "ai/mcp/server_test.lgo",
     "mode": "100644",
     "sha": "5826fd8b4af55853b664b32450c58d37dc4b7545"
+  },
+  {
+    "path": "ai/mcp/server.lgo",
+    "mode": "100644",
+    "sha": "6aaefffe040ef135748e3e692b2dac8ef1881dee"
   },
   {
     "path": "ai/mcp/shapes.lgo",
@@ -210,19 +185,14 @@
     "sha": "a9c1727f3e05abf1bc856995df0e562989da2fcb"
   },
   {
-    "path": "ai/mcp/stdio.lgo",
-    "mode": "100644",
-    "sha": "fbe7c6cb99bfaffb7caf6bb78d1d30341fbd7622"
-  },
-  {
     "path": "ai/mcp/stdio_test.lgo",
     "mode": "100644",
     "sha": "c4fa6b88ec2569a6d754e295b18d6ee5dc09cdda"
   },
   {
-    "path": "ai/mcp/testdata/SOURCES",
+    "path": "ai/mcp/stdio.lgo",
     "mode": "100644",
-    "sha": "47251ca21bd90c173ae00e656f5b1a1667a83c5a"
+    "sha": "fbe7c6cb99bfaffb7caf6bb78d1d30341fbd7622"
   },
   {
     "path": "ai/mcp/testdata/lifecycle/initialize-error.json",
@@ -243,6 +213,11 @@
     "path": "ai/mcp/testdata/lifecycle/initialized-notification.json",
     "mode": "100644",
     "sha": "a7169d84fb6b40647965529bf78a53e5357c9040"
+  },
+  {
+    "path": "ai/mcp/testdata/SOURCES",
+    "mode": "100644",
+    "sha": "47251ca21bd90c173ae00e656f5b1a1667a83c5a"
   },
   {
     "path": "ai/mcp/testdata/tools/content-audio.json",
@@ -330,24 +305,24 @@
     "sha": "52810e7775ee292f2fa81b316e3a73b37e90ad3a"
   },
   {
-    "path": "ai/ollama/faults.lgo",
-    "mode": "100644",
-    "sha": "3f010cb482930f3d3edb05c8b41b00a74d3fba8e"
-  },
-  {
     "path": "ai/ollama/faults_test.lgo",
     "mode": "100644",
     "sha": "59249983e620fd7df28ca9d235c6866c1c9d9e89"
   },
   {
-    "path": "ai/ollama/ollama.lgo",
+    "path": "ai/ollama/faults.lgo",
     "mode": "100644",
-    "sha": "26882f5efbbcf9e8703fe85bc372d113959d4b16"
+    "sha": "3f010cb482930f3d3edb05c8b41b00a74d3fba8e"
   },
   {
     "path": "ai/ollama/ollama_test.lgo",
     "mode": "100644",
     "sha": "a1d5d8caee75faa93fb53b1e4dd56e72e207b1e6"
+  },
+  {
+    "path": "ai/ollama/ollama.lgo",
+    "mode": "100644",
+    "sha": "26882f5efbbcf9e8703fe85bc372d113959d4b16"
   },
   {
     "path": "ai/ollama/wire.lgo",
@@ -360,24 +335,24 @@
     "sha": "69cb74a91dcfe47ca14b4ec212b9bbead21c85cb"
   },
   {
-    "path": "ai/openai/faults.lgo",
-    "mode": "100644",
-    "sha": "7820c7588f34081424c685e78115a08ec144473a"
-  },
-  {
     "path": "ai/openai/faults_test.lgo",
     "mode": "100644",
     "sha": "b432d8a8004e6c64ac10b76361976f45fe1cf921"
   },
   {
-    "path": "ai/openai/openai.lgo",
+    "path": "ai/openai/faults.lgo",
     "mode": "100644",
-    "sha": "8b14104aaf467eea52121c085f7349c225f46b89"
+    "sha": "7820c7588f34081424c685e78115a08ec144473a"
   },
   {
     "path": "ai/openai/openai_test.lgo",
     "mode": "100644",
     "sha": "a1f376931c32a033a02576b09eb41c44f7edf2a8"
+  },
+  {
+    "path": "ai/openai/openai.lgo",
+    "mode": "100644",
+    "sha": "8b14104aaf467eea52121c085f7349c225f46b89"
   },
   {
     "path": "ai/openai/testdata/SOURCES",
@@ -390,14 +365,14 @@
     "sha": "591c3990d958cd9a34991d5cee4ecb4244c4f2de"
   },
   {
-    "path": "ai/rag/augment.lgo",
-    "mode": "100644",
-    "sha": "9c658a830b05f7e69cf8eb093da260763ea40a98"
-  },
-  {
     "path": "ai/rag/augment_test.lgo",
     "mode": "100644",
     "sha": "7df0b78b982ada4b0d72c75347775382e1daa355"
+  },
+  {
+    "path": "ai/rag/augment.lgo",
+    "mode": "100644",
+    "sha": "9c658a830b05f7e69cf8eb093da260763ea40a98"
   },
   {
     "path": "ai/rag/bpe.lgo",
@@ -425,19 +400,14 @@
     "sha": "f5e8dc0d02d48b10978afc2975745861ba7f082b"
   },
   {
-    "path": "ai/rag/faults.lgo",
-    "mode": "100644",
-    "sha": "1a7f28ebf8a9804aaad9640225b1c726f2385d39"
-  },
-  {
     "path": "ai/rag/faults_test.lgo",
     "mode": "100644",
     "sha": "41cd853d3dc3035d1ce370dbfee46e2fe6e7a42b"
   },
   {
-    "path": "ai/rag/filter.lgo",
+    "path": "ai/rag/faults.lgo",
     "mode": "100644",
-    "sha": "daf7597ac953d2d6019b3d33964c941ca505b6c4"
+    "sha": "1a7f28ebf8a9804aaad9640225b1c726f2385d39"
   },
   {
     "path": "ai/rag/filter_test.lgo",
@@ -445,9 +415,9 @@
     "sha": "b21ab3581dfff9f3a4f4b4cadcccc85e93d97cba"
   },
   {
-    "path": "ai/rag/memory.lgo",
+    "path": "ai/rag/filter.lgo",
     "mode": "100644",
-    "sha": "ba1ab21b445f4dd529336654a3e563aab83173c5"
+    "sha": "daf7597ac953d2d6019b3d33964c941ca505b6c4"
   },
   {
     "path": "ai/rag/memory_test.lgo",
@@ -455,9 +425,9 @@
     "sha": "cde306c487e05b1862742fc86a3a29978087f23d"
   },
   {
-    "path": "ai/rag/pgvector.lgo",
+    "path": "ai/rag/memory.lgo",
     "mode": "100644",
-    "sha": "1494d2d9369a56a69ccc41cb5ce729448c1340af"
+    "sha": "ba1ab21b445f4dd529336654a3e563aab83173c5"
   },
   {
     "path": "ai/rag/pgvector_export_test.lgo",
@@ -470,9 +440,9 @@
     "sha": "b9bbe77ae6b39a19a79e575c8071464a5e3a39a8"
   },
   {
-    "path": "ai/rag/query.lgo",
+    "path": "ai/rag/pgvector.lgo",
     "mode": "100644",
-    "sha": "4db320cc49af38cb5f2f837ad6ce9b7fb2494c3d"
+    "sha": "1494d2d9369a56a69ccc41cb5ce729448c1340af"
   },
   {
     "path": "ai/rag/query_test.lgo",
@@ -480,9 +450,9 @@
     "sha": "cfe6ec3d50fbb7a70bb5c11814ff121d89ed4d06"
   },
   {
-    "path": "ai/rag/read.lgo",
+    "path": "ai/rag/query.lgo",
     "mode": "100644",
-    "sha": "f5e81521665d772cd842ecf370670d772aa4ae47"
+    "sha": "4db320cc49af38cb5f2f837ad6ce9b7fb2494c3d"
   },
   {
     "path": "ai/rag/read_test.lgo",
@@ -490,9 +460,9 @@
     "sha": "4cb100f26e68a2807f27e08a05cc512b7f2bd234"
   },
   {
-    "path": "ai/rag/split.lgo",
+    "path": "ai/rag/read.lgo",
     "mode": "100644",
-    "sha": "9c0d3467d11ab0ea78ce235f376729918de0d8b3"
+    "sha": "f5e81521665d772cd842ecf370670d772aa4ae47"
   },
   {
     "path": "ai/rag/split_test.lgo",
@@ -500,14 +470,14 @@
     "sha": "6f836a7b03855295141184b97e592f0edf0775c3"
   },
   {
+    "path": "ai/rag/split.lgo",
+    "mode": "100644",
+    "sha": "9c0d3467d11ab0ea78ce235f376729918de0d8b3"
+  },
+  {
     "path": "ai/rag/testdata/SOURCES",
     "mode": "100644",
     "sha": "71bdf1fce5e65aa2671cd099d52cb8261231a163"
-  },
-  {
-    "path": "ai/run.lgo",
-    "mode": "100644",
-    "sha": "a8ab44944b8f5431aac90039dbd006a947fb93fe"
   },
   {
     "path": "ai/run_test.lgo",
@@ -515,9 +485,9 @@
     "sha": "1c2781279f8bd4a561864ba12011d7c140807586"
   },
   {
-    "path": "ai/search.lgo",
+    "path": "ai/run.lgo",
     "mode": "100644",
-    "sha": "ae569ff491c744c6aca542001a46bc112e161711"
+    "sha": "a8ab44944b8f5431aac90039dbd006a947fb93fe"
   },
   {
     "path": "ai/search_reserved_name_test.lgo",
@@ -530,6 +500,11 @@
     "sha": "937d3ce9f9489769e6ba08313746e26d8f2801a3"
   },
   {
+    "path": "ai/search.lgo",
+    "mode": "100644",
+    "sha": "ae569ff491c744c6aca542001a46bc112e161711"
+  },
+  {
     "path": "ai/session/engines_test.lgo",
     "mode": "100644",
     "sha": "6e50063480978e636765f52173f1b931450c31a1"
@@ -540,24 +515,19 @@
     "sha": "8a334a999f8e8fef79d6d777f44613cd354a25a3"
   },
   {
-    "path": "ai/session/faults.lgo",
-    "mode": "100644",
-    "sha": "5ff9cf4fd8e679f80d8ec795a0bef669fbaad5f7"
-  },
-  {
     "path": "ai/session/faults_test.lgo",
     "mode": "100644",
     "sha": "d154785a59c7dcea0ca9f765fcd41418d8c867d9"
   },
   {
+    "path": "ai/session/faults.lgo",
+    "mode": "100644",
+    "sha": "5ff9cf4fd8e679f80d8ec795a0bef669fbaad5f7"
+  },
+  {
     "path": "ai/session/remember.lgo",
     "mode": "100644",
     "sha": "7a2b86ad4ffd19cee6d366d5c2c47d1e04b5cd6f"
-  },
-  {
-    "path": "ai/session/session.lgo",
-    "mode": "100644",
-    "sha": "41bf6c9ca1cabd32d543471d6ba634afafc6a890"
   },
   {
     "path": "ai/session/session_memory_test.lgo",
@@ -570,9 +540,9 @@
     "sha": "d2571c82db9507e42e05c65b0a58b42f254c31ff"
   },
   {
-    "path": "ai/session/sql.lgo",
+    "path": "ai/session/session.lgo",
     "mode": "100644",
-    "sha": "5a93ca9012611b09544561f72b5dd47791cb4e08"
+    "sha": "41bf6c9ca1cabd32d543471d6ba634afafc6a890"
   },
   {
     "path": "ai/session/sql_test.lgo",
@@ -580,9 +550,9 @@
     "sha": "0b01b980b288ed6e30bb68e465ec3809cb0308d4"
   },
   {
-    "path": "ai/structured.lgo",
+    "path": "ai/session/sql.lgo",
     "mode": "100644",
-    "sha": "698c696bbe92f24f6761bb6caa5b8be38bb02627"
+    "sha": "5a93ca9012611b09544561f72b5dd47791cb4e08"
   },
   {
     "path": "ai/structured_test.lgo",
@@ -590,9 +560,9 @@
     "sha": "7b46ab0a3d359a2c543fe7b1f9289bb9c386c606"
   },
   {
-    "path": "ai/toolof.lgo",
+    "path": "ai/structured.lgo",
     "mode": "100644",
-    "sha": "2476d1ff965b42a3a37f0818591b2c2bcb922f2f"
+    "sha": "698c696bbe92f24f6761bb6caa5b8be38bb02627"
   },
   {
     "path": "ai/toolof_test.lgo",
@@ -600,9 +570,9 @@
     "sha": "94d8a72397141f39e84dad89829a673885f5e14f"
   },
   {
-    "path": "ai/wrap.lgo",
+    "path": "ai/toolof.lgo",
     "mode": "100644",
-    "sha": "6f57d5016cbc7c93bcd38b4c94066aa493d26224"
+    "sha": "2476d1ff965b42a3a37f0818591b2c2bcb922f2f"
   },
   {
     "path": "ai/wrap_test.lgo",
@@ -610,9 +580,9 @@
     "sha": "a4cd1dd3a58b453e69feb89c26bbf020095b107b"
   },
   {
-    "path": "app/app.lgo",
+    "path": "ai/wrap.lgo",
     "mode": "100644",
-    "sha": "21ec3266f83d605bbec32f2f55baa491d694a8fe"
+    "sha": "6f57d5016cbc7c93bcd38b4c94066aa493d26224"
   },
   {
     "path": "app/app_test.lgo",
@@ -620,14 +590,19 @@
     "sha": "b4dbfbd6443e1ccfeb45ed5057bbb91495051266"
   },
   {
-    "path": "asset/asset.lgo",
+    "path": "app/app.lgo",
     "mode": "100644",
-    "sha": "0c8bcfe31248caa250c6cf3cef1bcc64ef15a6c3"
+    "sha": "21ec3266f83d605bbec32f2f55baa491d694a8fe"
   },
   {
     "path": "asset/asset_test.lgo",
     "mode": "100644",
     "sha": "56debab2efe16949e67fa946fc267e7338277f6f"
+  },
+  {
+    "path": "asset/asset.lgo",
+    "mode": "100644",
+    "sha": "0c8bcfe31248caa250c6cf3cef1bcc64ef15a6c3"
   },
   {
     "path": "auth/auth_test.lgo",
@@ -650,19 +625,14 @@
     "sha": "e27927129ce8bedb231dbd54dc4c62bb69e7aa74"
   },
   {
-    "path": "auth/headers.lgo",
-    "mode": "100644",
-    "sha": "84e233a31a910c83be049c03cb32dcfbb628b7db"
-  },
-  {
     "path": "auth/headers_test.lgo",
     "mode": "100644",
     "sha": "995985054c877f96ed5fca8d65e4bd75d6eaf1d0"
   },
   {
-    "path": "auth/password.lgo",
+    "path": "auth/headers.lgo",
     "mode": "100644",
-    "sha": "491c39d5e9e9a7776a098f10e67da83f95a78a57"
+    "sha": "84e233a31a910c83be049c03cb32dcfbb628b7db"
   },
   {
     "path": "auth/password_test.lgo",
@@ -670,14 +640,14 @@
     "sha": "25888a1fd942cbb1ab0e4804bfeff27c03749d26"
   },
   {
+    "path": "auth/password.lgo",
+    "mode": "100644",
+    "sha": "491c39d5e9e9a7776a098f10e67da83f95a78a57"
+  },
+  {
     "path": "auth/principal.lgo",
     "mode": "100644",
     "sha": "53803d2595a75411d0b46fb5cc54333b098b28f2"
-  },
-  {
-    "path": "auth/session.lgo",
-    "mode": "100644",
-    "sha": "8a9e075c472adcf97ebc2b284116aa003c908330"
   },
   {
     "path": "auth/session_test.lgo",
@@ -685,9 +655,9 @@
     "sha": "f6946faf00a2155d632af67fbcd83305314d022f"
   },
   {
-    "path": "bus/bus.lgo",
+    "path": "auth/session.lgo",
     "mode": "100644",
-    "sha": "69cdf04b7f899922a4722253b1de877d67fe23c2"
+    "sha": "8a9e075c472adcf97ebc2b284116aa003c908330"
   },
   {
     "path": "bus/bus_test.lgo",
@@ -695,9 +665,9 @@
     "sha": "02f81f64461102ed4cd422b20cdb81058d9e3681"
   },
   {
-    "path": "bus/faults.lgo",
+    "path": "bus/bus.lgo",
     "mode": "100644",
-    "sha": "9031cf0efcd6b1ea16283ec03322cdefbb251723"
+    "sha": "69cdf04b7f899922a4722253b1de877d67fe23c2"
   },
   {
     "path": "bus/faults_test.lgo",
@@ -705,9 +675,9 @@
     "sha": "ffef0cfda161355383c20d636cb919d65ab7fa2f"
   },
   {
-    "path": "cache/cache.lgo",
+    "path": "bus/faults.lgo",
     "mode": "100644",
-    "sha": "9e5d3a089b0d2e1c4741716310791b7cca20a33b"
+    "sha": "9031cf0efcd6b1ea16283ec03322cdefbb251723"
   },
   {
     "path": "cache/cache_test.lgo",
@@ -715,14 +685,14 @@
     "sha": "d8e68969268b974356c978be5f84b69632b6f238"
   },
   {
+    "path": "cache/cache.lgo",
+    "mode": "100644",
+    "sha": "9e5d3a089b0d2e1c4741716310791b7cca20a33b"
+  },
+  {
     "path": "cache/export_test.lgo",
     "mode": "100644",
     "sha": "876d7606e3c8f344fc8a79e0267d7bb058403c0d"
-  },
-  {
-    "path": "cache/faults.lgo",
-    "mode": "100644",
-    "sha": "5764856365addc9d37cdf26150646acc931bd003"
   },
   {
     "path": "cache/faults_test.lgo",
@@ -730,9 +700,9 @@
     "sha": "fdaa792fabb9e71e7a792a0e2dfc0032ee15ed49"
   },
   {
-    "path": "client/client.lgo",
+    "path": "cache/faults.lgo",
     "mode": "100644",
-    "sha": "0a84db2a0dc7a81c0fae3aa72e5935b79db67942"
+    "sha": "5764856365addc9d37cdf26150646acc931bd003"
   },
   {
     "path": "client/client_test.lgo",
@@ -740,19 +710,24 @@
     "sha": "fdcc88014635e46a8430fc0b252e0c8989714b35"
   },
   {
+    "path": "client/client.lgo",
+    "mode": "100644",
+    "sha": "0a84db2a0dc7a81c0fae3aa72e5935b79db67942"
+  },
+  {
     "path": "client/faults.lgo",
     "mode": "100644",
     "sha": "7181c2790ce883d9ef0864071cbf6b8195cbf3ee"
   },
   {
-    "path": "cmd/spira/dev.lgo",
-    "mode": "100644",
-    "sha": "530f5949fcfadc04f5eaab45b4a5df73a1973ee9"
-  },
-  {
     "path": "cmd/spira/dev_test.lgo",
     "mode": "100644",
     "sha": "e05c2f448f6cb303b0d00700dd0961ef4a917866"
+  },
+  {
+    "path": "cmd/spira/dev.lgo",
+    "mode": "100644",
+    "sha": "530f5949fcfadc04f5eaab45b4a5df73a1973ee9"
   },
   {
     "path": "cmd/spira/export_test.lgo",
@@ -768,11 +743,6 @@
     "path": "cmd/spira/main.lgo",
     "mode": "100644",
     "sha": "8eb12d43f6b5769fc6c62158809bcbb9ea294c0d"
-  },
-  {
-    "path": "cmd/spira/new.lgo",
-    "mode": "100644",
-    "sha": "d8f086e42c9be115e2126d234711c9b465025ad5"
   },
   {
     "path": "cmd/spira/new_pins_test.lgo",
@@ -793,6 +763,11 @@
     "path": "cmd/spira/new_test.lgo",
     "mode": "100644",
     "sha": "2e53ce0cf7ae4cea6f8144a5088570d11d18f6b1"
+  },
+  {
+    "path": "cmd/spira/new.lgo",
+    "mode": "100644",
+    "sha": "d8f086e42c9be115e2126d234711c9b465025ad5"
   },
   {
     "path": "cmd/spira/templates/account-account.lgo.tmpl",
@@ -1140,14 +1115,14 @@
     "sha": "f4afbff7a211d3f126b63f5b1f313bedba88314f"
   },
   {
-    "path": "cmd/sqlc-gen-spira/main.lgo",
-    "mode": "100644",
-    "sha": "8fd1a48a614fa2d0c367c4ebf62d215a124777d3"
-  },
-  {
     "path": "cmd/sqlc-gen-spira/main_test.lgo",
     "mode": "100644",
     "sha": "879667a498717a4e3f02c050d3e411532146ed7b"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/main.lgo",
+    "mode": "100644",
+    "sha": "8fd1a48a614fa2d0c367c4ebf62d215a124777d3"
   },
   {
     "path": "cmd/sqlc-gen-spira/model.lgo",
@@ -1300,14 +1275,14 @@
     "sha": "e18b5a331c1425155376896042c28cd527267404"
   },
   {
-    "path": "cmd/sqlc-gen-spira/testdata/query-constant-values.json",
-    "mode": "100644",
-    "sha": "21c52f821a31be96a94a456f9f26b66475a22e3b"
-  },
-  {
     "path": "cmd/sqlc-gen-spira/testdata/query_constants_test.lgo.tmpl",
     "mode": "100644",
     "sha": "d0c94977a5cc21883143aa68f481ccdbf289588d"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/testdata/query-constant-values.json",
+    "mode": "100644",
+    "sha": "21c52f821a31be96a94a456f9f26b66475a22e3b"
   },
   {
     "path": "cmd/sqlc-gen-spira/testdata/runtime_mssql/db/migrations/0001_create_items.down.sql",
@@ -1490,6 +1465,11 @@
     "sha": "750d7c4a2166607e27ec3ad9c1f6741921e6343d"
   },
   {
+    "path": "cmd/sqlc-gen-spira/testdata/version-projections.json",
+    "mode": "100644",
+    "sha": "e2f08cc58f2ea9ccc037fc495c72dc9e527ce4a4"
+  },
+  {
     "path": "cmd/sqlc-gen-spira/testdata/version-reference-boundaries.json",
     "mode": "100644",
     "sha": "8f1b5c3de5cb8f44fe12e6f9bbd0690eaf2bb05a"
@@ -1515,14 +1495,19 @@
     "sha": "640939f289b5b13d5cb32cf987c2ef5b118e7813"
   },
   {
-    "path": "cmd/sqlc-gen-spira/version_reference.lgo",
+    "path": "cmd/sqlc-gen-spira/version_projection_test.lgo",
     "mode": "100644",
-    "sha": "de5af94f52d91c2d91e93c0e1608386450d38807"
+    "sha": "7aa0945395912b15104d0f305cd2962a76c6b4ff"
   },
   {
     "path": "cmd/sqlc-gen-spira/version_reference_test.lgo",
     "mode": "100644",
     "sha": "207e40ee63b048880425fe12dee4723dc949666d"
+  },
+  {
+    "path": "cmd/sqlc-gen-spira/version_reference.lgo",
+    "mode": "100644",
+    "sha": "de5af94f52d91c2d91e93c0e1608386450d38807"
   },
   {
     "path": "cmd/sqlc-gen-spira/wire.lgo",
@@ -1535,14 +1520,14 @@
     "sha": "0c14a4b40bc76001263c51f68f9be3d7066ea3b7"
   },
   {
-    "path": "config/config.lgo",
-    "mode": "100644",
-    "sha": "5d12517a7892ffea5c1b0e363be2e46996997569"
-  },
-  {
     "path": "config/config_test.lgo",
     "mode": "100644",
     "sha": "b1308aa249a6577e27856311b47c01858242463c"
+  },
+  {
+    "path": "config/config.lgo",
+    "mode": "100644",
+    "sha": "5d12517a7892ffea5c1b0e363be2e46996997569"
   },
   {
     "path": "config/keys.lgo",
@@ -1560,19 +1545,24 @@
     "sha": "2809a0074b80b4bfde0333a5b1ce3a579b645283"
   },
   {
+    "path": "CONTRIBUTE.md",
+    "mode": "100644",
+    "sha": "d477ca0fdf458a75656476ca4ea16ca5fe2d3dde"
+  },
+  {
     "path": "db/cache.lgo",
     "mode": "100644",
     "sha": "65d5dd7056bd6e983881ec1269045b40e4ca2709"
   },
   {
-    "path": "db/db.lgo",
-    "mode": "100644",
-    "sha": "7cc77f0538455e040c6c27fd7f9cf30f3e91632c"
-  },
-  {
     "path": "db/db_test.lgo",
     "mode": "100644",
     "sha": "43613e297b8de649117b59077955de44bb7d52c6"
+  },
+  {
+    "path": "db/db.lgo",
+    "mode": "100644",
+    "sha": "7cc77f0538455e040c6c27fd7f9cf30f3e91632c"
   },
   {
     "path": "db/engines_test.lgo",
@@ -1585,14 +1575,14 @@
     "sha": "7078c07d37de8bee92d4deb60912176005e45336"
   },
   {
-    "path": "db/faults.lgo",
-    "mode": "100644",
-    "sha": "d00ba8ca08a77ad933ae6d7f4359148e855ae0a4"
-  },
-  {
     "path": "db/faults_test.lgo",
     "mode": "100644",
     "sha": "de82f3387bb951e6532b84b15ca6e8aefb54c0e9"
+  },
+  {
+    "path": "db/faults.lgo",
+    "mode": "100644",
+    "sha": "d00ba8ca08a77ad933ae6d7f4359148e855ae0a4"
   },
   {
     "path": "db/inmemory_test.lgo",
@@ -1623,11 +1613,6 @@
     "path": "db/tx_test.lgo",
     "mode": "100644",
     "sha": "617a3be33b9dd759f551fcafc3ed0ac2d76ab9ad"
-  },
-  {
-    "path": "docs/specs/README.md",
-    "mode": "100644",
-    "sha": "cfc6b4d7fb795f608595f150f510bc1077d88fe0"
   },
   {
     "path": "docs/specs/admin.md",
@@ -1770,6 +1755,11 @@
     "sha": "746c2c9e20ac57dd1687d2b81559fa9d8a2db20f"
   },
   {
+    "path": "docs/specs/README.md",
+    "mode": "100644",
+    "sha": "cfc6b4d7fb795f608595f150f510bc1077d88fe0"
+  },
+  {
     "path": "docs/specs/resilience.md",
     "mode": "100644",
     "sha": "2bb1d2b319689c21a33f6b4ebaf6fddcbc6d2ad3"
@@ -1820,14 +1810,14 @@
     "sha": "6054f067cf9b5010b116d51841804eef1f4cc735"
   },
   {
-    "path": "example/edge/main.lgo",
-    "mode": "100644",
-    "sha": "41ee1d71bb295f979b2b9ef8be513f5a07b58b59"
-  },
-  {
     "path": "example/edge/main_test.lgo",
     "mode": "100644",
     "sha": "78f8e5dd5b7fcba7c56b0d1f4c0854f0453fac17"
+  },
+  {
+    "path": "example/edge/main.lgo",
+    "mode": "100644",
+    "sha": "41ee1d71bb295f979b2b9ef8be513f5a07b58b59"
   },
   {
     "path": "example/shop/account/account_test.lgo",
@@ -1955,6 +1945,11 @@
     "sha": "8e61df459da4d7ed9bec2f55612603aa06ef08b0"
   },
   {
+    "path": "example/shop/db/migrations_test.lgo",
+    "mode": "100644",
+    "sha": "176cb8f384053b1bc68c672cf020e4a75075d1a3"
+  },
+  {
     "path": "example/shop/db/migrations.lgo",
     "mode": "100644",
     "sha": "9c8113ef1e4d4c55564b8ecdfdb5256aa8990b34"
@@ -2018,11 +2013,6 @@
     "path": "example/shop/db/migrations/0006_create_order_lines.up.sql",
     "mode": "100644",
     "sha": "9d6d82348c3e1c29b3b4efc71e1c1d273caf67be"
-  },
-  {
-    "path": "example/shop/db/migrations_test.lgo",
-    "mode": "100644",
-    "sha": "176cb8f384053b1bc68c672cf020e4a75075d1a3"
   },
   {
     "path": "example/shop/db/queries/account.sql",
@@ -2105,14 +2095,14 @@
     "sha": "7dc377ee37c307978a089e7b6b65bb0181bbfea4"
   },
   {
-    "path": "example/shop/mounts.lgo",
-    "mode": "100644",
-    "sha": "be15991e49fb8ea4d0e2f4cb3408e18f7cd145d8"
-  },
-  {
     "path": "example/shop/mounts_test.lgo",
     "mode": "100644",
     "sha": "b6ce1d0f34b74b11872f115d209e57b1aa8a7f24"
+  },
+  {
+    "path": "example/shop/mounts.lgo",
+    "mode": "100644",
+    "sha": "be15991e49fb8ea4d0e2f4cb3408e18f7cd145d8"
   },
   {
     "path": "example/shop/orders/export_test.lgo",
@@ -2185,14 +2175,14 @@
     "sha": "1b1a6b53b1201cd55f44b0e2cc8048d8fbb1459e"
   },
   {
-    "path": "fault/fault.lgo",
-    "mode": "100644",
-    "sha": "eec3c6db44e1c1de721d2f4475bfa93d49d939a7"
-  },
-  {
     "path": "fault/fault_test.lgo",
     "mode": "100644",
     "sha": "a2c8927a171284baf7e7fda61c08dbd994f55a3f"
+  },
+  {
+    "path": "fault/fault.lgo",
+    "mode": "100644",
+    "sha": "eec3c6db44e1c1de721d2f4475bfa93d49d939a7"
   },
   {
     "path": "fault/faulttest/export_test.lgo",
@@ -2200,14 +2190,14 @@
     "sha": "d3314eb802fc9aded714807ac490ce5005eb258b"
   },
   {
-    "path": "fault/faulttest/faulttest.lgo",
-    "mode": "100644",
-    "sha": "3f548e40da76df49a5151f17ffb18763d87a5bf4"
-  },
-  {
     "path": "fault/faulttest/faulttest_test.lgo",
     "mode": "100644",
     "sha": "faa091f7af8afee10fda5e5f36aadde32393f624"
+  },
+  {
+    "path": "fault/faulttest/faulttest.lgo",
+    "mode": "100644",
+    "sha": "3f548e40da76df49a5151f17ffb18763d87a5bf4"
   },
   {
     "path": "frontend/biome.json",
@@ -2280,36 +2270,6 @@
     "sha": "2071bb2bb8c93a8b3dfc2eff79422471ee4616e7"
   },
   {
-    "path": "frontend/test/fixtures/Counter.react.tsx",
-    "mode": "100644",
-    "sha": "0843166fefdd5d4b08959358dcfddc84379dbf50"
-  },
-  {
-    "path": "frontend/test/fixtures/Counter.solid.tsx",
-    "mode": "100644",
-    "sha": "3f81ae165b0dfbe01656744de423d688081183ee"
-  },
-  {
-    "path": "frontend/test/fixtures/Counter.svelte",
-    "mode": "100644",
-    "sha": "f8e8cabae04cfa3359e208b5be9658a570ea97cf"
-  },
-  {
-    "path": "frontend/test/fixtures/Disposable.react.tsx",
-    "mode": "100644",
-    "sha": "9516df9bffdfb8a16e76232514e04ebb852d0d79"
-  },
-  {
-    "path": "frontend/test/fixtures/Disposable.solid.tsx",
-    "mode": "100644",
-    "sha": "15324b8fc1fb21c84d0d2cf1dd988eec75ce116f"
-  },
-  {
-    "path": "frontend/test/fixtures/Disposable.svelte",
-    "mode": "100644",
-    "sha": "11998bba98922506a99e1242d02aac305f016821"
-  },
-  {
     "path": "frontend/test/fixtures/build-entry.react.ts",
     "mode": "100644",
     "sha": "a92d4e9895228df27b3604b9d22aa89615e5902e"
@@ -2325,9 +2285,39 @@
     "sha": "60a5efd2a1d6b318991b11a0ee5d7426fd6ad867"
   },
   {
+    "path": "frontend/test/fixtures/Counter.react.tsx",
+    "mode": "100644",
+    "sha": "0843166fefdd5d4b08959358dcfddc84379dbf50"
+  },
+  {
+    "path": "frontend/test/fixtures/Counter.solid.tsx",
+    "mode": "100644",
+    "sha": "3f81ae165b0dfbe01656744de423d688081183ee"
+  },
+  {
+    "path": "frontend/test/fixtures/Counter.svelte",
+    "mode": "100644",
+    "sha": "f8e8cabae04cfa3359e208b5be9658a570ea97cf"
+  },
+  {
     "path": "frontend/test/fixtures/disposable-svelte.ts",
     "mode": "100644",
     "sha": "57ba5716a4023ca85ce88f3437c963e5260cfe74"
+  },
+  {
+    "path": "frontend/test/fixtures/Disposable.react.tsx",
+    "mode": "100644",
+    "sha": "9516df9bffdfb8a16e76232514e04ebb852d0d79"
+  },
+  {
+    "path": "frontend/test/fixtures/Disposable.solid.tsx",
+    "mode": "100644",
+    "sha": "15324b8fc1fb21c84d0d2cf1dd988eec75ce116f"
+  },
+  {
+    "path": "frontend/test/fixtures/Disposable.svelte",
+    "mode": "100644",
+    "sha": "11998bba98922506a99e1242d02aac305f016821"
   },
   {
     "path": "frontend/test/fixtures/wasm/.gitignore",
@@ -2410,19 +2400,14 @@
     "sha": "6799482eebcfc65ddd3d3926288679f5f74f0038"
   },
   {
-    "path": "gateway/faults.lgo",
-    "mode": "100644",
-    "sha": "27854b96d6ecd6f753762d42db64032468f496f5"
-  },
-  {
     "path": "gateway/faults_test.lgo",
     "mode": "100644",
     "sha": "014ff6f05e06fe5ca9595fb596471ab6d598bf81"
   },
   {
-    "path": "gateway/gateway.lgo",
+    "path": "gateway/faults.lgo",
     "mode": "100644",
-    "sha": "cae3d5838c85a0ff64b5423656b356152c03218a"
+    "sha": "27854b96d6ecd6f753762d42db64032468f496f5"
   },
   {
     "path": "gateway/gateway_peek_test.lgo",
@@ -2445,6 +2430,11 @@
     "sha": "9c9ae0abb208b41bf7208720e81711c3cc44cff7"
   },
   {
+    "path": "gateway/gateway.lgo",
+    "mode": "100644",
+    "sha": "cae3d5838c85a0ff64b5423656b356152c03218a"
+  },
+  {
     "path": "go.mod",
     "mode": "100644",
     "sha": "3a60edac377aee5b42b2bad855769b08e0b88807"
@@ -2455,14 +2445,14 @@
     "sha": "394e67f163f28377add022869b8979dba4821d9e"
   },
   {
-    "path": "http3/control_stream.lgo",
-    "mode": "100644",
-    "sha": "bd4c81456d7f251ea04405bc307178bc69a90c08"
-  },
-  {
     "path": "http3/control_stream_test.lgo",
     "mode": "100644",
     "sha": "dd7cf1ecef09454a980af1126a53a9391d69e1e7"
+  },
+  {
+    "path": "http3/control_stream.lgo",
+    "mode": "100644",
+    "sha": "bd4c81456d7f251ea04405bc307178bc69a90c08"
   },
   {
     "path": "http3/datagrams_test.lgo",
@@ -2475,24 +2465,24 @@
     "sha": "d6a9ad31efd7f2c05e4fcc04410e55ce1ee8f90c"
   },
   {
-    "path": "http3/faults.lgo",
-    "mode": "100644",
-    "sha": "3f4396e5fd886d0aa8985b7538e9bc6d2054bdaa"
-  },
-  {
     "path": "http3/faults_mapping_test.lgo",
     "mode": "100644",
     "sha": "20b94179e5e84ad58ba34ecfb888d852807f0972"
   },
   {
-    "path": "http3/frame_codec.lgo",
+    "path": "http3/faults.lgo",
     "mode": "100644",
-    "sha": "82b5388448a9fe64815c14226f282a055ee35b1b"
+    "sha": "3f4396e5fd886d0aa8985b7538e9bc6d2054bdaa"
   },
   {
     "path": "http3/frame_codec_test.lgo",
     "mode": "100644",
     "sha": "898eb481dcd39241cb640bf80ea750fbf3cd04c5"
+  },
+  {
+    "path": "http3/frame_codec.lgo",
+    "mode": "100644",
+    "sha": "82b5388448a9fe64815c14226f282a055ee35b1b"
   },
   {
     "path": "http3/goaway_test.lgo",
@@ -2515,19 +2505,14 @@
     "sha": "14a7da654dbf66bd859a292b0645802ef4e6ed7b"
   },
   {
-    "path": "http3/owned_server.lgo",
-    "mode": "100644",
-    "sha": "4c7ff01048a54b3a15d93403929e43da95cf7842"
-  },
-  {
     "path": "http3/owned_server_test.lgo",
     "mode": "100644",
     "sha": "9d5b70e1cf2d10e5aea4890b5433ad2a9522a849"
   },
   {
-    "path": "http3/request_body.lgo",
+    "path": "http3/owned_server.lgo",
     "mode": "100644",
-    "sha": "636dad4d94d80e912eee167718833eabc6cfa52d"
+    "sha": "4c7ff01048a54b3a15d93403929e43da95cf7842"
   },
   {
     "path": "http3/request_body_test.lgo",
@@ -2535,9 +2520,9 @@
     "sha": "bd0da94d5e014d899791e70b5baa03fc41f538b8"
   },
   {
-    "path": "http3/request_headers.lgo",
+    "path": "http3/request_body.lgo",
     "mode": "100644",
-    "sha": "ebd9665546296932fffe7bbee160938a1740de76"
+    "sha": "636dad4d94d80e912eee167718833eabc6cfa52d"
   },
   {
     "path": "http3/request_headers_test.lgo",
@@ -2545,9 +2530,9 @@
     "sha": "d329fd6435f04f6c8df51400ef62cb5bb303a0a2"
   },
   {
-    "path": "http3/request_stream.lgo",
+    "path": "http3/request_headers.lgo",
     "mode": "100644",
-    "sha": "aeb1236bf88fb3b5605ce977fe47c01f98d2404b"
+    "sha": "ebd9665546296932fffe7bbee160938a1740de76"
   },
   {
     "path": "http3/request_stream_test.lgo",
@@ -2555,14 +2540,19 @@
     "sha": "8f582c60321b930b422e1d78a5364dca76f34a2b"
   },
   {
-    "path": "http3/response_writer.lgo",
+    "path": "http3/request_stream.lgo",
     "mode": "100644",
-    "sha": "1c74cb47c9ec886f3dbbbd6a1de45de2bae7ba16"
+    "sha": "aeb1236bf88fb3b5605ce977fe47c01f98d2404b"
   },
   {
     "path": "http3/response_writer_test.lgo",
     "mode": "100644",
     "sha": "f9b1a820b4a42868c953ea9edd5edfa1e329463d"
+  },
+  {
+    "path": "http3/response_writer.lgo",
+    "mode": "100644",
+    "sha": "1c74cb47c9ec886f3dbbbd6a1de45de2bae7ba16"
   },
   {
     "path": "http3/serve_port_test.lgo",
@@ -2595,14 +2585,14 @@
     "sha": "24ce3e45de549454d08dbad4ea521a02e6163ae3"
   },
   {
-    "path": "job/faults.lgo",
-    "mode": "100644",
-    "sha": "4df740c1d0c6e77c151dfab4fce636a0a10e0b81"
-  },
-  {
     "path": "job/faults_test.lgo",
     "mode": "100644",
     "sha": "d539588b9c020ba2e7ef8fe8a0436b7975b7b32a"
+  },
+  {
+    "path": "job/faults.lgo",
+    "mode": "100644",
+    "sha": "4df740c1d0c6e77c151dfab4fce636a0a10e0b81"
   },
   {
     "path": "job/job_test.lgo",
@@ -2625,14 +2615,14 @@
     "sha": "992b303e0da9a626fdcb7ee320f8b47107087a66"
   },
   {
+    "path": "LICENSE",
+    "mode": "100644",
+    "sha": "d645695673349e3947e8e5ae42332d0ac3164cd7"
+  },
+  {
     "path": "live/corpus_test.lgo",
     "mode": "100644",
     "sha": "2481202637b1a6c728814859733f75f1b51d043f"
-  },
-  {
-    "path": "live/faults.lgo",
-    "mode": "100644",
-    "sha": "3b041d9a7a5d18cdb26b90a35e09666c4146ed35"
   },
   {
     "path": "live/faults_test.lgo",
@@ -2640,9 +2630,9 @@
     "sha": "55a6ed1cb7327815bb641aa1131775f9a29ccfb4"
   },
   {
-    "path": "live/live.lgo",
+    "path": "live/faults.lgo",
     "mode": "100644",
-    "sha": "d95b12a0a3e4e7648ac8f9a8dfd3d4126db60010"
+    "sha": "3b041d9a7a5d18cdb26b90a35e09666c4146ed35"
   },
   {
     "path": "live/live_test.lgo",
@@ -2650,14 +2640,14 @@
     "sha": "131c02bd2363b5c6810caa017d23cb39a01b2e0a"
   },
   {
+    "path": "live/live.lgo",
+    "mode": "100644",
+    "sha": "d95b12a0a3e4e7648ac8f9a8dfd3d4126db60010"
+  },
+  {
     "path": "logos.toml",
     "mode": "100644",
     "sha": "72c9813404f32177e453440bbb0827c584af72a0"
-  },
-  {
-    "path": "meter/http.lgo",
-    "mode": "100644",
-    "sha": "891d357f6884a4888091e0ce0025b65c3a70c196"
   },
   {
     "path": "meter/http_test.lgo",
@@ -2665,14 +2655,19 @@
     "sha": "28693f9201e1506713858cba239d70b21a893728"
   },
   {
-    "path": "meter/meter.lgo",
+    "path": "meter/http.lgo",
     "mode": "100644",
-    "sha": "81bb99e7af3651c5ce7d1297b88dda49078f364f"
+    "sha": "891d357f6884a4888091e0ce0025b65c3a70c196"
   },
   {
     "path": "meter/meter_test.lgo",
     "mode": "100644",
     "sha": "dc421c15325da97b67d6409f4f9380e8b999603c"
+  },
+  {
+    "path": "meter/meter.lgo",
+    "mode": "100644",
+    "sha": "81bb99e7af3651c5ce7d1297b88dda49078f364f"
   },
   {
     "path": "migrate/bookkeeping_engines_test.lgo",
@@ -2690,14 +2685,14 @@
     "sha": "68f0a6bdf6ddc6ffa715816771c1b0d026292e59"
   },
   {
-    "path": "migrate/faults.lgo",
-    "mode": "100644",
-    "sha": "487dd12aa7f62b613ed17f53472446e73d9cb8e9"
-  },
-  {
     "path": "migrate/faults_test.lgo",
     "mode": "100644",
     "sha": "835888ecea6834fa04f9923675fd29e1d38e95e5"
+  },
+  {
+    "path": "migrate/faults.lgo",
+    "mode": "100644",
+    "sha": "487dd12aa7f62b613ed17f53472446e73d9cb8e9"
   },
   {
     "path": "migrate/fingerprint.lgo",
@@ -2705,14 +2700,14 @@
     "sha": "7d255d7d1b8dd3f97e601edd9b85ba5d020e8ed9"
   },
   {
-    "path": "migrate/migrate.lgo",
-    "mode": "100644",
-    "sha": "c0352b42d872566b830c4b2c98b57ff6693ff5d6"
-  },
-  {
     "path": "migrate/migrate_test.lgo",
     "mode": "100644",
     "sha": "537d4d2ae1863ae86f8a59ee5b2ee5bdaae6e996"
+  },
+  {
+    "path": "migrate/migrate.lgo",
+    "mode": "100644",
+    "sha": "c0352b42d872566b830c4b2c98b57ff6693ff5d6"
   },
   {
     "path": "migrate/serial_test.lgo",
@@ -2770,14 +2765,14 @@
     "sha": "bf0f8c91b32a3220a621781e9b0fc7dda157adcb"
   },
   {
+    "path": "NOTICE",
+    "mode": "100644",
+    "sha": "9fe62e0b4c1cea3d0041eca48a1d47b4fe59a638"
+  },
+  {
     "path": "openapi/jschema.lgo",
     "mode": "100644",
     "sha": "ede32860f6388ab662efe580d0d3bfbbcb5c9653"
-  },
-  {
-    "path": "openapi/openapi.lgo",
-    "mode": "100644",
-    "sha": "c2b075a0d5653b9e27e53913db012ab6642058a6"
   },
   {
     "path": "openapi/openapi_options_test.lgo",
@@ -2790,9 +2785,9 @@
     "sha": "dc51845d0973d03e8ef3a4d282875efff5870e0a"
   },
   {
-    "path": "ops/faults.lgo",
+    "path": "openapi/openapi.lgo",
     "mode": "100644",
-    "sha": "8f28bd221977b2b97c8f5434404cf38e30fc12c9"
+    "sha": "c2b075a0d5653b9e27e53913db012ab6642058a6"
   },
   {
     "path": "ops/faults_test.lgo",
@@ -2800,14 +2795,19 @@
     "sha": "79849e03d5cc5eba343f32f447e1fe3fcbe3fb79"
   },
   {
-    "path": "ops/ops.lgo",
+    "path": "ops/faults.lgo",
     "mode": "100644",
-    "sha": "e4429bf556dda3e6b8f8a8fcc40457a7bad3a90d"
+    "sha": "8f28bd221977b2b97c8f5434404cf38e30fc12c9"
   },
   {
     "path": "ops/ops_test.lgo",
     "mode": "100644",
     "sha": "8a445b61bc2aa2a3b90bbf0ffe336c9798791095"
+  },
+  {
+    "path": "ops/ops.lgo",
+    "mode": "100644",
+    "sha": "e4429bf556dda3e6b8f8a8fcc40457a7bad3a90d"
   },
   {
     "path": "orm/blob_test.lgo",
@@ -2835,14 +2835,14 @@
     "sha": "c9c4b14732a0e3af729f0a06e464e418d27f7a6b"
   },
   {
-    "path": "orm/session.lgo",
-    "mode": "100644",
-    "sha": "3dbbdc4f7b0d756dff138fe0b67d6c1b7d5ce92e"
-  },
-  {
     "path": "orm/session_test.lgo",
     "mode": "100644",
     "sha": "b5248a7c17e4b9c9e9ce01f190f56d5427b10d62"
+  },
+  {
+    "path": "orm/session.lgo",
+    "mode": "100644",
+    "sha": "3dbbdc4f7b0d756dff138fe0b67d6c1b7d5ce92e"
   },
   {
     "path": "orm/stale_key_test.lgo",
@@ -2860,6 +2860,11 @@
     "sha": "e3d4aba7f056b0d73aa9851521336189a21d99df"
   },
   {
+    "path": "README.md",
+    "mode": "100644",
+    "sha": "208706cd617dc57bb8b6c1acb8a802267406e0c5"
+  },
+  {
     "path": "resilience/breaker.lgo",
     "mode": "100644",
     "sha": "65ef94a3631bb0b8e91dd3d34ca51f7d58346029"
@@ -2870,19 +2875,19 @@
     "sha": "d5139e49133bd1c54a8cb5ace9e76773edda89db"
   },
   {
-    "path": "resilience/resilience.lgo",
-    "mode": "100644",
-    "sha": "e4fabcbbde1c1c1b995dd5f26d714c60a4eedffc"
-  },
-  {
     "path": "resilience/resilience_test.lgo",
     "mode": "100644",
     "sha": "c19e68c109cddf78d2358abec0f5fac711874f85"
   },
   {
-    "path": "schema/schema.lgo",
+    "path": "resilience/resilience.lgo",
     "mode": "100644",
-    "sha": "7f8360086cfb23ba96ddb83154c1c101ec045500"
+    "sha": "e4fabcbbde1c1c1b995dd5f26d714c60a4eedffc"
+  },
+  {
+    "path": "REVIEW.md",
+    "mode": "100644",
+    "sha": "ef5f2d0c4f68a924e8630557fe2ecd9a79ac97cd"
   },
   {
     "path": "schema/schema_test.lgo",
@@ -2890,14 +2895,19 @@
     "sha": "8650299763c526a6c79be3a2193b33eabcf02133"
   },
   {
-    "path": "scripts/engines.sh",
-    "mode": "100755",
-    "sha": "815cd60a5d8d800ec7c34e03fadfd6b3b6b339de"
+    "path": "schema/schema.lgo",
+    "mode": "100644",
+    "sha": "7f8360086cfb23ba96ddb83154c1c101ec045500"
   },
   {
     "path": "scripts/engines_test.sh",
     "mode": "100755",
     "sha": "b015ec3e9a07de9b57aaf6b35d40b763a705738b"
+  },
+  {
+    "path": "scripts/engines.sh",
+    "mode": "100755",
+    "sha": "815cd60a5d8d800ec7c34e03fadfd6b3b6b339de"
   },
   {
     "path": "scripts/slop_test.sh",
@@ -2915,14 +2925,14 @@
     "sha": "2083f381d5fa80c0ac795778c1d1e00d056f9cbe"
   },
   {
-    "path": "validate/validate.lgo",
-    "mode": "100644",
-    "sha": "cc42db8d4036d32e59936872648b901fa3800245"
-  },
-  {
     "path": "validate/validate_test.lgo",
     "mode": "100644",
     "sha": "7667d9b93fe8c3102347bb1e442045683256f176"
+  },
+  {
+    "path": "validate/validate.lgo",
+    "mode": "100644",
+    "sha": "cc42db8d4036d32e59936872648b901fa3800245"
   },
   {
     "path": "view/render.lgo",
@@ -2930,19 +2940,14 @@
     "sha": "bbbf10783a8226020cf71a4405a73f882d312767"
   },
   {
-    "path": "view/view.lgo",
-    "mode": "100644",
-    "sha": "25f2d0938109e53de32d61033543aa2332843e67"
-  },
-  {
     "path": "view/view_test.lgo",
     "mode": "100644",
     "sha": "64d96732585785135b98118e6dc213afff2f1f10"
   },
   {
-    "path": "web/bind.lgo",
+    "path": "view/view.lgo",
     "mode": "100644",
-    "sha": "904ca8b72cd4b149d3cd17b60a646e2509de0b9d"
+    "sha": "25f2d0938109e53de32d61033543aa2332843e67"
   },
   {
     "path": "web/bind_edge_test.lgo",
@@ -2953,6 +2958,11 @@
     "path": "web/bind_test.lgo",
     "mode": "100644",
     "sha": "dbd366526f21156b3a4a6cb37a8dd66df1e64cf8"
+  },
+  {
+    "path": "web/bind.lgo",
+    "mode": "100644",
+    "sha": "904ca8b72cd4b149d3cd17b60a646e2509de0b9d"
   },
   {
     "path": "web/export_test.lgo",
@@ -2980,14 +2990,14 @@
     "sha": "b44c3e375b277c0d8e600fafd7a4483cba772042"
   },
   {
-    "path": "web/server.lgo",
-    "mode": "100644",
-    "sha": "ce12c63ee116afe0b0d032b353442d1996ca2524"
-  },
-  {
     "path": "web/server_test.lgo",
     "mode": "100644",
     "sha": "c431be9227e49c9e8b0df0929757112726be25d2"
+  },
+  {
+    "path": "web/server.lgo",
+    "mode": "100644",
+    "sha": "ce12c63ee116afe0b0d032b353442d1996ca2524"
   },
   {
     "path": "web/stage.lgo",
@@ -2995,19 +3005,14 @@
     "sha": "13e8ef1ea36fe71b5eda41fab091e1f5df9ad644"
   },
   {
-    "path": "web/web.lgo",
-    "mode": "100644",
-    "sha": "e1e9a3f57e568cfeacda839142591191677cc6ea"
-  },
-  {
     "path": "web/web_test.lgo",
     "mode": "100644",
     "sha": "8802f54f3cec5d2773e03ca53078d913b256db10"
   },
   {
-    "path": "web/ws_h2.lgo",
+    "path": "web/web.lgo",
     "mode": "100644",
-    "sha": "9e3fbbc8e9cd0236b25c5e23f8ebc2a57d08e24c"
+    "sha": "e1e9a3f57e568cfeacda839142591191677cc6ea"
   },
   {
     "path": "web/ws_h2_test.lgo",
@@ -3015,9 +3020,9 @@
     "sha": "deb89e3454d50e263d368a7ba268fd0aff671817"
   },
   {
-    "path": "websocket/close.lgo",
+    "path": "web/ws_h2.lgo",
     "mode": "100644",
-    "sha": "c297f49ad2fb70d18f0a255e8e3976a5dbfd9092"
+    "sha": "9e3fbbc8e9cd0236b25c5e23f8ebc2a57d08e24c"
   },
   {
     "path": "websocket/close_export_test.lgo",
@@ -3030,9 +3035,9 @@
     "sha": "471afa0e119ed425b7de654ecc1997ede21842d8"
   },
   {
-    "path": "websocket/conn.lgo",
+    "path": "websocket/close.lgo",
     "mode": "100644",
-    "sha": "011093f0aae0df13667a7d50b10d5475409b8d3b"
+    "sha": "c297f49ad2fb70d18f0a255e8e3976a5dbfd9092"
   },
   {
     "path": "websocket/conn_test.lgo",
@@ -3040,19 +3045,24 @@
     "sha": "d9fb9ea69938cc4e240ef3c5fca34a4c9a5fe667"
   },
   {
+    "path": "websocket/conn.lgo",
+    "mode": "100644",
+    "sha": "011093f0aae0df13667a7d50b10d5475409b8d3b"
+  },
+  {
     "path": "websocket/echo_bench_test.lgo",
     "mode": "100644",
     "sha": "64eb0dfeb63d924a03bbb9084eb8f0301ecc4f19"
   },
   {
-    "path": "websocket/engine.lgo",
-    "mode": "100644",
-    "sha": "3a65a8a50c17377ddfadbc68d8c36a4ba2a7471d"
-  },
-  {
     "path": "websocket/engine_test.lgo",
     "mode": "100644",
     "sha": "b18142940d9757a157671fd4cc2bbb6232014d63"
+  },
+  {
+    "path": "websocket/engine.lgo",
+    "mode": "100644",
+    "sha": "3a65a8a50c17377ddfadbc68d8c36a4ba2a7471d"
   },
   {
     "path": "websocket/export_test.lgo",
@@ -3070,11 +3080,6 @@
     "sha": "bfb2c7f70b20678e2c8411b21bca62097ff8ec67"
   },
   {
-    "path": "websocket/frame.lgo",
-    "mode": "100644",
-    "sha": "2931d6ec3465effcc8e17b56065236c196c4be87"
-  },
-  {
     "path": "websocket/frame_bench_test.lgo",
     "mode": "100644",
     "sha": "840e8d2ac825d872a99ef13adc357fe771854d8e"
@@ -3088,6 +3093,11 @@
     "path": "websocket/frame_test.lgo",
     "mode": "100644",
     "sha": "d7fce50503a07cf26d1f23569878b683b0f9d280"
+  },
+  {
+    "path": "websocket/frame.lgo",
+    "mode": "100644",
+    "sha": "2931d6ec3465effcc8e17b56065236c196c4be87"
   },
   {
     "path": "websocket/h2_connect_test.lgo",
@@ -3105,11 +3115,6 @@
     "sha": "ce02e1e7b956d217792989e9908220fb67539fc4"
   },
   {
-    "path": "websocket/handshake.lgo",
-    "mode": "100644",
-    "sha": "e71e2ceda71ed7261aa446e987fc481d7653be66"
-  },
-  {
     "path": "websocket/handshake_export_test.lgo",
     "mode": "100644",
     "sha": "1f031d80cf3ba6809718f133aa4db6211aa56a1d"
@@ -3120,19 +3125,24 @@
     "sha": "40c08d92f4bb4237debe58518926378af1b5191c"
   },
   {
+    "path": "websocket/handshake.lgo",
+    "mode": "100644",
+    "sha": "e71e2ceda71ed7261aa446e987fc481d7653be66"
+  },
+  {
     "path": "websocket/origin.lgo",
     "mode": "100644",
     "sha": "c9660d38d049efe30354607f77e349f5ef86a0ab"
   },
   {
-    "path": "websocket/stream.lgo",
-    "mode": "100644",
-    "sha": "73099f78bb29f1e29fd5ebf2223e396999a0f2f2"
-  },
-  {
     "path": "websocket/stream_test.lgo",
     "mode": "100644",
     "sha": "524da9c91255bebdb8ffc466d8ece5fa930f4be8"
+  },
+  {
+    "path": "websocket/stream.lgo",
+    "mode": "100644",
+    "sha": "73099f78bb29f1e29fd5ebf2223e396999a0f2f2"
   },
   {
     "path": "wire/corpus.jsonl",

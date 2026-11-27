@@ -1,0 +1,16 @@
+[
+  {
+    "name": "cte-select-distinct-from-alias",
+    "sql": "WITH seed AS MATERIALIZED (SELECT 1 IS DISTINCT FROM 0 version) UPDATE items SET name = 'changed';",
+    "allow": false,
+    "native_name": "changed",
+    "native_version": 0
+  },
+  {
+    "name": "cte-select-not-distinct-from-reference",
+    "sql": "WITH seed AS MATERIALIZED (SELECT 0 IS NOT DISTINCT FROM version FROM items) UPDATE items SET name = 'changed';",
+    "allow": true,
+    "native_name": "changed",
+    "native_version": 0
+  }
+]
