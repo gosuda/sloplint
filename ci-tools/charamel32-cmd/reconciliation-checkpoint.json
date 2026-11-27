@@ -1,0 +1,667 @@
+{
+  "task": "Charamel32 current-head reconciliation after external five-commit follow-up",
+  "public_only": true,
+  "maintained_source_updated": false,
+  "head": "38d586ae3b2bce634e854990844f1db0b7642618",
+  "tree": "10a647a31d2e9cca96d31be7189bce76c3017f80",
+  "main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
+  "external_commits": [
+    "7f89de1d059be7761bccaad69734e7e4add5671d",
+    "7b859b8462f43ed69f2d6fa1d833d18163483246",
+    "165eca655b2747be7aeed3dfc2420fba8ddabced",
+    "41efa2a429e82e88628821e1bc4f52a08579e8aa",
+    "38d586ae3b2bce634e854990844f1db0b7642618"
+  ],
+  "external_paths": [
+    "bin/crush/lib/shell_screen.ml",
+    "test/crush/test_tools_shell.ml"
+  ],
+  "unresolved": [
+    {
+      "id": "PRRT_kwDOUbWGks68r_ro",
+      "comments": [
+        {
+          "id": 4716843677,
+          "body": "<!-- devin-review-comment {\"id\": \"BUG_pr-review-job-d527c102bb6142dba8f11070458704fc_0001\", \"file_path\": \"bin/crush/lib/shell_screen.ml\", \"start_line\": 943, \"end_line\": 945, \"side\": \"RIGHT\", \"based_on_repo_rules\": false, \"kind\": \"bug\"} -->\n\n🟡 **Quoted search fallback forces approval**\n\n`parameter` treats literal `{@` in a quoted `find -name` fallback as a multiword expansion. The shell tool then requires explicit approval even though the pattern stays one argument.\n\n<details>\n<summary>Learn more</summary>\n\nThe shell tool’s [command dispatcher](https://github.com/gosuda/charamel/blob/38d586ae3b2bce634e854990844f1db0b7642618/bin/crush/lib/tools_shell.ml#L243-L252 \"bin/crush/lib/tools_shell.ml:243-252\") sends `Review` verdicts through explicit permission checks. For `find -name`, [exec_commands](https://github.com/gosuda/charamel/blob/38d586ae3b2bce634e854990844f1db0b7642618/bin/crush/lib/shell_screen.ml#L1628-L1630 \"bin/crush/lib/shell_screen.ml:1628-1630\") requests review when it cannot prove the pattern is a single argument. A quoted scalar parameter expansion stays one argument even when its fallback contains literal `{@`. The scanner mistakes that text for the start of `${@}`. In automatic-approval mode without a prompt or an explicit grant, [the permission check](https://github.com/gosuda/charamel/blob/38d586ae3b2bce634e854990844f1db0b7642618/bin/crush/lib/permission.ml#L140-L144 \"bin/crush/lib/permission.ml:140-144\") and [prompt handling](https://github.com/gosuda/charamel/blob/38d586ae3b2bce634e854990844f1db0b7642618/bin/crush/lib/permission.ml#L168-L175 \"bin/crush/lib/permission.ml:168-175\") then deny the search.\n\n**Example:** `find . -name \"${pattern:-{@*.txt}\" -print` passes `{@*.txt` as one pattern when `pattern` is unset, but the screen requires explicit approval.\n\n**Recommended fix:** Record the opening position of each parameter expansion in [dollar](https://github.com/gosuda/charamel/blob/38d586ae3b2bce634e854990844f1db0b7642618/bin/crush/lib/shell_screen.ml#L864-L869 \"bin/crush/lib/shell_screen.ml:864-869\"), and recognize a leading `@` only at that expansion’s parameter position. Apply the same position check to the `!prefix@` selector so literal fallback text cannot match that rule either. Keep the existing multiword verdict tests and add a Clear case for a quoted scalar fallback.\n\n</details>\n\n<!-- devin-review-badge-begin -->\n<a href=\"https://app.devin.ai/review/gosuda/charamel/pull/32\" target=\"_blank\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://static.devin.ai/assets/gh-devin-review-dark.svg?v=4\"><img src=\"https://static.devin.ai/assets/gh-devin-review-light.svg?v=4\" alt=\"Devin Review\"></picture></a>\n<!-- devin-review-badge-end -->\n\n---\n*Was this helpful? React with 👍 or 👎 to provide feedback.*"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOUbWGks68r_sx",
+      "comments": [
+        {
+          "id": 4716843803,
+          "body": "<!-- devin-review-comment {\"id\": \"ANALYSIS_pr-review-job-d527c102bb6142dba8f11070458704fc_0001\", \"file_path\": \"bin/crush/lib/shell_screen.ml\", \"start_line\": 1156, \"end_line\": 1156, \"side\": \"RIGHT\", \"kind\": \"analysis\"} -->\n\n🔍 **Wrong executable in env test**\n\nAfter `GROUP=value`, GNU `env` treats `-` as the executable. `env_command` skips it, so the test expects a refusal for an argument rather than the executable.\n\n<!-- devin-review-badge-begin -->\n<a href=\"https://app.devin.ai/review/gosuda/charamel/pull/32\" target=\"_blank\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://static.devin.ai/assets/gh-devin-review-dark.svg?v=4\"><img src=\"https://static.devin.ai/assets/gh-devin-review-light.svg?v=4\" alt=\"Devin Review\"></picture></a>\n<!-- devin-review-badge-end -->\n\n---\n*Was this helpful? React with 👍 or 👎 to provide feedback.*"
+        }
+      ]
+    }
+  ],
+  "draft_tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
+  "production_byte_identity": [
+    {
+      "path": "bin/crush/lib/shell_screen.ml",
+      "sha256": "76f8ed44a22f5f6d022732aa7d92fba00517fee38ed9d4a3cf28e6d5e0fdd1fe"
+    },
+    {
+      "path": "bin/crush/lib/tools_shell.ml",
+      "sha256": "dd04f4b372f42d5ad4d64d09168ded0e8939c8263c25693e4704303d00623928"
+    }
+  ],
+  "windows_specific_fixture_sha256": "84e4ea277db9f271b3ecc06e11702e3ff28dc04f2f88a7caf5dba2add2a68e07",
+  "prior_exact_source": {
+    "tree": "457cd4529dbca9dfb84a258f6a4854b3ce5c6ac2",
+    "producer": "0a60a5c81b539444484ffbf596d8a78f179c8cee",
+    "run": 45957479981,
+    "conclusion": "success",
+    "linux": {
+      "producer": "0a60a5c81b539444484ffbf596d8a78f179c8cee",
+      "run": "45957479981",
+      "lane": "linux",
+      "identity": {
+        "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
+        "original_tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
+        "candidate_tree": "457cd4529dbca9dfb84a258f6a4854b3ce5c6ac2",
+        "source_sha256": {
+          "bin/crush/lib/shell_screen.ml": "76f8ed44a22f5f6d022732aa7d92fba00517fee38ed9d4a3cf28e6d5e0fdd1fe",
+          "bin/crush/lib/tools_shell.ml": "dd04f4b372f42d5ad4d64d09168ded0e8939c8263c25693e4704303d00623928",
+          "test/crush/test_tools_shell.ml": "6225ae491aac514cf56594597277cd39e3b53524a53412fc2311444dac65ce77"
+        },
+        "changed_paths": [
+          "bin/crush/lib/shell_screen.ml",
+          "bin/crush/lib/tools_shell.ml",
+          "test/crush/test_tools_shell.ml"
+        ],
+        "unstaged_clean": true,
+        "unexpected_untracked": [],
+        "index_sha256": "a663a4e0f99b484e4ed4633d9d756469cbcc1ee21e6742584a45a2c9dafb68f4"
+      },
+      "commands": [
+        {
+          "label": "compiler-and-formatter",
+          "script": "test \"$(ocamlc -version)\" = 5.5.1\ntest \"$(ocamlformat --version)\" = 0.29.0\nopam list --installed",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.16398052099998495,
+          "log_sha256": "380d384b5cb72e8aa68600edaeb03228ac298c5f6330d5fed6631aec9305dcb3"
+        },
+        {
+          "label": "format",
+          "script": "dune build @fmt",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 7.345824359000062,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "release-build",
+          "script": "dune build --profile release",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 21.26281501400001,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "release-tests",
+          "script": "dune runtest --profile release",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 13.73693283600005,
+          "log_sha256": "32a04c0816e92945ec407a8518b6363f4d2f7d58a08beeb3aa913c3aaf8dabb9",
+          "test_summary": [
+            "Test Successful in 0.013s. 89 tests run.",
+            "Test Successful in 0.004s. 15 tests run.",
+            "Test Successful in 0.014s. 15 tests run.",
+            "Test Successful in 0.000s. 5 tests run.",
+            "Test Successful in 0.024s. 38 tests run.",
+            "Test Successful in 0.030s. 34 tests run.",
+            "Test Successful in 0.030s. 13 tests run.",
+            "Test Successful in 0.008s. 7 tests run.",
+            "Test Successful in 0.021s. 62 tests run.",
+            "Test Successful in 0.012s. 16 tests run.",
+            "Test Successful in 0.203s. 78 tests run.",
+            "Test Successful in 0.001s. 18 tests run.",
+            "Test Successful in 0.041s. 26 tests run.",
+            "Test Successful in 0.003s. 15 tests run.",
+            "Test Successful in 0.028s. 13 tests run.",
+            "Test Successful in 0.010s. 8 tests run.",
+            "Test Successful in 0.013s. 7 tests run.",
+            "Test Successful in 0.081s. 25 tests run.",
+            "Test Successful in 0.037s. 395 tests run.",
+            "Test Successful in 0.065s. 143 tests run.",
+            "Test Successful in 0.353s. 103 tests run.",
+            "Test Successful in 0.296s. 28 tests run.",
+            "Test Successful in 0.030s. 16 tests run.",
+            "Test Successful in 0.105s. 22 tests run.",
+            "Test Successful in 0.031s. 89 tests run.",
+            "Test Successful in 2.302s. 66 tests run.",
+            "Test Successful in 0.471s. 77 tests run.",
+            "Test Successful in 0.176s. 87 tests run.",
+            "Test Successful in 8.080s. 42 tests run.",
+            "  [OK]          session                 5   file permissions are enforced.",
+            "  [OK]          permission              0   plan ceiling.",
+            "  [OK]          permission              1   unknown mutation targets.",
+            "  [OK]          permission              2   yolo and plan order.",
+            "  [OK]          permission              3   deny before allow.",
+            "  [OK]          permission              4   deny before session approval.",
+            "  [OK]          permission              5   exact config entries.",
+            "  [OK]          permission              6   exact session grants.",
+            "  [OK]          permission              7   asker session grant.",
+            "  [OK]          permission              8   hook order.",
+            "  [OK]          permission              9   local read-only approval.",
+            "  [OK]          permission             10   read-only plan behavior.",
+            "  [OK]          permission             11   component-aware containment.",
+            "  [OK]          permission             12   decision observability.",
+            "  [OK]          permission             13   policy lock while asking.",
+            "  [OK]          permission             14   entry matching.",
+            "  [OK]          permission             15   review needs explicit approval.",
+            "  [OK]          artifact                6   directory permissions are enforced.",
+            "  [OK]          tools-shell             0   conservative shell classifier.",
+            "  [OK]          tools-shell             1   screen reads shell quoting.",
+            "  [OK]          tools-shell             2   literal here-document boundaries.",
+            "  [OK]          tools-shell             3   ANSI-C NUL screening.",
+            "  [OK]          tools-shell             4   parameter quote context.",
+            "  [OK]          tools-shell             5   command lookup mode.",
+            "  [OK]          tools-shell             6   find data positions.",
+            "  [OK]          tools-shell             7   nested fd actions are screened once.",
+            "  [OK]          tools-shell             8   ANSI-C NUL matches bash.",
+            "  [OK]          tools-shell             9   screen requires review.",
+            "  [OK]          tools-shell            10   screen clears ordinary commands.",
+            "  [OK]          tools-shell            11   screen verdict table.",
+            "  [OK]          tools-shell            12   review argument boundaries.",
+            "  [OK]          tools-shell            13   Cmd loop approval boundary.",
+            "  [OK]          tools-shell            14   wrapper option and argument bound...",
+            "  [OK]          tools-shell            15   xargs replacement positions.",
+            "  [OK]          tools-shell            16   executable suffix positions.",
+            "  [OK]          tools-shell            17   shell information switches.",
+            "  [OK]          tools-shell            18   watch execution mode.",
+            "  [OK]          tools-shell            19   foreground capture.",
+            "  [OK]          tools-shell            20   foreground deadline.",
+            "  [OK]          tools-shell            21   background lifecycle.",
+            "  [OK]          tools-shell            22   permission receives read-only cla...",
+            "  [OK]          tools-shell            23   windows fixtures pin zero exit.",
+            "  [OK]          ui                      2   permission dialog bridge round trip.",
+            "Test Successful in 9.976s. 223 tests run."
+          ]
+        },
+        {
+          "label": "whitespace",
+          "script": "git diff --cached --check",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.017134182999939185,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "accepted": true,
+      "native_windows_full_suite_claim": false
+    },
+    "windows": {
+      "producer": "0a60a5c81b539444484ffbf596d8a78f179c8cee",
+      "run": "45957479981",
+      "lane": "windows",
+      "identity": {
+        "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
+        "original_tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
+        "candidate_tree": "457cd4529dbca9dfb84a258f6a4854b3ce5c6ac2",
+        "source_sha256": {
+          "bin/crush/lib/shell_screen.ml": "76f8ed44a22f5f6d022732aa7d92fba00517fee38ed9d4a3cf28e6d5e0fdd1fe",
+          "bin/crush/lib/tools_shell.ml": "dd04f4b372f42d5ad4d64d09168ded0e8939c8263c25693e4704303d00623928",
+          "test/crush/test_tools_shell.ml": "6225ae491aac514cf56594597277cd39e3b53524a53412fc2311444dac65ce77"
+        },
+        "changed_paths": [
+          "bin/crush/lib/shell_screen.ml",
+          "bin/crush/lib/tools_shell.ml",
+          "test/crush/test_tools_shell.ml"
+        ],
+        "unstaged_clean": true,
+        "unexpected_untracked": [],
+        "index_sha256": "a663a4e0f99b484e4ed4633d9d756469cbcc1ee21e6742584a45a2c9dafb68f4"
+      },
+      "commands": [
+        {
+          "label": "compiler-and-formatter",
+          "script": "test \"$(ocamlc -version)\" = 5.5.1\ntest \"$(ocamlformat --version)\" = 0.29.0\nopam list --installed",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 1.0623564000002261,
+          "log_sha256": "1fcb1bd4bbe058604470700932df31d5a91b956cef7056ab34c94257b286ae34"
+        },
+        {
+          "label": "format",
+          "script": "dune build @fmt",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 32.99263259999998,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "release-build",
+          "script": "dune build --profile release",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 179.66267150000022,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "native-shell-permission-tests",
+          "script": "dune exec --profile release test/crush/test_crush.exe -- test '^(tools-shell|permission)$'",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 1.937565899999754,
+          "log_sha256": "1309072ea42c04b54e48d48f856051571d664c988741517241cbc36fe944ceaf",
+          "test_summary": [
+            "  [SKIP]        session                 5   file permissions are enforced.",
+            "  [OK]          permission              0   plan ceiling.",
+            "  [OK]          permission              1   unknown mutation targets.",
+            "  [OK]          permission              2   yolo and plan order.",
+            "  [OK]          permission              3   deny before allow.",
+            "  [OK]          permission              4   deny before session approval.",
+            "  [OK]          permission              5   exact config entries.",
+            "  [OK]          permission              6   exact session grants.",
+            "  [OK]          permission              7   asker session grant.",
+            "  [OK]          permission              8   hook order.",
+            "  [OK]          permission              9   local read-only approval.",
+            "  [OK]          permission             10   read-only plan behavior.",
+            "  [OK]          permission             11   component-aware containment.",
+            "  [OK]          permission             12   decision observability.",
+            "  [OK]          permission             13   policy lock while asking.",
+            "  [OK]          permission             14   entry matching.",
+            "  [OK]          permission             15   review needs explicit approval.",
+            "  [SKIP]        artifact                6   directory permissions are enforced.",
+            "  [OK]          tools-shell             0   conservative shell classifier.",
+            "  [OK]          tools-shell             1   screen reads shell quoting.",
+            "  [OK]          tools-shell             2   literal here-document boundaries.",
+            "  [OK]          tools-shell             3   ANSI-C NUL screening.",
+            "  [OK]          tools-shell             4   parameter quote context.",
+            "  [OK]          tools-shell             5   command lookup mode.",
+            "  [OK]          tools-shell             6   find data positions.",
+            "  [OK]          tools-shell             7   nested fd actions are screened once.",
+            "  [OK]          tools-shell             8   ANSI-C NUL matches bash.",
+            "  [OK]          tools-shell             9   screen requires review.",
+            "  [OK]          tools-shell            10   screen clears ordinary commands.",
+            "  [OK]          tools-shell            11   screen verdict table.",
+            "  [OK]          tools-shell            12   review argument boundaries.",
+            "  [OK]          tools-shell            13   Cmd loop approval boundary.",
+            "  [OK]          tools-shell            14   wrapper option and argument boundaries.",
+            "  [OK]          tools-shell            15   xargs replacement positions.",
+            "  [OK]          tools-shell            16   executable suffix positions.",
+            "  [OK]          tools-shell            17   shell information switches.",
+            "  [OK]          tools-shell            18   watch execution mode.",
+            "  [OK]          tools-shell            19   foreground capture.",
+            "  [OK]          tools-shell            20   foreground deadline.",
+            "  [OK]          tools-shell            21   background lifecycle.",
+            "  [OK]          tools-shell            22   permission receives read-only classification.",
+            "  [OK]          tools-shell            23   windows fixtures pin zero exit.",
+            "  [SKIP]        ui                      2   permission dialog bridge round trip.",
+            "  [SKIP]        ui                      3   serialized question and permission dialogs.",
+            "Test Successful in 1.103s. 40 tests run."
+          ]
+        },
+        {
+          "label": "whitespace",
+          "script": "git diff --cached --check",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.45720269999992524,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "accepted": true,
+      "native_windows_full_suite_claim": false
+    },
+    "windows_artifact": 15181286677,
+    "windows_zip_sha256": "5459c195bb44cb21a73a43fffa88a67fa67bba8fcd9cfb7575c0806cdd902941"
+  },
+  "native_new_findings": {
+    "producer": "88a5e152a2265678dca327f7b6a37286c382a66a",
+    "run": 45962135575,
+    "job": 140382213249,
+    "artifact": 15181560296,
+    "zip_sha256": "7605405ac76a8eea3907e09af9a1375cfa128b5d23336e91f9537389305122cd",
+    "report": {
+      "producer": "88a5e152a2265678dca327f7b6a37286c382a66a",
+      "run": "45962135575",
+      "source": "38d586ae3b2bce634e854990844f1db0b7642618",
+      "tree": "10a647a31d2e9cca96d31be7189bce76c3017f80",
+      "source_clean": true,
+      "driver_sha256": "e4884e280777da832bfb621861dd223c978055dc15afc9ffc89db5575c11ff02",
+      "manifest_sha256": "9d680fb3418692002079446e24eb97f38742ba2fa10477168c64a6fa7bc1ac99",
+      "records": [
+        {
+          "id": "bash_literal_braced_at",
+          "argv": [
+            "/bin/bash",
+            "-c",
+            "probe() { printf \"%s\\n\" \"$#\"; printf \"<%s>\\n\" \"$@\"; }; unset pattern; set -- alpha beta; CHAR32_PREFIX_A=one; CHAR32_PREFIX_B=two; probe \"${pattern:-{@*.txt}\""
+          ],
+          "actual_exit": 0,
+          "stdout": "1\n<{@*.txt>\n",
+          "stderr": "",
+          "seconds": 0.0010751219999995953,
+          "stdout_sha256": "1e6f131de2868fd77247f774955ba15dc9193ba54d8bfe96d86a34fe51827861",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "expected_lines": [
+            "1",
+            "<{@*.txt>"
+          ],
+          "expected_exit": 0,
+          "accepted": true
+        },
+        {
+          "id": "bash_literal_indirect_at",
+          "argv": [
+            "/bin/bash",
+            "-c",
+            "probe() { printf \"%s\\n\" \"$#\"; printf \"<%s>\\n\" \"$@\"; }; unset pattern; set -- alpha beta; CHAR32_PREFIX_A=one; CHAR32_PREFIX_B=two; probe \"${pattern:-{!CHAR32_PREFIX@*.txt}\""
+          ],
+          "actual_exit": 0,
+          "stdout": "1\n<{!CHAR32_PREFIX@*.txt>\n",
+          "stderr": "",
+          "seconds": 0.0008405709999994571,
+          "stdout_sha256": "07d9a4aa52e6be3f0d6c12c3cabd6202a8429c8bcb9f12189d67692f8d3184f6",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "expected_lines": [
+            "1",
+            "<{!CHAR32_PREFIX@*.txt>"
+          ],
+          "expected_exit": 0,
+          "accepted": true
+        },
+        {
+          "id": "bash_literal_at",
+          "argv": [
+            "/bin/bash",
+            "-c",
+            "probe() { printf \"%s\\n\" \"$#\"; printf \"<%s>\\n\" \"$@\"; }; unset pattern; set -- alpha beta; CHAR32_PREFIX_A=one; CHAR32_PREFIX_B=two; probe \"${pattern:-literal@text}\""
+          ],
+          "actual_exit": 0,
+          "stdout": "1\n<literal@text>\n",
+          "stderr": "",
+          "seconds": 0.0007800500000003652,
+          "stdout_sha256": "dec054aec9fa7502241fb3251b47fde8b9c0feb6d12fe5d97a4c243eb1fe3791",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "expected_lines": [
+            "1",
+            "<literal@text>"
+          ],
+          "expected_exit": 0,
+          "accepted": true
+        },
+        {
+          "id": "bash_real_braced_at",
+          "argv": [
+            "/bin/bash",
+            "-c",
+            "probe() { printf \"%s\\n\" \"$#\"; printf \"<%s>\\n\" \"$@\"; }; unset pattern; set -- alpha beta; CHAR32_PREFIX_A=one; CHAR32_PREFIX_B=two; probe \"${@}\""
+          ],
+          "actual_exit": 0,
+          "stdout": "2\n<alpha>\n<beta>\n",
+          "stderr": "",
+          "seconds": 0.0008332009999998391,
+          "stdout_sha256": "be97092b45dbbc56846a31324a7a9841bf725c2d88f572bebb52b6862111c11f",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "expected_lines": [
+            "2",
+            "<alpha>",
+            "<beta>"
+          ],
+          "expected_exit": 0,
+          "accepted": true
+        },
+        {
+          "id": "dash_literal_braced_at",
+          "argv": [
+            "/bin/dash",
+            "-c",
+            "probe() { printf \"%s\\n\" \"$#\"; printf \"<%s>\\n\" \"$@\"; }; unset pattern; set -- alpha beta; CHAR32_PREFIX_A=one; CHAR32_PREFIX_B=two; probe \"${pattern:-{@*.txt}\""
+          ],
+          "actual_exit": 0,
+          "stdout": "1\n<{@*.txt>\n",
+          "stderr": "",
+          "seconds": 0.0005120509999994027,
+          "stdout_sha256": "1e6f131de2868fd77247f774955ba15dc9193ba54d8bfe96d86a34fe51827861",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "expected_lines": [
+            "1",
+            "<{@*.txt>"
+          ],
+          "expected_exit": 0,
+          "accepted": true
+        },
+        {
+          "id": "dash_literal_indirect_at",
+          "argv": [
+            "/bin/dash",
+            "-c",
+            "probe() { printf \"%s\\n\" \"$#\"; printf \"<%s>\\n\" \"$@\"; }; unset pattern; set -- alpha beta; CHAR32_PREFIX_A=one; CHAR32_PREFIX_B=two; probe \"${pattern:-{!CHAR32_PREFIX@*.txt}\""
+          ],
+          "actual_exit": 0,
+          "stdout": "1\n<{!CHAR32_PREFIX@*.txt>\n",
+          "stderr": "",
+          "seconds": 0.0004743899999999357,
+          "stdout_sha256": "07d9a4aa52e6be3f0d6c12c3cabd6202a8429c8bcb9f12189d67692f8d3184f6",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "expected_lines": [
+            "1",
+            "<{!CHAR32_PREFIX@*.txt>"
+          ],
+          "expected_exit": 0,
+          "accepted": true
+        },
+        {
+          "id": "dash_literal_at",
+          "argv": [
+            "/bin/dash",
+            "-c",
+            "probe() { printf \"%s\\n\" \"$#\"; printf \"<%s>\\n\" \"$@\"; }; unset pattern; set -- alpha beta; CHAR32_PREFIX_A=one; CHAR32_PREFIX_B=two; probe \"${pattern:-literal@text}\""
+          ],
+          "actual_exit": 0,
+          "stdout": "1\n<literal@text>\n",
+          "stderr": "",
+          "seconds": 0.00042866099999994134,
+          "stdout_sha256": "dec054aec9fa7502241fb3251b47fde8b9c0feb6d12fe5d97a4c243eb1fe3791",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "expected_lines": [
+            "1",
+            "<literal@text>"
+          ],
+          "expected_exit": 0,
+          "accepted": true
+        },
+        {
+          "id": "dash_real_braced_at",
+          "argv": [
+            "/bin/dash",
+            "-c",
+            "probe() { printf \"%s\\n\" \"$#\"; printf \"<%s>\\n\" \"$@\"; }; unset pattern; set -- alpha beta; CHAR32_PREFIX_A=one; CHAR32_PREFIX_B=two; probe \"${@}\""
+          ],
+          "actual_exit": 0,
+          "stdout": "2\n<alpha>\n<beta>\n",
+          "stderr": "",
+          "seconds": 0.0004169210000002366,
+          "stdout_sha256": "be97092b45dbbc56846a31324a7a9841bf725c2d88f572bebb52b6862111c11f",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "expected_lines": [
+            "2",
+            "<alpha>",
+            "<beta>"
+          ],
+          "expected_exit": 0,
+          "accepted": true
+        },
+        {
+          "id": "bash_real_indirect_at",
+          "argv": [
+            "/bin/bash",
+            "--noprofile",
+            "--norc",
+            "-c",
+            "probe() { printf \"%s\\n\" \"$#\"; printf \"<%s>\\n\" \"$@\"; }; unset pattern; set -- alpha beta; CHAR32_PREFIX_A=one; CHAR32_PREFIX_B=two; probe \"${!CHAR32_PREFIX@}\""
+          ],
+          "actual_exit": 0,
+          "stdout": "2\n<CHAR32_PREFIX_A>\n<CHAR32_PREFIX_B>\n",
+          "stderr": "",
+          "seconds": 0.0007819910000002039,
+          "stdout_sha256": "95e3debd16630543d1ab38f2922799a066c64a302cac29b6025a6197846b0125",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "expected_lines": [
+            "2",
+            "<CHAR32_PREFIX_A>",
+            "<CHAR32_PREFIX_B>"
+          ],
+          "expected_exit": 0,
+          "accepted": true
+        },
+        {
+          "id": "assignment_then_dash",
+          "argv": [
+            "/usr/bin/env",
+            "GROUP=value",
+            "-",
+            "./brew.exe",
+            "install",
+            "fixture"
+          ],
+          "actual_exit": 0,
+          "stdout": "EXEC:DASH\n<./brew.exe>\n<install>\n<fixture>\n",
+          "stderr": "",
+          "seconds": 0.0009234010000005455,
+          "stdout_sha256": "a0fae326f5083d8d31fe48e189208c646fe816fa5d1b9e36ce53db8fe3fe3dc8",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "expected_lines": [
+            "EXEC:DASH",
+            "<./brew.exe>",
+            "<install>",
+            "<fixture>"
+          ],
+          "expected_exit": 0,
+          "accepted": true
+        },
+        {
+          "id": "option_assignment_then_dash",
+          "argv": [
+            "/usr/bin/env",
+            "-u",
+            "UNUSED",
+            "GROUP=value",
+            "-",
+            "./brew.exe",
+            "install",
+            "fixture"
+          ],
+          "actual_exit": 0,
+          "stdout": "EXEC:DASH\n<./brew.exe>\n<install>\n<fixture>\n",
+          "stderr": "",
+          "seconds": 0.0007438119999996218,
+          "stdout_sha256": "a0fae326f5083d8d31fe48e189208c646fe816fa5d1b9e36ce53db8fe3fe3dc8",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "expected_lines": [
+            "EXEC:DASH",
+            "<./brew.exe>",
+            "<install>",
+            "<fixture>"
+          ],
+          "expected_exit": 0,
+          "accepted": true
+        },
+        {
+          "id": "option_then_dash",
+          "argv": [
+            "/usr/bin/env",
+            "-u",
+            "UNUSED",
+            "-",
+            "./brew.exe",
+            "install",
+            "fixture"
+          ],
+          "actual_exit": 0,
+          "stdout": "EXEC:BREW\n<install>\n<fixture>\n",
+          "stderr": "",
+          "seconds": 0.0006805710000001852,
+          "stdout_sha256": "ac902a7aba4eae691000e3e22d989ad9aa3140af7166c08724995ab2a4f30485",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "expected_lines": [
+            "EXEC:BREW",
+            "<install>",
+            "<fixture>"
+          ],
+          "expected_exit": 0,
+          "accepted": true
+        },
+        {
+          "id": "dash_then_assignment",
+          "argv": [
+            "/usr/bin/env",
+            "-",
+            "GROUP=value",
+            "./brew.exe",
+            "install",
+            "fixture"
+          ],
+          "actual_exit": 0,
+          "stdout": "EXEC:BREW\n<install>\n<fixture>\n",
+          "stderr": "",
+          "seconds": 0.0006763909999998319,
+          "stdout_sha256": "ac902a7aba4eae691000e3e22d989ad9aa3140af7166c08724995ab2a4f30485",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "expected_lines": [
+            "EXEC:BREW",
+            "<install>",
+            "<fixture>"
+          ],
+          "expected_exit": 0,
+          "accepted": true
+        },
+        {
+          "id": "assignment_then_option_spelling",
+          "argv": [
+            "/usr/bin/env",
+            "GROUP=value",
+            "-i",
+            "./brew.exe",
+            "install",
+            "fixture"
+          ],
+          "actual_exit": 0,
+          "stdout": "EXEC:DASH_I\n<./brew.exe>\n<install>\n<fixture>\n",
+          "stderr": "",
+          "seconds": 0.0007016210000001522,
+          "stdout_sha256": "c3e85eff17515dc0eb6d1d6bb94fcf4ec3ac146d46fe7361c50ea8c241650215",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "expected_lines": [
+            "EXEC:DASH_I",
+            "<./brew.exe>",
+            "<install>",
+            "<fixture>"
+          ],
+          "expected_exit": 0,
+          "accepted": true
+        }
+      ],
+      "failures": []
+    }
+  },
+  "preservation": "All external tests are retained, with the native-proven env-assignment dash expected verdict corrected from blocked to clear and the fd action test strengthened with an explicit Clear assertion.",
+  "pending": [
+    "Current38d baseline classifier witnesses and formatted merged-test candidate.",
+    "Full Linux AGENTS gates on exact current-head candidate.",
+    "Authenticated complete non-test blob/mode identity and exact Windows-specific fixture equality before carrying historical Windows proof.",
+    "Fresh raw refs, additive publication, current findings, ordinary CI, retirement of all three owned temporary workflows."
+  ],
+  "limitations": [
+    "The older successful457cd Git tree is not the new maintained head.",
+    "No full Windows-suite claim; actual full release build and40 selected shell/permission tests are recorded.",
+    "Earlier setup/oracle/transport/fd failures remain in immutable prior checkpoints."
+  ]
+}

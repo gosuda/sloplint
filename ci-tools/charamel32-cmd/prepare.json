@@ -1,7 +1,7 @@
 {
-  "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
-  "tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
-  "draft_tree": "7ee46852b14fa0b6a7211da5ef9070c5f478edc6",
+  "head": "38d586ae3b2bce634e854990844f1db0b7642618",
+  "tree": "10a647a31d2e9cca96d31be7189bce76c3017f80",
+  "draft_tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
   "cases": [
     {
       "id": "cmd-00",
@@ -692,40 +692,78 @@
       "dialect": "cmd",
       "command": "for /f \"delims=usebackq tokens=*\" %i in (`echo 9173`) do @echo RESULT:[%i]",
       "expected": "clear"
+    },
+    {
+      "id": "literal-fallback-braced-at",
+      "dialect": "posix",
+      "command": "find . -name \"${pattern:-{@*.txt}\" -print",
+      "expected": "clear"
+    },
+    {
+      "id": "literal-fallback-indirect-at",
+      "dialect": "posix",
+      "command": "find . -name \"${pattern:-{!CHAR32_PREFIX@*.txt}\" -print",
+      "expected": "clear"
+    },
+    {
+      "id": "literal-fallback-at-control",
+      "dialect": "posix",
+      "command": "find . -name \"${pattern:-literal@text}\" -print",
+      "expected": "clear"
+    },
+    {
+      "id": "env-assignment-dash",
+      "dialect": "posix",
+      "command": "env GROUP=value - ./brew.exe install fixture",
+      "expected": "clear"
+    },
+    {
+      "id": "env-option-assignment-dash",
+      "dialect": "posix",
+      "command": "env -u UNUSED GROUP=value - ./brew.exe install fixture",
+      "expected": "clear"
+    },
+    {
+      "id": "env-option-dash-control",
+      "dialect": "posix",
+      "command": "env -u UNUSED - ./brew.exe install fixture",
+      "expected": "blocked"
+    },
+    {
+      "id": "env-dash-assignment-control",
+      "dialect": "posix",
+      "command": "env - GROUP=value ./brew.exe install fixture",
+      "expected": "blocked"
+    },
+    {
+      "id": "env-assignment-option-spelling",
+      "dialect": "posix",
+      "command": "env GROUP=value -i ./brew.exe install fixture",
+      "expected": "clear"
+    },
+    {
+      "id": "preserved-cmd-missing-do",
+      "dialect": "cmd",
+      "command": "cmd /c for %i in (*)",
+      "expected": "review"
     }
   ],
   "must_fail": [
     {
-      "dialect": "cmd",
-      "command": "cmd /c echo ready for review"
-    },
-    {
-      "dialect": "cmd",
-      "command": "for /r do %i in (*.txt) do echo %i"
-    },
-    {
-      "dialect": "cmd",
-      "command": "for /f %i in (notes.txt) do echo %i"
-    },
-    {
-      "dialect": "cmd",
-      "command": "for %i in (alpha) do"
+      "dialect": "posix",
+      "command": "find . -name \"${pattern:-{@*.txt}\" -print"
     },
     {
       "dialect": "posix",
-      "command": "env A=\"${@}\" true"
+      "command": "find . -name \"${pattern:-{!CHAR32_PREFIX@*.txt}\" -print"
     },
     {
       "dialect": "posix",
-      "command": "fd -tf README"
+      "command": "env GROUP=value - ./brew.exe install fixture"
     },
     {
       "dialect": "posix",
-      "command": "command -pv git"
-    },
-    {
-      "dialect": "posix",
-      "command": "env -i - ./cu''rl.exe"
+      "command": "env -u UNUSED GROUP=value - ./brew.exe install fixture"
     }
   ],
   "archives": [
@@ -761,16 +799,23 @@
       "failure_field": "control_failures",
       "failures": [],
       "observed_sha256": "4828864f66e1c3b3b861d1fe2be1b9fd9571c6e92dccbfb4b751114e3c65d638"
+    },
+    {
+      "id": 15181560296,
+      "sha256": "7605405ac76a8eea3907e09af9a1375cfa128b5d23336e91f9537389305122cd",
+      "report": "native-followup.json",
+      "producer": "88a5e152a2265678dca327f7b6a37286c382a66a",
+      "source": "38d586ae3b2bce634e854990844f1db0b7642618",
+      "records": 14,
+      "failures": []
     }
   ],
   "limits": [
     "This preparation does not replace any required full Dune gate or native tool-permission test.",
     "The Windows historical native baseline remains an overall failure due to three incomplete stdout expectations; its complete observations are authenticated unchanged.",
-    "Attached usebackq option forms remain conservatively unparsed and require explicit approval; the 18 new native rows establish observed quote behavior, not a complete Cmd option grammar."
+    "Attached usebackq option forms remain conservatively unparsed and require explicit approval; the 18 new native rows establish observed quote behavior, not a complete Cmd option grammar.",
+    "This preparation reconciles the five external commits from5be8 to38d and preserves their new tests, correcting only the native-proven env assignment/dash expectation. Production remains byte-identical to457cd; additional tests require final current-head Linux gates."
   ],
-  "intermediate_tree": "e4dc56c7aa06c798df5eca42ecad54e2ffe83423",
-  "intermediate_failures": [
-    "for-options-options_5_backtick",
-    "for-options-options_6_backtick"
-  ]
+  "intermediate_tree": "457cd4529dbca9dfb84a258f6a4854b3ce5c6ac2",
+  "intermediate_failures": []
 }
