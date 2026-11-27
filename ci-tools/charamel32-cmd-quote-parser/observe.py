@@ -182,7 +182,7 @@ def identity() -> dict[str, Any]:
             "source_sha256": {path: digest((SOURCE / path).read_bytes())
                               for path in MANIFEST["source_sha256"]},
             "index_sha256": digest(subprocess.check_output(
-                ["git", "-C", str(SOURCE), "ls-files", "--stage", "-z"])),
+                ["git", "-C", str(SOURCE), "ls-files", "-s"])),
             "source_clean": git("status", "--porcelain") == ""}
 
 
@@ -190,6 +190,7 @@ def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     assert digest(Path(__file__).read_bytes()) == MANIFEST["driver_sha256"]
     before = identity()
+    save("initial-source.json", before)
     assert before["head"] == MANIFEST["head"] and before["tree"] == MANIFEST["tree"]
     assert before["source_clean"] and before["source_sha256"] == MANIFEST["source_sha256"]
     native_files = archive_files(MANIFEST["native"])
