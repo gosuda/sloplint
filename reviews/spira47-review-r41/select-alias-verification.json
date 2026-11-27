@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "producer": "b5ffb351e27ac2255607de5659c23875b73d0b2a",
+  "run": 46058226582,
+  "job": 140705847413,
+  "conclusion": "success",
+  "artifact": {
+    "id": 15227633065,
+    "name": "spira47-select-alias-baseline-r41",
+    "bytes": 501766,
+    "zip_sha256": "cdd8c530f094c683341a95342c69a3e92e203c42255a17d482d601ddcd21ae62",
+    "api_and_upload_digest_match": true,
+    "owner_downloaded_zip": false,
+    "next_candidate_authenticates_downloaded_bytes": true
+  },
+  "raw_job_log_sha256": "2e347516a22a245b6f45dea21636125fd9002d86b2a04ca3a3a7db80f50dc520",
+  "report_sha256": "86ce71fde466c380428fe06519eaf88990abfe6c795b05921d5f3ca7385e0f15",
+  "report_bytes": 118133,
+  "command_receipts": 73,
+  "command_stdout_hashes_independently_reconstructed": 73,
+  "no_timeout": true,
+  "native_original_matches": 10,
+  "native_processed_matches": 20,
+  "unchanged_projection": {
+    "passed": [
+      "cte-select-bare-alias",
+      "cte-select-explicit-alias",
+      "cte-select-quoted-alias"
+    ],
+    "failed": [
+      "cte-select-all-column",
+      "cte-select-column",
+      "cte-select-distinct-column",
+      "cte-select-distinct-on-column",
+      "cte-select-function-argument",
+      "cte-select-operator-operand",
+      "cte-select-sibling-column"
+    ]
+  },
+  "rejected_proposal_projection": {
+    "passed": [
+      "cte-select-all-column",
+      "cte-select-column",
+      "cte-select-distinct-column",
+      "cte-select-distinct-on-column",
+      "cte-select-explicit-alias",
+      "cte-select-function-argument",
+      "cte-select-operator-operand",
+      "cte-select-sibling-column"
+    ],
+    "failed": [
+      "cte-select-bare-alias",
+      "cte-select-quoted-alias"
+    ]
+  },
+  "unchanged_pipeline_partition": {
+    "generated": 0,
+    "plugin-refusal": 10
+  },
+  "rejected_proposal_pipeline_partition": {
+    "generated": 9,
+    "plugin-refusal": 1
+  },
+  "source": {
+    "label": "source",
+    "tree": "e4214ecf0b2b5a214d26921664313b98d14efb13",
+    "blobs": 625,
+    "index_sha256": "5f9db7b6da063c1b66ee549ca72338ada4c5fe54b77f02bea571c231d3b59e29"
+  },
+  "unchanged_tests": {
+    "label": "tests",
+    "tree": "1fa7e3ac0a333bc1d2b69a1ce23d18402d512f9d",
+    "blobs": 630,
+    "index_sha256": "76157b86a3f4a22c17a11e0c5cb4dbb968b5fe6d428487417abc6da462072412"
+  },
+  "rejected_proposal": {
+    "label": "proposed",
+    "tree": "d865a7d0e949ee674e1d13dd09e84c5ef8789b28",
+    "blobs": 631,
+    "index_sha256": "062903ddf3c9b5946e89f8aaee354b3833baebfc3acbf19de1f042b56bf47e7a"
+  },
+  "source_restored": {
+    "label": "source",
+    "tree": "e4214ecf0b2b5a214d26921664313b98d14efb13",
+    "blobs": 625,
+    "index_sha256": "5f9db7b6da063c1b66ee549ca72338ada4c5fe54b77f02bea571c231d3b59e29"
+  },
+  "baseline_verified": true,
+  "source_gates_passed": false,
+  "publication_eligible": false,
+  "scope": "The diagnostic proves two introduced bare SELECT-alias false acceptances in the frozen proposal. Its successful harness does not verify the corrected source or its full source gates.",
+  "source_proposal": "5863a89fca0390474647332c5dab82bee591371f",
+  "reviewed_draft": "972e56e4b2f7125ad3c0c14f24ad131feda83d45",
+  "maintained_head": "6031a63255bc7496e22b38921e10401a2d50c291",
+  "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332"
+}

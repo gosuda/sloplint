@@ -1,0 +1,2895 @@
+{
+  "schema": 1,
+  "producer": "b5ffb351e27ac2255607de5659c23875b73d0b2a",
+  "run": "46058226582",
+  "manifest": {
+    "schema": 1,
+    "purpose": "Freeze the SELECT bare-output-alias regression hypothesized in the inactive CTE proposal; no corrected production or publication.",
+    "source": {
+      "repository": "gosuda/spira",
+      "head": "6031a63255bc7496e22b38921e10401a2d50c291",
+      "tree": "e4214ecf0b2b5a214d26921664313b98d14efb13",
+      "blobs": 625,
+      "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+      "index_file": "source-index.json"
+    },
+    "tests": {
+      "tree": "1fa7e3ac0a333bc1d2b69a1ce23d18402d512f9d",
+      "blobs": 630,
+      "index_file": "test-index.json",
+      "production_unchanged": true
+    },
+    "proposed": {
+      "tree": "d865a7d0e949ee674e1d13dd09e84c5ef8789b28",
+      "blobs": 631,
+      "index_file": "proposed-index.json",
+      "source_proposal_commit": "5863a89fca0390474647332c5dab82bee591371f",
+      "production_bytes_unchanged_from_reviewed_proposal": true
+    },
+    "toolchain": {
+      "repository": "gosuda/LoGOs",
+      "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+      "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+      "bootstrap_go": "1.27.4",
+      "fresh_build": true
+    },
+    "postgres_image": "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782",
+    "postgres_version_num": "180007",
+    "sqlc_version": "v1.31.2-0.20261023030206-3ad8b20fb02b",
+    "tools": {
+      "uv": "0.13.9",
+      "python": "3.15"
+    },
+    "contracts": {
+      "cases": 10,
+      "native_original": 10,
+      "native_processed_per_source": 10,
+      "unchanged_failed": [
+        "cte-select-column",
+        "cte-select-all-column",
+        "cte-select-distinct-column",
+        "cte-select-distinct-on-column",
+        "cte-select-function-argument",
+        "cte-select-operator-operand",
+        "cte-select-sibling-column"
+      ],
+      "proposed_failed": [
+        "cte-select-quoted-alias",
+        "cte-select-bare-alias"
+      ],
+      "proposed_pipeline_refusals": [
+        "cte-select-explicit-alias"
+      ],
+      "unchanged_pipeline_partition": {
+        "generated": 0,
+        "plugin-refusal": 10
+      },
+      "proposed_pipeline_partition": {
+        "generated": 9,
+        "plugin-refusal": 1
+      },
+      "query_metadata_unchanged": true,
+      "all_original_37_cases_and_7_test_paths_preserved": true,
+      "baseline_verified_scope": "The known inaccurate proposal must fail two newly frozen alias-negative assertions while genuine-reference controls pass. This is a successful diagnostic harness only if every native, source, pipeline and restoration condition matches; the proposed source remains ineligible for publication.",
+      "source_gates_reused": false
+    },
+    "completed_original_baseline": {
+      "commit": "815abc8715bdb5bc3d69aeaa09b92e77e5c2ec15",
+      "run": 46055423838,
+      "job": 140696615860,
+      "artifact": 15225739880,
+      "report_sha256": "f3260715e44cf18ffdc38fb500fdff0c1dc2e421e5d15d5e9ff96cdbd7899fd5"
+    },
+    "proof_sha256": {
+      "baseline_support.py": "c1124b78e01e1cbb8b296c2199240a3f19b2673f2add1b327f2ba2d40b348e38",
+      "proof_support.py": "e24d7a897bbafc7f1d29557be3b0dd8fdd2756258b91161b92fb48c4b5df74f5",
+      "native_support.py": "70e59aad5436371c7c7e08772b89f797f01755d02ca71214180309cc916afd53",
+      "observer.py": "311c6b97c19ff10d1a68f7d186c9de00a27185207bbf9071f5a7430cf2195578",
+      "verify_baseline.py": "74effd6fe6cd99dd2b00b37397419e0e8090d72448929540f256ded4225981bf",
+      "schema.sql": "250795d402dca7144e24f33dc51026083c7664385436545bca8762b7a66de6bc",
+      "source-index.json": "9172ff6ef0f04168d8c9c0ffbb32612f672beef67af29b7c6b65af107a746615",
+      "test-index.json": "1b023ebe772f6959e1f599300de905da1601912c26eca712ac62f53d54debe46",
+      "proposed-index.json": "64d5e29a470cff422b3c54ffdeca8407d0777a729dc1b693a5a2f2f455d02ebd",
+      "authored-tests.json": "27f7c8dcb8458c09e4fe35100f90b29d65b7b8976a906f3407af13e9cb16054b",
+      "authored-proposed.json": "e441a5c19711c1de2968e1a51275dea93c939c4081e9f44fe6d82f00d13a00e5",
+      "version-projections.json": "3462fcabeeee48c49f90e9021422da1a646dfaa05bb616bcda4a2998694a5444",
+      "verify_alias_baseline.py": "00f9d27bc62897893e2bcddbab6f4b32baf9ee36e145b2bdb00a3a707b61d73a"
+    },
+    "workflow_sha256": "6610947a1bfa9c54f00c07141af0a6987279bd086382fa38cae5e09ce33b74a9",
+    "publication_eligible": false
+  },
+  "manifest_sha256": "854079a7f41aad732a7c6bac5520b6e08d4aebdcc4ba4664ecbfb29fd91010d0",
+  "observations_complete": true,
+  "source_restored": true,
+  "baseline_verified": true,
+  "source_gates_passed": false,
+  "publication_eligible": false,
+  "before": {
+    "label": "source",
+    "tree": "e4214ecf0b2b5a214d26921664313b98d14efb13",
+    "blobs": 625,
+    "index_sha256": "5f9db7b6da063c1b66ee549ca72338ada4c5fe54b77f02bea571c231d3b59e29"
+  },
+  "postgres_version_num": "180007",
+  "native_original": [
+    {
+      "name": "cte-select-quoted-alias",
+      "lane": "original",
+      "sql": "WITH seed AS MATERIALIZED (SELECT 1 \"version\") UPDATE items SET name = 'changed';",
+      "sql_sha256": "7296ae2a4bbe4174108ae3cbc49359a20b0276e5b4130dfb193dbdd825b1abf5",
+      "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+      "observed": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "expected": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "matches": true
+    },
+    {
+      "name": "cte-select-explicit-alias",
+      "lane": "original",
+      "sql": "WITH seed AS MATERIALIZED (SELECT 1 AS \"version\") UPDATE items SET name = 'changed';",
+      "sql_sha256": "5ff7e5a95e29be2fb8d77ae86167a06a6ef9282de9e0413ee0f92642a8b25ab6",
+      "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+      "observed": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "expected": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "matches": true
+    },
+    {
+      "name": "cte-select-bare-alias",
+      "lane": "original",
+      "sql": "WITH seed AS MATERIALIZED (SELECT 1 version) UPDATE items SET name = 'changed';",
+      "sql_sha256": "fa97feb12b61e41be08a8df4dfddd41a57725a836231185b4f558184e31029ad",
+      "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+      "observed": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "expected": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "matches": true
+    },
+    {
+      "name": "cte-select-column",
+      "lane": "original",
+      "sql": "WITH seed AS MATERIALIZED (SELECT version FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "2317ba5020762b8435ded3fee0b366a88d6b044c968f6461e1e37c83d4a1a22f",
+      "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+      "observed": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "expected": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "matches": true
+    },
+    {
+      "name": "cte-select-all-column",
+      "lane": "original",
+      "sql": "WITH seed AS MATERIALIZED (SELECT ALL version FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "1b25f9e81911a581368ce9568a616f3e2eb5bc941bd63cf8badaeddc465465ba",
+      "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+      "observed": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "expected": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "matches": true
+    },
+    {
+      "name": "cte-select-distinct-column",
+      "lane": "original",
+      "sql": "WITH seed AS MATERIALIZED (SELECT DISTINCT version FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "7fd57d46190d26b77c6cc94783672099c563197a1d5743e1d9d0e0e78d785614",
+      "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+      "observed": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "expected": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "matches": true
+    },
+    {
+      "name": "cte-select-distinct-on-column",
+      "lane": "original",
+      "sql": "WITH seed AS MATERIALIZED (SELECT DISTINCT ON (id) version FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "11d0fb1f1b79cc5ea90d3b8364011e91b57e38bc8b68f2a56074c0175975f7be",
+      "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+      "observed": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "expected": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "matches": true
+    },
+    {
+      "name": "cte-select-function-argument",
+      "lane": "original",
+      "sql": "WITH seed AS MATERIALIZED (SELECT abs(version) FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "1963157aa2169f6139413409edc7d65fea7d35a22f1fdb90eb07cf653480c802",
+      "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+      "observed": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "expected": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "matches": true
+    },
+    {
+      "name": "cte-select-operator-operand",
+      "lane": "original",
+      "sql": "WITH seed AS MATERIALIZED (SELECT 0 OPERATOR(pg_catalog.+) version FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "db4f934799fcf86c43081d6388bc1a02f1127b4ced6caaaebf8f658e60bf41d7",
+      "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+      "observed": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "expected": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "matches": true
+    },
+    {
+      "name": "cte-select-sibling-column",
+      "lane": "original",
+      "sql": "WITH seed AS MATERIALIZED (SELECT 1 \"version\", version AS value FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "c4bd0ea0786c9d5beae6e03cde4617072bdc88ad0f7fc5ae9d461bdf3a416485",
+      "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+      "observed": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "expected": {
+        "name": "changed",
+        "versions": [
+          0
+        ]
+      },
+      "matches": true
+    }
+  ],
+  "tests_before": {
+    "label": "tests",
+    "tree": "1fa7e3ac0a333bc1d2b69a1ce23d18402d512f9d",
+    "blobs": 630,
+    "index_sha256": "76157b86a3f4a22c17a11e0c5cb4dbb968b5fe6d428487417abc6da462072412"
+  },
+  "unchanged_projection": {
+    "passed": [
+      "cte-select-bare-alias",
+      "cte-select-explicit-alias",
+      "cte-select-quoted-alias"
+    ],
+    "failed": [
+      "cte-select-all-column",
+      "cte-select-column",
+      "cte-select-distinct-column",
+      "cte-select-distinct-on-column",
+      "cte-select-function-argument",
+      "cte-select-operator-operand",
+      "cte-select-sibling-column"
+    ]
+  },
+  "unchanged_pipeline": [
+    {
+      "name": "cte-select-quoted-alias",
+      "lane": "unchanged",
+      "sql": "WITH seed AS MATERIALIZED (SELECT 1 \"version\") UPDATE items SET name = 'changed';",
+      "sql_sha256": "7296ae2a4bbe4174108ae3cbc49359a20b0276e5b4130dfb193dbdd825b1abf5",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+      "raw_exit": 1,
+      "request_sha256": "fe5737adac6bc766d16a1e3d653e8cee93df9d2da2f71abaed77dec88c3be357",
+      "request_present": true,
+      "pipeline_contract": "plugin-refusal",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT 1 \"version\") UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "8df604f1f916750d9a8648f1520dc29699e436bfcc9a74936df164d8a077602a",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT 1 \"version\") UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b",
+      "files": [],
+      "processed_native": {
+        "name": "cte-select-quoted-alias",
+        "lane": "unchanged-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT 1 \"version\") UPDATE items SET name = 'changed'",
+        "sql_sha256": "8df604f1f916750d9a8648f1520dc29699e436bfcc9a74936df164d8a077602a",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "cte-select-explicit-alias",
+      "lane": "unchanged",
+      "sql": "WITH seed AS MATERIALIZED (SELECT 1 AS \"version\") UPDATE items SET name = 'changed';",
+      "sql_sha256": "5ff7e5a95e29be2fb8d77ae86167a06a6ef9282de9e0413ee0f92642a8b25ab6",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+      "raw_exit": 1,
+      "request_sha256": "ee1cb93e7422595cc2c233c7ffe7ec34d1134852d0635295604ee6380ce0de7a",
+      "request_present": true,
+      "pipeline_contract": "plugin-refusal",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT 1 AS \"version\") UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "3c9b0f5a5e7fccf79f249dd141d313b2f92d108149e6ae81cec5015bf9c15b8e",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT 1 AS \"version\") UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b",
+      "files": [],
+      "processed_native": {
+        "name": "cte-select-explicit-alias",
+        "lane": "unchanged-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT 1 AS \"version\") UPDATE items SET name = 'changed'",
+        "sql_sha256": "3c9b0f5a5e7fccf79f249dd141d313b2f92d108149e6ae81cec5015bf9c15b8e",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "cte-select-bare-alias",
+      "lane": "unchanged",
+      "sql": "WITH seed AS MATERIALIZED (SELECT 1 version) UPDATE items SET name = 'changed';",
+      "sql_sha256": "fa97feb12b61e41be08a8df4dfddd41a57725a836231185b4f558184e31029ad",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+      "raw_exit": 1,
+      "request_sha256": "e2c4c26bf733df52df2dfafcbd51b01e4194b151f7cd383f10ef1be8b0b36d0b",
+      "request_present": true,
+      "pipeline_contract": "plugin-refusal",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT 1 version) UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "689d0cb652f7c53eab5deb3c06611de41841539c75fb2c7c123d54bc32e18851",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT 1 version) UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b",
+      "files": [],
+      "processed_native": {
+        "name": "cte-select-bare-alias",
+        "lane": "unchanged-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT 1 version) UPDATE items SET name = 'changed'",
+        "sql_sha256": "689d0cb652f7c53eab5deb3c06611de41841539c75fb2c7c123d54bc32e18851",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "cte-select-column",
+      "lane": "unchanged",
+      "sql": "WITH seed AS MATERIALIZED (SELECT version FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "2317ba5020762b8435ded3fee0b366a88d6b044c968f6461e1e37c83d4a1a22f",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+      "raw_exit": 1,
+      "request_sha256": "87499e4ce4027e90e49159664624b18f0edc4d077c84e95eba3d2a4edbebd928",
+      "request_present": true,
+      "pipeline_contract": "plugin-refusal",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT version FROM items) UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "2bcfd43467e17c20ed70cfe6374401d34909eeed58e647e16167c7fd1c586be9",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT version FROM items) UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b",
+      "files": [],
+      "processed_native": {
+        "name": "cte-select-column",
+        "lane": "unchanged-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT version FROM items) UPDATE items SET name = 'changed'",
+        "sql_sha256": "2bcfd43467e17c20ed70cfe6374401d34909eeed58e647e16167c7fd1c586be9",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "cte-select-all-column",
+      "lane": "unchanged",
+      "sql": "WITH seed AS MATERIALIZED (SELECT ALL version FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "1b25f9e81911a581368ce9568a616f3e2eb5bc941bd63cf8badaeddc465465ba",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+      "raw_exit": 1,
+      "request_sha256": "58f02bd2e043ec2de7eda66a427774aeaee12c9cafc72b478de8386ed5d43ea9",
+      "request_present": true,
+      "pipeline_contract": "plugin-refusal",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT ALL version FROM items) UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "f08310c6f21dfa70df57fe834bd01c85de48cc4b82910bc0c79ae6801bc81bb2",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT ALL version FROM items) UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b",
+      "files": [],
+      "processed_native": {
+        "name": "cte-select-all-column",
+        "lane": "unchanged-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT ALL version FROM items) UPDATE items SET name = 'changed'",
+        "sql_sha256": "f08310c6f21dfa70df57fe834bd01c85de48cc4b82910bc0c79ae6801bc81bb2",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "cte-select-distinct-column",
+      "lane": "unchanged",
+      "sql": "WITH seed AS MATERIALIZED (SELECT DISTINCT version FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "7fd57d46190d26b77c6cc94783672099c563197a1d5743e1d9d0e0e78d785614",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+      "raw_exit": 1,
+      "request_sha256": "fc6b36fc1304417a51d169ce7c26b4010ce6ed79eb04e81695df6fabaedab116",
+      "request_present": true,
+      "pipeline_contract": "plugin-refusal",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT DISTINCT version FROM items) UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "ad5f292085f2f542f0fcd43cd38291231646975206949ffce9a3bec60de10936",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT DISTINCT version FROM items) UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b",
+      "files": [],
+      "processed_native": {
+        "name": "cte-select-distinct-column",
+        "lane": "unchanged-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT DISTINCT version FROM items) UPDATE items SET name = 'changed'",
+        "sql_sha256": "ad5f292085f2f542f0fcd43cd38291231646975206949ffce9a3bec60de10936",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "cte-select-distinct-on-column",
+      "lane": "unchanged",
+      "sql": "WITH seed AS MATERIALIZED (SELECT DISTINCT ON (id) version FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "11d0fb1f1b79cc5ea90d3b8364011e91b57e38bc8b68f2a56074c0175975f7be",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+      "raw_exit": 1,
+      "request_sha256": "ace7e74ee856de5fbae792787cf93dda7b1c3feaf6a6705faf964f26352958ec",
+      "request_present": true,
+      "pipeline_contract": "plugin-refusal",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT DISTINCT ON (id) version FROM items) UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "e67061287df3c076e2420226fb7107a940d449b1b33e8cf9fc9fa9e6fe062fc4",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT DISTINCT ON (id) version FROM items) UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b",
+      "files": [],
+      "processed_native": {
+        "name": "cte-select-distinct-on-column",
+        "lane": "unchanged-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT DISTINCT ON (id) version FROM items) UPDATE items SET name = 'changed'",
+        "sql_sha256": "e67061287df3c076e2420226fb7107a940d449b1b33e8cf9fc9fa9e6fe062fc4",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "cte-select-function-argument",
+      "lane": "unchanged",
+      "sql": "WITH seed AS MATERIALIZED (SELECT abs(version) FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "1963157aa2169f6139413409edc7d65fea7d35a22f1fdb90eb07cf653480c802",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+      "raw_exit": 1,
+      "request_sha256": "a64b9417c09014a9656889ffb2e2fa983e454564f04b97dab5a3e7d246f48f5e",
+      "request_present": true,
+      "pipeline_contract": "plugin-refusal",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT abs(version) FROM items) UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "7e925715267c9845ab678ed5e51dd80b849b60eccfb058c1dbe6f95bd44c72b6",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT abs(version) FROM items) UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b",
+      "files": [],
+      "processed_native": {
+        "name": "cte-select-function-argument",
+        "lane": "unchanged-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT abs(version) FROM items) UPDATE items SET name = 'changed'",
+        "sql_sha256": "7e925715267c9845ab678ed5e51dd80b849b60eccfb058c1dbe6f95bd44c72b6",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "cte-select-operator-operand",
+      "lane": "unchanged",
+      "sql": "WITH seed AS MATERIALIZED (SELECT 0 OPERATOR(pg_catalog.+) version FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "db4f934799fcf86c43081d6388bc1a02f1127b4ced6caaaebf8f658e60bf41d7",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+      "raw_exit": 1,
+      "request_sha256": "b4264ba506246f7b4dcd8946a84ecdf9a4b2982fc61a966f15e68610407fef26",
+      "request_present": true,
+      "pipeline_contract": "plugin-refusal",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT 0 OPERATOR(pg_catalog.+) version FROM items) UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "fd713f5edf2d60cdf18e1080b1a6f40ab1c210df4f7dba28ec15e405d5544dd0",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT 0 OPERATOR(pg_catalog.+) version FROM items) UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b",
+      "files": [],
+      "processed_native": {
+        "name": "cte-select-operator-operand",
+        "lane": "unchanged-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT 0 OPERATOR(pg_catalog.+) version FROM items) UPDATE items SET name = 'changed'",
+        "sql_sha256": "fd713f5edf2d60cdf18e1080b1a6f40ab1c210df4f7dba28ec15e405d5544dd0",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "cte-select-sibling-column",
+      "lane": "unchanged",
+      "sql": "WITH seed AS MATERIALIZED (SELECT 1 \"version\", version AS value FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "c4bd0ea0786c9d5beae6e03cde4617072bdc88ad0f7fc5ae9d461bdf3a416485",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+      "raw_exit": 1,
+      "request_sha256": "1aa149c3ccf5eee552ac1625fba11ce6efca1298af2d194dc7dd81462aeae557",
+      "request_present": true,
+      "pipeline_contract": "plugin-refusal",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT 1 \"version\", version AS value FROM items) UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "8ac13264987a0bec27e1f4003b8cbaadcb98d2055d24e42269c7b0f49341868a",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT 1 \"version\", version AS value FROM items) UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b",
+      "files": [],
+      "processed_native": {
+        "name": "cte-select-sibling-column",
+        "lane": "unchanged-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT 1 \"version\", version AS value FROM items) UPDATE items SET name = 'changed'",
+        "sql_sha256": "8ac13264987a0bec27e1f4003b8cbaadcb98d2055d24e42269c7b0f49341868a",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    }
+  ],
+  "tests_after": {
+    "label": "tests",
+    "tree": "1fa7e3ac0a333bc1d2b69a1ce23d18402d512f9d",
+    "blobs": 630,
+    "index_sha256": "76157b86a3f4a22c17a11e0c5cb4dbb968b5fe6d428487417abc6da462072412"
+  },
+  "proposed_before": {
+    "label": "proposed",
+    "tree": "d865a7d0e949ee674e1d13dd09e84c5ef8789b28",
+    "blobs": 631,
+    "index_sha256": "062903ddf3c9b5946e89f8aaee354b3833baebfc3acbf19de1f042b56bf47e7a"
+  },
+  "proposed_projection": {
+    "passed": [
+      "cte-select-all-column",
+      "cte-select-column",
+      "cte-select-distinct-column",
+      "cte-select-distinct-on-column",
+      "cte-select-explicit-alias",
+      "cte-select-function-argument",
+      "cte-select-operator-operand",
+      "cte-select-sibling-column"
+    ],
+    "failed": [
+      "cte-select-bare-alias",
+      "cte-select-quoted-alias"
+    ]
+  },
+  "proposed_pipeline": [
+    {
+      "name": "cte-select-quoted-alias",
+      "lane": "proposed",
+      "sql": "WITH seed AS MATERIALIZED (SELECT 1 \"version\") UPDATE items SET name = 'changed';",
+      "sql_sha256": "7296ae2a4bbe4174108ae3cbc49359a20b0276e5b4130dfb193dbdd825b1abf5",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "",
+      "raw_exit": 0,
+      "request_sha256": "faa14d8a948fc2b9a3419a50ed67cceade9e0695854bcf51d778fd2272c114dd",
+      "request_present": true,
+      "pipeline_contract": "generated",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT 1 \"version\") UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "8df604f1f916750d9a8648f1520dc29699e436bfcc9a74936df164d8a077602a",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT 1 \"version\") UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "d73e20e17596f7949dda9434dfd84e4bf07430efbec0afa6bf1be6549cbcad79",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `WITH seed AS MATERIALIZED (SELECT 1 \"version\") UPDATE items SET name = 'changed'`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "cte-select-quoted-alias",
+        "lane": "proposed-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT 1 \"version\") UPDATE items SET name = 'changed'",
+        "sql_sha256": "8df604f1f916750d9a8648f1520dc29699e436bfcc9a74936df164d8a077602a",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "cte-select-explicit-alias",
+      "lane": "proposed",
+      "sql": "WITH seed AS MATERIALIZED (SELECT 1 AS \"version\") UPDATE items SET name = 'changed';",
+      "sql_sha256": "5ff7e5a95e29be2fb8d77ae86167a06a6ef9282de9e0413ee0f92642a8b25ab6",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+      "raw_exit": 1,
+      "request_sha256": "a8f99195bbfb3a50daad67c6e6f00968bad33c0261fdda46691eb08b7865a153",
+      "request_present": true,
+      "pipeline_contract": "plugin-refusal",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT 1 AS \"version\") UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "3c9b0f5a5e7fccf79f249dd141d313b2f92d108149e6ae81cec5015bf9c15b8e",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT 1 AS \"version\") UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b",
+      "files": [],
+      "processed_native": {
+        "name": "cte-select-explicit-alias",
+        "lane": "proposed-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT 1 AS \"version\") UPDATE items SET name = 'changed'",
+        "sql_sha256": "3c9b0f5a5e7fccf79f249dd141d313b2f92d108149e6ae81cec5015bf9c15b8e",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "cte-select-bare-alias",
+      "lane": "proposed",
+      "sql": "WITH seed AS MATERIALIZED (SELECT 1 version) UPDATE items SET name = 'changed';",
+      "sql_sha256": "fa97feb12b61e41be08a8df4dfddd41a57725a836231185b4f558184e31029ad",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "",
+      "raw_exit": 0,
+      "request_sha256": "603cc2389c7f0ef7947bee7eacb4d81efe01a7b9c5ec393bc1eebc8a6dcac72b",
+      "request_present": true,
+      "pipeline_contract": "generated",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT 1 version) UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "689d0cb652f7c53eab5deb3c06611de41841539c75fb2c7c123d54bc32e18851",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT 1 version) UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "169046b5ebaac9c4829dd9c3983b684db21ebd7e2fcaffa88b5a64217b8ae7a0",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `WITH seed AS MATERIALIZED (SELECT 1 version) UPDATE items SET name = 'changed'`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "cte-select-bare-alias",
+        "lane": "proposed-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT 1 version) UPDATE items SET name = 'changed'",
+        "sql_sha256": "689d0cb652f7c53eab5deb3c06611de41841539c75fb2c7c123d54bc32e18851",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "cte-select-column",
+      "lane": "proposed",
+      "sql": "WITH seed AS MATERIALIZED (SELECT version FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "2317ba5020762b8435ded3fee0b366a88d6b044c968f6461e1e37c83d4a1a22f",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "",
+      "raw_exit": 0,
+      "request_sha256": "c5e109438edfe4875cdae50d682af74f452e696aaf242ef03bcbe81440107751",
+      "request_present": true,
+      "pipeline_contract": "generated",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT version FROM items) UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "2bcfd43467e17c20ed70cfe6374401d34909eeed58e647e16167c7fd1c586be9",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT version FROM items) UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "0e684e659e6ad6bb8d714b03be5cffe5d23cf5ef93eb59a0973788840ab63b8f",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `WITH seed AS MATERIALIZED (SELECT version FROM items) UPDATE items SET name = 'changed'`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "cte-select-column",
+        "lane": "proposed-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT version FROM items) UPDATE items SET name = 'changed'",
+        "sql_sha256": "2bcfd43467e17c20ed70cfe6374401d34909eeed58e647e16167c7fd1c586be9",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "cte-select-all-column",
+      "lane": "proposed",
+      "sql": "WITH seed AS MATERIALIZED (SELECT ALL version FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "1b25f9e81911a581368ce9568a616f3e2eb5bc941bd63cf8badaeddc465465ba",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "",
+      "raw_exit": 0,
+      "request_sha256": "14c54008bddd1e37410810d77e2f747a20bef13fdeb6b1a19be6767a0f68488f",
+      "request_present": true,
+      "pipeline_contract": "generated",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT ALL version FROM items) UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "f08310c6f21dfa70df57fe834bd01c85de48cc4b82910bc0c79ae6801bc81bb2",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT ALL version FROM items) UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "56ec6d25361c7fefc5d15dda6c9e1d5a5bcad2d4327bccf6fd8b70df192cdb80",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `WITH seed AS MATERIALIZED (SELECT ALL version FROM items) UPDATE items SET name = 'changed'`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "cte-select-all-column",
+        "lane": "proposed-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT ALL version FROM items) UPDATE items SET name = 'changed'",
+        "sql_sha256": "f08310c6f21dfa70df57fe834bd01c85de48cc4b82910bc0c79ae6801bc81bb2",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "cte-select-distinct-column",
+      "lane": "proposed",
+      "sql": "WITH seed AS MATERIALIZED (SELECT DISTINCT version FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "7fd57d46190d26b77c6cc94783672099c563197a1d5743e1d9d0e0e78d785614",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "",
+      "raw_exit": 0,
+      "request_sha256": "4a8347b02edc615b110dab89cf66d6b948d0d4274a35d797cfa2e8eb5e243f1e",
+      "request_present": true,
+      "pipeline_contract": "generated",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT DISTINCT version FROM items) UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "ad5f292085f2f542f0fcd43cd38291231646975206949ffce9a3bec60de10936",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT DISTINCT version FROM items) UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "6ed69068394903a04ebd081067dae8738e9f5101718723fc3f71654ba3390624",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `WITH seed AS MATERIALIZED (SELECT DISTINCT version FROM items) UPDATE items SET name = 'changed'`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "cte-select-distinct-column",
+        "lane": "proposed-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT DISTINCT version FROM items) UPDATE items SET name = 'changed'",
+        "sql_sha256": "ad5f292085f2f542f0fcd43cd38291231646975206949ffce9a3bec60de10936",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "cte-select-distinct-on-column",
+      "lane": "proposed",
+      "sql": "WITH seed AS MATERIALIZED (SELECT DISTINCT ON (id) version FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "11d0fb1f1b79cc5ea90d3b8364011e91b57e38bc8b68f2a56074c0175975f7be",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "",
+      "raw_exit": 0,
+      "request_sha256": "9932c536d54341ca77bfae48e56682a7a5f724c3fc2c307290e78f6fd7ea742a",
+      "request_present": true,
+      "pipeline_contract": "generated",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT DISTINCT ON (id) version FROM items) UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "e67061287df3c076e2420226fb7107a940d449b1b33e8cf9fc9fa9e6fe062fc4",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT DISTINCT ON (id) version FROM items) UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "94a54cc164334486ff3cef9aa97891e606568e9be187ede99b62243cdd7b74e0",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `WITH seed AS MATERIALIZED (SELECT DISTINCT ON (id) version FROM items) UPDATE items SET name = 'changed'`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "cte-select-distinct-on-column",
+        "lane": "proposed-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT DISTINCT ON (id) version FROM items) UPDATE items SET name = 'changed'",
+        "sql_sha256": "e67061287df3c076e2420226fb7107a940d449b1b33e8cf9fc9fa9e6fe062fc4",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "cte-select-function-argument",
+      "lane": "proposed",
+      "sql": "WITH seed AS MATERIALIZED (SELECT abs(version) FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "1963157aa2169f6139413409edc7d65fea7d35a22f1fdb90eb07cf653480c802",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "",
+      "raw_exit": 0,
+      "request_sha256": "675fed8cd676471652b4d45e47ccc6502c853aa119d77d58aa2422a99a0b40b5",
+      "request_present": true,
+      "pipeline_contract": "generated",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT abs(version) FROM items) UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "7e925715267c9845ab678ed5e51dd80b849b60eccfb058c1dbe6f95bd44c72b6",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT abs(version) FROM items) UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "43db4222b069b4250c42acdee8aa3e639f0efe4d18f304d4f6909a92da25c394",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `WITH seed AS MATERIALIZED (SELECT abs(version) FROM items) UPDATE items SET name = 'changed'`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "cte-select-function-argument",
+        "lane": "proposed-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT abs(version) FROM items) UPDATE items SET name = 'changed'",
+        "sql_sha256": "7e925715267c9845ab678ed5e51dd80b849b60eccfb058c1dbe6f95bd44c72b6",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "cte-select-operator-operand",
+      "lane": "proposed",
+      "sql": "WITH seed AS MATERIALIZED (SELECT 0 OPERATOR(pg_catalog.+) version FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "db4f934799fcf86c43081d6388bc1a02f1127b4ced6caaaebf8f658e60bf41d7",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "",
+      "raw_exit": 0,
+      "request_sha256": "648dde2c1f6d13d7ca97fe2e8877b3463ebe7c1989ae5b9730d1ccbb498bea07",
+      "request_present": true,
+      "pipeline_contract": "generated",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT 0 OPERATOR(pg_catalog.+) version FROM items) UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "fd713f5edf2d60cdf18e1080b1a6f40ab1c210df4f7dba28ec15e405d5544dd0",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT 0 OPERATOR(pg_catalog.+) version FROM items) UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "2ad8c5be778f3480643eef4cc05e21480bba69b6337c6e93286ea3b9ee47ff15",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `WITH seed AS MATERIALIZED (SELECT 0 OPERATOR(pg_catalog.+) version FROM items) UPDATE items SET name = 'changed'`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "cte-select-operator-operand",
+        "lane": "proposed-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT 0 OPERATOR(pg_catalog.+) version FROM items) UPDATE items SET name = 'changed'",
+        "sql_sha256": "fd713f5edf2d60cdf18e1080b1a6f40ab1c210df4f7dba28ec15e405d5544dd0",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    },
+    {
+      "name": "cte-select-sibling-column",
+      "lane": "proposed",
+      "sql": "WITH seed AS MATERIALIZED (SELECT 1 \"version\", version AS value FROM items) UPDATE items SET name = 'changed';",
+      "sql_sha256": "c4bd0ea0786c9d5beae6e03cde4617072bdc88ad0f7fc5ae9d461bdf3a416485",
+      "option": "version",
+      "columns": [
+        "version"
+      ],
+      "expected_diagnostic": "",
+      "raw_exit": 0,
+      "request_sha256": "7eddb2a79815e6488d92a7225cc666a995c8676b8594403cccb577c6978c977f",
+      "request_present": true,
+      "pipeline_contract": "generated",
+      "processed_sql": "WITH seed AS MATERIALIZED (SELECT 1 \"version\", version AS value FROM items) UPDATE items SET name = 'changed'",
+      "processed_sql_sha256": "8ac13264987a0bec27e1f4003b8cbaadcb98d2055d24e42269c7b0f49341868a",
+      "catalog_sha256": "6ad2237c0237586bb784b491c5b897eab3718037eef4d3c970a68d32ea48b008",
+      "catalog_canonical_bytes": 994882,
+      "catalog_encoding": "UTF-8 JSON, sorted keys, compact separators",
+      "query_metadata": {
+        "text": "WITH seed AS MATERIALIZED (SELECT 1 \"version\", version AS value FROM items) UPDATE items SET name = 'changed'",
+        "name": "ContinueItem",
+        "cmd": ":exec",
+        "columns": [],
+        "params": [],
+        "comments": [],
+        "filename": "queries.sql",
+        "insert_into_table": null
+      },
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": [
+        {
+          "path": "models.sql.lgo",
+          "sha256": "0a3d968e7e7d04c8581d214f3a786ed70eb107b096aca0c3546e4333be1ea197",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n\t\"github.com/gosuda/spira/orm\"\n)\n\ntype ItemID int64\n\ntype Item struct {\n\tID ItemID `col:\"id\"`\n\tName string `col:\"name\"`\n\tVersion int32 `col:\"version\"`\n}\n\nvar ItemTable = orm.Table[Item, ItemID]{Name: \"items\", Key: \"id\", Version: \"version\"}\n\n//logos:rodata\nvar sqlcSpiraPrepareAllQueries = [...]struct {\n\tname string\n\tsql string\n}{\n\t{\"ContinueItem\", ContinueItemQuery},\n}\n\nfunc PrepareAll(ctx context.Context, p *db.Pool) error {\n\tfor i := range sqlcSpiraPrepareAllQueries {\n\t\terr := p.Prepare(ctx, sqlcSpiraPrepareAllQueries[i].sql)\n\t\tif err != nil {\n\t\t\treturn fmt.Errorf(\"PrepareAll: %s: %w\", sqlcSpiraPrepareAllQueries[i].name, err)\n\t\t}\n\t}\n\treturn nil\n}\n"
+        },
+        {
+          "path": "queries.sql.lgo",
+          "sha256": "8e93b42bf04ae4a7cb84b9167e09c29923f54c1f2fa518d3fd8fbc749a6acac9",
+          "content": "// Code generated by sqlc-gen-spira. DO NOT EDIT.\n\npackage generated\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\n\t\"github.com/gosuda/spira/db\"\n)\n\nconst ContinueItemQuery = `WITH seed AS MATERIALIZED (SELECT 1 \"version\", version AS value FROM items) UPDATE items SET name = 'changed'`\n\ntype ContinueItemRow struct {\n}\n\nfunc ContinueItem(ctx context.Context, q db.Querier) error {\n\t_, err := db.Exec(ctx, q, ContinueItemQuery)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"ContinueItem: %w\", err)\n\t}\n\treturn nil\n}\n\n"
+        }
+      ],
+      "processed_native": {
+        "name": "cte-select-sibling-column",
+        "lane": "proposed-processed",
+        "sql": "WITH seed AS MATERIALIZED (SELECT 1 \"version\", version AS value FROM items) UPDATE items SET name = 'changed'",
+        "sql_sha256": "8ac13264987a0bec27e1f4003b8cbaadcb98d2055d24e42269c7b0f49341868a",
+        "raw_output": "{\"name\" : \"changed\", \"versions\" : [0]}\n",
+        "observed": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "expected": {
+          "name": "changed",
+          "versions": [
+            0
+          ]
+        },
+        "matches": true
+      }
+    }
+  ],
+  "unchanged_pipeline_partition": {
+    "generated": 0,
+    "plugin-refusal": 10
+  },
+  "proposed_pipeline_partition": {
+    "generated": 9,
+    "plugin-refusal": 1
+  },
+  "proposed_after": {
+    "label": "proposed",
+    "tree": "d865a7d0e949ee674e1d13dd09e84c5ef8789b28",
+    "blobs": 631,
+    "index_sha256": "062903ddf3c9b5946e89f8aaee354b3833baebfc3acbf19de1f042b56bf47e7a"
+  },
+  "restored": {
+    "label": "source",
+    "tree": "e4214ecf0b2b5a214d26921664313b98d14efb13",
+    "blobs": 625,
+    "index_sha256": "5f9db7b6da063c1b66ee549ca72338ada4c5fe54b77f02bea571c231d3b59e29"
+  },
+  "commands": [
+    {
+      "name": "proof-head",
+      "command": [
+        "git",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/proof",
+        "rev-parse",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "2499106bf4a10773a3584e054d16fdcfd9c10e8084315ee97a3b7619221e1d15"
+    },
+    {
+      "name": "source-head",
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "029bfa9c0a56fe53e6194b18557ccfb49089d77d468c95b8858369c166ff0988"
+    },
+    {
+      "name": "logos-version",
+      "command": [
+        "logos",
+        "version"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "3a7b14cf792a79c78a9e42aab8906e0774b54ecddbbbc520ce94651a34aec2f9"
+    },
+    {
+      "name": "go-cache-disabled",
+      "command": [
+        "go",
+        "env",
+        "GOCACHEPROG"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "name": "sqlc-modules",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "mod",
+        "download"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "sqlc-module",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "list",
+        "-m",
+        "-json",
+        "github.com/sqlc-dev/sqlc"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "78fe4571c2a0ec0aca3a70bff3218c5a6e5d56ddc513732f01ecd45fd9717dc6"
+    },
+    {
+      "name": "postgres-image",
+      "command": [
+        "docker",
+        "pull",
+        "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "dcc72efc08ba4ad1059f35c72d75b293b78d0a2103307281c48f3aa2757699a8"
+    },
+    {
+      "name": "postgres-image-identity",
+      "command": [
+        "docker",
+        "image",
+        "inspect",
+        "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "0beb14825b93bdf732472c7221db12061c4ab9ace820df16913ea4ea84f81e4f"
+    },
+    {
+      "name": "postgres-start",
+      "command": [
+        "docker",
+        "run",
+        "--detach",
+        "--network",
+        "none",
+        "--name",
+        "spira47-refs-46058226582-1",
+        "--env",
+        "POSTGRES_HOST_AUTH_METHOD=trust",
+        "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "1956fd94165115c2dcc0eb2cb60b31e26bee01bdcd9a06cd844d157c60e1019a"
+    },
+    {
+      "name": "postgres-version",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "SHOW server_version_num;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "23115ea6bcfc1e8cf9bf3b7e201ecf38f5a9c76d337eea137c01265e768d7c31"
+    },
+    {
+      "name": "postgres-schema",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "CREATE DOMAIN version AS text;\nCREATE COLLATION version FROM \"C\";\n"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "original-cte-select-quoted-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT 1 \"version\") UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "original-cte-select-explicit-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT 1 AS \"version\") UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "original-cte-select-bare-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT 1 version) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "original-cte-select-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT version FROM items) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "original-cte-select-all-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT ALL version FROM items) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "original-cte-select-distinct-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT DISTINCT version FROM items) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "original-cte-select-distinct-on-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT DISTINCT ON (id) version FROM items) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "original-cte-select-function-argument",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT abs(version) FROM items) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "original-cte-select-operator-operand",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT 0 OPERATOR(pg_catalog.+) version FROM items) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "original-cte-select-sibling-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT 1 \"version\", version AS value FROM items) UPDATE items SET name = 'changed';\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "stage-unchanged-tests",
+      "command": [
+        "git",
+        "add",
+        "--",
+        "cmd/sqlc-gen-spira/version_catalog_test.lgo",
+        "cmd/sqlc-gen-spira/testdata/version-catalog.json",
+        "cmd/sqlc-gen-spira/testdata/version-ctes.json",
+        "cmd/sqlc-gen-spira/version_reference_test.lgo",
+        "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo",
+        "cmd/sqlc-gen-spira/testdata/sqlc-literal-pipeline.json",
+        "cmd/sqlc-gen-spira/testdata/literal-schema.sql",
+        "cmd/sqlc-gen-spira/version_projection_test.lgo",
+        "cmd/sqlc-gen-spira/testdata/version-projections.json"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "unchanged-test-compile",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-run",
+        "^$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "d3d9a20c6e953b90de8ce7d0e0e5a2b7692901dd9afd49f6c4d22052dc2f2457"
+    },
+    {
+      "name": "unchanged-projection-controls",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "-run",
+        "^TestPostgresCTEProjectionRoles$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "d6045cb3a219e27439fe88fa4f0bb161883f042cf2b078aa5994067c518162f2"
+    },
+    {
+      "name": "build-unchanged-plugin",
+      "command": [
+        "logos",
+        "build",
+        "-o",
+        "/home/runner/work/_temp/spira47-baseline-build/unchanged-plugin",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "unchanged-sqlc-cte-select-quoted-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/unchanged/cte-select-quoted-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "unchanged-processed-cte-select-quoted-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT 1 \"version\") UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "unchanged-sqlc-cte-select-explicit-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/unchanged/cte-select-explicit-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "unchanged-processed-cte-select-explicit-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT 1 AS \"version\") UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "unchanged-sqlc-cte-select-bare-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/unchanged/cte-select-bare-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "unchanged-processed-cte-select-bare-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT 1 version) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "unchanged-sqlc-cte-select-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/unchanged/cte-select-column/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "unchanged-processed-cte-select-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT version FROM items) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "unchanged-sqlc-cte-select-all-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/unchanged/cte-select-all-column/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "unchanged-processed-cte-select-all-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT ALL version FROM items) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "unchanged-sqlc-cte-select-distinct-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/unchanged/cte-select-distinct-column/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "unchanged-processed-cte-select-distinct-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT DISTINCT version FROM items) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "unchanged-sqlc-cte-select-distinct-on-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/unchanged/cte-select-distinct-on-column/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "unchanged-processed-cte-select-distinct-on-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT DISTINCT ON (id) version FROM items) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "unchanged-sqlc-cte-select-function-argument",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/unchanged/cte-select-function-argument/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "unchanged-processed-cte-select-function-argument",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT abs(version) FROM items) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "unchanged-sqlc-cte-select-operator-operand",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/unchanged/cte-select-operator-operand/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "unchanged-processed-cte-select-operator-operand",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT 0 OPERATOR(pg_catalog.+) version FROM items) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "unchanged-sqlc-cte-select-sibling-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/unchanged/cte-select-sibling-column/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "unchanged-processed-cte-select-sibling-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT 1 \"version\", version AS value FROM items) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "stage-frozen-proposal",
+      "command": [
+        "git",
+        "add",
+        "--",
+        "cmd/sqlc-gen-spira/version_catalog_test.lgo",
+        "cmd/sqlc-gen-spira/testdata/version-catalog.json",
+        "cmd/sqlc-gen-spira/testdata/version-ctes.json",
+        "cmd/sqlc-gen-spira/version_reference_test.lgo",
+        "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo",
+        "cmd/sqlc-gen-spira/testdata/sqlc-literal-pipeline.json",
+        "cmd/sqlc-gen-spira/testdata/literal-schema.sql",
+        "cmd/sqlc-gen-spira/model.lgo",
+        "cmd/sqlc-gen-spira/version_reference.lgo",
+        "cmd/sqlc-gen-spira/version_cte.lgo",
+        "docs/specs/sqlc-gen-spira.md",
+        "cmd/sqlc-gen-spira/version_projection_test.lgo",
+        "cmd/sqlc-gen-spira/testdata/version-projections.json"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "proposed-test-compile",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-run",
+        "^$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "3d6f43d30e00ced2022c6b162e0d78574894f28a6bc994b4fff77f8bc9b1e026"
+    },
+    {
+      "name": "proposed-projection-regression",
+      "command": [
+        "logos",
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "-run",
+        "^TestPostgresCTEProjectionRoles$",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "affb3758550f857a453cdfbc1eb10240cd02b7dae57573eda691965f016eccd2"
+    },
+    {
+      "name": "build-proposed-plugin",
+      "command": [
+        "logos",
+        "build",
+        "-o",
+        "/home/runner/work/_temp/spira47-baseline-build/proposed-plugin",
+        "./cmd/sqlc-gen-spira"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "proposed-sqlc-cte-select-quoted-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/proposed/cte-select-quoted-alias/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "proposed-processed-cte-select-quoted-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT 1 \"version\") UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "proposed-sqlc-cte-select-explicit-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/proposed/cte-select-explicit-alias/sqlc.yaml"
+      ],
+      "raw_exit": 1,
+      "expected": 1,
+      "timed_out": false,
+      "log_sha256": "c5b5986cd22425e8dcb3585802440e5d164ea458fedde6b93d34f5999469b20b"
+    },
+    {
+      "name": "proposed-processed-cte-select-explicit-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT 1 AS \"version\") UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "proposed-sqlc-cte-select-bare-alias",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/proposed/cte-select-bare-alias/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "proposed-processed-cte-select-bare-alias",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT 1 version) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "proposed-sqlc-cte-select-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/proposed/cte-select-column/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "proposed-processed-cte-select-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT version FROM items) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "proposed-sqlc-cte-select-all-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/proposed/cte-select-all-column/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "proposed-processed-cte-select-all-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT ALL version FROM items) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "proposed-sqlc-cte-select-distinct-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/proposed/cte-select-distinct-column/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "proposed-processed-cte-select-distinct-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT DISTINCT version FROM items) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "proposed-sqlc-cte-select-distinct-on-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/proposed/cte-select-distinct-on-column/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "proposed-processed-cte-select-distinct-on-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT DISTINCT ON (id) version FROM items) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "proposed-sqlc-cte-select-function-argument",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/proposed/cte-select-function-argument/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "proposed-processed-cte-select-function-argument",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT abs(version) FROM items) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "proposed-sqlc-cte-select-operator-operand",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/proposed/cte-select-operator-operand/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "proposed-processed-cte-select-operator-operand",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT 0 OPERATOR(pg_catalog.+) version FROM items) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "proposed-sqlc-cte-select-sibling-column",
+      "command": [
+        "go",
+        "-C",
+        "/home/runner/work/sloplint/sloplint/source/tools",
+        "tool",
+        "sqlc",
+        "generate",
+        "-f",
+        "/home/runner/work/_temp/spira47-baseline-build/catalog-cte-pipeline/proposed/cte-select-sibling-column/sqlc.yaml"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "proposed-processed-cte-select-sibling-column",
+      "command": [
+        "docker",
+        "exec",
+        "spira47-refs-46058226582-1",
+        "psql",
+        "-XAtq",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-c",
+        "BEGIN; SET LOCAL standard_conforming_strings = on;\nCREATE TEMP TABLE items (id bigint PRIMARY KEY, name text NOT NULL, \"version\" integer NOT NULL DEFAULT 0);\nINSERT INTO items VALUES (1, 'before', 0);\nWITH seed AS MATERIALIZED (SELECT 1 \"version\", version AS value FROM items) UPDATE items SET name = 'changed'\n;\nSELECT json_build_object('name', name, 'versions', ARRAY[\"version\"]) FROM items;\nROLLBACK;"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "ac0fca5fbf214bc5878c4342a74ffe057c5b8fd909538ab3985c96b5ad720f3b"
+    },
+    {
+      "name": "postgres-cleanup",
+      "command": [
+        "docker",
+        "rm",
+        "-f",
+        "-v",
+        "spira47-refs-46058226582-1"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "dbcd82fab70307bb426a624237b9b89150856de28323e933b08076e8413b5ba5"
+    },
+    {
+      "name": "restore-original-source",
+      "command": [
+        "git",
+        "restore",
+        "--source",
+        "6031a63255bc7496e22b38921e10401a2d50c291",
+        "--staged",
+        "--worktree",
+        "--",
+        "."
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "source-restoration",
+      "command": [
+        "git",
+        "diff",
+        "--exit-code",
+        "HEAD"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "untracked-restoration",
+      "command": [
+        "git",
+        "ls-files",
+        "--others",
+        "--exclude-standard"
+      ],
+      "raw_exit": 0,
+      "expected": 0,
+      "timed_out": false,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}
