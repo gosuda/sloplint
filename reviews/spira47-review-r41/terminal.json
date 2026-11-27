@@ -1,0 +1,423 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-11-27 20:29:57 UTC",
+  "scope": "Spira PR47 r41 catalog, materialized CTE and permanent reference-pipeline findings",
+  "repository": "gosuda/spira",
+  "pull_request": 47,
+  "branch": "followup/merged-threads-1127",
+  "published": {
+    "head": "f3a47a04f1defe427494124507ec621118525265",
+    "parent": "6031a63255bc7496e22b38921e10401a2d50c291",
+    "tree": "cae17384cce41647b686a80932833cf5a7b09b19",
+    "blobs": 633,
+    "authored_paths": 15,
+    "all_published_paths_modes_and_blob_ids_verified": true,
+    "all_authored_contents_read_back": true,
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "mergeable": true
+  },
+  "native": {
+    "producer": "f4cf3affecceb7459e9d4b9e9561415defef6197",
+    "run": 46061112680,
+    "job": 140715332598,
+    "conclusion": "success",
+    "report_commit": "400809640b52eacb61b4a9a3d1655762cf7b2da4",
+    "report_path": "reviews/spira47-review-r41/candidate-report.json",
+    "report_sha256": "34bbe593df70f1e29ae0d27578cf1f8c3560345b98317643eef4ce7a6be9eded",
+    "verification_path": "reviews/spira47-review-r41/verified-run-46061112680.json",
+    "verification_sha256": "29b2f038504a3bb735c0a733b565cb095c8b3961aa87a2c2f2f538abd87af25a",
+    "artifact": {
+      "id": 15229680826,
+      "name": "spira47-catalog-cte-candidate-r41",
+      "bytes": 1322443,
+      "zip_sha256": "84b23da565a2ebc612846a38ebc91d2d9f836bb728c5a5542e186e00af283279",
+      "api_and_upload_digest_match": true,
+      "owner_downloaded_zip": false
+    },
+    "raw_job_log_sha256": "3d4a84fc1acd6a2ea4e6aef087da8d2da5d55abfb7aa220c097d6e8b29c5b25a",
+    "raw_log_parts": [
+      "reviews/spira47-review-r41/job-log-46061112680.part1.json",
+      "reviews/spira47-review-r41/job-log-46061112680.part2.json"
+    ],
+    "all_204_ordered_receipts_and_stdout_hashes_verified": true,
+    "all_expected_exits": true,
+    "no_timeout": true,
+    "source_restored": true,
+    "required_commands": [
+      {
+        "name": "just-gate",
+        "command": [
+          "just",
+          "gate"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e4224190ed3c75ec91410fc92b95ba660ae96a2e0edb16690ab033a4fb7dcb02"
+      },
+      {
+        "name": "just-slop",
+        "command": [
+          "just",
+          "slop"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "9951928aee45fed134b35554ae040e950cbc0e4c36e84a4cde6652a1d907c6b9"
+      },
+      {
+        "name": "just-eject",
+        "command": [
+          "just",
+          "eject"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "ab7498a95970cfb5b1c90e4813ce0421daa66a7df192a40978b9c488b6b63a42"
+      }
+    ],
+    "full_source_gates_reused": false
+  },
+  "artifact_log_qualification": {
+    "stdout_occurrences": 204,
+    "unique_command_names": 198,
+    "duplicate_names": [
+      {
+        "name": "postgres-image",
+        "occurrences": [
+          {
+            "ordinal": 7,
+            "raw_exit": 0,
+            "expected": 0,
+            "log_sha256": "d80cee8658e278d032663c6c43240b98ab90dc2324b1266be5ced0d8f0af6aec",
+            "stdout_bytes": 1802
+          },
+          {
+            "ordinal": 41,
+            "raw_exit": 0,
+            "expected": 0,
+            "log_sha256": "076f8070a4e81922ba27ccd9e7241a81cf6e02c21eb6f67082e2f93d965c2d4f",
+            "stdout_bytes": 434
+          }
+        ],
+        "artifact_file": "postgres-image.log",
+        "last_occurrence_retained": 41,
+        "distinct_output_hashes": 2
+      },
+      {
+        "name": "postgres-image-identity",
+        "occurrences": [
+          {
+            "ordinal": 8,
+            "raw_exit": 0,
+            "expected": 0,
+            "log_sha256": "c4767c1a0982b5c1011b37db32749d5640cd384baeb19fba96d3fa24aafb237f",
+            "stdout_bytes": 3614
+          },
+          {
+            "ordinal": 42,
+            "raw_exit": 0,
+            "expected": 0,
+            "log_sha256": "f04d74eef79bcee4fb77f880ba6168dd079e26f9df4e30bfa4645ab5cdc2e0a4",
+            "stdout_bytes": 3616
+          }
+        ],
+        "artifact_file": "postgres-image-identity.log",
+        "last_occurrence_retained": 42,
+        "distinct_output_hashes": 2
+      },
+      {
+        "name": "postgres-start",
+        "occurrences": [
+          {
+            "ordinal": 9,
+            "raw_exit": 0,
+            "expected": 0,
+            "log_sha256": "8383acabaadec94167f4d50dcf0e8c7ff5f401d9ff0e76f8e38a7e51214a9afa",
+            "stdout_bytes": 65
+          },
+          {
+            "ordinal": 43,
+            "raw_exit": 0,
+            "expected": 0,
+            "log_sha256": "939cc9f86c722eee5a0c207b2672c43524e1bb39f1c2c8c94d00138ef4c7f04e",
+            "stdout_bytes": 65
+          }
+        ],
+        "artifact_file": "postgres-start.log",
+        "last_occurrence_retained": 43,
+        "distinct_output_hashes": 2
+      },
+      {
+        "name": "postgres-version",
+        "occurrences": [
+          {
+            "ordinal": 10,
+            "raw_exit": 0,
+            "expected": 0,
+            "log_sha256": "23115ea6bcfc1e8cf9bf3b7e201ecf38f5a9c76d337eea137c01265e768d7c31",
+            "stdout_bytes": 7
+          },
+          {
+            "ordinal": 44,
+            "raw_exit": 0,
+            "expected": 0,
+            "log_sha256": "23115ea6bcfc1e8cf9bf3b7e201ecf38f5a9c76d337eea137c01265e768d7c31",
+            "stdout_bytes": 7
+          }
+        ],
+        "artifact_file": "postgres-version.log",
+        "last_occurrence_retained": 44,
+        "distinct_output_hashes": 1
+      },
+      {
+        "name": "postgres-schema",
+        "occurrences": [
+          {
+            "ordinal": 11,
+            "raw_exit": 0,
+            "expected": 0,
+            "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "stdout_bytes": 0
+          },
+          {
+            "ordinal": 45,
+            "raw_exit": 0,
+            "expected": 0,
+            "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "stdout_bytes": 0
+          }
+        ],
+        "artifact_file": "postgres-schema.log",
+        "last_occurrence_retained": 45,
+        "distinct_output_hashes": 1
+      },
+      {
+        "name": "postgres-cleanup",
+        "occurrences": [
+          {
+            "ordinal": 30,
+            "raw_exit": 0,
+            "expected": 0,
+            "log_sha256": "a0d5d21cc4a163d3d7219f17f391b52d344c0b99389eac5ef24072df4de866be",
+            "stdout_bytes": 27
+          },
+          {
+            "ordinal": 192,
+            "raw_exit": 0,
+            "expected": 0,
+            "log_sha256": "a0d5d21cc4a163d3d7219f17f391b52d344c0b99389eac5ef24072df4de866be",
+            "stdout_bytes": 27
+          }
+        ],
+        "artifact_file": "postgres-cleanup.log",
+        "last_occurrence_retained": 192,
+        "distinct_output_hashes": 1
+      }
+    ],
+    "all_occurrences_preserved_in_raw_job_log": true,
+    "artifact_filename_semantics": "The logger uses one <name>.log path. Later repeated setup/cleanup names overwrite earlier per-name files. All ordered outputs remain in the lossless raw job log and were reconstructed against every receipt hash.",
+    "source_outcomes_unchanged": true,
+    "source_rerun_required": false,
+    "reuse_requirement": "Any later reuse must authenticate occurrence-qualified raw-log records rather than assuming 204 distinct per-command artifact files."
+  },
+  "addressed_threads": [
+    {
+      "thread": "PRRT_kwDOVpFduc684Wq4",
+      "comment_id": 4722144191,
+      "reply_id": 4723376408,
+      "is_resolved": true
+    },
+    {
+      "thread": "PRRT_kwDOVpFduc684Wsr",
+      "comment_id": 4722144365,
+      "reply_id": 4723376662,
+      "is_resolved": true
+    },
+    {
+      "thread": "PRRT_kwDOVpFduc684WvB",
+      "comment_id": 4722144592,
+      "reply_id": 4723376975,
+      "is_resolved": true
+    }
+  ],
+  "pr_body_updated_and_read_back": true,
+  "latest_review_snapshot": {
+    "total_threads": 27,
+    "unresolved": 4,
+    "head": "f3a47a04f1defe427494124507ec621118525265",
+    "threads": [
+      {
+        "id": "PRRT_kwDOVpFduc687Ofj",
+        "path": "cmd/sqlc-gen-spira/version_reference.lgo",
+        "line": 242,
+        "is_resolved": false,
+        "comments": [
+          {
+            "id": 4723385630,
+            "body": "<!-- devin-review-comment {\"id\": \"BUG_pr-review-job-12a765b7d73b4ae983878be22ae7a20a_0001\", \"file_path\": \"cmd/sqlc-gen-spira/version_reference.lgo\", \"start_line\": 238, \"end_line\": 242, \"side\": \"RIGHT\", \"based_on_repo_rules\": false, \"kind\": \"bug\"} -->\n\n🟡 **Version guard counts SELECT aliases**\n\nFor `SELECT i.time version` in a materialized CTE, `excludeOutputAliases` leaves the `version` alias visible. [referenceEndsOperand](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_reference.lgo#L305-L321 \"cmd/sqlc-gen-spira/version_reference.lgo:305-321\") treats `time` as a keyword even after a dot. The generator accepts an update that never references the version column.\n\n<details>\n<summary>Learn more</summary>\n\nThe version guard scans a statement for the configured column name. [postgresReferencesColumn](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_reference.lgo#L22-L40 \"cmd/sqlc-gen-spira/version_reference.lgo:22-40\") relies on the exclusion pass to distinguish column references from name declarations. For bare output aliases, [excludeOutputAlias](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_reference.lgo#L295-L303 \"cmd/sqlc-gen-spira/version_reference.lgo:295-303\") checks whether the preceding token can end an expression. [referenceEndsOperand](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_reference.lgo#L305-L321 \"cmd/sqlc-gen-spira/version_reference.lgo:305-321\") rejects the word `time` without checking whether it is the final component of a qualified identifier.\n\n**Example:** With `items.time` as an ordinary column and `items.version` as the configured version column, `WITH seed AS MATERIALIZED (SELECT i.time version FROM items AS i) UPDATE items SET name = 'changed'` generates even though `version` is only an output label.\n\n**Recommended fix:** Recognize qualified identifier tails as expression operands before checking bare keyword spellings. Add a refusal case alongside [TestPostgresCTEProjectionRoles](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_projection_test.lgo#L9-L29 \"cmd/sqlc-gen-spira/version_projection_test.lgo:9-29\") and retain the existing genuine-operand controls.\n\n</details>\n\n<!-- devin-review-badge-begin -->\n<a href=\"https://app.devin.ai/review/gosuda/spira/pull/47\" target=\"_blank\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://static.devin.ai/assets/gh-devin-review-dark.svg?v=4\"><img src=\"https://static.devin.ai/assets/gh-devin-review-light.svg?v=4\" alt=\"Devin Review\"></picture></a>\n<!-- devin-review-badge-end -->\n\n---\n*Was this helpful? React with 👍 or 👎 to provide feedback.*",
+            "created_at": "2026-11-27T20:24:17Z"
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOVpFduc687Ogz",
+        "path": "cmd/sqlc-gen-spira/version_reference.lgo",
+        "line": 174,
+        "is_resolved": false,
+        "comments": [
+          {
+            "id": 4723385762,
+            "body": "<!-- devin-review-comment {\"id\": \"BUG_pr-review-job-12a765b7d73b4ae983878be22ae7a20a_0002\", \"file_path\": \"cmd/sqlc-gen-spira/version_reference.lgo\", \"start_line\": 169, \"end_line\": 174, \"side\": \"RIGHT\", \"based_on_repo_rules\": false, \"kind\": \"bug\"} -->\n\n🟡 **Version guard counts table aliases**\n\nIn a materialized CTE, `excludeReferenceDeclarations` leaves the bare table alias in `FROM items version` visible. The generator accepts a write that never references the version column.\n\n<details>\n<summary>Learn more</summary>\n\nThe declaration pass skips the bodies of recognized materialized CTE headers so genuine column references remain visible. The scan then accepts any matching name that survives the exclusions in [postgresReferencesColumn](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_reference.lgo#L22-L40 \"cmd/sqlc-gen-spira/version_reference.lgo:22-40\"). [excludeWriteHeaders](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_reference.lgo#L193-L205 \"cmd/sqlc-gen-spira/version_reference.lgo:193-205\") covers write targets, not table declarations in a SELECT. A SELECT table alias introduced without `AS` therefore remains visible even though it declares a relation name.\n\n**Example:** With the standard `items` fixture, `WITH seed AS MATERIALIZED (SELECT id FROM items version) UPDATE items SET name = 'changed'` passes the guard. `version` names the relation alias, not the column.\n\n**Recommended fix:** Exclude implicit relation alias declarations in SELECT table expressions without masking expression operands. Add a refusal case to [TestPostgresVersionCTEs](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_reference_test.lgo#L53-L73 \"cmd/sqlc-gen-spira/version_reference_test.lgo:53-73\") and keep its genuine column-reference controls.\n\n</details>\n\n<!-- devin-review-badge-begin -->\n<a href=\"https://app.devin.ai/review/gosuda/spira/pull/47\" target=\"_blank\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://static.devin.ai/assets/gh-devin-review-dark.svg?v=4\"><img src=\"https://static.devin.ai/assets/gh-devin-review-light.svg?v=4\" alt=\"Devin Review\"></picture></a>\n<!-- devin-review-badge-end -->\n\n---\n*Was this helpful? React with 👍 or 👎 to provide feedback.*",
+            "created_at": "2026-11-27T20:24:18Z"
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOVpFduc687OiK",
+        "path": "docs/specs/sqlc-gen-spira.md",
+        "line": 210,
+        "is_resolved": false,
+        "comments": [
+          {
+            "id": 4723385899,
+            "body": "<!-- devin-review-comment {\"id\": \"ANALYSIS_pr-review-job-12a765b7d73b4ae983878be22ae7a20a_0001\", \"file_path\": \"docs/specs/sqlc-gen-spira.md\", \"start_line\": 206, \"end_line\": 210, \"side\": \"RIGHT\", \"kind\": \"analysis\"} -->\n\n🔍 **Overlong PostgreSQL specification requirements**\n\nThe identifier, excluded-name, and CTE suffix requirements each contain a sentence above the repository’s 20-word limit.\n\n<!-- devin-review-badge-begin -->\n<a href=\"https://app.devin.ai/review/gosuda/spira/pull/47\" target=\"_blank\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://static.devin.ai/assets/gh-devin-review-dark.svg?v=4\"><img src=\"https://static.devin.ai/assets/gh-devin-review-light.svg?v=4\" alt=\"Devin Review\"></picture></a>\n<!-- devin-review-badge-end -->\n\n---\n*Was this helpful? React with 👍 or 👎 to provide feedback.*",
+            "created_at": "2026-11-27T20:24:19Z"
+          }
+        ]
+      },
+      {
+        "id": "PRRT_kwDOVpFduc687Ojg",
+        "path": "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo",
+        "line": 87,
+        "is_resolved": false,
+        "comments": [
+          {
+            "id": 4723386039,
+            "body": "<!-- devin-review-comment {\"id\": \"ANALYSIS_pr-review-job-12a765b7d73b4ae983878be22ae7a20a_0002\", \"file_path\": \"cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo\", \"start_line\": 87, \"end_line\": 87, \"side\": \"RIGHT\", \"kind\": \"analysis\"} -->\n\n🔍 **Missing sqlc coverage for CTEs and catalog casing**\n\n`readSQLcLiteralInputs` adds reference-role cases, but no materialized CTE or mixed-case catalog case. [TestPostgresVersionCatalogResolution](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_catalog_test.lgo#L20-L40 \"cmd/sqlc-gen-spira/version_catalog_test.lgo:20-40\") edits the catalog in memory, and [TestPostgresVersionCTEs](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_reference_test.lgo#L53-L73 \"cmd/sqlc-gen-spira/version_reference_test.lgo:53-73\") calls the plugin directly. Neither checks the actual sqlc handoff.\n\n<!-- devin-review-badge-begin -->\n<a href=\"https://app.devin.ai/review/gosuda/spira/pull/47\" target=\"_blank\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://static.devin.ai/assets/gh-devin-review-dark.svg?v=4\"><img src=\"https://static.devin.ai/assets/gh-devin-review-light.svg?v=4\" alt=\"Devin Review\"></picture></a>\n<!-- devin-review-badge-end -->\n\n---\n*Was this helpful? React with 👍 or 👎 to provide feedback.*",
+            "created_at": "2026-11-27T20:24:21Z"
+          }
+        ]
+      }
+    ]
+  },
+  "ordinary_ci": {
+    "source_workflows": [],
+    "observed_check_runs": 0,
+    "native_proof_used": true,
+    "ordinary_workflow_success_claimed": false
+  },
+  "retirement": {
+    "repository": "gosuda/sloplint",
+    "branch": "ci/spira47-catalog-cte-20261127-r41",
+    "commit": "95ef95a5a98b3c20f48ecf5cd210f4a253f62ff3",
+    "tree": "cf15f0b30b0c378d32ef58df07c328442e7f4451",
+    "workflow": ".github/workflows/spira47-review-r41.yml",
+    "workflow_absent_verified": true,
+    "remaining_workflows": [
+      {
+        "name": "ci.yml",
+        "sha": "318af336a730492b08e20ec84b4c62568ec48bab"
+      },
+      {
+        "name": "release.yml",
+        "sha": "de1e7d15549b146df23409451844860e931a74f2"
+      }
+    ],
+    "retirement_runs": 0
+  },
+  "independent_receipts": {
+    "parent_source_driver_and_identity_review": "accepted at 0013f33f and e67a614f",
+    "independent_select_correction_review": "accepted; native predictions subsequently observed",
+    "parent_native_reconciliation": "All 204 ordered outputs, both lossless log parts, complete report, authentication markers, actual gates, source restoration and artifact API/upload identity independently match.",
+    "parent_publication_reconciliation": "All 633 published paths, modes and blob IDs match the verified candidate tree; sole parent is 6031a632."
+  },
+  "source_scope_complete": true,
+  "overall_pr_work_complete": false,
+  "next_scope": "Four fresh r42 findings remain open. Preserve this completed r41 proof and its retired workflow; use a new isolated proof for source follow-up.",
+  "preserved_failed_baselines": [
+    {
+      "producer": "c039ed58a5b39004cb52c062ff62901eb10b8c2a",
+      "run": 46047431437,
+      "job": 140670082779,
+      "conclusion": "failure",
+      "artifact": 15223182778,
+      "zip_sha256": "703384184775309a749e96966ff13b7174061a396ead6cb41128788ebcc84102",
+      "raw_log_sha256": "3d70e6423265e6eddbfd75b0e66719adf40a0beefdcaeb59a5aedda2948972fb",
+      "receipt_commit": "c9c85476c325f328d4cc4a5e6d0449df028f36da",
+      "receipt_sha256": "1a3d92f73347917a90f22226811bda34095edb4943a156ea51125875e344a669",
+      "original_native_matches": 37,
+      "failed_phase": "unchanged-test-compile",
+      "actual_exit": 1,
+      "expected_exit": 0,
+      "source_regressions_reached": false,
+      "real_sqlc_pipeline_reached": false,
+      "source_restored": true,
+      "gate_reuse": false
+    },
+    {
+      "producer": "1d223b822e87a36ad6c26356b3468915fdfe3ef4",
+      "run": 46049995476,
+      "job": 140678648999,
+      "conclusion": "failure",
+      "artifact": 15224042249,
+      "zip_sha256": "5a9c02b3efa58f28ffc569ae97047b70dcadec31e02dfb3bc6b7084e7e2155cf",
+      "raw_log_sha256": "49ce5eae62bb3cae0dba1cfb33466d4bc171fb892e1047c71b18d5c615602ae4",
+      "receipt_commit": "6dee66b15d8e3d9700e0dd2bd8da58c0f414b866",
+      "receipt_sha256": "c87c75722ad70446151fde5e49a99eb8e57171d83645706e8b7be09a6e68e64b",
+      "original_native_matches": 37,
+      "failed_phase": "unchanged-test-compile",
+      "actual_exit": 1,
+      "expected_exit": 0,
+      "diagnostic": "complexity::cognitive_overflow: function versionCatalogRequest is too complex: nesting depth 4 exceeds 3, cognitive score 18 exceeds 15",
+      "source_regressions_reached": false,
+      "real_sqlc_pipeline_reached": false,
+      "source_restored": true,
+      "gate_reuse": false
+    },
+    {
+      "producer": "105fa98dfd8c58107a9a36bb41f05ccc7671251d",
+      "run": 46051338072,
+      "job": 140683124786,
+      "conclusion": "failure",
+      "artifact": 15224512377,
+      "zip_sha256": "2d643bcf9dd38d606df75fd3ef4ac5ef523a40ec74111d1f61a5331331ae796c",
+      "full_report_bytes": 70404886,
+      "full_report_sha256": "023ca00696a1b46bb4abcc58f40137eed47c8617ce4f60dbb0dbd602faac1172",
+      "recovered_projection_sha256": "0a1e672965ac831e127401f10f28486d116438bbafe5119d10985eeddbe06d4c",
+      "recovery_producer": "d43fc1abbbdb3c8c5248ba5f29f3e33c513d11ab",
+      "recovery_run": 46052998288,
+      "recovery_job": 140688657885,
+      "recovery_artifact": 15225431799,
+      "recovery_zip_sha256": "fc023636edf9a2efb1fd1ca8c957caba9aedcbbe2014ae63cb0e5aee46a8280f",
+      "failed_phase": "unexpected SQLc upstream diagnostic",
+      "native_original": 37,
+      "catalog_red": 5,
+      "catalog_controls": 6,
+      "cte_red": 11,
+      "cte_controls": 15,
+      "completed_pipeline": 28,
+      "permanent_pipeline_reached": false,
+      "counterfactual_reached": false,
+      "source_restored": true,
+      "gate_reuse": false
+    }
+  ],
+  "rejected_proposal": {
+    "commit": "5863a89fca0390474647332c5dab82bee591371f",
+    "tree": "0b503cb7e55dbe747bf0515476f0139e79283ab9",
+    "producer": "b5ffb351e27ac2255607de5659c23875b73d0b2a",
+    "run": 46058226582,
+    "job": 140705847413,
+    "observed_tree": "d865a7d0e949ee674e1d13dd09e84c5ef8789b28",
+    "report_sha256": "86ce71fde466c380428fe06519eaf88990abfe6c795b05921d5f3ca7385e0f15",
+    "introduced_alias_failures": [
+      "cte-select-quoted-alias",
+      "cte-select-bare-alias"
+    ],
+    "controls": 8,
+    "restored": true
+  }
+}

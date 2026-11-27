@@ -1,0 +1,143 @@
+{
+  "stdout_occurrences": 204,
+  "unique_command_names": 198,
+  "duplicate_names": [
+    {
+      "name": "postgres-image",
+      "occurrences": [
+        {
+          "ordinal": 7,
+          "raw_exit": 0,
+          "expected": 0,
+          "log_sha256": "d80cee8658e278d032663c6c43240b98ab90dc2324b1266be5ced0d8f0af6aec",
+          "stdout_bytes": 1802
+        },
+        {
+          "ordinal": 41,
+          "raw_exit": 0,
+          "expected": 0,
+          "log_sha256": "076f8070a4e81922ba27ccd9e7241a81cf6e02c21eb6f67082e2f93d965c2d4f",
+          "stdout_bytes": 434
+        }
+      ],
+      "artifact_file": "postgres-image.log",
+      "last_occurrence_retained": 41,
+      "distinct_output_hashes": 2
+    },
+    {
+      "name": "postgres-image-identity",
+      "occurrences": [
+        {
+          "ordinal": 8,
+          "raw_exit": 0,
+          "expected": 0,
+          "log_sha256": "c4767c1a0982b5c1011b37db32749d5640cd384baeb19fba96d3fa24aafb237f",
+          "stdout_bytes": 3614
+        },
+        {
+          "ordinal": 42,
+          "raw_exit": 0,
+          "expected": 0,
+          "log_sha256": "f04d74eef79bcee4fb77f880ba6168dd079e26f9df4e30bfa4645ab5cdc2e0a4",
+          "stdout_bytes": 3616
+        }
+      ],
+      "artifact_file": "postgres-image-identity.log",
+      "last_occurrence_retained": 42,
+      "distinct_output_hashes": 2
+    },
+    {
+      "name": "postgres-start",
+      "occurrences": [
+        {
+          "ordinal": 9,
+          "raw_exit": 0,
+          "expected": 0,
+          "log_sha256": "8383acabaadec94167f4d50dcf0e8c7ff5f401d9ff0e76f8e38a7e51214a9afa",
+          "stdout_bytes": 65
+        },
+        {
+          "ordinal": 43,
+          "raw_exit": 0,
+          "expected": 0,
+          "log_sha256": "939cc9f86c722eee5a0c207b2672c43524e1bb39f1c2c8c94d00138ef4c7f04e",
+          "stdout_bytes": 65
+        }
+      ],
+      "artifact_file": "postgres-start.log",
+      "last_occurrence_retained": 43,
+      "distinct_output_hashes": 2
+    },
+    {
+      "name": "postgres-version",
+      "occurrences": [
+        {
+          "ordinal": 10,
+          "raw_exit": 0,
+          "expected": 0,
+          "log_sha256": "23115ea6bcfc1e8cf9bf3b7e201ecf38f5a9c76d337eea137c01265e768d7c31",
+          "stdout_bytes": 7
+        },
+        {
+          "ordinal": 44,
+          "raw_exit": 0,
+          "expected": 0,
+          "log_sha256": "23115ea6bcfc1e8cf9bf3b7e201ecf38f5a9c76d337eea137c01265e768d7c31",
+          "stdout_bytes": 7
+        }
+      ],
+      "artifact_file": "postgres-version.log",
+      "last_occurrence_retained": 44,
+      "distinct_output_hashes": 1
+    },
+    {
+      "name": "postgres-schema",
+      "occurrences": [
+        {
+          "ordinal": 11,
+          "raw_exit": 0,
+          "expected": 0,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 0
+        },
+        {
+          "ordinal": 45,
+          "raw_exit": 0,
+          "expected": 0,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 0
+        }
+      ],
+      "artifact_file": "postgres-schema.log",
+      "last_occurrence_retained": 45,
+      "distinct_output_hashes": 1
+    },
+    {
+      "name": "postgres-cleanup",
+      "occurrences": [
+        {
+          "ordinal": 30,
+          "raw_exit": 0,
+          "expected": 0,
+          "log_sha256": "a0d5d21cc4a163d3d7219f17f391b52d344c0b99389eac5ef24072df4de866be",
+          "stdout_bytes": 27
+        },
+        {
+          "ordinal": 192,
+          "raw_exit": 0,
+          "expected": 0,
+          "log_sha256": "a0d5d21cc4a163d3d7219f17f391b52d344c0b99389eac5ef24072df4de866be",
+          "stdout_bytes": 27
+        }
+      ],
+      "artifact_file": "postgres-cleanup.log",
+      "last_occurrence_retained": 192,
+      "distinct_output_hashes": 1
+    }
+  ],
+  "all_occurrences_preserved_in_raw_job_log": true,
+  "artifact_filename_semantics": "The logger uses one <name>.log path. Later repeated setup/cleanup names overwrite earlier per-name files. All ordered outputs remain in the lossless raw job log and were reconstructed against every receipt hash.",
+  "source_outcomes_unchanged": true,
+  "source_rerun_required": false,
+  "reuse_requirement": "Any later reuse must authenticate occurrence-qualified raw-log records rather than assuming 204 distinct per-command artifact files."
+}

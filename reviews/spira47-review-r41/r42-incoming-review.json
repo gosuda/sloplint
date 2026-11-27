@@ -1,0 +1,60 @@
+{
+  "head": "f3a47a04f1defe427494124507ec621118525265",
+  "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+  "recorded_at": "2026-11-27 20:29:57 UTC",
+  "total_threads": 27,
+  "unresolved": [
+    {
+      "id": "PRRT_kwDOVpFduc687Ofj",
+      "path": "cmd/sqlc-gen-spira/version_reference.lgo",
+      "line": 242,
+      "is_resolved": false,
+      "comments": [
+        {
+          "id": 4723385630,
+          "body": "<!-- devin-review-comment {\"id\": \"BUG_pr-review-job-12a765b7d73b4ae983878be22ae7a20a_0001\", \"file_path\": \"cmd/sqlc-gen-spira/version_reference.lgo\", \"start_line\": 238, \"end_line\": 242, \"side\": \"RIGHT\", \"based_on_repo_rules\": false, \"kind\": \"bug\"} -->\n\n🟡 **Version guard counts SELECT aliases**\n\nFor `SELECT i.time version` in a materialized CTE, `excludeOutputAliases` leaves the `version` alias visible. [referenceEndsOperand](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_reference.lgo#L305-L321 \"cmd/sqlc-gen-spira/version_reference.lgo:305-321\") treats `time` as a keyword even after a dot. The generator accepts an update that never references the version column.\n\n<details>\n<summary>Learn more</summary>\n\nThe version guard scans a statement for the configured column name. [postgresReferencesColumn](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_reference.lgo#L22-L40 \"cmd/sqlc-gen-spira/version_reference.lgo:22-40\") relies on the exclusion pass to distinguish column references from name declarations. For bare output aliases, [excludeOutputAlias](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_reference.lgo#L295-L303 \"cmd/sqlc-gen-spira/version_reference.lgo:295-303\") checks whether the preceding token can end an expression. [referenceEndsOperand](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_reference.lgo#L305-L321 \"cmd/sqlc-gen-spira/version_reference.lgo:305-321\") rejects the word `time` without checking whether it is the final component of a qualified identifier.\n\n**Example:** With `items.time` as an ordinary column and `items.version` as the configured version column, `WITH seed AS MATERIALIZED (SELECT i.time version FROM items AS i) UPDATE items SET name = 'changed'` generates even though `version` is only an output label.\n\n**Recommended fix:** Recognize qualified identifier tails as expression operands before checking bare keyword spellings. Add a refusal case alongside [TestPostgresCTEProjectionRoles](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_projection_test.lgo#L9-L29 \"cmd/sqlc-gen-spira/version_projection_test.lgo:9-29\") and retain the existing genuine-operand controls.\n\n</details>\n\n<!-- devin-review-badge-begin -->\n<a href=\"https://app.devin.ai/review/gosuda/spira/pull/47\" target=\"_blank\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://static.devin.ai/assets/gh-devin-review-dark.svg?v=4\"><img src=\"https://static.devin.ai/assets/gh-devin-review-light.svg?v=4\" alt=\"Devin Review\"></picture></a>\n<!-- devin-review-badge-end -->\n\n---\n*Was this helpful? React with 👍 or 👎 to provide feedback.*",
+          "created_at": "2026-11-27T20:24:17Z"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOVpFduc687Ogz",
+      "path": "cmd/sqlc-gen-spira/version_reference.lgo",
+      "line": 174,
+      "is_resolved": false,
+      "comments": [
+        {
+          "id": 4723385762,
+          "body": "<!-- devin-review-comment {\"id\": \"BUG_pr-review-job-12a765b7d73b4ae983878be22ae7a20a_0002\", \"file_path\": \"cmd/sqlc-gen-spira/version_reference.lgo\", \"start_line\": 169, \"end_line\": 174, \"side\": \"RIGHT\", \"based_on_repo_rules\": false, \"kind\": \"bug\"} -->\n\n🟡 **Version guard counts table aliases**\n\nIn a materialized CTE, `excludeReferenceDeclarations` leaves the bare table alias in `FROM items version` visible. The generator accepts a write that never references the version column.\n\n<details>\n<summary>Learn more</summary>\n\nThe declaration pass skips the bodies of recognized materialized CTE headers so genuine column references remain visible. The scan then accepts any matching name that survives the exclusions in [postgresReferencesColumn](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_reference.lgo#L22-L40 \"cmd/sqlc-gen-spira/version_reference.lgo:22-40\"). [excludeWriteHeaders](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_reference.lgo#L193-L205 \"cmd/sqlc-gen-spira/version_reference.lgo:193-205\") covers write targets, not table declarations in a SELECT. A SELECT table alias introduced without `AS` therefore remains visible even though it declares a relation name.\n\n**Example:** With the standard `items` fixture, `WITH seed AS MATERIALIZED (SELECT id FROM items version) UPDATE items SET name = 'changed'` passes the guard. `version` names the relation alias, not the column.\n\n**Recommended fix:** Exclude implicit relation alias declarations in SELECT table expressions without masking expression operands. Add a refusal case to [TestPostgresVersionCTEs](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_reference_test.lgo#L53-L73 \"cmd/sqlc-gen-spira/version_reference_test.lgo:53-73\") and keep its genuine column-reference controls.\n\n</details>\n\n<!-- devin-review-badge-begin -->\n<a href=\"https://app.devin.ai/review/gosuda/spira/pull/47\" target=\"_blank\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://static.devin.ai/assets/gh-devin-review-dark.svg?v=4\"><img src=\"https://static.devin.ai/assets/gh-devin-review-light.svg?v=4\" alt=\"Devin Review\"></picture></a>\n<!-- devin-review-badge-end -->\n\n---\n*Was this helpful? React with 👍 or 👎 to provide feedback.*",
+          "created_at": "2026-11-27T20:24:18Z"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOVpFduc687OiK",
+      "path": "docs/specs/sqlc-gen-spira.md",
+      "line": 210,
+      "is_resolved": false,
+      "comments": [
+        {
+          "id": 4723385899,
+          "body": "<!-- devin-review-comment {\"id\": \"ANALYSIS_pr-review-job-12a765b7d73b4ae983878be22ae7a20a_0001\", \"file_path\": \"docs/specs/sqlc-gen-spira.md\", \"start_line\": 206, \"end_line\": 210, \"side\": \"RIGHT\", \"kind\": \"analysis\"} -->\n\n🔍 **Overlong PostgreSQL specification requirements**\n\nThe identifier, excluded-name, and CTE suffix requirements each contain a sentence above the repository’s 20-word limit.\n\n<!-- devin-review-badge-begin -->\n<a href=\"https://app.devin.ai/review/gosuda/spira/pull/47\" target=\"_blank\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://static.devin.ai/assets/gh-devin-review-dark.svg?v=4\"><img src=\"https://static.devin.ai/assets/gh-devin-review-light.svg?v=4\" alt=\"Devin Review\"></picture></a>\n<!-- devin-review-badge-end -->\n\n---\n*Was this helpful? React with 👍 or 👎 to provide feedback.*",
+          "created_at": "2026-11-27T20:24:19Z"
+        }
+      ]
+    },
+    {
+      "id": "PRRT_kwDOVpFduc687Ojg",
+      "path": "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo",
+      "line": 87,
+      "is_resolved": false,
+      "comments": [
+        {
+          "id": 4723386039,
+          "body": "<!-- devin-review-comment {\"id\": \"ANALYSIS_pr-review-job-12a765b7d73b4ae983878be22ae7a20a_0002\", \"file_path\": \"cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo\", \"start_line\": 87, \"end_line\": 87, \"side\": \"RIGHT\", \"kind\": \"analysis\"} -->\n\n🔍 **Missing sqlc coverage for CTEs and catalog casing**\n\n`readSQLcLiteralInputs` adds reference-role cases, but no materialized CTE or mixed-case catalog case. [TestPostgresVersionCatalogResolution](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_catalog_test.lgo#L20-L40 \"cmd/sqlc-gen-spira/version_catalog_test.lgo:20-40\") edits the catalog in memory, and [TestPostgresVersionCTEs](https://github.com/gosuda/spira/blob/f3a47a04f1defe427494124507ec621118525265/cmd/sqlc-gen-spira/version_reference_test.lgo#L53-L73 \"cmd/sqlc-gen-spira/version_reference_test.lgo:53-73\") calls the plugin directly. Neither checks the actual sqlc handoff.\n\n<!-- devin-review-badge-begin -->\n<a href=\"https://app.devin.ai/review/gosuda/spira/pull/47\" target=\"_blank\"><picture><source media=\"(prefers-color-scheme: dark)\" srcset=\"https://static.devin.ai/assets/gh-devin-review-dark.svg?v=4\"><img src=\"https://static.devin.ai/assets/gh-devin-review-light.svg?v=4\" alt=\"Devin Review\"></picture></a>\n<!-- devin-review-badge-end -->\n\n---\n*Was this helpful? React with 👍 or 👎 to provide feedback.*",
+          "created_at": "2026-11-27T20:24:21Z"
+        }
+      ]
+    }
+  ]
+}
