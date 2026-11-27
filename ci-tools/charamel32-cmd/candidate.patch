@@ -1,7 +1,7 @@
 diff --git a/bin/crush/lib/shell_screen.ml b/bin/crush/lib/shell_screen.ml
 --- a/bin/crush/lib/shell_screen.ml
 +++ b/bin/crush/lib/shell_screen.ml
-@@ -1,1854 +1,2092 @@
+@@ -1,1854 +1,2102 @@
 -open Result.Syntax
 -
 -type dialect = Posix | Cmd
@@ -3842,19 +3842,29 @@ diff --git a/bin/crush/lib/shell_screen.ml b/bin/crush/lib/shell_screen.ml
 +          false
 +      | Some options -> (
 +          cmd_for_data sink source;
-+          (if cmd_for_file_mode header then
-+             let usebackq =
-+               List.exists
-+                 (fun word ->
-+                   String.split_on_char ' ' (String.lowercase_ascii word.value)
-+                   |> List.concat_map (String.split_on_char '\t')
-+                   |> List.mem "usebackq")
-+                 options
-+             in
-+             let source = String.trim source in
-+             let quote = if usebackq then '`' else '\'' in
-+             if String.length source > 0 && source.[0] = quote then
-+               review sink for_command_source);
++          if cmd_for_file_mode header then (
++            let keywords =
++              List.concat_map
++                (fun word ->
++                  String.split_on_char ' ' (String.lowercase_ascii word.value)
++                  |> List.concat_map (String.split_on_char '\t'))
++                options
++            in
++            (* Cmd also accepts attached keywords. Keep those unparsed forms
++                behind review instead of assuming the default quote mode. *)
++            if
++              List.exists
++                (fun keyword ->
++                  keyword <> "usebackq"
++                  && (not (String.starts_with ~prefix:"delims=" keyword))
++                  && contains_substring ~needle:"usebackq" keyword)
++                keywords
++            then review sink (unreadable "attached for /f options");
++            let usebackq = List.mem "usebackq" keywords in
++            let source = String.trim source in
++            let quote = if usebackq then '`' else '\'' in
++            if String.length source > 0 && source.[0] = quote then
++              review sink for_command_source);
 +          match body with
 +          | Cmd_word (word, _) :: rest
 +            when word.fixed && word.unquoted && String.equal (cmd_lower word) "do" ->
@@ -4629,7 +4639,7 @@ diff --git a/bin/crush/lib/tools_shell.ml b/bin/crush/lib/tools_shell.ml
 diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
 --- a/test/crush/test_tools_shell.ml
 +++ b/test/crush/test_tools_shell.ml
-@@ -1,625 +1,779 @@
+@@ -1,625 +1,820 @@
 -open Lwt_direct
 -module Artifact = Crush_core.Artifact
 -module Config = Crush_core.Config
@@ -5666,6 +5676,32 @@ diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
 +    cmd "for /f \"usebackq\" %i in (`echo alpha`) do echo %i" `Review;
 +    cmd "for /f \"tokens=* usebackq\" %i in (`echo alpha`) do echo %i" `Review;
 +    cmd "for /f \"delims=usebackq\" %i in ('echo alpha') do echo %i" `Review;
++    (* Frozen native option/quote observations. Attached keywords are
++       intentionally unparsed and therefore require exact-command approval. *)
++    cmd "for /f %i in ('echo 9173') do @echo RESULT:[%i]" `Review;
++    cmd "for /f %i in (`echo 9173`) do @echo RESULT:[%i]" `Clear;
++    cmd "for /f \"usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]" `Clear;
++    cmd "for /f \"usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]" `Review;
++    cmd "for /f \"delims=usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]" `Review;
++    cmd "for /f \"delims=usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]" `Clear;
++    cmd "for /f \"delims= usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]" `Clear;
++    cmd "for /f \"delims= usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]" `Review;
++    cmd "for /f \"tokens=* delims= usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]"
++      `Clear;
++    cmd "for /f \"tokens=* delims= usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]"
++      `Review;
++    cmd "for /f \"usebackqdelims=\" %i in ('echo 9173') do @echo RESULT:[%i]" `Review;
++    cmd "for /f \"usebackqdelims=\" %i in (`echo 9173`) do @echo RESULT:[%i]" `Review;
++    cmd "for /f \"tokens=*usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]" `Review;
++    cmd "for /f \"tokens=*usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]" `Review;
++    cmd "for /f \"usebackq tokens=* delims=\" %i in ('echo 9173') do @echo RESULT:[%i]"
++      `Clear;
++    cmd "for /f \"usebackq tokens=* delims=\" %i in (`echo 9173`) do @echo RESULT:[%i]"
++      `Review;
++    cmd "for /f \"delims=usebackq tokens=*\" %i in ('echo 9173') do @echo RESULT:[%i]"
++      `Review;
++    cmd "for /f \"delims=usebackq tokens=*\" %i in (`echo 9173`) do @echo RESULT:[%i]"
++      `Clear;
 +    cmd "for %i in (alpha) do" `Review;
 +    cmd "for %i in (alpha) do   " `Review;
 +    cmd "for /r do %i in (*.txt) do" `Review;
@@ -5905,7 +5941,12 @@ diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
 +        match run_command ctx command with
 +        | Error (`Denied _) -> ()
 +        | Ok _ | Error _ -> Alcotest.failf "blanket approval ran %s" command)
-+      [ command_source; "for %i in (alpha) do" ];
++      [
++        command_source;
++        "for %i in (alpha) do";
++        "for /f \"usebackqdelims=\" %i in (`echo 9173`) do @echo RESULT:[%i]";
++        "for /f \"tokens=*usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]";
++      ];
 +    let ordinary =
 +      output_or_fail (run_command ctx "for /f %i in (\"literal words\") do @echo %i")
 +    in
@@ -5918,7 +5959,17 @@ diff --git a/test/crush/test_tools_shell.ml b/test/crush/test_tools_shell.ml
 +    let output = output_or_fail (run_command ctx command_source) in
 +    Alcotest.(check bool)
 +      "an exact approval permits the command source" true
-+      (Test_support.contains ~needle:"reviewed" ~haystack:output.Tool.content))
++      (Test_support.contains ~needle:"reviewed" ~haystack:output.Tool.content);
++    List.iter
++      (fun command ->
++        let output = output_or_fail (run_command ctx command) in
++        Alcotest.(check bool)
++          "an exact approval permits attached command-source options" true
++          (Test_support.contains ~needle:"RESULT:[9173]" ~haystack:output.Tool.content))
++      [
++        "for /f \"usebackqdelims=\" %i in (`echo 9173`) do @echo RESULT:[%i]";
++        "for /f \"tokens=*usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]";
++      ])
 +
 +let test_foreground_capture () =
 +  await @@ with_ctx

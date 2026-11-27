@@ -103,7 +103,11 @@ def preflight() -> int:
     assert preparation["original_tree"] == MANIFEST["original_tree"]
     assert preparation["formatted_tree"] == MANIFEST["prepared_tree"]
     assert preparation["candidate_all_pass"] is True
-    assert preparation["candidate_cases"] == 97
+    assert preparation["candidate_cases"] == 115
+    assert preparation["intermediate_tree"] == "e4dc56c7aa06c798df5eca42ecad54e2ffe83423"
+    assert preparation["intermediate_actual_failures"] == [
+        "for-options-options_5_backtick", "for-options-options_6_backtick"
+    ]
     assert preparation["source_restored"] is True
     assert preparation["baseline_actual_failures"] >= 8
     patch = ROOT / "candidate.patch"
@@ -118,11 +122,6 @@ def preflight() -> int:
     for entry in formatted["elements"]:
         before = entry["content"]
         assert sha256(before.encode("utf-8")) == entry["sha256"]
-        if entry["path"] == "bin/crush/lib/tools_shell.ml":
-            old = "[safe_simple_command] still checks every execution option."
-            new = "[safe_simple_command] still checks the execution options."
-            assert before.count(old) == 1
-            before = before.replace(old, new)
         assert (SOURCE / entry["path"]).read_bytes() == before.encode("utf-8"), entry["path"]
     save("exact-candidate.json", current)
     print("EXACT_CHARAMEL_CANDIDATE " + json.dumps(current), flush=True)
@@ -134,6 +133,10 @@ def native_windows() -> int:
     identity()
     expected: dict[str, Any] = json.loads((ROOT / "native-observed.json").read_text("utf-8"))
     assert sha256((ROOT / "native-observed.json").read_bytes()) == MANIFEST["native_observed_sha256"]
+    option_expected: dict[str, Any] = json.loads((ROOT / "native-options-observed.json").read_text("utf-8"))
+    assert sha256((ROOT / "native-options-observed.json").read_bytes()) == MANIFEST["native_options_sha256"]
+    assert option_expected["producer"] == "2786b929fed8e9f74702a07c6ffceadbebbf6b95"
+    assert len(option_expected["records"]) == 18
     comspec = os.environ["COMSPEC"]
     records: list[dict[str, Any]] = []
     failures: list[str] = []
@@ -171,6 +174,28 @@ def native_windows() -> int:
             print("NATIVE_CMD_REPLAY " + json.dumps(row), flush=True)
             if not accepted:
                 failures.append(case["id"])
+        for case in option_expected["records"]:
+            started = time.monotonic()
+            result = subprocess.run(
+                f'"{comspec}" /d /c {case["command"]}', executable=comspec,
+                cwd=cwd, env=env, stdin=subprocess.DEVNULL, capture_output=True,
+                timeout=10, check=False,
+            )
+            stdout = result.stdout.decode("utf-8", errors="backslashreplace")
+            stderr = result.stderr.decode("utf-8", errors="backslashreplace")
+            accepted = (result.returncode == case["actual_exit"]
+                        and stdout == case["stdout"] and stderr == case["stderr"])
+            row = {
+                "id": case["id"], "command": case["command"], "actual_exit": result.returncode,
+                "seconds": time.monotonic() - started, "stdout": stdout, "stderr": stderr,
+                "stdout_sha256": sha256(result.stdout), "stderr_sha256": sha256(result.stderr),
+                "expected": case, "accepted": accepted, "group": "attached-option-observations",
+            }
+            records.append(row)
+            print("NATIVE_CMD_REPLAY " + json.dumps(row), flush=True)
+            if not accepted:
+                failures.append(case["id"])
+    assert len(records) == 55
     report = {"producer": os.environ["GITHUB_SHA"], "run": os.environ["GITHUB_RUN_ID"],
               "identity": identity(), "records": records, "failures": failures,
               "historical_baseline_conclusion": "failure",
