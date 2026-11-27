@@ -159,11 +159,25 @@ fn complete_dash_prefix_keeps_the_comment_boundary_before_an_escape() {
 
 #[test]
 fn comments_before_attached_redirect_words_stay_outside_separators() {
-    for comments in ["<# note #>", "<# one #><# two #>", "<# one\n two #>"] {
+    for (comments, filename_byte) in [
+        ("<# note #>", 29),
+        ("<# one #><# two #>", 37),
+        ("<# one\n two #>", 33),
+    ] {
         let source = format!("Write-Output hi > {comments} -output.log\n");
         run_clean(&source);
         assert!(
             captures(&source, "(command_argument_sep (comment) @match)").is_empty(),
+            "{source:?}"
+        );
+        assert_eq!(
+            captures(&source, "(redirection) @match"),
+            vec![(16, format!("> {comments} -output.log"))],
+            "{source:?}"
+        );
+        assert_eq!(
+            captures(&source, "(redirected_file_name (generic_token) @match)"),
+            vec![(filename_byte, "-output.log".to_owned())],
             "{source:?}"
         );
     }
