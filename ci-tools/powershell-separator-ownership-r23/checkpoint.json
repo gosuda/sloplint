@@ -2,8 +2,8 @@
   "schema_version": 1,
   "repository": "gosuda/sloplint",
   "pull_request": 137,
-  "recorded_at": "2026-11-27 00:33:21 UTC",
-  "status": "Published verified source; temporary workflow retired in this checkpoint commit. Ordinary PR CI is in progress.",
+  "recorded_at": "2026-11-27 00:44:38 UTC",
+  "status": "Published verified source; all required native source gates and ordinary PR CI succeeded; temporary r23 workflow retired; fresh review state has no unresolved threads.",
   "publication": {
     "commit": "d972b52788bbdf88265e50df1a2502663e597df7",
     "parent": "e7ee97e84246863766ec7465777a035134533feb",
@@ -911,27 +911,28 @@
     "is_resolved": true,
     "threads": 26,
     "unresolved": 0,
-    "head": "d972b52788bbdf88265e50df1a2502663e597df7"
+    "head": "d972b52788bbdf88265e50df1a2502663e597df7",
+    "refreshed_at": "2026-11-27 00:44:38 UTC"
   },
   "ordinary_ci": {
     "run": 45917020535,
     "head": "d972b52788bbdf88265e50df1a2502663e597df7",
-    "status": "in_progress",
-    "conclusion": null,
+    "status": "completed",
+    "conclusion": "success",
     "merge_commit": "b7f13dd9cfaa58c9b5f6a2853c4e0d158a408c32",
     "tree": "a026522088e19dd38731146c90956650506be913",
     "jobs": [
       {
         "id": 140238597837,
         "name": "test (depot-ubuntu-24.04, x86_64-unknown-linux-gnu, 1)",
-        "status": "in_progress",
-        "conclusion": null
+        "status": "completed",
+        "conclusion": "success"
       },
       {
         "id": 140238598041,
         "name": "test (depot-ubuntu-24.04-arm, aarch64-unknown-linux-gnu, 1)",
-        "status": "in_progress",
-        "conclusion": null
+        "status": "completed",
+        "conclusion": "success"
       },
       {
         "id": 140238598080,
@@ -946,17 +947,28 @@
         "conclusion": "skipped"
       }
     ],
-    "scheduled_native_matrix": "Skipped as designed for ordinary PR events."
+    "scheduled_native_matrix": "Skipped as designed for ordinary PR events.",
+    "created_at": "2026-11-27T00:29:37Z",
+    "updated_at": "2026-11-27T00:43:26Z"
   },
   "retirement": {
     "branch": "ci/powershell-separator-ownership-20261126-r23",
     "parent": "2283f07cb51e48f5e61d21861e146e2a53518681",
     "removed_workflow": ".github/workflows/powershell-separator-ownership-r23.yml",
-    "scope": "Only the owned r23 temporary workflow is removed. All proof source and evidence records remain immutable in history."
+    "scope": "Only the owned r23 temporary workflow is removed. All proof source and evidence records remain immutable in history.",
+    "commit": "04bbfba1f2fcba1d8df8b9e77e90794c41b13f32",
+    "tree": "4277f93dd62f864ae0c5020d30b0a1f96a86fa4a",
+    "workflow_absent_verified": true,
+    "new_runs_for_retirement_commit": 0
   },
   "previous_r22_checkpoint": "https://github.com/gosuda/sloplint/blob/03a275c9b8b72820d5bcb0925e43da127d0e25b9/ci-tools/powershell-context-boundaries-r22/checkpoint.json",
   "previous_pr_description": {
     "path": "ci-tools/powershell-separator-ownership-r23/previous-pr-description.md",
     "sha256": "ea2940a9652bcb31fc6d65bb69cbd623a357873073579e65cf8defc347e55888"
+  },
+  "terminal_refs": {
+    "head": "d972b52788bbdf88265e50df1a2502663e597df7",
+    "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+    "mergeable": true
   }
 }
