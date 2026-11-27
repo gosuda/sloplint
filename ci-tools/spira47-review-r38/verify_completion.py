@@ -51,7 +51,8 @@ def main() -> None:
         ):
             if not re.fullmatch(pattern, base.run(name, command).strip()):
                 raise RuntimeError("wrong " + name)
-        if base.run("ripgrep-version", ["rg", "--version"]).splitlines()[0] != "ripgrep 15.1.0":
+        ripgrep = base.run("ripgrep-version", ["rg", "--version"]).splitlines()
+        if not ripgrep or not re.fullmatch(r"ripgrep 15\.1\.0(?: \(rev [0-9a-f]{10,40}\))?", ripgrep[0]):
             raise RuntimeError("wrong pinned ripgrep")
         if base.run("go-cache-disabled", ["go", "env", "GOCACHEPROG"]).strip():
             raise RuntimeError("external compiler cache active")

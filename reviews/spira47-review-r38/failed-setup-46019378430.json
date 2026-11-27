@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "run": 46019378430,
+  "job": 140574730781,
+  "producer": "52e03d798e5aa54d3b45f21c0439f3bff122ad5b",
+  "conclusion": "failure",
+  "failed_step": "Install pinned ripgrep required by sql-check",
+  "raw_step_exit": 1,
+  "observed_archive_checksum": "OK",
+  "expected_archive_sha256": "1c9297be4a084eea7ecaedf93eb03d058d6faae29bbc57ecdaf5063921491599",
+  "version_output_preserved": false,
+  "artifacts": [],
+  "secondary_failure": "Upload found no evidence directory because the source driver had not started.",
+  "source_driver_started": false,
+  "source_gates_passed": false,
+  "source_restoration_verified": false,
+  "publication_eligible": false,
+  "raw_log_sha256": "00767d3eecff80a7b8f54a1b775d0561cf86c03b8f089eeb8f1f4bff27227aa5",
+  "source_derived_diagnosis": {
+    "source_commit": "af60c2de9d85e7f3d81c78601669468cf02dabab",
+    "version_source": "crates/core/flags/doc/version.rs",
+    "build_source": "build.rs",
+    "observation": "The official renderer appends '(rev HASH)' when RIPGREP_BUILD_GIT_HASH is present. The rejected assertion required the bare 'ripgrep 15.1.0' line.",
+    "qualification": "The exact native version output was not printed in the failed step; its suffix is inferred from the pinned release renderer, not a captured native value."
+  },
+  "correction": "Preserve complete native version output and accept only 15.1.0 with the documented optional hex revision suffix. Preserve the exact archive digest; install before the compiler build and create setup evidence before download. Product/test/source assertions remain unchanged."
+}

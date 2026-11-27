@@ -38,6 +38,25 @@ jobs:
           ref: 2cfe17218b4d3311c5746b94a1858bf3fe9a3e45
           path: compiler
           persist-credentials: false
+      - name: Install pinned ripgrep required by sql-check
+        run: |
+          tool_dir="$RUNNER_TEMP/spira-r38-tools"
+          evidence="$RUNNER_TEMP/spira47-dollar-runtime-completion-evidence"
+          archive="$RUNNER_TEMP/ripgrep-15.1.0-x86_64-unknown-linux-musl.tar.gz"
+          mkdir -p "$tool_dir" "$evidence"
+          printf '%s\n' 'ripgrep 15.1.0; expected archive SHA-256 1c9297be4a084eea7ecaedf93eb03d058d6faae29bbc57ecdaf5063921491599' > "$evidence/ripgrep-setup.txt"
+          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 \
+            https://github.com/BurntSushi/ripgrep/releases/download/15.1.0/ripgrep-15.1.0-x86_64-unknown-linux-musl.tar.gz \
+            --output "$archive"
+          printf '%s  %s\n' '1c9297be4a084eea7ecaedf93eb03d058d6faae29bbc57ecdaf5063921491599' "$archive" | sha256sum --check --strict | tee "$evidence/ripgrep-archive-check.log"
+          tar -xzf "$archive" --directory "$tool_dir" --strip-components=1 \
+            ripgrep-15.1.0-x86_64-unknown-linux-musl/rg
+          rg_version="$("$tool_dir/rg" --version)"
+          printf '%s\n' "$rg_version" | tee "$evidence/ripgrep-version.txt"
+          rg_first_line="${rg_version%%$'\n'*}"
+          rg_pattern='^ripgrep 15[.]1[.]0( [(]rev [0-9a-f]{10,40}[)])?$'
+          [[ "$rg_first_line" =~ $rg_pattern ]]
+          printf '%s\n' "$tool_dir" >> "$GITHUB_PATH"
       - name: Install official bootstrap Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
         with:
@@ -62,19 +81,6 @@ jobs:
         uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39
         with:
           tool: "just@1.59.0"
-      - name: Install pinned ripgrep required by sql-check
-        run: |
-          tool_dir="$RUNNER_TEMP/spira-r38-tools"
-          archive="$RUNNER_TEMP/ripgrep-15.1.0-x86_64-unknown-linux-musl.tar.gz"
-          mkdir -p "$tool_dir"
-          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 \
-            https://github.com/BurntSushi/ripgrep/releases/download/15.1.0/ripgrep-15.1.0-x86_64-unknown-linux-musl.tar.gz \
-            --output "$archive"
-          printf '%s  %s\n' '1c9297be4a084eea7ecaedf93eb03d058d6faae29bbc57ecdaf5063921491599' "$archive" | sha256sum --check --strict
-          tar -xzf "$archive" --directory "$tool_dir" --strip-components=1 \
-            ripgrep-15.1.0-x86_64-unknown-linux-musl/rg
-          test "$("$tool_dir/rg" --version | head -n 1)" = "ripgrep 15.1.0"
-          printf '%s\n' "$tool_dir" >> "$GITHUB_PATH"
       - name: Install the source-pinned package manager
         uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115
         with:

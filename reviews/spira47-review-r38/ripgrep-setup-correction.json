@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "failed_producer": "52e03d798e5aa54d3b45f21c0439f3bff122ad5b",
+  "failed_run": 46019378430,
+  "source_unchanged": true,
+  "authored_candidate_sha256": "ba4813fb7bcae07979f275f59441c7b1ea5daaa4ad425f8a410f224d735a1139",
+  "candidate_tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+  "prior_review": "52ed94cd9bc8152c515419134d82d1584cad8a8a",
+  "driver": {
+    "before_sha256": "e4964d090832d64e8820aeecdc270a786647922fdb8d0cb34ad28b0fa183f540",
+    "after_sha256": "70c71a8fce9caff5e720811937c83522b955f3a5182be4eb072b3737ffa96d59",
+    "only_change": "Recognize official version15.1.0 with its optional hexadecimal revision suffix; preserve the actual complete output in the normal command receipt."
+  },
+  "workflow": {
+    "before_sha256": "00147aa0e080dbede628bb795bbf70b90807cd5b8bfa441ede0ca7a61940d80d",
+    "after_sha256": "94ab4aa3f5fa311e8ed25c722abf51be4310f1092bdf67dbe16270851c9e9b3a",
+    "changes": [
+      "Move the same pinned ripgrep installation before the compiler build.",
+      "Create setup evidence before download and preserve full checksum/version output.",
+      "Replace the invalid bare-line display assertion with the documented optional revision-suffix format."
+    ]
+  },
+  "official_source": {
+    "repository": "BurntSushi/ripgrep",
+    "commit": "af60c2de9d85e7f3d81c78601669468cf02dabab",
+    "files": [
+      {
+        "path": "crates/core/flags/doc/version.rs",
+        "sha256": "190b63e9c03db51205ead9a80a61655b618961bea111366dbf4fc2adb38bd6ad"
+      },
+      {
+        "path": "build.rs",
+        "sha256": "07d72d8929ecd1cc2277e7d1f16092521c9160c92cca9544a682b275bd53d955"
+      }
+    ]
+  },
+  "unchanged": {
+    "release_archive_sha256": "1c9297be4a084eea7ecaedf93eb03d058d6faae29bbc57ecdaf5063921491599",
+    "completion_support_sha256": "26e7f6822ff3299959c47468c7ff87ba0cb6734603140b9039a106fa822f30de",
+    "source_and_tests": true,
+    "source_gates": true,
+    "focused_archive_authentication": true,
+    "restoration_and_eligibility": true
+  },
+  "native_format_confirmation_pending": true,
+  "publication_eligible": false
+}

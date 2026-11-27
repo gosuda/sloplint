@@ -47,12 +47,12 @@
     "baseline-report.json": "b79f38301fd14dc0d15a53584402a70c5dd0450ab782cebd090b46bbbc448ce1",
     "candidate-manifest.json": "411f45334c4ad2ba03b923d4d761519a644d17df90f1250248095e24186ba9be",
     "pipeline_observer.py": "c3a797b3fd4a9312c2d009bcc462426bfde91bd724398b306d1292eccbcad039",
-    "verify_completion.py": "e4964d090832d64e8820aeecdc270a786647922fdb8d0cb34ad28b0fa183f540",
+    "verify_completion.py": "70c71a8fce9caff5e720811937c83522b955f3a5182be4eb072b3737ffa96d59",
     "completion_support.py": "26e7f6822ff3299959c47468c7ff87ba0cb6734603140b9039a106fa822f30de",
     "failed-candidate-report.json": "c2ad7f02bae0908373e46f3daea62c023abd7a750e41ec377fe45df637654cb6"
   },
   "workflow": ".github/workflows/spira47-review-r38.yml",
-  "workflow_sha256": "00147aa0e080dbede628bb795bbf70b90807cd5b8bfa441ede0ca7a61940d80d",
+  "workflow_sha256": "94ab4aa3f5fa311e8ed25c722abf51be4310f1092bdf67dbe16270851c9e9b3a",
   "focused_artifact": {
     "producer": "94dadaf62ae595080dd34e51a9cebd0bae0acd75",
     "run": 46016220487,
@@ -75,10 +75,25 @@
     "version": "15.1.0",
     "url": "https://github.com/BurntSushi/ripgrep/releases/download/15.1.0/ripgrep-15.1.0-x86_64-unknown-linux-musl.tar.gz",
     "sha256": "1c9297be4a084eea7ecaedf93eb03d058d6faae29bbc57ecdaf5063921491599",
-    "source": "Official BurntSushi/ripgrep release API digest"
+    "source": "Official BurntSushi/ripgrep release API digest",
+    "version_format": {
+      "source_commit": "af60c2de9d85e7f3d81c78601669468cf02dabab",
+      "path": "crates/core/flags/doc/version.rs",
+      "accepted": "ripgrep 15.1.0 with optional '(rev HEX)' suffix; full output preserved; exact archive digest remains mandatory."
+    }
   },
   "reuse_boundary": "All 195 original command logs and the exact failed report/source identities are authenticated. Focused RED/GREEN/native evidence is reused; failed just gate is not reused as a pass. Actual just gate, just slop and just eject are required again.",
   "product_changes": false,
   "source_gate_threshold_changes": false,
-  "publication_eligible": false
+  "publication_eligible": false,
+  "setup_failure": {
+    "run": 46019378430,
+    "job": 140574730781,
+    "producer": "52e03d798e5aa54d3b45f21c0439f3bff122ad5b",
+    "raw_exit": 1,
+    "artifact_created": false,
+    "source_driver_started": false,
+    "raw_log_sha256": "00767d3eecff80a7b8f54a1b775d0561cf86c03b8f089eeb8f1f4bff27227aa5",
+    "receipt_sha256": "619ce4a7e2ef20c5ad74efc840e047c3681d736dd212428cd468291597f4e051"
+  }
 }
