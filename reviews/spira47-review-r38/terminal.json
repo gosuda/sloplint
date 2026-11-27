@@ -1,0 +1,132 @@
+{
+  "schema": 1,
+  "phase": "published-native-verified-proof-retired",
+  "repository": "gosuda/spira",
+  "pull_request": 47,
+  "source": {
+    "head": "4bde2ec5e8bf23ffbeca0b4b54e8c9c7c005e33f",
+    "parent": "593d792bf282f7b7119dafb057a389b04c91fd6d",
+    "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+    "tracked_blobs": 621,
+    "index_sha256": "3ac9074f7cdce055c9d99c656ea683e5323921dc8beee595debf175b6f80e7a1",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "mergeable": true,
+    "mergeable_state": "clean"
+  },
+  "successful_proof": {
+    "producer": "e168a19f2ace42724d73932297f16b65fa0f9d84",
+    "run": 46021221052,
+    "job": 140581049752,
+    "conclusion": "success",
+    "actual_receipts": 21,
+    "all_expected_exits": true,
+    "timeout": false,
+    "gate": 0,
+    "slop": 0,
+    "eject": 0,
+    "artifact_id": 15210655064,
+    "artifact_bytes": 812892,
+    "artifact_sha256": "6893d1b112c55f48d689b5c0b24af2249f8901c3c1a3b81f71e92d51707163dd",
+    "raw_log_sha256": "3e2350c3d67e08101d4cfc6c14f501ddd34e87baafbd69ca9939344d3b0a3e92",
+    "receipt_commit": "b24e6c69faf08b854cae2b2fe0a267ce01d66277",
+    "receipt_path": "reviews/spira47-review-r38/verified-run-46021221052.json",
+    "receipt_sha256": "57bd8bbdf0e59a1c0c294df98a1f4687998eec1c4b3e392ad5956a183496f394",
+    "job_log_path": "reviews/spira47-review-r38/job-log-46021221052.json",
+    "job_log_json_sha256": "c0935623eeeefd65726202e8d5547152eb07b173d0dd58e891ee08bde0b10aa2"
+  },
+  "focused_evidence": {
+    "producer": "94dadaf62ae595080dd34e51a9cebd0bae0acd75",
+    "run": 46016220487,
+    "conclusion": "failure",
+    "failure": "just gate exited 127 because rg was absent; just slop/eject were not reached",
+    "completed_focused_receipts_authenticated": 195,
+    "full_gate_reused": false,
+    "final_unchanged_production": {
+      "compiled_first": true,
+      "intended_failures": 11,
+      "passing_controls": 29
+    },
+    "candidate": {
+      "dollar_cases": 14,
+      "direct_compiled_cases": 8,
+      "sqlc_pipeline_cases": 40,
+      "generated": 32,
+      "version_refusals": 4,
+      "upstream_rejections": 4,
+      "native_original": 48,
+      "native_captured": 36,
+      "native_compiled": 40
+    }
+  },
+  "setup_failure": {
+    "run": 46019378430,
+    "conclusion": "failure",
+    "source_driver_started": false,
+    "reason": "Pinned ripgrep checksum passed; overly strict version-display assertion rejected its build suffix. Only the observer was corrected, retaining the official archive and its checksum."
+  },
+  "source_restored": true,
+  "review_receipts": {
+    "parent": "Independent parent receipt accepted: run 46021221052/job 140581049752 SUCCESS; all21 actual logs and manifest/workflow hashes verified; exact621 source restored616; prior failure preserved; artifact API/upload match; no new discrepancy.",
+    "observer_correction": "Independent child review accepted exact e168 observer-only correction; source and all other proof files unchanged."
+  },
+  "addressed_threads": [
+    {
+      "id": "PRRT_kwDOVpFduc68zFK3",
+      "comment": 4719883660,
+      "reply": 4721072214,
+      "is_resolved": true,
+      "resolved_by": "devin-ai-integration[bot]"
+    },
+    {
+      "id": "PRRT_kwDOVpFduc68zFMT",
+      "comment": 4719883813,
+      "reply": 4721072610,
+      "is_resolved": true,
+      "resolved_by": "devin-ai-integration[bot]"
+    }
+  ],
+  "fresh_review": {
+    "total_threads": 20,
+    "unresolved": [
+      {
+        "id": "PRRT_kwDOVpFduc6811oT",
+        "comment": 4721057351,
+        "scope": "Quoted aliases can satisfy existing substring version check"
+      },
+      {
+        "id": "PRRT_kwDOVpFduc6811qC",
+        "comment": 4721057551,
+        "scope": "Nested generated-package tests omit -race"
+      }
+    ],
+    "all_comments_resolved": false
+  },
+  "ordinary_workflows": {
+    "github_actions_defined": false,
+    "depot_defined": false,
+    "check_runs_total": 0,
+    "ordinary_success_claim": false
+  },
+  "limits": {
+    "slop": {
+      "blocker": 0,
+      "critical": 0,
+      "major": 0,
+      "minor": 1,
+      "skipped": 12,
+      "threshold_unchanged": true
+    },
+    "engines_run": false,
+    "stock_go_export_build": true,
+    "stock_go_generated_runtime_test_claim": false
+  },
+  "pr_body_sha256": "f5a076943b7d7f64d4c74acb81e360dadf229ed93c8e2a0fce5304a49c0c06f8",
+  "retirement": {
+    "repository": "gosuda/sloplint",
+    "branch": "ci/spira47-dollar-runtime-20261127-r38",
+    "parent": "b24e6c69faf08b854cae2b2fe0a267ce01d66277",
+    "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+    "removed_workflow": ".github/workflows/spira47-review-r38.yml",
+    "source_changes": false
+  }
+}
