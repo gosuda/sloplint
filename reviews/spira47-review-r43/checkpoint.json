@@ -1,271 +1,244 @@
 {
   "schema": 1,
   "round": 43,
-  "status": "First proof failed before native/test phases; exact source restored; serialization correction frozen for review.",
   "repository": "gosuda/spira",
   "pull_request": 47,
-  "thread": "PRRT_kwDOVpFduc688xES",
-  "source_head": "6d4f84fc8a1a50603fbdf5c024bdc1966436ea31",
-  "source_tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0",
+  "head": "c4e424ba3a580f04d5ff260b2030c5e56267c8e7",
+  "parent": "6d4f84fc8a1a50603fbdf5c024bdc1966436ea31",
+  "tree": "42ac87ebaf4cad019a5f53bfe61c7d1455f9d041",
+  "blobs": 638,
   "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
-  "proposal": "e6b9d0a44dec3f9d7637a85852def4c71808008c",
-  "reviewed_gate": "ce75747559832e58ceb6f1a37ee96aef3a1a13f6",
-  "proof": {
-    "repository": "gosuda/sloplint",
-    "branch": "ci/spira47-fixture-metadata-20261127-r43",
-    "producer": "1694350a47292b483f9a4314d46b43996b843985",
-    "tree": "f243a9b76c5067b903cfbef82972b5cfe8a986d8",
-    "run": 46079109930,
-    "job": 140773675515
+  "published_at": {
+    "current_time": "2026-11-27 23:19:35 UTC"
   },
-  "candidate": {
-    "tree": "42ac87ebaf4cad019a5f53bfe61c7d1455f9d041",
-    "blobs": 638,
-    "changed_paths": 5,
-    "production_changes": false
-  },
-  "reviews": {
-    "source": {
-      "commit": "e6b9d0a44dec3f9d7637a85852def4c71808008c",
-      "reviewer": "/root/bitcoin_round7",
-      "verdict": "No finding. Exact five existing test/docs paths, complete candidate/counterfactual tree binding, unchanged production and raw original 30/67 fixture prefixes; counterfactual changes only reader count and appended data. Static review only."
+  "additive": true,
+  "force": false,
+  "production_changes": false,
+  "authored_paths": [
+    {
+      "path": "cmd/sqlc-gen-spira/version_relation_test.lgo",
+      "blob": "009100f8853619b612ffcb4f920d6fc949d00585",
+      "sha256": "44c2f1029128e39e09a97ed04d46c93e2ee5bdf5af5d1800338b3c8d3a60fc52"
     },
-    "oracle": {
-      "commit": "e6b9d0a44dec3f9d7637a85852def4c71808008c",
-      "reviewer": "/root/bitcoin_round7/spira40_oracle_review",
-      "verdict": "No finding. Time-alias refusal and genuine counter-reference generation, exact captured-text predictions grounded in R42 control, unchanged integer values. Static review only."
+    {
+      "path": "cmd/sqlc-gen-spira/testdata/version-relation-roles.json",
+      "blob": "fe2a945a9825ba20ed9e28d7a5aa2c950c7d8127",
+      "sha256": "686032e6a9c7b6049825845da4455498adcbfbbabad4edc62bf558acc96bf921"
     },
-    "driver": {
-      "commit": "ce75747559832e58ceb6f1a37ee96aef3a1a13f6",
-      "reviewer": "/root/bitcoin_round7",
-      "verdict": "No finding",
-      "scope": "Main driver, runtime observer, workflow, source identity and restoration",
-      "bindings": {
-        "proof_blobs": 23,
-        "manifest_bound_content_hashes": 21,
-        "driver_sha256": "7c13e78f0c28e122359c0c09b1018a3a91385ab585e60da40bb6fc6265318b4f",
-        "manifest_sha256": "f67d48ee4093ac63b46f0493a075e01fe5508ac9a1e131416850b3f5098947d2",
-        "workflow_sha256": "c97809ce8359b43395e0064271920a8bafa881f853f359306144d74cd13e35ff"
-      },
-      "reviewed": [
-        "Two original and two processed PostgreSQL/SQLc observations before test application.",
-        "Count-adjusted old reader compile followed by exact two failures and 30 controls, then restoration.",
-        "Corrected direct 32/permanent 69 suites and exact 31 compiled-value map.",
-        "Exactly one actual nested logos test -race -count=1 -v . invocation.",
-        "Credential removed before first child; actual required gate/slop/eject.",
-        "Full candidate and final original 638-blob source identity and restoration."
-      ],
-      "execution": false
+    {
+      "path": "cmd/sqlc-gen-spira/sqlc_postgres_version_test.lgo",
+      "blob": "56b626ffae2310dcddd2e97cbc929c48bdc8903a",
+      "sha256": "76af5850ffe96198f71019477d3a942e6c07e56987badda4164f9bb9d7b63f82"
     },
-    "archive": {
-      "commit": "ce75747559832e58ceb6f1a37ee96aef3a1a13f6",
-      "reviewer": "/root/bitcoin_round7/spira40_oracle_review",
-      "verdict": "No finding",
-      "scope": "Archive authentication and previous exact R42 evidence",
-      "archive_sha256": "e3400b496e42d217886994136784bec4fe614297c30e1a36d18f6e25846eff3e",
-      "manifest_sha256": "f67d48ee4093ac63b46f0493a075e01fe5508ac9a1e131416850b3f5098947d2",
-      "report_sha256": "8337d9925f35c55aac6130e07be6803bda972fa5625cbda0354fccce2d64b822",
-      "reviewed": {
-        "unique_command_logs": 228,
-        "native_cases": 67,
-        "pipeline_cases": 67,
-        "captured_requests": 64,
-        "generated": 30,
-        "plugin_refusals": 34,
-        "upstream_refusals": 3,
-        "source_blobs": 638,
-        "source_tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0"
-      },
-      "live_metadata_matched": true,
-      "reviewer_zip_download": false,
-      "execution": false,
-      "full_source_gates_reused": false
+    {
+      "path": "cmd/sqlc-gen-spira/testdata/sqlc-version-pipeline.json",
+      "blob": "eaadb172b45f3b53977bd10443aa24a400fec4f1",
+      "sha256": "79e82a027719f141dfeba85aee06f1df8c9a919aeb636c2cc262656482221843"
+    },
+    {
+      "path": "docs/specs/sqlc-gen-spira.md",
+      "blob": "df63156409369b6aa5f4b3b1a4c6348abe60d1b2",
+      "sha256": "7db5595fa2ca5f48843eb2c1859b7dc3ed53de9124c3d46c05ec057b9ccd9510"
     }
+  ],
+  "native": {
+    "producer": "b1eda8d382132098028e88d4be9737aac1ff00ce",
+    "run": 46080218773,
+    "job": 140777215364,
+    "conclusion": "success",
+    "artifact": 15236782785,
+    "artifact_sha256": "0f7199b5f7fc0025559299c16fd2dd10ec124c9195a6f517f01f26d04452172f",
+    "raw_log_sha256": "24bc7968c9dcc58d2df30098ee3ee91431ed100d9b88152db0355fe4c864c267",
+    "report_projection_sha256": "13cfdd057f462cbca705df89415e2ebf3060d25861aa3067afd89b36e45760b0",
+    "commands": 38,
+    "candidate_index_sha256": "57a3f08469b52cffafb3e35b5b15bff2a926df79555e90d238281caa4e652e57",
+    "source_restored": true
   },
-  "source_gates_passed": false,
-  "publication_eligible": false,
-  "native_status": "Run 46079109930 failed at previous report byte authentication. No new native/test results reached.",
-  "failed_attempt": {
-    "schema": 1,
-    "status": "FAILURE",
-    "producer": "1694350a47292b483f9a4314d46b43996b843985",
+  "evidence": {
+    "commit": "0dd3bf8f8afa16c02feede039e3c085fe67d644c",
+    "file": "reviews/spira47-review-r43/verified-candidate-46080218773.json",
+    "sha256": "cfb26066a9c32508f2f2d40bb2e85e24b4356a35902f80b226ebe8ca81e48028"
+  },
+  "thread": {
+    "id": "PRRT_kwDOVpFduc688xES",
+    "comment": 4724046389,
+    "reply": 4724343741,
+    "is_resolved": true,
+    "reply_readback_exact": true
+  },
+  "pr_body_readback_exact": true,
+  "feedback": {
+    "observed_at": {
+      "current_time": "2026-11-27 23:22:30 UTC"
+    },
+    "head": "c4e424ba3a580f04d5ff260b2030c5e56267c8e7",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "mergeable": true,
+    "mergeable_state": "clean",
+    "review_threads": 28,
+    "unresolved": 0,
+    "devin_review": [
+      {
+        "state": "success",
+        "description": "Completed analysis in 1m 5s",
+        "updated_at": "2026-11-27T23:20:45Z",
+        "target_url": "https://app.devin.ai/review/gosuda/spira/pull/47"
+      }
+    ],
+    "source_check_runs": 0,
+    "source_workflow_runs": 0,
+    "source_workflow_paths": []
+  },
+  "first_failure": {
     "run": 46079109930,
-    "job": 140773675515,
-    "artifact": {
-      "id": 15236980208,
-      "name": "spira47-fixture-metadata-candidate-r43",
-      "bytes": 6641,
-      "sha256": "f06e8b3c01f17006fa4c89c20fc0a5341a9ef42523575023d9d8dbd3d499535c",
-      "api_upload_digest_match": true,
-      "independent_zip_download": false
-    },
-    "raw_log_sha256": "26d5fa624dc154bf63bb4be9ddddbf8212d625b5da9c0e6afaf51390aa4390c0",
-    "report_projection_sha256": "3831e58c0f156dd37c737bf008eb5b998cdb83b91da386c370d00a5bf7b90c8c",
-    "command_receipts": [
+    "conclusion": "failure",
+    "preserved_at": "86dbfc5804104e285d590401100d9443eca12d36",
+    "test_or_source_phases_reached": false,
+    "gate_reuse": false
+  },
+  "owned_workflow": ".github/workflows/spira47-review-r43.yml",
+  "retirement_readback_pending": false,
+  "overall_pr_work_complete": true,
+  "status": "completed",
+  "observed_at": {
+    "current_time": "2026-11-27 23:22:30 UTC"
+  },
+  "source_published": true,
+  "source_publication_verified": true,
+  "full_source_tree_readback_verified": true,
+  "pr_body_sha256": "24fac4802469490745bcc73eab9c6c1c55ada187caf899ce5c31f5dd9c01b607",
+  "reply_sha256": "31f1f7300a4ec3b06b7fca2f9f201542beff569451c9eb847a0549afe1b3b679",
+  "retirement": {
+    "commit": "d555bdec81e5236d93bfe1f7c6a920a76290ec68",
+    "tree": "ce044df9cfc1faa59892e1ba92fe081af540953c",
+    "parent": "0dd3bf8f8afa16c02feede039e3c085fe67d644c",
+    "owned_workflow_absent": true,
+    "inherited_workflow_blobs": [
       {
-        "name": "proof-head",
-        "command": [
-          "git",
-          "-C",
-          "/home/runner/work/sloplint/sloplint/proof",
-          "rev-parse",
-          "HEAD"
-        ],
-        "raw_exit": 0,
-        "expected": 0,
-        "timed_out": false,
-        "log_sha256": "234356dbef09f1a833de037659cf9e3357dd549d0464d537c872f41723afa78a"
+        "name": "ci.yml",
+        "sha": "318af336a730492b08e20ec84b4c62568ec48bab"
       },
       {
-        "name": "source-head",
-        "command": [
-          "git",
-          "rev-parse",
-          "HEAD"
-        ],
-        "raw_exit": 0,
-        "expected": 0,
-        "timed_out": false,
-        "log_sha256": "34bbedf77e97c7551a4dde3ea9e11f7319735d1892a0937730544cdf5e6e3b28"
-      },
-      {
-        "name": "restore-original-source",
-        "command": [
-          "git",
-          "restore",
-          "--source",
-          "6d4f84fc8a1a50603fbdf5c024bdc1966436ea31",
-          "--staged",
-          "--worktree",
-          "--",
-          "."
-        ],
-        "raw_exit": 0,
-        "expected": 0,
-        "timed_out": false,
-        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-      },
-      {
-        "name": "source-restoration",
-        "command": [
-          "git",
-          "diff",
-          "--exit-code",
-          "HEAD"
-        ],
-        "raw_exit": 0,
-        "expected": 0,
-        "timed_out": false,
-        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-      },
-      {
-        "name": "untracked-restoration",
-        "command": [
-          "git",
-          "ls-files",
-          "--others",
-          "--exclude-standard"
-        ],
-        "raw_exit": 0,
-        "expected": 0,
-        "timed_out": false,
-        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        "name": "release.yml",
+        "sha": "de1e7d15549b146df23409451844860e931a74f2"
       }
     ],
-    "stdout_receipts": [
-      {
-        "name": "proof-head",
-        "sha256": "234356dbef09f1a833de037659cf9e3357dd549d0464d537c872f41723afa78a",
-        "bytes": 41
+    "workflow_directory_readback_exact": true,
+    "run_count": 0
+  },
+  "terminal_reviews": {
+    "identity": {
+      "reviewer": "/root/bitcoin_round7",
+      "verdict": "No discrepancy",
+      "run": 46080218773,
+      "job": 140777215364,
+      "producer": "b1eda8d382132098028e88d4be9737aac1ff00ce",
+      "commands": 38,
+      "unique": true,
+      "raw_log_sha256": "24bc7968c9dcc58d2df30098ee3ee91431ed100d9b88152db0355fe4c864c267",
+      "raw_log_bytes": 288376,
+      "active_proof_workflow_blobs": 24,
+      "manifest_exact": true,
+      "source_markers": 8,
+      "candidate_tree": "42ac87ebaf4cad019a5f53bfe61c7d1455f9d041",
+      "candidate_blobs": 638,
+      "candidate_index_sha256": "57a3f08469b52cffafb3e35b5b15bff2a926df79555e90d238281caa4e652e57",
+      "original_restored": true,
+      "published_commit": "c4e424ba3a580f04d5ff260b2030c5e56267c8e7",
+      "published_parent": "6d4f84fc8a1a50603fbdf5c024bdc1966436ea31",
+      "published_full_index_matches": true,
+      "authored_paths_exact": 5,
+      "native_previous_report_authentication_verified": true,
+      "required_gate_exits": {
+        "gate": 0,
+        "slop": 0,
+        "eject": 0
       },
-      {
-        "name": "source-head",
-        "sha256": "34bbedf77e97c7551a4dde3ea9e11f7319735d1892a0937730544cdf5e6e3b28",
-        "bytes": 41
-      },
-      {
-        "name": "restore-original-source",
-        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "bytes": 0
-      },
-      {
-        "name": "source-restoration",
-        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "bytes": 0
-      },
-      {
-        "name": "untracked-restoration",
-        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "bytes": 0
-      }
-    ],
-    "unexpected_command_exits": [],
-    "failed_phase": "archive_support.frozen_report: frozen complete report differs: previous",
-    "source_gate_exit": 1,
-    "native_cases_reached": false,
-    "counterfactual_reached": false,
-    "candidate_applied": false,
-    "source_gates_passed": false,
-    "publication_eligible": false,
-    "source_restored": true,
-    "source_before": {
-      "label": "source",
-      "tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0",
-      "blobs": 638,
-      "index_sha256": "a8f431d2319f13259dba66403a2971d30443d26a0c73ab8a2fbc1947c637642c"
+      "artifact_api_upload_match": true,
+      "independent_current_zip_download": false,
+      "first_failure_preserved": true,
+      "limitations": [
+        "Stock Go build only under eject",
+        "One existing minor Handle finding and 12 skips"
+      ]
     },
-    "source_after": {
-      "label": "source",
-      "tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0",
-      "blobs": 638,
-      "index_sha256": "a8f431d2319f13259dba66403a2971d30443d26a0c73ab8a2fbc1947c637642c"
-    },
-    "gate_reuse": false,
-    "serialization_receipt": {
-      "source_producer": "673f0c39445d4b583c4d3371609ce585c39be87b",
-      "source_driver": "ci-tools/spira47-review-r42/verify_candidate.py",
-      "source_writer": "(base.OUTPUT / \"report.json\").write_text(json.dumps(report, indent=2) + \"\\n\", encoding=\"utf-8\")",
-      "projection_sha256": "8337d9925f35c55aac6130e07be6803bda972fa5625cbda0354fccce2d64b822",
-      "reconstructed_python_file_sha256": "ca1bc0848dc98e7541f3d223159112fad80f03fb1b36970e8a8a4bbdbf4a96f5",
-      "projection_bytes": 494516,
-      "reconstructed_python_file_bytes": 494540,
-      "changes": [
+    "semantic": {
+      "reviewer": "/root/bitcoin_round7/spira40_oracle_review",
+      "verdict": "No discrepancy",
+      "evidence_commit": "0dd3bf8f8afa16c02feede039e3c085fe67d644c",
+      "run": 46080218773,
+      "native_server_version_num": "180007",
+      "native_original_cases": 2,
+      "native_processed_cases": 2,
+      "native_state": {
+        "name": "changed",
+        "versions": [
+          0,
+          0
+        ]
+      },
+      "plugin_outcomes": [
         {
-          "projection_offset": 14372,
-          "code_point": "U+00E9",
-          "escaped": "\\u00e9"
+          "name": "fixture-option-time-alias",
+          "raw_exit": 1,
+          "diagnostic": "writes versioned table items without time",
+          "request_present": true,
+          "files": 0
         },
         {
-          "projection_offset": 14394,
-          "code_point": "U+00E9",
-          "escaped": "\\u00e9"
-        },
-        {
-          "projection_offset": 16101,
-          "code_point": "U+00E9",
-          "escaped": "\\u00e9"
-        },
-        {
-          "projection_offset": 314859,
-          "code_point": "U+00E9",
-          "escaped": "\\u00e9"
-        },
-        {
-          "projection_offset": 316557,
-          "code_point": "U+00E9",
-          "escaped": "\\u00e9"
-        },
-        {
-          "projection_offset": 316579,
-          "code_point": "U+00E9",
-          "escaped": "\\u00e9"
+          "name": "fixture-counter-column",
+          "raw_exit": 0,
+          "version_option": "counter",
+          "files": 2
         }
       ],
-      "complete_default_python_terminal_serialization_matches": true,
-      "parsed_data_unchanged": true,
+      "observations_before_counterfactual": true,
+      "old_reader_compile": 0,
+      "old_reader_failed": 2,
+      "old_reader_controls_passed": 30,
+      "corrected_direct_passed": 32,
+      "permanent_sqlc_passed": 69,
+      "compiled_query_values": 31,
+      "nested_argv": [
+        "test",
+        "-race",
+        "-count=1",
+        "-v",
+        "."
+      ],
+      "nested_pid": 37130,
+      "required_gate_exits": {
+        "gate": 0,
+        "slop": 0,
+        "eject": 0
+      },
+      "previous_report_native_byte_identity_confirmed": true,
       "independent_zip_download": false,
-      "status": "Source-bound serialization reconstruction; next native read must verify actual artifact bytes exactly."
+      "limitations": [
+        "One existing minor Handle finding and 12 skips",
+        "Eject is stock Go 1.27.4 build only"
+      ]
     }
   },
-  "observed_at": "2026-11-27 22:58:05 UTC"
+  "verification_summary": {
+    "native_original": 2,
+    "native_processed": 2,
+    "old_reader_failures": 2,
+    "old_reader_controls": 30,
+    "corrected_direct": 32,
+    "permanent_sqlc": 69,
+    "compiled_query_values": 31,
+    "required_gate_exits": {
+      "gate": 0,
+      "slop": 0,
+      "eject": 0
+    },
+    "source_restored": true
+  },
+  "limitations": [
+    "Sloplint passed the unchanged major threshold with one existing minor Handle finding and 12 skipped files.",
+    "The three existing SQLc upstream limitations are retained; direct coverage does not imply SQLc acceptance.",
+    "just eject ran the stock Go 1.27.4 build only; no stock-Go runtime or engines coverage is claimed.",
+    "Current artifact ZIP was not independently downloaded in this session; API/upload identity and lossless job-log evidence were reconciled."
+  ]
 }
