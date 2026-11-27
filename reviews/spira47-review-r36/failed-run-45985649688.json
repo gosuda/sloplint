@@ -1,0 +1,331 @@
+{
+  "schema": 1,
+  "status": "failure",
+  "producer": "0a801443782c9c56c8a35bbf2b117256cf1f3805",
+  "run": 45985649688,
+  "job": 140460458731,
+  "artifact": {
+    "id": 15191802000,
+    "node_id": "MDg6QXJ0aWZhY3QxNTE5MTgwMjAwMA==",
+    "name": "spira47-candidate-r36",
+    "size_in_bytes": 48277,
+    "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15191802000",
+    "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15191802000/zip",
+    "expired": false,
+    "digest": "sha256:4c921def54f00f3e2487017451f6aebabaacb4353b354616748adefa641f2b17",
+    "created_at": "2026-11-27T10:55:03Z",
+    "updated_at": "2026-11-27T10:55:03Z",
+    "expires_at": "2026-12-11T10:55:03Z",
+    "workflow_run": {
+      "id": 45985649688,
+      "repository_id": 1424164147,
+      "head_repository_id": 1424164147,
+      "head_branch": "ci/spira47-review-20261127-r36",
+      "head_sha": "0a801443782c9c56c8a35bbf2b117256cf1f3805"
+    }
+  },
+  "raw_job_log_sha256": "c8874f67598e59a50632f395e8a56735725ff4422eb5b24d897cbbc59acb695b",
+  "report": {
+    "schema": 1,
+    "manifest": {
+      "schema": 1,
+      "purpose": "Exact Spira47 continuation and migration review repair with all required gates",
+      "source": {
+        "repository": "gosuda/Spira",
+        "head": "e422d148ee77e78abad83b993cd4b255c34504bf",
+        "tree": "9ca31a701e9d51fb857c969328c0c7f43f656cb1",
+        "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+        "blobs": 609
+      },
+      "candidate": {
+        "tree": "eb9547a9b5a884bfaf5b29cc968859906399ec8d",
+        "blobs": 611,
+        "changed_paths": [
+          "cmd/sqlc-gen-spira/model.lgo",
+          "db/db.lgo",
+          "migrate/serial_test.lgo",
+          "docs/specs/migrate.md",
+          "docs/specs/sqlc-gen-spira.md",
+          "cmd/sqlc-gen-spira/continued_escape_test.lgo",
+          "cmd/sqlc-gen-spira/testdata/continued-strings.json"
+        ],
+        "authored_sha256": "d9f7440fbbc042ab860f350c6d40e4e9ac62fd6148ca02994e226d0417e99ca2",
+        "index_sha256": "988145852070d88c2ad01ee37c64c1674d675e985352c76541709763845b5c49",
+        "production_commit_created": false
+      },
+      "proof_sha256": {
+        "baseline_support.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
+        "artifact_support.py": "8e9b1dc135988293262eb373358637b47c0a390672bd5628753a9caf8a68ee29",
+        "verify_candidate.py": "ce246daad380488a6a64babf0ac5f4b9f50eb023c2ad7ae7a880356b30af177b",
+        "source-index.json": "6543e3d7b335754d5c99a31666fc35f1d872949d15beebfd10d6b0ef8717a717",
+        "candidate-index.json": "988145852070d88c2ad01ee37c64c1674d675e985352c76541709763845b5c49",
+        "authored-candidate.json": "d9f7440fbbc042ab860f350c6d40e4e9ac62fd6148ca02994e226d0417e99ca2",
+        "baseline-manifest.json": "591e6bfae160fe70b8735cd56a459274994afb9573ceab958ef9458ec5d3f435",
+        "baseline-report.json": "8b9f91bd02dafda3a736ddaa85ebe7d9bb07cd4588eef2d04ce9ab421167106d",
+        "continued-strings.json": "5bdccdcb30ee68ac6d9ffd3f32a31324cb44ac51ccc12a356894f8e3218a028e",
+        "continued_escape_test.lgo": "6c4b73100f578fcb4bc8a5b0d22b2a1e1ca710893a617df60bfeab57d53dadf8"
+      },
+      "workflow_sha256": "f61e7c5d8d34df228ebaf43f3f6d3dff9c511e5fac84325beb44ea7db371d907",
+      "toolchain": {
+        "repository": "gosuda/LoGOs",
+        "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+        "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+        "bootstrap_go": "1.27.4",
+        "fresh_build": true
+      },
+      "baseline_artifact": {
+        "producer": "f6c6b396f0ca8143a6dead92fc41470fce4d2c57",
+        "run": 45980151731,
+        "job": 140441701012,
+        "artifact": 15189556101,
+        "name": "spira47-review-r36",
+        "zip_bytes": 11775,
+        "zip_sha256": "502862af3201a32661e16b71ef56d0643100b01ff461c9ce88ba3e24018a9204"
+      },
+      "linter_artifact": {
+        "producer": "bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+        "run": 45765398446,
+        "job": 139724970737,
+        "artifact": 15091303567,
+        "name": "lean-rust-and-cli-bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+        "zip_bytes": 17472007,
+        "zip_sha256": "e362f672d39498374a637a68ded7f57205b415e68006a4dc4a4a882405f5af33",
+        "binary_sha256": "a04c9c3e53c8aae18e2d5f89faaf3ad68b89980218ca9d1fc4af5ce487401024"
+      },
+      "tools": {
+        "bootstrap_go": "1.27.4",
+        "node": "26.13.1",
+        "pnpm": "12.21.0",
+        "just": "1.59.0",
+        "uv": "0.13.9",
+        "python": "3.15"
+      },
+      "required_source_gates": [
+        "just gate",
+        "just slop",
+        "just eject"
+      ],
+      "frozen_generator_case_count": 14,
+      "reused_native_evidence": "Only the identical fourteen-query PostgreSQL180007 observations and the authentic unchanged-source RED/control receipt are reused after ZIP, source and command-log verification.",
+      "mutation": "Compile the temporary Apply acquisition-context mutation, require the watchdog-specific failure, restore exact bytes before the full source gates.",
+      "publication_eligible": false
+    },
+    "source_restored": true,
+    "source_gates_passed": false,
+    "publication_eligible": false,
+    "original_index_sha256": "de0d1874c4feff1f38a9ee6d7ef6155480bfd49a7cbf44cd4b9fb155547f34e5",
+    "baseline_evidence": {
+      "producer": "f6c6b396f0ca8143a6dead92fc41470fce4d2c57",
+      "run": 45980151731,
+      "job": 140441701012,
+      "artifact": 15189556101,
+      "name": "spira47-review-r36",
+      "zip_bytes": 11775,
+      "zip_sha256": "502862af3201a32661e16b71ef56d0643100b01ff461c9ce88ba3e24018a9204",
+      "producer_conclusion": "success",
+      "download_digest_verified": true,
+      "source": {
+        "repository": "gosuda/Spira",
+        "head": "e422d148ee77e78abad83b993cd4b255c34504bf",
+        "tree": "9ca31a701e9d51fb857c969328c0c7f43f656cb1",
+        "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+        "blobs": 609
+      },
+      "native_cases": 14,
+      "generator_raw_exit": 1,
+      "command_logs_verified": 29,
+      "source_restored": true,
+      "native_reexecuted_in_this_job": false
+    },
+    "linter": {
+      "producer": "bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+      "run": 45765398446,
+      "job": 139724970737,
+      "artifact": 15091303567,
+      "name": "lean-rust-and-cli-bc2067d1ec888789e6584dc6a24e8c67d1b0b506",
+      "zip_bytes": 17472007,
+      "zip_sha256": "e362f672d39498374a637a68ded7f57205b415e68006a4dc4a4a882405f5af33",
+      "producer_conclusion": "success",
+      "download_digest_verified": true,
+      "binary_sha256": "a04c9c3e53c8aae18e2d5f89faaf3ad68b89980218ca9d1fc4af5ce487401024",
+      "binary_bytes": 191012744,
+      "version": "sloplint 0.1.0",
+      "source": "bc2067d1ec888789e6584dc6a24e8c67d1b0b506"
+    },
+    "candidate_before": {
+      "label": "before",
+      "tree": "eb9547a9b5a884bfaf5b29cc968859906399ec8d",
+      "blobs": 611,
+      "index_sha256": "6e89e97c327edcd50cd381e2cfa5b18bf4194e0126b825012e9159f2d060f7ab"
+    },
+    "restored_index_sha256": "de0d1874c4feff1f38a9ee6d7ef6155480bfd49a7cbf44cd4b9fb155547f34e5",
+    "commands": [
+      {
+        "name": "source-head",
+        "command": [
+          "git",
+          "rev-parse",
+          "HEAD"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "47550141840589a5cc08916acba07e11f8156d57f5cca2af4fb7b77f2b799f98"
+      },
+      {
+        "name": "source-tree",
+        "command": [
+          "git",
+          "rev-parse",
+          "HEAD^{tree}"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "3330c3b3ece97093635b6d0fa242a2d04e87d6ad59f2fbca042f0d8c8fc449a2"
+      },
+      {
+        "name": "logos-version",
+        "command": [
+          "logos",
+          "version"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "3a7b14cf792a79c78a9e42aab8906e0774b54ecddbbbc520ce94651a34aec2f9"
+      },
+      {
+        "name": "node-version",
+        "command": [
+          "node",
+          "--version"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "417336d0f30f0481a3e337b10abf4da8263d1a181c639c757a2a68401935bdb6"
+      },
+      {
+        "name": "pnpm-version",
+        "command": [
+          "pnpm",
+          "--version"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "6ee1d7e9e7a434fa5d1f756e268596cff8e9d03d453fd81462507b1d7ba22e6f"
+      },
+      {
+        "name": "just-version",
+        "command": [
+          "just",
+          "--version"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "9b7567d90fbce31fba37284f79c4d38cbbe20b42fa01cfa5504d27838a5e11ce"
+      },
+      {
+        "name": "go-cache-disabled",
+        "command": [
+          "go",
+          "env",
+          "GOCACHEPROG"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+      },
+      {
+        "name": "sloplint-version",
+        "command": [
+          "sloplint",
+          "--version"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "234fbe737d28020f20bf97b03b9a7414b7029b6949961325f555d79562413a1f"
+      },
+      {
+        "name": "stage-exact-candidate",
+        "command": [
+          "git",
+          "add",
+          "--",
+          "cmd/sqlc-gen-spira/model.lgo",
+          "db/db.lgo",
+          "migrate/serial_test.lgo",
+          "docs/specs/migrate.md",
+          "docs/specs/sqlc-gen-spira.md",
+          "cmd/sqlc-gen-spira/continued_escape_test.lgo",
+          "cmd/sqlc-gen-spira/testdata/continued-strings.json"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "candidate-compile",
+        "command": [
+          "logos",
+          "test",
+          "-run",
+          "^$",
+          "-count=1",
+          "./cmd/sqlc-gen-spira",
+          "./migrate"
+        ],
+        "raw_exit": 1,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "ca8e177ca29e6af7e95e786ade63d7a0e3f3214c4c1553daff10802f81ab9e13"
+      },
+      {
+        "name": "restore-original-source",
+        "command": [
+          "git",
+          "restore",
+          "--source",
+          "e422d148ee77e78abad83b993cd4b255c34504bf",
+          "--staged",
+          "--worktree",
+          "--",
+          "."
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "source-restoration",
+        "command": [
+          "git",
+          "diff",
+          "--exit-code",
+          "HEAD"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  },
+  "diagnostic": "migrate/serial_test.lgo:67:6: [complexity::cognitive_overflow] function TestQueuedApplyHonorsContext is too complex: line count 64 exceeds 60",
+  "gates_not_reached": [
+    "continued generator race tests",
+    "migration race controls",
+    "watchdog mutation",
+    "just gate",
+    "just slop",
+    "just eject"
+  ],
+  "next_delta": "Test-only extraction of the existing timer/select block into releaseStalledApply, called by the same structured group child; assertions, limits, channels and production source remain unchanged."
+}
