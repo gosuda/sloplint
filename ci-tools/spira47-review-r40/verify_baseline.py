@@ -14,6 +14,7 @@ from pathlib import Path
 import baseline_support as base
 import native_support as native
 import proof_support as proof
+import recover_failure
 
 
 def rows_from(name: str, count: int) -> list[dict[str, object]]:
@@ -95,7 +96,7 @@ def observe_pipeline(container: str, case: dict[str, object], plugin: Path) -> d
     return row
 
 
-def install_argv_observer() -> tuple[Path, str]:
+def install_argv_observer() -> tuple[Path, Path, str]:
     found = shutil.which("logos")
     if found is None:
         raise RuntimeError("real logos compiler is missing")
@@ -107,28 +108,46 @@ def install_argv_observer() -> tuple[Path, str]:
                        + (base.PROOF / "capture_logos.py").read_text(encoding="utf-8"),
                        encoding="utf-8")
     wrapper.chmod(0o755)
+    launcher = observer_dir / "launch-test"
+    launcher.write_text("#!" + sys.executable + "\n"
+                        + (base.PROOF / "launch_test.py").read_text(encoding="utf-8"),
+                        encoding="utf-8")
+    launcher.chmod(0o755)
     old_path = os.environ["PATH"]
+    os.environ["SPIRA_ARGV_OBSERVER_DIR"] = str(observer_dir)
+    os.environ["SPIRA_TEST_PROCESS_ARGV"] = str(base.OUTPUT / "test-process-argv.jsonl")
     os.environ["SPIRA_REAL_LOGOS"] = str(real)
     os.environ["SPIRA_LOGOS_ARGV"] = str(base.OUTPUT / "logos-argv.jsonl")
     os.environ["PATH"] = str(observer_dir) + os.pathsep + old_path
-    return real, old_path
+    return real, launcher, old_path
 
 
 def nested_race_records() -> list[dict[str, object]]:
     rows = [base.object_value(json.loads(line))
             for line in (base.OUTPUT / "logos-argv.jsonl").read_bytes().splitlines()]
+    for row in rows:
+        print("CURRENT_OBSERVER_RAW_ARGV " + json.dumps(row), flush=True)
     selected = [row for row in rows if row["module"] == "module example.com/spira-sqlc-runtime"
                 and isinstance(row["argv"], list) and row["argv"][:1] == ["test"]]
     if len(selected) != 2 or len({base.text(row["cwd"]) for row in selected}) != 2:
         raise RuntimeError("did not observe the two distinct nested generated-package test processes")
     if any(row["argv"] != ["test", "-count=1", "-v", "."] for row in selected):
         raise RuntimeError("unchanged nested test arguments differ")
+    launchers = [base.object_value(json.loads(line))
+                 for line in (base.OUTPUT / "test-process-argv.jsonl").read_bytes().splitlines()]
+    if len(launchers) != 2:
+        raise RuntimeError("did not observe both actual outer test binaries")
+    for row in launchers:
+        print("OUTER_TEST_PROCESS_ARGV " + json.dumps(row), flush=True)
+        if row["incoming_first_path"] != str(Path(os.environ["GOROOT"]) / "bin"):
+            raise RuntimeError("native test PATH did not match the pinned runner prepend")
     for row in selected:
         print("NESTED_QUERY_TEST_ARGV " + json.dumps(row), flush=True)
     return selected
 
 
 def main() -> None:
+    artifact_token = os.environ.pop("GH_TOKEN")
     manifest = base.object_value(json.loads((base.PROOF / "manifest.json").read_bytes()))
     for name, wanted in base.object_value(manifest["proof_sha256"]).items():
         if Path(name).name != name or base.digest((base.PROOF / name).read_bytes()) != wanted:
@@ -151,6 +170,7 @@ def main() -> None:
     original_path = os.environ["PATH"]
     try:
         report["before"] = proof.source_snapshot(manifest, "source")
+        report["prior_failed_observer"] = recover_failure.authenticate(base.object_value(manifest["prior_failure"]), artifact_token)
         base.run("logos-version", ["logos", "version"])
         if base.run("go-cache-disabled", ["go", "env", "GOCACHEPROG"]).strip():
             raise RuntimeError("external compiler cache active")
@@ -203,11 +223,11 @@ def main() -> None:
                 (base.OUTPUT / "pipeline-observations.json").write_text(json.dumps(pipeline, indent=2) + "\n",
                                                                        encoding="utf-8")
             report["pipeline"] = pipeline
-        real, original_path = install_argv_observer()
+        real, launcher, original_path = install_argv_observer()
         report["real_logos"] = {"path": str(real), "sha256": base.digest(real.read_bytes())}
         for name, test in (("retained-direct-runtime", "TestGeneratedQueryConstants"),
                            ("retained-pipeline-runtime", "TestSQLcPostgresLiteralPipeline")):
-            output = base.run(name, ["logos", "test", "-race", "-count=1", "-v", "-run", "^" + test + "$",
+            output = base.run(name, ["logos", "test", "-race", "-exec", str(launcher), "-count=1", "-v", "-run", "^" + test + "$",
                                      "./cmd/sqlc-gen-spira"], timeout=1200)
             if re.search(r"^\s*--- PASS: " + re.escape(test) + r" ", output, re.MULTILINE) is None:
                 raise RuntimeError("retained runtime suite did not pass: " + test)

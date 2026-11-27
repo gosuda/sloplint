@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "reviewed_draft": "806d9a489d01176f655e83b7264ac242c31cd327",
+  "manifest_sha256": "2706d5bc5b9c35442ed8ae3b0950e5868d80305cf07f1e8ef554b1b29f986a67",
+  "review": "Parent and independent hook reviewer found no remaining bounded static blocker. Native execution pending.",
+  "source_unchanged": true,
+  "prior_failure": {
+    "run": 46027118627,
+    "job": 140601265244,
+    "receipt": "1426d46684ccea9bf5b50db6dc0db0f1a6f6dcb6"
+  },
+  "scope": "Rerun the exact unchanged-production baseline with the reviewed test-launcher observer correction and authenticated prior archive; no product edit."
+}

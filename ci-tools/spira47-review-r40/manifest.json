@@ -35,14 +35,18 @@
     "proof_support.py": "6cc72c815508ccb1c501420c049d7c188ca4577d2ae6b8853eb5228d0c655569",
     "native_support.py": "eb17dd6d33bcb3256a037de831ce95825c149c7287cad234e6dd438fe7af2953",
     "capture_logos.py": "e00e719e8eb63b0c3c21889398799c0c0751a54a679a247c8b74d26e1bd77f32",
-    "verify_baseline.py": "49e248ad129bc59e907f2416ebd5b939c5bc719a2652594fa8c23ddec183a1e6",
+    "verify_baseline.py": "5183f60e7e06b197118f7233ba9fb6df4f648255220254b5d2b1cb5bea429f38",
     "version-references.json": "dd4ce8e234ddd6f4fd668608944dc5bd3b15ce23f3ff9de463d48b9706d8332a",
     "authored-tests.json": "2910ca457f0cf0e50e7c30530f6944a015390f309b80ef20c8ab4da23e6f495e",
     "source-index.json": "628d91c699ed64ab99c4dd00f936fc2187aa5d7daa53377e306daae80177b9fc",
     "test-index.json": "985d70dae339c92251a5a1b4f76f5fc93416b180dff9be9c63f580a4ff92ab75",
-    "schema.sql": "8d16f5318bc6ce7490f44cbb53a02fb65fe335c2747e237cba3fa60ba27b862b"
+    "schema.sql": "8d16f5318bc6ce7490f44cbb53a02fb65fe335c2747e237cba3fa60ba27b862b",
+    "artifact_support.py": "b3f27ccd5d75efea94530f1294d7e0d23d89b46d7d9e5771cc0b3d32a56d1b28",
+    "prior-report.json": "0581c8331a8463cc5ac6a63e1c752926c7d3b2c12ca7b2b9af73377ee32919e7",
+    "recover_failure.py": "41a8bc4bb407b8d72f47e9d502ef43ad0278fcc42c3bfaf5f2b32098e19fb259",
+    "launch_test.py": "31d90542191330a6be39b61ce5d5dc447dedbbb0b557706ef0a00c9d93a7c733"
   },
-  "workflow_sha256": "94d5ddf1377a5569d0af487436fee0e1f2f02995f51e2bd4ff104143131d7eda",
+  "workflow_sha256": "391ea1a534ebcf27ccd10e3063297b27766efcc41ad1b13a17cbb9bc0c24ddcf",
   "contracts": {
     "cases": 20,
     "expected_red": [
@@ -76,8 +80,18 @@
     "preserved": "Published14 dollar,12 typed,14 continued,8 direct runtime and40 pipeline cases remain unchanged. Existing version controls run too."
   },
   "review": {
-    "parent": "Pending bounded review of this frozen draft",
-    "prior_read_only": "Complete identifier tokens plus role exclusions; metadata alone is incomplete. No production algorithm has been selected."
+    "parent": "Original baseline reviewed at4884; bounded observer correction pending independent review."
   },
-  "publication_eligible": false
+  "publication_eligible": false,
+  "prior_failure": {
+    "producer": "5889c641b120ea325e1ff9a04769739db461f039",
+    "run": 46027118627,
+    "job": 140601265244,
+    "artifact": 15213535172,
+    "name": "spira47-version-reference-baseline-r40",
+    "zip_bytes": 503117,
+    "zip_sha256": "586b6123b6a0a7a829aa89ce9bfd2c9ed5de86c4f30a61b8d6366b2ef63a3c0f",
+    "conclusion": "failure"
+  },
+  "observer_correction": "The pinned test runner prepends GOROOT/bin to PATH. Its documented -exec hook now invokes the real test binary through a launcher that restores only the observer's PATH priority. Actual test/production bytes, compiler, nested argv expectation and all SQL oracles stay unchanged. The failed archive's complete argv records are authenticated and emitted first. The artifact token is removed from os.environ before the first child command and passed explicitly only to the artifact downloader; it is never restored into the process environment."
 }
