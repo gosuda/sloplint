@@ -1,37 +1,15 @@
 {
-  "maintained_head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
-  "actual_main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
+  "scope": "Charamel32 parser repairs",
+  "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
   "draft_tree": "b452f15ea02f5ea086b04bc63d58aac369ddac74",
-  "status": "unpublished parser draft; preparing formatter/compile and old-source causal controls; all full required gates remain pending",
-  "native_windows": {
-    "run": 45947106831,
+  "prior_prepare": {
+    "run": 45949463414,
+    "job": 140341687023,
+    "producer": "4a567f62c4e15f23eb8b284cac09bfb94e9c9ad0",
     "conclusion": "failure",
-    "observations": 37,
-    "artifact": 15175765148,
-    "sha256": "ddb69269eed07dcd79c1abd7a83888f17fca287c42f567576e2c685fcfca3d96",
-    "failure": "three native command-echo stdout hypotheses were incomplete; complete outputs retained"
+    "cause": "Artifact download followed GitHub's302 while forwarding its Authorization header; signed artifact host returned401 before source compilation/application"
   },
-  "native_posix": {
-    "run": 45948949283,
-    "job": 140340063474,
-    "conclusion": "success",
-    "observations": 50,
-    "artifact": 15175727233,
-    "sha256": "e64712b6a5df8b75d12d983d202d72abe8b3e9395a1c089d78e2f843fcf13487"
-  },
-  "native_review_scope": "Cmd loops plus externally merged POSIX braced arity, command lookup grouping, env lone-dash and attached fd filters; only shell_screen.ml/test_tools_shell.ml drafted",
-  "elements": [
-    {
-      "path": "bin/crush/lib/shell_screen.ml",
-      "mode": "100644",
-      "type": "blob",
-      "sha256": "df9346e3c4ffdb19a82cfa52496deed50bfd75c90e9d6be56dbff9c11b9b849a"
-    },
-    {
-      "path": "test/crush/test_tools_shell.ml",
-      "mode": "100644",
-      "type": "blob",
-      "sha256": "db54f8e339389b912a9c26e0683dd8240bbde8488bb1ecf73207dfde4ab0d273"
-    }
-  ]
+  "revision": "Remove Authorization from the HTTPS download redirect; GitHub API request retains normal actions:read authentication and ZIP SHA-256 remains mandatory. All source/fixture/manifest bytes unchanged.",
+  "full_required_gates": "pending",
+  "maintained_source_updated": false
 }

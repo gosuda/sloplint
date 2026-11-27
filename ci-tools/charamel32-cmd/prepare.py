@@ -12,6 +12,8 @@ import sys
 import tempfile
 import time
 from typing import Any
+import urllib.error
+import urllib.parse
 import urllib.request
 import zipfile
 
@@ -46,13 +48,26 @@ def run(label: str, args: list[str], cwd: Path) -> subprocess.CompletedProcess[b
     return result
 
 
+class ArtifactRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(
+        self, request: urllib.request.Request, response: Any, code: int,
+        message: str, headers: Any, new_url: str,
+    ) -> urllib.request.Request | None:
+        redirected = super().redirect_request(request, response, code, message, headers, new_url)
+        if redirected is not None:
+            assert urllib.parse.urlparse(new_url).scheme == "https"
+            redirected.remove_header("Authorization")
+        return redirected
+
+
 def authenticate(archive: dict[str, Any]) -> dict[str, Any]:
     request = urllib.request.Request(
         f'https://api.github.com/repos/gosuda/sloplint/actions/artifacts/{archive["id"]}/zip',
         headers={"Authorization": "Bearer " + os.environ["GH_TOKEN"],
                  "Accept": "application/vnd.github+json"},
     )
-    with urllib.request.urlopen(request, timeout=90) as response:
+    opener = urllib.request.build_opener(ArtifactRedirect())
+    with opener.open(request, timeout=90) as response:
         data = response.read()
     assert digest(data) == archive["sha256"], archive["id"]
     with zipfile.ZipFile(io.BytesIO(data)) as contents:
@@ -126,6 +141,11 @@ def main() -> int:
     assert git("rev-parse", "HEAD") == manifest["head"]
     assert git("rev-parse", "HEAD^{tree}") == manifest["tree"]
     assert git("status", "--porcelain") == ""
+    (OUT / "preflight.json").write_text(
+        json.dumps({"source": manifest["head"], "tree": manifest["tree"],
+                    "producer": os.environ["GITHUB_SHA"], "source_clean": True}) + "\n",
+        encoding="utf-8",
+    )
     archives = [authenticate(item) for item in manifest["archives"]]
     switch = subprocess.check_output(
         ["opam", "switch", "show"], cwd=WORKSPACE, text=True
