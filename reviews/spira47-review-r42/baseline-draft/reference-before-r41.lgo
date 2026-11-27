@@ -1,0 +1,312 @@
+package main
+
+import "strings"
+
+type sqlReferenceKind uint8
+
+const (
+	referencePunctuation sqlReferenceKind = iota
+	referenceName
+	referenceQuotedName
+	referenceLiteral
+)
+
+type sqlReferenceToken struct {
+	text  string
+	kind  sqlReferenceKind
+	depth int
+}
+
+// postgresReferencesColumn checks name roles, not binding across query scopes.
+// Literals remain opaque tokens so a typed-literal head cannot become a column.
+func postgresReferencesColumn(text string, column string) bool {
+	tokens := postgresReferenceTokens(text)
+	excluded := make([]bool, len(tokens))
+	excludeReferenceDeclarations(tokens, excluded)
+	excludeWriteHeaders(tokens, excluded)
+	excludeReturningAliases(tokens, excluded)
+	for i := 0; i < len(tokens); {
+		if !tokens[i].isName() {
+			i++
+			continue
+		}
+		end := referenceNameEnd(tokens, i)
+		last := tokens[end-1]
+		if last.text == column && !excluded[i] && !excluded[end-1] && !referenceNameHead(tokens, end) {
+			return true
+		}
+		i = end
+	}
+	return false
+}
+
+func (token sqlReferenceToken) isName() bool {
+	return token.kind == referenceName || token.kind == referenceQuotedName
+}
+
+func (token sqlReferenceToken) keyword(word string) bool {
+	return token.kind == referenceName && token.text == word
+}
+
+func (token sqlReferenceToken) punctuation(value string) bool {
+	return token.kind == referencePunctuation && token.text == value
+}
+
+func postgresReferenceTokens(text string) []sqlReferenceToken {
+	out := []byte(text)
+	var tokens []sqlReferenceToken
+	depth := 0
+	for i := 0; i < len(out); {
+		token, end := postgresReferenceToken(out, i)
+		i = end
+		if token.text == "" && token.kind != referenceLiteral {
+			continue
+		}
+		if token.punctuation(")") && depth > 0 {
+			depth--
+		}
+		token.depth = depth
+		tokens = append(tokens, token)
+		if token.punctuation("(") {
+			depth++
+		}
+	}
+	return tokens
+}
+
+func postgresReferenceToken(out []byte, i int) (sqlReferenceToken, int) {
+	if strings.ContainsRune(" \t\r\n\f\v", rune(out[i])) {
+		return sqlReferenceToken{}, i + 1
+	}
+	if out[i] == '-' && i+1 < len(out) && out[i+1] == '-' {
+		return sqlReferenceToken{}, postgresLineEnd(out, i+2)
+	}
+	if out[i] == '/' && i+1 < len(out) && out[i+1] == '*' {
+		return sqlReferenceToken{}, maskBlock(out, i)
+	}
+	if quote := referenceLiteralQuote(out, i); quote != nil {
+		return sqlReferenceToken{kind: referenceLiteral}, maskStringFor(out, quote, "postgresql")
+	}
+	if out[i] == '$' && postgresDollarDelimiterEnd(out, i) != nil {
+		return sqlReferenceToken{kind: referenceLiteral}, maskPostgresDollar(out, i)
+	}
+	if out[i] == '"' {
+		end := postgresIdentifierEnd(out, i)
+		if end <= i+1 || out[end-1] != '"' {
+			return sqlReferenceToken{kind: referenceLiteral}, end
+		}
+		name := strings.ReplaceAll(string(out[i+1:end-1]), "\"\"", "\"")
+		return sqlReferenceToken{text: name, kind: referenceQuotedName}, end
+	}
+	if isPostgresTagStart(out[i]) {
+		end := referenceWordEnd(out, i)
+		return sqlReferenceToken{text: foldPostgresName(string(out[i:end])), kind: referenceName}, end
+	}
+	if isASCIIDigit(out[i]) {
+		end := i + 1
+		for end < len(out) && (isPostgresIdentPart(out[end]) || out[end] == '.') {
+			end++
+		}
+		return sqlReferenceToken{kind: referenceLiteral}, end
+	}
+	if out[i] == ':' && i+1 < len(out) && out[i+1] == ':' {
+		return sqlReferenceToken{text: "::"}, i + 2
+	}
+	return sqlReferenceToken{text: string(out[i : i+1])}, i + 1
+}
+
+func referenceLiteralQuote(out []byte, i int) int? {
+	if out[i] == '\'' {
+		return i
+	}
+	if i+1 < len(out) && out[i+1] == '\'' && strings.ContainsRune("eEbBxXnN", rune(out[i])) {
+		return i + 1
+	}
+	if i+2 < len(out) && (out[i] == 'u' || out[i] == 'U') && out[i+1] == '&' && out[i+2] == '\'' {
+		return i + 2
+	}
+	return nil
+}
+
+func referenceWordEnd(out []byte, i int) int {
+	for i < len(out) && isPostgresIdentPart(out[i]) {
+		i++
+	}
+	return i
+}
+
+func foldPostgresName(name string) string {
+	out := []byte(name)
+	for i, value := range out {
+		if value >= 'A' && value <= 'Z' {
+			out[i] = value + ('a' - 'A')
+		}
+	}
+	return string(out)
+}
+
+func referenceNameEnd(tokens []sqlReferenceToken, start int) int {
+	end := start + 1
+	for end+1 < len(tokens) && tokens[end].punctuation(".") && tokens[end+1].isName() {
+		end += 2
+	}
+	return end
+}
+
+func referenceNameHead(tokens []sqlReferenceToken, end int) bool {
+	return end < len(tokens) && (tokens[end].punctuation("(") || tokens[end].kind == referenceLiteral)
+}
+
+func excludeReferenceDeclarations(tokens []sqlReferenceToken, excluded []bool) {
+	for i, token := range tokens {
+		if !token.keyword("as") && !token.keyword("collate") && !token.punctuation("::") {
+			continue
+		}
+		if i+1 == len(tokens) || !tokens[i+1].isName() {
+			continue
+		}
+		end := referenceNameEnd(tokens, i+1)
+		excludeReferenceRange(excluded, i+1, end)
+		if end < len(tokens) && tokens[end].punctuation("(") {
+			close := referenceParenthesisEnd(tokens, end)
+			excludeReferenceRange(excluded, end, close)
+		}
+	}
+}
+
+func referenceParenthesisEnd(tokens []sqlReferenceToken, start int) int {
+	for i := start + 1; i < len(tokens); i++ {
+		if tokens[i].punctuation(")") && tokens[i].depth == tokens[start].depth {
+			return i + 1
+		}
+	}
+	return len(tokens)
+}
+
+func excludeReferenceRange(excluded []bool, from int, to int) {
+	for i := from; i < to; i++ {
+		excluded[i] = true
+	}
+}
+
+func excludeWriteHeaders(tokens []sqlReferenceToken, excluded []bool) {
+	for i, token := range tokens {
+		if token.keyword("update") {
+			if end := referenceUpdateSet(tokens, i); end >= 0 {
+				excludeReferenceRange(excluded, i+1, end)
+			}
+		}
+		if token.keyword("delete") && i+1 < len(tokens) && tokens[i+1].keyword("from") {
+			end := referenceDeleteHeaderEnd(tokens, i+2, token.depth)
+			excludeReferenceRange(excluded, i+2, end)
+		}
+	}
+}
+
+func referenceUpdateSet(tokens []sqlReferenceToken, start int) int {
+	depth := tokens[start].depth
+	for i := start + 1; i < len(tokens); i++ {
+		if tokens[i].depth < depth || tokens[i].punctuation(";") {
+			return -1
+		}
+		if tokens[i].depth == depth && tokens[i].keyword("set") {
+			return i
+		}
+	}
+	return -1
+}
+
+func referenceDeleteHeaderEnd(tokens []sqlReferenceToken, start int, depth int) int {
+	for i := start; i < len(tokens); i++ {
+		token := tokens[i]
+		if token.depth < depth || token.punctuation(";") {
+			return i
+		}
+		if token.depth == depth && (token.keyword("where") || token.keyword("using") || token.keyword("returning")) {
+			return i
+		}
+	}
+	return len(tokens)
+}
+
+func excludeReturningAliases(tokens []sqlReferenceToken, excluded []bool) {
+	for i, token := range tokens {
+		if !token.keyword("returning") {
+			continue
+		}
+		start := i + 1
+		for end := start; end <= len(tokens); end++ {
+			if end == len(tokens) || tokens[end].depth < token.depth || tokens[end].punctuation(";") {
+				excludeReturningAlias(tokens[start:end], excluded[start:end])
+				break
+			}
+			if tokens[end].depth == token.depth && tokens[end].punctuation(",") {
+				excludeReturningAlias(tokens[start:end], excluded[start:end])
+				start = end + 1
+			}
+		}
+	}
+}
+
+func excludeReturningAlias(tokens []sqlReferenceToken, excluded []bool) {
+	if len(tokens) < 2 {
+		return
+	}
+	last := len(tokens) - 1
+	if tokens[last].isName() && referenceEndsOperand(tokens, last-1) {
+		excluded[last] = true
+	}
+}
+
+func referenceEndsOperand(tokens []sqlReferenceToken, index int) bool {
+	token := tokens[index]
+	if token.kind == referenceLiteral || token.kind == referenceQuotedName {
+		return true
+	}
+	if token.kind == referencePunctuation {
+		if token.punctuation(")") {
+			return !referenceClosesOperator(tokens, index)
+		}
+		return token.punctuation("]")
+	}
+	switch token.text {
+	case "as", "collate", "and", "or", "not", "is", "distinct", "from", "like", "ilike", "similar",
+		"to", "between", "in", "escape", "at", "time", "zone", "when", "then", "else":
+		return false
+	}
+	return true
+}
+
+func referenceClosesOperator(tokens []sqlReferenceToken, close int) bool {
+	depth := tokens[close].depth
+	for i := close - 1; i >= 0; i-- {
+		if tokens[i].depth < depth {
+			return false
+		}
+		if tokens[i].depth == depth && tokens[i].punctuation("(") {
+			if i == 0 || !tokens[i-1].keyword("operator") || (i > 1 && tokens[i-2].punctuation(".")) {
+				return false
+			}
+			return referenceOperatorName(tokens[i+1 : close])
+		}
+	}
+	return false
+}
+
+func referenceOperatorName(tokens []sqlReferenceToken) bool {
+	i := 0
+	for i+1 < len(tokens) && tokens[i].isName() && tokens[i+1].punctuation(".") {
+		i += 2
+	}
+	if i == len(tokens) {
+		return false
+	}
+	for ; i < len(tokens); i++ {
+		token := tokens[i]
+		if token.kind != referencePunctuation || len(token.text) != 1 ||
+			!strings.ContainsRune("+-*/<>=~!@#%^&|`?", rune(token.text[0])) {
+			return false
+		}
+	}
+	return true
+}

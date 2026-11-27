@@ -1,0 +1,119 @@
+{
+  "schema": 1,
+  "purpose": "Freeze the two reported identifier-role defects and adjacent syntactic declaration boundaries before source correction; no production publication.",
+  "source": {
+    "repository": "gosuda/spira",
+    "head": "f3a47a04f1defe427494124507ec621118525265",
+    "tree": "cae17384cce41647b686a80932833cf5a7b09b19",
+    "blobs": 633,
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "index_file": "source-index.json"
+  },
+  "tests": {
+    "tree": "e7b75d79b64be3cfd9e87b027fbfaad39a025493",
+    "blobs": 635,
+    "index_file": "test-index.json",
+    "production_unchanged": true
+  },
+  "counterfactual": {
+    "tree": "becf954ec601cd52a72fed2da48276acefff326d",
+    "blobs": 635,
+    "index_file": "counterfactual-index.json",
+    "kind": "one-file prior reference classifier, not a complete old-source snapshot",
+    "path": "cmd/sqlc-gen-spira/version_reference.lgo",
+    "original_commit": "6031a63255bc7496e22b38921e10401a2d50c291",
+    "sha256": "f3c2fb8217abe06f16b9e0651e045d2da72af695b5cf288c8e9d17a042e3fefb",
+    "blob": "de5af94f52d91c2d91e93c0e1608386450d38807"
+  },
+  "toolchain": {
+    "repository": "gosuda/LoGOs",
+    "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+    "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+    "bootstrap_go": "1.27.4",
+    "fresh_build": true
+  },
+  "postgres_image": "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782",
+  "postgres_version_num": "180007",
+  "sqlc_version": "v1.31.2-0.20261023030206-3ad8b20fb02b",
+  "tools": {
+    "uv": "0.13.9",
+    "python": "3.15"
+  },
+  "contracts": {
+    "cases": 28,
+    "native_original": 28,
+    "native_processed": 28,
+    "current_failed": [
+      "qualified-time-select-alias",
+      "qualified-time-select-quoted-alias",
+      "qualified-time-returning-alias",
+      "relation-bare-alias",
+      "relation-quoted-alias",
+      "relation-qualified-alias",
+      "relation-only-alias",
+      "relation-join-alias",
+      "relation-comma-alias",
+      "relation-derived-alias",
+      "relation-lateral-alias",
+      "relation-function-alias",
+      "relation-ordinality-alias",
+      "relation-column-list",
+      "relation-parenthesized-join-alias"
+    ],
+    "current_pipeline_refusals": [
+      "qualified-time-select-explicit-alias",
+      "qualified-quoted-time-select-alias",
+      "relation-explicit-alias",
+      "relation-column-list-explicit"
+    ],
+    "current_pipeline_partition": {
+      "generated": 24,
+      "plugin-refusal": 4
+    },
+    "counterfactual_failed": [
+      "qualified-version-select-time",
+      "qualified-time-select-operand",
+      "qualified-time-returning-alias",
+      "relation-qualified-column",
+      "relation-join-on-column",
+      "relation-where-column",
+      "relation-function-argument",
+      "relation-distinct-from-column",
+      "relation-function-from-operand"
+    ],
+    "expected_semantics": {
+      "references": 9,
+      "aliases": 19
+    },
+    "native_schema": "Create each public items table inside its transaction and roll it back; this makes the qualified public.items control identical to the real SQLc schema.",
+    "all_original_633_source_paths_preserved": true,
+    "source_gates_reused": false
+  },
+  "source_findings": [
+    "PRRT_kwDOVpFduc687Ofj",
+    "PRRT_kwDOVpFduc687Ogz"
+  ],
+  "preserved_r41_terminal": {
+    "commit": "b6f69d1f9c8ead5d67b925db22dafdb9cfa755ce",
+    "run": 46061112680,
+    "published": "f3a47a04f1defe427494124507ec621118525265",
+    "work_complete_for_r41": true,
+    "overall_pr_work_complete": false
+  },
+  "proof_sha256": {
+    "baseline_support.py": "c1124b78e01e1cbb8b296c2199240a3f19b2673f2add1b327f2ba2d40b348e38",
+    "proof_support.py": "e59521ce25de634ceea28a6346991a80327fbfbeeeaf4ce520a8ddd0ff57d326",
+    "native_support.py": "c5f930b77c049a6ac3f4f5c2e1356e13e59cd5047e2d0ab632e1076efa35e1c5",
+    "observer.py": "288df11fda25bf164ed03820d178fe89f32cca11171830b72a98fcf84b5ca124",
+    "schema.sql": "250795d402dca7144e24f33dc51026083c7664385436545bca8762b7a66de6bc",
+    "source-index.json": "f82cc1851d56d7cc2e42d29f0e31630934bb204de21e2b252cafc02cbc08c55d",
+    "test-index.json": "7b1f646803cf25a2a627ba3fac0b55594e4fa894d65697850fb64e7bd4deca99",
+    "counterfactual-index.json": "0c4fe50f479d92de56b75a8c637820691f12c08e1f631ac4ee409e8591a83091",
+    "authored-tests.json": "f3602cbdec8519d669f4b3bb098e3695c56f7eba4a39464bcdf86a8f47f4898c",
+    "version-relation-roles.json": "40a3eab823529083252674b686a9c73bf19c196adce918a8658836910286f57f",
+    "reference-before-r41.lgo": "f3c2fb8217abe06f16b9e0651e045d2da72af695b5cf288c8e9d17a042e3fefb",
+    "verify_baseline.py": "058504818e91b83efcbd106807bdcfdc201f2a2d6d397fe2370cc527040ac07d"
+  },
+  "workflow_sha256": "43e436145e6c962384a40239720f4ec057a1e54b49192c02dbfb16603c24db0c",
+  "publication_eligible": false
+}
