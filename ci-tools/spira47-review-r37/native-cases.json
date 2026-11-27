@@ -1,0 +1,184 @@
+[
+  {
+    "name": "escape-lf",
+    "sql": "UPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1;",
+    "native_name": "first it's",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "escape-lower-crlf",
+    "sql": "UPDATE items SET name = e'first '\r\n\t'it\\'s', version = version + 1 WHERE id = 1;",
+    "native_name": "first it's",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "escape-cr",
+    "sql": "UPDATE items SET name = E'first '\r'it\\'s', version = version + 1 WHERE id = 1;",
+    "native_name": "first it's",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "escape-three",
+    "sql": "UPDATE items SET name = E'first '\n'it\\'s '\n'ready\\'s', version = version + 1 WHERE id = 1;",
+    "native_name": "first it's ready's",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "escape-comment-lf",
+    "sql": "UPDATE items SET name = E'first ' -- note with ' version\n'it\\'s', version = version + 1 WHERE id = 1;",
+    "native_name": "first it's",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "escape-comment-crlf",
+    "sql": "UPDATE items SET name = E'first ' -- note with ' version\r\n'it\\'s', version = version + 1 WHERE id = 1;",
+    "native_name": "first it's",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "escape-mixed-whitespace",
+    "sql": "UPDATE items SET name = E'first '\u000b\f \n\t'it\\'s', version = version + 1 WHERE id = 1;",
+    "native_name": "first it's",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "escape-single",
+    "sql": "UPDATE items SET name = E'first it\\'s', version = version + 1 WHERE id = 1;",
+    "native_name": "first it's",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "standard-continuation",
+    "sql": "UPDATE items SET name = 'first '\n'last\\', version = version + 1 WHERE id = 1;",
+    "native_name": "first last\\",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "independent-standard",
+    "sql": "UPDATE items SET name = E'first ' || '\\', version = version + 1 WHERE id = 1;",
+    "native_name": "first \\",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "independent-escape",
+    "sql": "UPDATE items SET name = 'first ' || E'it\\'s', version = version + 1 WHERE id = 1;",
+    "native_name": "first it's",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "string-only-version",
+    "sql": "UPDATE items SET name = E'first '\n'it\\'s version' WHERE id = 1;",
+    "native_name": "first it's version",
+    "native_version": 0,
+    "allow": false
+  },
+  {
+    "name": "comment-only-version",
+    "sql": "UPDATE items SET name = E'first ' -- version comment\n'it\\'s' WHERE id = 1;",
+    "native_name": "first it's",
+    "native_version": 0,
+    "allow": false
+  },
+  {
+    "name": "standard-final-backslash",
+    "sql": "UPDATE items SET name = 'first\\', version = version + 1 WHERE id = 1;",
+    "native_name": "first\\",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "typed-name-lf",
+    "sql": "UPDATE items SET name = name'first '\n'last\\', version = version + 1 WHERE id = 1;",
+    "native_name": "first last\\",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "typed-name-crlf",
+    "sql": "UPDATE items SET name = NAME'first '\r\n'last\\', version = version + 1 WHERE id = 1;",
+    "native_name": "first last\\",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "typed-qualified-comment",
+    "sql": "UPDATE items SET name = pg_catalog.name'first ' -- a type name ending in e\n'last\\', version = version + 1 WHERE id = 1;",
+    "native_name": "first last\\",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "typed-name-single",
+    "sql": "UPDATE items SET name = name'last\\', version = version + 1 WHERE id = 1;",
+    "native_name": "last\\",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "typed-digit-tail",
+    "sql": "UPDATE items SET name = name1e'first '\n'last\\', version = version + 1 WHERE id = 1;",
+    "native_name": "first last\\",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "typed-underscore-tail",
+    "sql": "UPDATE items SET name = name_e'first '\n'last\\', version = version + 1 WHERE id = 1;",
+    "native_name": "first last\\",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "typed-dollar-tail",
+    "sql": "UPDATE items SET name = name$e'first '\n'last\\', version = version + 1 WHERE id = 1;",
+    "native_name": "first last\\",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "typed-utf8-tail",
+    "sql": "UPDATE items SET name = namée'first '\n'last\\', version = version + 1 WHERE id = 1;",
+    "native_name": "first last\\",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "quoted-type-control",
+    "sql": "UPDATE items SET name = \"name\"'first '\n'last\\', version = version + 1 WHERE id = 1;",
+    "native_name": "first last\\",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "standard-text-control",
+    "sql": "UPDATE items SET name = text'first '\n'last\\', version = version + 1 WHERE id = 1;",
+    "native_name": "first last\\",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "escape-boundary-control",
+    "sql": "UPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1;",
+    "native_name": "first it's",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "typed-string-only-version",
+    "sql": "UPDATE items SET name = name'first '\n'last\\ version' WHERE id = 1;",
+    "native_name": "first last\\ version",
+    "native_version": 0,
+    "allow": false
+  }
+]

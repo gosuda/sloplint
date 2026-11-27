@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "purpose": "Freeze typed-literal escape-prefix failures and real source-pinned sqlc preprocessing on unchanged published Spira.",
+  "source": {
+    "repository": "gosuda/spira",
+    "head": "82ce092dd0799ee6f644262d3c724c587350633a",
+    "tree": "d34e094ffcd7ec2f63727bae30b8bf83582a6767",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "blobs": 611
+  },
+  "toolchain": {
+    "repository": "gosuda/LoGOs",
+    "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+    "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+    "bootstrap_go": "1.27.4",
+    "fresh_build": true
+  },
+  "postgres_image": "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782",
+  "postgres_version_num": "180007",
+  "sqlc_version": "v1.31.2-0.20261023030206-3ad8b20fb02b",
+  "proof_sha256": {
+    "verify.py": "e3b226d297cc4e011251d8d44f8571c6a9760dc3061af833c3a3b6e1058c457f",
+    "baseline_support.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
+    "typed_literal_test.lgo": "c5435f53affa2c19a5864e0bbcc7bfc731ee9cd0d66f92d70fe1fd8ea88e34a3",
+    "typed-literals.json": "af4a4119677d429c96be284283fc9caf6db658b13644633cad7e23915cd33b1a",
+    "native-cases.json": "50ddfc2bfad5d2454d4557d54c8f2d08ad2f3281596dce28fd4f624ac0423b78",
+    "schema.sql": "bfa56ef159e985b85976918f7fdc7bb79c82095913a8470ce42fd6494b2e99cc",
+    "source-index.json": "03b61679c1b341b74acce34d37348444e80caa8b3f8ea3238a4ca63cf9b28777"
+  },
+  "workflow_sha256": "87b2e3b6caba94f3afc1a09f12c5d6cd948a42b83ea33d8678cac75ff3318861",
+  "native_cases": 26,
+  "new_typed_cases": 12,
+  "retained_native_cases": 14,
+  "expected_generator_failures": [
+    "typed-name-lf",
+    "typed-name-crlf",
+    "typed-qualified-comment",
+    "typed-name-single",
+    "typed-digit-tail",
+    "typed-underscore-tail",
+    "typed-dollar-tail",
+    "typed-utf8-tail"
+  ],
+  "controls": [
+    "quoted-type-control",
+    "standard-text-control",
+    "escape-boundary-control",
+    "typed-string-only-version"
+  ],
+  "pipeline_observation": "Each exact SQL goes through real go tool sqlc generate and the actual built plugin. A pipefail wrapper records the unmodified request bytes. The captured query text is executed on native PostgreSQL against the same frozen result. Actual sqlc exits and every captured/generated payload are preserved; no parser-success claim substitutes for native values.",
+  "source_changes": "Inject only frozen external test and fixture; no production edits. Restore all611 tracked blobs and remove only the two created paths.",
+  "review_threads": [
+    "PRRT_kwDOVpFduc68wxcA",
+    "PRRT_kwDOVpFduc68wxdV"
+  ],
+  "previous_completed_scope": {
+    "published": "82ce092dd0799ee6f644262d3c724c587350633a",
+    "terminal": "e2151ac6afdaac3fd4f0b221f37d61f72daf0283",
+    "native_run": 45988490445
+  },
+  "host": {
+    "repository": "gosuda/sloplint",
+    "isolated_base": "57248742cfc7f29d72fede5c20b0ce8e73a62420",
+    "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa"
+  },
+  "publication_eligible": false
+}
