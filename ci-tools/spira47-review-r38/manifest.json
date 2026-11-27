@@ -1,0 +1,89 @@
+{
+  "schema": 1,
+  "purpose": "Freeze native dollar-quoted SQL and actual compiled query constants on unchanged production before either repair.",
+  "source": {
+    "repository": "gosuda/spira",
+    "head": "593d792bf282f7b7119dafb057a389b04c91fd6d",
+    "tree": "1ec9a3d1e6a53ad1a50723869c6d381cf64d7877",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "blobs": 616,
+    "index_file": "source-index.json"
+  },
+  "current_tests": {
+    "tree": "82b21663fef4347fbe8b9554f1028b7554ea217c",
+    "blobs": 621,
+    "index_file": "current-tests-index.json"
+  },
+  "previous_prefix_tests": {
+    "tree": "729764eb25fe3787ee1cfc6bb1cb16118aa79589",
+    "blobs": 621,
+    "index_file": "previous-prefix-index.json",
+    "selection": "Same unchanged maintained tree plus frozen tests, with only model.lgo restored to pre-r37 content from82ce. This is a counterfactual selected-file comparison, not a claim that the entire old source head ran."
+  },
+  "previous_model_sha256": "8d7994845af36bb1fe5d1377e1715c383e5c480f6e031a80bccba2414c4c615d",
+  "proof_sha256": {
+    "baseline_support.py": "e36ac612a3742e4aa6fb698104db36425f18fbf94f20905763eeea709f0b3251",
+    "native_support.py": "d288f94d76a058d418a289b8c6dc4a77e0a1fbbf00ef52f3b5dbdc53da8d531e",
+    "pipeline_observer.py": "c3a797b3fd4a9312c2d009bcc462426bfde91bd724398b306d1292eccbcad039",
+    "verify_baseline.py": "c495f45fb6ffff5573b39ad10d8c7adf5a457e4529eb91369a5bb6043a008bcb",
+    "authored-tests.json": "aad8125fbef00c029e4db9899f27a2e1e549566510d13ace2f11f50fd9470fa9",
+    "source-index.json": "8db1a56dbe2e97087478a3e25b5a7298cb2c75f42607d2ffb51def942834b2b6",
+    "current-tests-index.json": "33cd6a972c9fe311ff78e0ce7364c06e147fe546d10408b18fd34a92ca842879",
+    "previous-prefix-index.json": "d4da82281fa1d1ec2590668ac6afa9fd535ef0f611833f66a77b7063e00e67f0",
+    "dollar-strings.json": "e61f5b4f84db17b22d381b4915a3d6403bf92256c868d0726d6156ee5cea8455",
+    "query-constant-values.json": "a15051e112569f683775ec9242b5077d7c9fe167b8d852062b838d8ab68cfbd7",
+    "previous-model.lgo": "8d7994845af36bb1fe5d1377e1715c383e5c480f6e031a80bccba2414c4c615d",
+    "schema.sql": "bfa56ef159e985b85976918f7fdc7bb79c82095913a8470ce42fd6494b2e99cc",
+    "retained-native-cases.json": "50ddfc2bfad5d2454d4557d54c8f2d08ad2f3281596dce28fd4f624ac0423b78",
+    "retained-pipeline.json": "1b08df2d6d3c4a4d141b72244819d4290a39cf9b357bfe5212d82da97a31c48f"
+  },
+  "workflow_sha256": "0f1171e4080f2e2ff056bf116d793ed6ef882f78b16fbf998b8d811741a1738f",
+  "toolchain": {
+    "repository": "gosuda/LoGOs",
+    "head": "2cfe17218b4d3311c5746b94a1858bf3fe9a3e45",
+    "tree": "27b36e93b40d0e90ef983f4326c01a049b2196c5",
+    "bootstrap_go": "1.27.4",
+    "fresh_build": true
+  },
+  "postgres_image": "pgvector/pgvector@sha256:38681dc6eaf55308e2a4c6de392d131652dcfac70e1263e35cd9b5ea3fe39782",
+  "postgres_version_num": "180007",
+  "sqlc_version": "v1.31.2-0.20261023030206-3ad8b20fb02b",
+  "contracts": {
+    "dollar_cases": 12,
+    "direct_compiled_cases": 8,
+    "retained_pipeline": 26,
+    "retained_generated": 20,
+    "primary_dollar_current_fail": "dollar-untagged",
+    "primary_dollar_previous_prefix_pass": "dollar-untagged",
+    "direct_byte_mismatches": [
+      "runtime-cr",
+      "runtime-crlf",
+      "runtime-cr-value",
+      "runtime-crlf-value"
+    ],
+    "direct_native_mismatches": [
+      "runtime-cr",
+      "runtime-cr-value",
+      "runtime-crlf-value"
+    ],
+    "pipeline_byte_and_native_mismatch": "escape-cr",
+    "strictly_read_expected_json_at_runtime": true,
+    "all_generated_files_preserved": true
+  },
+  "prior_success": {
+    "run": 46003935409,
+    "source_head": "593d792bf282f7b7119dafb057a389b04c91fd6d",
+    "scope": "Source-byte and captured SQL verification passed. That proof did not compile the emitted temporary package constants.",
+    "retired_at": "870adb73916931b75bdb48076d34a7870fcc9323"
+  },
+  "new_threads": [
+    "PRRT_kwDOVpFduc68zFK3",
+    "PRRT_kwDOVpFduc68zFMT"
+  ],
+  "production_mutation": false,
+  "publication_eligible": false,
+  "proposed_future_repairs": [
+    "Recognize PostgreSQL dollar-quote delimiters and identifier boundaries before scanning inner apostrophes, subject to native baseline.",
+    "Use the existing interpreted literal branch when the query contains CR, preserving CR-free output, subject to actual compiled-query baseline."
+  ]
+}

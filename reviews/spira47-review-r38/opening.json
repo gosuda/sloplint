@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "status": "new_findings_baseline_prepared",
+  "observed_at": "2026-11-27 13:35:06 UTC",
+  "source": {
+    "repository": "gosuda/spira",
+    "head": "593d792bf282f7b7119dafb057a389b04c91fd6d",
+    "tree": "1ec9a3d1e6a53ad1a50723869c6d381cf64d7877",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "blobs": 616,
+    "index_file": "source-index.json"
+  },
+  "threads": [
+    "PRRT_kwDOVpFduc68zFK3",
+    "PRRT_kwDOVpFduc68zFMT"
+  ],
+  "prior_r37": {
+    "published": "593d792bf282f7b7119dafb057a389b04c91fd6d",
+    "run": 46003935409,
+    "conclusion": "success",
+    "retired": "870adb73916931b75bdb48076d34a7870fcc9323",
+    "scope": "Source-byte and captured SQL verification passed. That proof did not compile the emitted temporary package constants."
+  },
+  "hypotheses": [
+    {
+      "cause": "Dollar-quote contents are scanned as ordinary quote syntax",
+      "weight": 0.95,
+      "falsifier": "The exact SQL is rejected by native PostgreSQL, or actual current generation preserves the real version assignment."
+    },
+    {
+      "cause": "Raw query constants drop literal CR during compilation",
+      "weight": 0.99,
+      "falsifier": "The actual generated package returns the exact CR-containing expected query bytes at runtime."
+    }
+  ],
+  "compiled_witness": "One real temporary module imports complete generated packages, reads independent expected JSON at runtime, records actual constants, and tests every name and byte. No source-literal extraction or expectation normalization.",
+  "baseline_manifest_sha256": "e73e9c01bbe48a904d75a9ee4f01d255ecbc271bbb448fad4d63602a9f635f33",
+  "workflow_draft_sha256": "0f1171e4080f2e2ff056bf116d793ed6ef882f78b16fbf998b8d811741a1738f",
+  "workflow_active": false,
+  "source_changes_published": false
+}

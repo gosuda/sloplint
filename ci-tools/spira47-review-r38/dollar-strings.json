@@ -1,0 +1,86 @@
+[
+  {
+    "name": "dollar-untagged",
+    "sql": "UPDATE items SET name = $$name'.*\\\\\\'.*'$$, version = version + 1 WHERE id = 1;",
+    "native_name": "name'.*\\\\\\'.*'",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "dollar-tagged",
+    "sql": "UPDATE items SET name = $re$name'.*\\\\\\'.*'$re$, version = version + 1 WHERE id = 1;",
+    "native_name": "name'.*\\\\\\'.*'",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "dollar-case-sensitive",
+    "sql": "UPDATE items SET name = $Tag$name'.*\\\\\\'.*' $tag$ version$Tag$, version = version + 1 WHERE id = 1;",
+    "native_name": "name'.*\\\\\\'.*' $tag$ version",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "dollar-nested-tag",
+    "sql": "UPDATE items SET name = $outer$name'.*\\\\\\'.*' $inner$ 'version'$outer$, version = version + 1 WHERE id = 1;",
+    "native_name": "name'.*\\\\\\'.*' $inner$ 'version'",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "dollar-overlap-close",
+    "sql": "UPDATE items SET name = $tag$name'.*\\\\\\'.*'$other$tag$, version = version + 1 WHERE id = 1;",
+    "native_name": "name'.*\\\\\\'.*'$other",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "dollar-unicode-tag",
+    "sql": "UPDATE items SET name = $tég$name'.*\\\\\\'.*'$tég$, version = version + 1 WHERE id = 1;",
+    "native_name": "name'.*\\\\\\'.*'",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "dollar-underscore-tag",
+    "sql": "UPDATE items SET name = $a_2$name'.*\\\\\\'.*'$a_2$, version = version + 1 WHERE id = 1;",
+    "native_name": "name'.*\\\\\\'.*'",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "dollar-version-only",
+    "sql": "UPDATE items SET name = $$version$$ WHERE id = 1;",
+    "native_name": "version",
+    "native_version": 0,
+    "allow": false
+  },
+  {
+    "name": "dollar-tagged-version-only",
+    "sql": "UPDATE items SET name = $v$version$v$ WHERE id = 1;",
+    "native_name": "version",
+    "native_version": 0,
+    "allow": false
+  },
+  {
+    "name": "dollar-quoted-type",
+    "sql": "UPDATE items SET name = \"name\" $$name'.*\\\\\\'.*'$$, version = version + 1 WHERE id = 1;",
+    "native_name": "name'.*\\\\\\'.*'",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "dollar-read-only-write-text",
+    "sql": "SELECT id FROM items WHERE name = $$UPDATE items SET name = 'not here'$$;",
+    "native_name": "before",
+    "native_version": 0,
+    "allow": true
+  },
+  {
+    "name": "dollar-identifier-boundary",
+    "sql": "UPDATE items SET name = v.name$tag$, version = version + 1 FROM (VALUES ('identifier')) AS v(name$tag$) WHERE items.id = 1;",
+    "native_name": "identifier",
+    "native_version": 1,
+    "allow": true
+  }
+]

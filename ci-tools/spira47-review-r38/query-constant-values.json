@@ -1,0 +1,58 @@
+[
+  {
+    "name": "runtime-cr",
+    "sql": "UPDATE items SET name = E'first '\r'it\\'s', version = version + 1 WHERE id = 1;",
+    "native_name": "first it's",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "runtime-crlf",
+    "sql": "UPDATE items SET name = e'first '\r\n\t'it\\'s', version = version + 1 WHERE id = 1;",
+    "native_name": "first it's",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "runtime-lf",
+    "sql": "UPDATE items SET name = E'first '\n'it\\'s', version = version + 1 WHERE id = 1;",
+    "native_name": "first it's",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "runtime-cr-value",
+    "sql": "UPDATE items SET name = 'left\rright', version = version + 1 WHERE id = 1;",
+    "native_name": "left\rright",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "runtime-crlf-value",
+    "sql": "UPDATE items SET name = 'left\r\nright', version = version + 1 WHERE id = 1;",
+    "native_name": "left\r\nright",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "runtime-backquote",
+    "sql": "UPDATE items SET name = 'tick`slash\\r', version = version + 1 WHERE id = 1;",
+    "native_name": "tick`slash\\r",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "runtime-cr-backquote",
+    "sql": "UPDATE items SET name = 'left`\rright', version = version + 1 WHERE id = 1;",
+    "native_name": "left`\rright",
+    "native_version": 1,
+    "allow": true
+  },
+  {
+    "name": "runtime-quote-backslash",
+    "sql": "UPDATE items SET name = 'double \"quote\" \\r', version = version + 1 WHERE id = 1;",
+    "native_name": "double \"quote\" \\r",
+    "native_version": 1,
+    "allow": true
+  }
+]
