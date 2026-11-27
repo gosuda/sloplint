@@ -1,107 +1,37 @@
 {
-  "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
-  "tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
-  "main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-  "status": "freezing native POSIX observations after external merge; no maintained source writes",
-  "windows": {
-    "initial_run": 45946247831,
-    "initial_conclusion": "failure",
-    "initial_failure": "working file hash before native execution",
-    "observation_run": 45947106831,
-    "observation_job": 140334220740,
+  "maintained_head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
+  "actual_main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
+  "draft_tree": "b452f15ea02f5ea086b04bc63d58aac369ddac74",
+  "status": "unpublished parser draft; preparing formatter/compile and old-source causal controls; all full required gates remain pending",
+  "native_windows": {
+    "run": 45947106831,
     "conclusion": "failure",
-    "actual_records": 37,
-    "source_clean": true,
-    "failed_expectations": [
-      "dynamic_body",
-      "nested_loop",
-      "grouped_body"
-    ],
-    "cause": "frozen simple stdout expectations omitted authentic Cmd command-echo trace; all raw observations retained",
+    "observations": 37,
     "artifact": 15175765148,
-    "artifact_sha256": "ddb69269eed07dcd79c1abd7a83888f17fca287c42f567576e2c685fcfca3d96"
+    "sha256": "ddb69269eed07dcd79c1abd7a83888f17fca287c42f567576e2c685fcfca3d96",
+    "failure": "three native command-echo stdout hypotheses were incomplete; complete outputs retained"
   },
-  "new_threads": [
+  "native_posix": {
+    "run": 45948949283,
+    "job": 140340063474,
+    "conclusion": "success",
+    "observations": 50,
+    "artifact": 15175727233,
+    "sha256": "e64712b6a5df8b75d12d983d202d72abe8b3e9395a1c089d78e2f843fcf13487"
+  },
+  "native_review_scope": "Cmd loops plus externally merged POSIX braced arity, command lookup grouping, env lone-dash and attached fd filters; only shell_screen.ml/test_tools_shell.ml drafted",
+  "elements": [
     {
-      "id": "PRRT_kwDOUbWGks68pEjK",
-      "is_resolved": false,
       "path": "bin/crush/lib/shell_screen.ml",
-      "comments": [
-        4715589949
-      ]
+      "mode": "100644",
+      "type": "blob",
+      "sha256": "df9346e3c4ffdb19a82cfa52496deed50bfd75c90e9d6be56dbff9c11b9b849a"
     },
     {
-      "id": "PRRT_kwDOUbWGks68pEkO",
-      "is_resolved": false,
-      "path": "bin/crush/lib/shell_screen.ml",
-      "comments": [
-        4715590060
-      ]
-    },
-    {
-      "id": "PRRT_kwDOUbWGks68pEky",
-      "is_resolved": false,
-      "path": "bin/crush/lib/shell_screen.ml",
-      "comments": [
-        4715590141
-      ]
-    },
-    {
-      "id": "PRRT_kwDOUbWGks68pElp",
-      "is_resolved": true,
-      "path": "bin/crush/lib/shell_screen.ml",
-      "comments": [
-        4715590231,
-        4716036327
-      ]
-    },
-    {
-      "id": "PRRT_kwDOUbWGks68qHVK",
-      "is_resolved": false,
-      "path": "bin/crush/lib/shell_screen.ml",
-      "comments": [
-        4716036754
-      ]
-    },
-    {
-      "id": "PRRT_kwDOUbWGks68qHWW",
-      "is_resolved": false,
-      "path": "bin/crush/lib/shell_screen.ml",
-      "comments": [
-        4716036873
-      ]
-    },
-    {
-      "id": "PRRT_kwDOUbWGks68qHXk",
-      "is_resolved": false,
-      "path": "bin/crush/lib/shell_screen.ml",
-      "comments": [
-        4716037000
-      ]
-    },
-    {
-      "id": "PRRT_kwDOUbWGks68qHYe",
-      "is_resolved": false,
       "path": "test/crush/test_tools_shell.ml",
-      "comments": [
-        4716037087
-      ]
-    },
-    {
-      "id": "PRRT_kwDOUbWGks68qHZW",
-      "is_resolved": false,
-      "path": "bin/crush/lib/tools_shell.ml",
-      "comments": [
-        4716037196
-      ]
-    },
-    {
-      "id": "PRRT_kwDOUbWGks68qHaJ",
-      "is_resolved": false,
-      "path": "bin/crush/lib/shell_screen.ml",
-      "comments": [
-        4716037287
-      ]
+      "mode": "100644",
+      "type": "blob",
+      "sha256": "db54f8e339389b912a9c26e0683dd8240bbde8488bb1ecf73207dfde4ab0d273"
     }
   ]
 }

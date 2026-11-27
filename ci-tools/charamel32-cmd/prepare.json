@@ -1,0 +1,651 @@
+{
+  "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
+  "tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
+  "draft_tree": "b452f15ea02f5ea086b04bc63d58aac369ddac74",
+  "cases": [
+    {
+      "id": "cmd-00",
+      "dialect": "cmd",
+      "command": "cmd /c echo ready for review",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-01",
+      "dialect": "cmd",
+      "command": "cmd /c \"echo ready for review\"",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-02",
+      "dialect": "cmd",
+      "command": "cmd /d /c echo do for else",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-03",
+      "dialect": "cmd",
+      "command": "for /r do %i in (*.txt) do echo %i",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-04",
+      "dialect": "cmd",
+      "command": "for /r \"do\" %i in (*.txt) do echo %i",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-05",
+      "dialect": "cmd",
+      "command": "for %i in (do) do echo %i",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-06",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do echo ready for review",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-07",
+      "dialect": "cmd",
+      "command": "for /f %i in (notes.txt) do echo %i",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-08",
+      "dialect": "cmd",
+      "command": "for /f \"tokens=2\" %i in (notes.txt) do echo %i",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-09",
+      "dialect": "cmd",
+      "command": "for /f %i in (\"literal words\") do echo %i",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-10",
+      "dialect": "cmd",
+      "command": "for /f \"usebackq\" %i in (\"notes space.txt\") do echo %i",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-11",
+      "dialect": "cmd",
+      "command": "for /f \"usebackq\" %i in ('literal words') do echo %i",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-12",
+      "dialect": "cmd",
+      "command": "for /f \"usebackq\" %i in (`echo alpha`) do echo %i",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-13",
+      "dialect": "cmd",
+      "command": "for /f \"tokens=* usebackq\" %i in (`echo alpha`) do echo %i",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-14",
+      "dialect": "cmd",
+      "command": "for /f \"delims=usebackq\" %i in ('echo alpha') do echo %i",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-15",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-16",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do   ",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-17",
+      "dialect": "cmd",
+      "command": "for /r do %i in (*.txt) do",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-18",
+      "dialect": "cmd",
+      "command": "for %i in (do) do",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-19",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do ()",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-20",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do (())",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-21",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do & echo after",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-22",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) & for %j in (beta) do echo %j",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-23",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do echo %i & for %j in (beta)",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-24",
+      "dialect": "cmd",
+      "command": "cmd /c for %i in (alpha)",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-25",
+      "dialect": "cmd",
+      "command": "cmd /c \"for %i in (alpha) do\"",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-26",
+      "dialect": "cmd",
+      "command": "for %i in (alpha do echo ready",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-27",
+      "dialect": "cmd",
+      "command": "for in (alpha) do echo ready",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-28",
+      "dialect": "cmd",
+      "command": "for %i (alpha) do echo ready",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-29",
+      "dialect": "cmd",
+      "command": "for unsupported %i in (alpha) do echo ready",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-30",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do %PROGRAM% %i",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-31",
+      "dialect": "cmd",
+      "command": "cmd /c %PROGRAM% ready",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-32",
+      "dialect": "cmd",
+      "command": "cmd /c echo %TEXT%",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-33",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do for %j in (beta) do echo %i %j",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-34",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do (echo %i)",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-35",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do (echo %i & echo ready for review)",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-36",
+      "dialect": "cmd",
+      "command": "for %i in (c^url) do echo %i",
+      "expected": "blocked"
+    },
+    {
+      "id": "cmd-37",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do c^url x",
+      "expected": "blocked"
+    },
+    {
+      "id": "cmd-38",
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do %PROGRAM% & c^url x",
+      "expected": "blocked"
+    },
+    {
+      "id": "posix-00",
+      "dialect": "posix",
+      "command": "env A=\"${@}\" true",
+      "expected": "review"
+    },
+    {
+      "id": "posix-01",
+      "dialect": "posix",
+      "command": "env A=\"${@:1}\" true",
+      "expected": "review"
+    },
+    {
+      "id": "posix-02",
+      "dialect": "posix",
+      "command": "env A=\"${@:-fallback}\" true",
+      "expected": "review"
+    },
+    {
+      "id": "posix-03",
+      "dialect": "posix",
+      "command": "env A=\"${!prefix@}\" true",
+      "expected": "review"
+    },
+    {
+      "id": "posix-04",
+      "dialect": "posix",
+      "command": "find . -name \"${@}\" -print",
+      "expected": "review"
+    },
+    {
+      "id": "posix-05",
+      "dialect": "posix",
+      "command": "find . -name \"${@:1}\" -print",
+      "expected": "review"
+    },
+    {
+      "id": "posix-06",
+      "dialect": "posix",
+      "command": "find . -name \"${@:-fallback}\" -print",
+      "expected": "review"
+    },
+    {
+      "id": "posix-07",
+      "dialect": "posix",
+      "command": "find . -name \"${!prefix@}\" -print",
+      "expected": "review"
+    },
+    {
+      "id": "posix-08",
+      "dialect": "posix",
+      "command": "find . -name \"${value:-literal@text}\" -print",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-09",
+      "dialect": "posix",
+      "command": "find . -name \"${value@Q}\" -print",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-10",
+      "dialect": "posix",
+      "command": "find . -name \"${!prefix*}\" -print",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-11",
+      "dialect": "posix",
+      "command": "fd -tf README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-12",
+      "dialect": "posix",
+      "command": "fd --type=f README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-13",
+      "dialect": "posix",
+      "command": "fd -e.rs README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-14",
+      "dialect": "posix",
+      "command": "fd --extension=rs README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-15",
+      "dialect": "posix",
+      "command": "fd -Etarget README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-16",
+      "dialect": "posix",
+      "command": "fd --exclude=target README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-17",
+      "dialect": "posix",
+      "command": "fd -d2 README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-18",
+      "dialect": "posix",
+      "command": "fd --max-depth=2 README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-19",
+      "dialect": "posix",
+      "command": "fd -tf README -x printf '%s'",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-20",
+      "dialect": "posix",
+      "command": "fd --type=f README --exec-batch printf '%s'",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-21",
+      "dialect": "posix",
+      "command": "fd -e-X README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-22",
+      "dialect": "posix",
+      "command": "fd --extension=--exec README",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-23",
+      "dialect": "posix",
+      "command": "fd --typefuture=f README",
+      "expected": "review"
+    },
+    {
+      "id": "posix-24",
+      "dialect": "posix",
+      "command": "fd -t\"$kind\" README",
+      "expected": "review"
+    },
+    {
+      "id": "posix-25",
+      "dialect": "posix",
+      "command": "fd -tf README -x \"$PROGRAM\"",
+      "expected": "review"
+    },
+    {
+      "id": "posix-26",
+      "dialect": "posix",
+      "command": "fd -tf README -x ./cu''rl.exe",
+      "expected": "blocked"
+    },
+    {
+      "id": "posix-27",
+      "dialect": "posix",
+      "command": "command -pv git",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-28",
+      "dialect": "posix",
+      "command": "command -pV git",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-29",
+      "dialect": "posix",
+      "command": "command -vp git",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-30",
+      "dialect": "posix",
+      "command": "command -p -v git",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-31",
+      "dialect": "posix",
+      "command": "command -pp printf ready",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-32",
+      "dialect": "posix",
+      "command": "command -pv -p git",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-33",
+      "dialect": "posix",
+      "command": "command -pv -- git",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-34",
+      "dialect": "posix",
+      "command": "command -pz git",
+      "expected": "review"
+    },
+    {
+      "id": "posix-35",
+      "dialect": "posix",
+      "command": "command -v -z git",
+      "expected": "review"
+    },
+    {
+      "id": "posix-36",
+      "dialect": "posix",
+      "command": "command -- -pv",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-37",
+      "dialect": "posix",
+      "command": "command -p ./cu''rl.exe",
+      "expected": "blocked"
+    },
+    {
+      "id": "posix-38",
+      "dialect": "posix",
+      "command": "command -pv ./cu''rl.exe",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-39",
+      "dialect": "posix",
+      "command": "env -i - ./cu''rl.exe",
+      "expected": "blocked"
+    },
+    {
+      "id": "posix-40",
+      "dialect": "posix",
+      "command": "env -u UNUSED - ./cu''rl.exe",
+      "expected": "blocked"
+    },
+    {
+      "id": "posix-41",
+      "dialect": "posix",
+      "command": "env -i -- - ./cu''rl.exe",
+      "expected": "blocked"
+    },
+    {
+      "id": "posix-42",
+      "dialect": "posix",
+      "command": "env - -i ./cu''rl.exe",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-43",
+      "dialect": "posix",
+      "command": "env -i - A=\"$@\" ./cu''rl.exe",
+      "expected": "blocked"
+    },
+    {
+      "id": "posix-44",
+      "dialect": "posix",
+      "command": "env -i - \"$PROGRAM\"",
+      "expected": "review"
+    },
+    {
+      "id": "posix-45",
+      "dialect": "posix",
+      "command": "env -i - A=one printf ready",
+      "expected": "clear"
+    },
+    {
+      "id": "posix-46",
+      "dialect": "posix",
+      "command": "command -v \"$NAME\"",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-retained-0",
+      "dialect": "cmd",
+      "command": "for %f in (a.txt b.txt) do type \"%f\"",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-retained-1",
+      "dialect": "cmd",
+      "command": "for %%f in (a.txt b.txt) do type \"%%f\"",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-retained-2",
+      "dialect": "cmd",
+      "command": "for /l %i in (1,1,10) do @echo hi",
+      "expected": "clear"
+    },
+    {
+      "id": "cmd-retained-3",
+      "dialect": "cmd",
+      "command": "for %f in (a.txt b.txt)",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-retained-4",
+      "dialect": "cmd",
+      "command": "for %f in (%FILES%) do type \"%f\"",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-retained-5",
+      "dialect": "cmd",
+      "command": "for /f \"tokens=*\" %i in ('dir') do echo %i",
+      "expected": "review"
+    },
+    {
+      "id": "cmd-retained-6",
+      "dialect": "cmd",
+      "command": "c^url x",
+      "expected": "blocked"
+    },
+    {
+      "id": "cmd-retained-7",
+      "dialect": "cmd",
+      "command": "cu\"\"rl x",
+      "expected": "blocked"
+    },
+    {
+      "id": "cmd-retained-8",
+      "dialect": "cmd",
+      "command": "C:\\Windows\\System32\\curl.exe x",
+      "expected": "blocked"
+    },
+    {
+      "id": "cmd-retained-9",
+      "dialect": "cmd",
+      "command": "cmd /c \"c^url x\"",
+      "expected": "blocked"
+    },
+    {
+      "id": "cmd-retained-10",
+      "dialect": "cmd",
+      "command": "%CMD% x",
+      "expected": "review"
+    }
+  ],
+  "must_fail": [
+    {
+      "dialect": "cmd",
+      "command": "cmd /c echo ready for review"
+    },
+    {
+      "dialect": "cmd",
+      "command": "for /r do %i in (*.txt) do echo %i"
+    },
+    {
+      "dialect": "cmd",
+      "command": "for /f %i in (notes.txt) do echo %i"
+    },
+    {
+      "dialect": "cmd",
+      "command": "for %i in (alpha) do"
+    },
+    {
+      "dialect": "posix",
+      "command": "env A=\"${@}\" true"
+    },
+    {
+      "dialect": "posix",
+      "command": "fd -tf README"
+    },
+    {
+      "dialect": "posix",
+      "command": "command -pv git"
+    },
+    {
+      "dialect": "posix",
+      "command": "env -i - ./cu''rl.exe"
+    }
+  ],
+  "archives": [
+    {
+      "id": 15175765148,
+      "sha256": "ddb69269eed07dcd79c1abd7a83888f17fca287c42f567576e2c685fcfca3d96",
+      "report": "native-baseline.json",
+      "producer": "d3d970b69736556d42c96a6974fca1eb0d040340",
+      "source": "53cdbc3dd32e34cf0ac6769b1fead9c14dad10a5",
+      "records": 37,
+      "failures": [
+        "dynamic_body",
+        "nested_loop",
+        "grouped_body"
+      ]
+    },
+    {
+      "id": 15175727233,
+      "sha256": "e64712b6a5df8b75d12d983d202d72abe8b3e9395a1c089d78e2f843fcf13487",
+      "report": "posix-baseline-result.json",
+      "producer": "a79da117ab77b45fe6adf5d02a6e1e38eb5618f1",
+      "source": "5be8cba8e9150be37b35dec47f2cace5647d704f",
+      "records": 50,
+      "failures": []
+    }
+  ],
+  "limits": [
+    "This preparation does not replace any required full Dune gate or native tool-permission test.",
+    "The Windows historical native baseline remains an overall failure due to three incomplete stdout expectations; its complete observations are authenticated unchanged."
+  ]
+}
