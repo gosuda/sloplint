@@ -1,0 +1,231 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-11-27 21:59:01 UTC",
+  "scope": "Spira PR47 R42 relation roles, permanent SQLc pipeline coverage and requirement wording",
+  "pr": "https://github.com/gosuda/spira/pull/47",
+  "source": {
+    "repository": "gosuda/spira",
+    "head": "f3a47a04f1defe427494124507ec621118525265",
+    "tree": "cae17384cce41647b686a80932833cf5a7b09b19",
+    "blobs": 633,
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "index_file": "source-index.json"
+  },
+  "candidate": {
+    "tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0",
+    "blobs": 638,
+    "index_file": "candidate-index.json",
+    "authored_paths": 7
+  },
+  "producer": "673f0c39445d4b583c4d3371609ce585c39be87b",
+  "producer_tree": "836e638517e6149a184c896e3b30d000554965a9",
+  "run": 46073659117,
+  "job": 140756258552,
+  "run_url": "https://github.com/gosuda/sloplint/actions/runs/46073659117",
+  "status": "in_progress",
+  "conclusion": null,
+  "manifest_sha256": "d9f05b8cb3d764cce6eefcb0247fbbc3971be1e4ad983431355f730f2ed53fa5",
+  "driver_sha256": "64ec870742cc49d70f5abbb8ba4aaf04bed8df4b642e19b76f4d3eeb6232a8ac",
+  "workflow_sha256": "3e49f5e07dc5ad8d81b4c1aae4402ffe6e7047a838de03d8775f0fd08d7f6b98",
+  "active_file_readback": [
+    {
+      "path": "ci-tools/spira47-review-r42/baseline_support.py",
+      "sha256": "32676bc6ec68d6dd7091a441b3220606bcc047760f386ef9098bf7b01e5e9bce",
+      "blob": "49c35620acd489c4c9cdd19167da7dfa20da7f4e"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/proof_support.py",
+      "sha256": "e59521ce25de634ceea28a6346991a80327fbfbeeeaf4ce520a8ddd0ff57d326",
+      "blob": "99911e7b60007f2c646db88264d3007ae076014a"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/native_support.py",
+      "sha256": "c5f930b77c049a6ac3f4f5c2e1356e13e59cd5047e2d0ab632e1076efa35e1c5",
+      "blob": "9df5f81f20446df741ae78e0911fe3ffb1b5e84a"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/observer.py",
+      "sha256": "a1dc217115104228910a0d9cce0f0340a3c49f5f48b821f84466e56d8d1b031a",
+      "blob": "f532ea6b8984e0c65ea91cec17ac0fffbdcb4632"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/schema.sql",
+      "sha256": "250795d402dca7144e24f33dc51026083c7664385436545bca8762b7a66de6bc",
+      "blob": "eb49abf5cc3567058db0470fb04f88e7faaa62c1"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/artifact_support.py",
+      "sha256": "b3f27ccd5d75efea94530f1294d7e0d23d89b46d7d9e5771cc0b3d32a56d1b28",
+      "blob": "4eab6df202a806ae74f826e546401eb5f2dab17a"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/linter_support.py",
+      "sha256": "5594ac624c616c8641723dcc710220346117e826b3e59ed5728c016e38fc1ee1",
+      "blob": "bbacf2f742dbf0c5d5ef555d503418a9f1c402ea"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/archive_support.py",
+      "sha256": "fc3aba54e149c53de6b13319517cf03449cd95db82aa60f5f10d3a969f515069",
+      "blob": "5c9fe2ad95b0cc926d0a272ce199332b2de05fd3"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/runtime_observer.py",
+      "sha256": "853b4e5c895c48f981b3988f7acff5da41dd4e163b5700c87cd8f72b4c1c6702",
+      "blob": "3347235272b6904e15c55868c96373b72853bba5"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/capture_logos.py",
+      "sha256": "e00e719e8eb63b0c3c21889398799c0c0751a54a679a247c8b74d26e1bd77f32",
+      "blob": "47ccc37699f4e1757ba6dadd3cafdc10787516aa"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/launch_test.py",
+      "sha256": "31d90542191330a6be39b61ce5d5dc447dedbbb0b557706ef0a00c9d93a7c733",
+      "blob": "2ff71f4b7849dfacc0ad7ed51f4535f42ac654ba"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/verify_candidate.py",
+      "sha256": "64ec870742cc49d70f5abbb8ba4aaf04bed8df4b642e19b76f4d3eeb6232a8ac",
+      "blob": "85f9439a1219bd961169110ea01e90ac890039d4"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/source-index.json",
+      "sha256": "f82cc1851d56d7cc2e42d29f0e31630934bb204de21e2b252cafc02cbc08c55d",
+      "blob": "91cab04fe5279d4f3b713f92b8406f6b556e3fb7"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/test-index.json",
+      "sha256": "486ce88a67d6cccbea95571c936d3fedc1444fddd3f89ded25f483b19b1b8cfb",
+      "blob": "1a030b49da8239bedcf9785f0cc1793e170a727c"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/candidate-index.json",
+      "sha256": "b1cbb62290929b0ae90995a686a2890ffe9ea12c3a3fdcabc0de64d5549b7a75",
+      "blob": "e39198211ca68614f387e5b5a282a2a7fca7b3e2"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/authored-tests.json",
+      "sha256": "54fd28c4e8210a47308fc865e86c81e159a6bc9e11de09bf3475bab62d09223b",
+      "blob": "38031010c8c93c37d3ba805de2808030a233e6bc"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/authored-candidate.json",
+      "sha256": "2ede9ee8290429dcd8bb7b92e8ab058b7380740e90f059a8796d06c3fed6613d",
+      "blob": "cc392300081d080e7d0ee6558d3150dd2bd13dc5"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/version-catalog.json",
+      "sha256": "3eb8eb324f1394693ee653772a439b4b742295829c92e137363f8e0ba0f35384",
+      "blob": "8057454105cfeae7e2bb5b899ceaa67499a8d898"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/version-ctes.json",
+      "sha256": "3dc4c74efb3eaa8996649ca18b528c47e344608a06d98d8bc9d288d8c0449382",
+      "blob": "750d7c4a2166607e27ec3ad9c1f6741921e6343d"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/version-relation-roles.json",
+      "sha256": "2f28a9bf7f5bfa33b9e7f863b8661484c24dae2a803fe4e493ec439938ad85c1",
+      "blob": "9896e68ec7f16e3d5cddb100c11fb541b2ed7fde"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/sqlc-version-pipeline.json",
+      "sha256": "f8341c992395a9e0ab1bb74fdf27351f29792b4f510fa4869583b5d3756ee26b",
+      "blob": "9560cfb8015ac23a5ef0adc23b268e35107ab11d"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/baseline-report.json",
+      "sha256": "9e1c4ce2a1bd9d57b65ccd0877555be35da6c2a9c44cba3c6aad955678821ffb",
+      "blob": "6c55d57b3a159100f6c1c0fbac7419310321783b"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/prior-report.json",
+      "sha256": "34bbe593df70f1e29ae0d27578cf1f8c3560345b98317643eef4ce7a6be9eded",
+      "blob": "f84a212e542988a59847ecd81689bf75dca34c10"
+    },
+    {
+      "path": "ci-tools/spira47-review-r42/candidate-manifest.json",
+      "sha256": "d9f05b8cb3d764cce6eefcb0247fbbc3971be1e4ad983431355f730f2ed53fa5",
+      "blob": "44ddd1c4e29cfcd21bd03e0b48bc522aeabfb890"
+    },
+    {
+      "path": ".github/workflows/spira47-review-r42.yml",
+      "sha256": "3e49f5e07dc5ad8d81b4c1aae4402ffe6e7047a838de03d8775f0fd08d7f6b98",
+      "blob": "1221171b50ae6980e9c24c7b3733a4f3890ec9ca"
+    }
+  ],
+  "static_reviews": [
+    {
+      "commit": "bbc5598ec35787a73c683aceb99bd154352b4595",
+      "reviewer": "/root/bitcoin_round7",
+      "verdict": "No finding",
+      "verified_proof_workflow_files": 25,
+      "candidate_tree": "77ea20c31e393eece34c7e204ac807c7c2d163e0",
+      "tests_tree": "1023a56edb760173d0d69ccc582567b94509c877",
+      "base_tree": "cae17384cce41647b686a80932833cf5a7b09b19",
+      "native_execution": false
+    },
+    {
+      "commit": "bbc5598ec35787a73c683aceb99bd154352b4595",
+      "reviewer": "/root/bitcoin_round7/spira40_oracle_review",
+      "verdict": "No concrete defect found",
+      "archive_sha256": "fc3aba54e149c53de6b13319517cf03449cd95db82aa60f5f10d3a969f515069",
+      "artifact_sha256": "b3f27ccd5d75efea94530f1294d7e0d23d89b46d7d9e5771cc0b3d32a56d1b28",
+      "baseline_unique_logs": 110,
+      "prior_selected_unique_logs": 113,
+      "prior_receipts": 204,
+      "prior_distinct_log_filenames": 198,
+      "prior_excluded_repeated_names": 6,
+      "native_execution": false,
+      "zip_download": false
+    }
+  ],
+  "baseline": {
+    "run": 46070228650,
+    "job": 140745126134,
+    "producer": "1e3727f8611f3548727b25534e0f534b3f754cf6",
+    "outcome": "success",
+    "artifact": 15232697489,
+    "artifact_sha256": "d77ca9b5011526a574548896be1f519043257f5c7da2aaa1b699f31f4de4907a",
+    "evidence_commit": "f2e130b988608f0a3540e08a984938c375450214",
+    "actual_commands": 110,
+    "current_roles": {
+      "failed": 15,
+      "passed": 15
+    },
+    "one_file_counterfactual": {
+      "failed": 11,
+      "passed": 19
+    },
+    "native_original": 30,
+    "native_processed": 28,
+    "pipeline": {
+      "generated": 25,
+      "plugin_refusal": 3,
+      "upstream": 2
+    },
+    "source_restored": true,
+    "source_gates_passed": false
+  },
+  "preserved_failure": {
+    "run": 46068178205,
+    "job": 140738456076,
+    "producer": "e5c98bfa622da358c1fd84b25b44b00a3a940814",
+    "outcome": "failure",
+    "cause": "The observer predicted the SQLc column-x diagnostic at 1:1; actual native output was 2:35. The expected diagnostic location alone was corrected before the complete baseline reran.",
+    "evidence_commit": "ac4c7a4dc91f7cc0f7eea2b52ea5a9d54b8d7670",
+    "source_restored": true,
+    "no_gate_reuse": true
+  },
+  "native_candidate_observed": false,
+  "source_published": false,
+  "source_gates_passed": false,
+  "publication_eligible": false,
+  "unresolved_threads": [
+    "PRRT_kwDOVpFduc687Ofj",
+    "PRRT_kwDOVpFduc687Ogz",
+    "PRRT_kwDOVpFduc687OiK",
+    "PRRT_kwDOVpFduc687Ojg"
+  ],
+  "ordinary_source_workflow": "None exists in either the maintained 633-blob source or the 638-blob candidate."
+}
