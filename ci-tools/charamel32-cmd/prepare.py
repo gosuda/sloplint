@@ -78,7 +78,15 @@ def authenticate(archive: dict[str, Any]) -> dict[str, Any]:
     assert report["source"] == archive["source"]
     assert report["source_clean"] is True
     assert len(report["records"]) == archive["records"]
-    assert report["failures"] == archive["failures"]
+    failure_field = archive.get("failure_field", "failures")
+    assert report[failure_field] == archive["failures"]
+    if archive["report"] == "native-for-options.json":
+        frozen: dict[str, Any] = json.loads((ROOT / "native-options-observed.json").read_text("utf-8"))
+        assert digest((ROOT / "native-options-observed.json").read_bytes()) == archive["observed_sha256"]
+        fields = ("id", "command", "actual_exit", "stdout", "stderr")
+        assert [[row[key] for key in fields] for row in report["records"]] == [
+            [row[key] for key in fields] for row in frozen["records"]
+        ]
     (OUT / ("authenticated-" + archive["report"])).write_text(
         json.dumps(report, indent=2) + "\n", encoding="utf-8"
     )
@@ -154,6 +162,7 @@ def main() -> int:
     assert run("formatter-version", ["opam", "exec", "--switch=" + switch, "--", "ocamlformat", "--version"], SOURCE).stdout.strip() == b"0.29.0"
     baseline: list[dict[str, Any]] = []
     candidate: list[dict[str, Any]] = []
+    intermediate: list[dict[str, Any]] = []
     final: dict[str, Any] = {}
     try:
         with tempfile.TemporaryDirectory(prefix="charamel32-compile-") as temporary:
@@ -163,6 +172,19 @@ def main() -> int:
             for wanted in manifest["must_fail"]:
                 found = [r for r in baseline if r["dialect"] == wanted["dialect"] and r["command"] == wanted["command"]]
                 assert len(found) == 1 and found[0]["actual_exit"] == 1, wanted
+            previous: list[dict[str, str]] = json.loads(
+                (ROOT / "previous-elements.json").read_text("utf-8")
+            )
+            for element in previous:
+                data = element["content"].encode("utf-8")
+                assert digest(data) == element["sha256"], element["path"]
+                (SOURCE / element["path"]).write_bytes(data)
+            assert git("add", "--", *[element["path"] for element in previous]) == ""
+            assert git("write-tree") == manifest["intermediate_tree"]
+            intermediate_binary = compile_probe("previous-candidate-compile", switch, scratch / "previous")
+            intermediate = classifications("previous", intermediate_binary, manifest["cases"])
+            failures = [row["id"] for row in intermediate if row["actual_exit"] != 0]
+            assert failures == manifest["intermediate_failures"], failures
             for element in payload:
                 data = element["content"].encode("utf-8")
                 assert digest(data) == element["sha256"], element["path"]
@@ -202,6 +224,9 @@ def main() -> int:
             "formatted_tree": final.get("tree"),
             "native_archives": manifest["archives"], "native_record_counts": [len(a["records"]) for a in archives],
             "baseline_cases": len(baseline),
+            "intermediate_tree": manifest["intermediate_tree"],
+            "intermediate_cases": len(intermediate),
+            "intermediate_actual_failures": [row["id"] for row in intermediate if row["actual_exit"] != 0],
             "baseline_actual_failures": sum(row["actual_exit"] != 0 for row in baseline),
             "candidate_cases": len(candidate),
             "candidate_actual_failures": sum(row["actual_exit"] != 0 for row in candidate),

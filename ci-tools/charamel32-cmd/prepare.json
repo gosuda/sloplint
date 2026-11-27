@@ -1,7 +1,7 @@
 {
   "head": "5be8cba8e9150be37b35dec47f2cace5647d704f",
   "tree": "1d61f71d4674223f67e1a80404152c59e748e3ba",
-  "draft_tree": "67d7cdfdf0704e3bc15fe2cfab768ffac954dea4",
+  "draft_tree": "7ee46852b14fa0b6a7211da5ef9070c5f478edc6",
   "cases": [
     {
       "id": "cmd-00",
@@ -584,6 +584,114 @@
       "dialect": "cmd",
       "command": "%CMD% x",
       "expected": "review"
+    },
+    {
+      "id": "for-options-options_0_single",
+      "dialect": "cmd",
+      "command": "for /f %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_0_backtick",
+      "dialect": "cmd",
+      "command": "for /f %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected": "clear"
+    },
+    {
+      "id": "for-options-options_1_single",
+      "dialect": "cmd",
+      "command": "for /f \"usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected": "clear"
+    },
+    {
+      "id": "for-options-options_1_backtick",
+      "dialect": "cmd",
+      "command": "for /f \"usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_2_single",
+      "dialect": "cmd",
+      "command": "for /f \"delims=usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_2_backtick",
+      "dialect": "cmd",
+      "command": "for /f \"delims=usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected": "clear"
+    },
+    {
+      "id": "for-options-options_3_single",
+      "dialect": "cmd",
+      "command": "for /f \"delims= usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected": "clear"
+    },
+    {
+      "id": "for-options-options_3_backtick",
+      "dialect": "cmd",
+      "command": "for /f \"delims= usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_4_single",
+      "dialect": "cmd",
+      "command": "for /f \"tokens=* delims= usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected": "clear"
+    },
+    {
+      "id": "for-options-options_4_backtick",
+      "dialect": "cmd",
+      "command": "for /f \"tokens=* delims= usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_5_single",
+      "dialect": "cmd",
+      "command": "for /f \"usebackqdelims=\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_5_backtick",
+      "dialect": "cmd",
+      "command": "for /f \"usebackqdelims=\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_6_single",
+      "dialect": "cmd",
+      "command": "for /f \"tokens=*usebackq\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_6_backtick",
+      "dialect": "cmd",
+      "command": "for /f \"tokens=*usebackq\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_7_single",
+      "dialect": "cmd",
+      "command": "for /f \"usebackq tokens=* delims=\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected": "clear"
+    },
+    {
+      "id": "for-options-options_7_backtick",
+      "dialect": "cmd",
+      "command": "for /f \"usebackq tokens=* delims=\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_8_single",
+      "dialect": "cmd",
+      "command": "for /f \"delims=usebackq tokens=*\" %i in ('echo 9173') do @echo RESULT:[%i]",
+      "expected": "review"
+    },
+    {
+      "id": "for-options-options_8_backtick",
+      "dialect": "cmd",
+      "command": "for /f \"delims=usebackq tokens=*\" %i in (`echo 9173`) do @echo RESULT:[%i]",
+      "expected": "clear"
     }
   ],
   "must_fail": [
@@ -642,10 +750,27 @@
       "source": "5be8cba8e9150be37b35dec47f2cace5647d704f",
       "records": 50,
       "failures": []
+    },
+    {
+      "id": 15178263350,
+      "sha256": "b4602929f39c98eb52826a554890eff70cfd93d49f2b9b5d45756e6ba98239d6",
+      "report": "native-for-options.json",
+      "producer": "2786b929fed8e9f74702a07c6ffceadbebbf6b95",
+      "source": "5be8cba8e9150be37b35dec47f2cace5647d704f",
+      "records": 18,
+      "failure_field": "control_failures",
+      "failures": [],
+      "observed_sha256": "4828864f66e1c3b3b861d1fe2be1b9fd9571c6e92dccbfb4b751114e3c65d638"
     }
   ],
   "limits": [
     "This preparation does not replace any required full Dune gate or native tool-permission test.",
-    "The Windows historical native baseline remains an overall failure due to three incomplete stdout expectations; its complete observations are authenticated unchanged."
+    "The Windows historical native baseline remains an overall failure due to three incomplete stdout expectations; its complete observations are authenticated unchanged.",
+    "Attached usebackq option forms remain conservatively unparsed and require explicit approval; the 18 new native rows establish observed quote behavior, not a complete Cmd option grammar."
+  ],
+  "intermediate_tree": "e4dc56c7aa06c798df5eca42ecad54e2ffe83423",
+  "intermediate_failures": [
+    "for-options-options_5_backtick",
+    "for-options-options_6_backtick"
   ]
 }
