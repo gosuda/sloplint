@@ -2,16 +2,21 @@
   "schema_version": 2,
   "task": "Charamel PR32 parser and approval-boundary reconciliation",
   "public_only": true,
-  "snapshot_utc": "2026-11-27 08:18:33 UTC",
-  "state": "full_current_source_gate_running",
+  "snapshot_utc": "2026-11-27 08:28:26 UTC",
+  "state": "verified source published; ordinary CI and review replies pending",
   "maintained": {
     "repository": "gosuda/Charamel",
     "pr": 32,
     "branch": "followup/merged-threads-1127",
-    "head": "38d586ae3b2bce634e854990844f1db0b7642618",
-    "tree": "10a647a31d2e9cca96d31be7189bce76c3017f80",
+    "head": "f879b0156aa32a317cb0e29609df53786a09ec78",
+    "tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
     "actual_main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
-    "published_by_this_followup": false
+    "published_by_this_followup": true,
+    "integrated_head": "38d586ae3b2bce634e854990844f1db0b7642618",
+    "parents": [
+      "38d586ae3b2bce634e854990844f1db0b7642618"
+    ],
+    "mergeable": true
   },
   "candidate": {
     "tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
@@ -31,9 +36,9 @@
     "tree": "837b7cf0cd47e6648aeb271a4190ab12328773fb",
     "run": 45964436559,
     "job": 140389628289,
-    "status": "in_progress",
+    "status": "completed",
     "preflight": "success",
-    "conclusion": null,
+    "conclusion": "success",
     "manifest": {
       "head": "38d586ae3b2bce634e854990844f1db0b7642618",
       "original_tree": "10a647a31d2e9cca96d31be7189bce76c3017f80",
@@ -80,7 +85,196 @@
         "No claim that the merged test-only tree was run on Windows, or that the full Windows suite passed.",
         "Historical failed native setup/oracle/transport/fd-integration proofs remain unchanged."
       ]
-    }
+    },
+    "result": {
+      "producer": "f5adc8cbc2b99e6764dd182a6285368a5df60ed5",
+      "run": "45964436559",
+      "lane": "linux",
+      "identity": {
+        "head": "38d586ae3b2bce634e854990844f1db0b7642618",
+        "original_tree": "10a647a31d2e9cca96d31be7189bce76c3017f80",
+        "candidate_tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
+        "source_sha256": {
+          "bin/crush/lib/shell_screen.ml": "76f8ed44a22f5f6d022732aa7d92fba00517fee38ed9d4a3cf28e6d5e0fdd1fe",
+          "bin/crush/lib/tools_shell.ml": "dd04f4b372f42d5ad4d64d09168ded0e8939c8263c25693e4704303d00623928",
+          "test/crush/test_tools_shell.ml": "5ce61e22f1d031bc43a2375a80f5240589e073e41eee6f592b08d97e26a28e8c"
+        },
+        "changed_paths": [
+          "bin/crush/lib/shell_screen.ml",
+          "bin/crush/lib/tools_shell.ml",
+          "test/crush/test_tools_shell.ml"
+        ],
+        "unstaged_clean": true,
+        "unexpected_untracked": [],
+        "index_sha256": "568f161f004546db7a6419966a6e9e55d4c8de94df15930fc146ab3e47c97251"
+      },
+      "commands": [
+        {
+          "label": "compiler-and-formatter",
+          "script": "test \"$(ocamlc -version)\" = 5.5.1\ntest \"$(ocamlformat --version)\" = 0.29.0\nopam list --installed",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.1638734339999246,
+          "log_sha256": "380d384b5cb72e8aa68600edaeb03228ac298c5f6330d5fed6631aec9305dcb3"
+        },
+        {
+          "label": "format",
+          "script": "dune build @fmt",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 7.516152230999978,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "release-build",
+          "script": "dune build --profile release",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 21.534472192999942,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "release-tests",
+          "script": "dune runtest --profile release",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 13.852875014000006,
+          "log_sha256": "6e6b0bca8ca67025a7a175c9bec880aea2fa6aacb43c62528c290e7457ab64ef",
+          "test_summary": [
+            "Test Successful in 0.001s. 15 tests run.",
+            "Test Successful in 0.014s. 89 tests run.",
+            "Test Successful in 0.001s. 5 tests run.",
+            "Test Successful in 0.018s. 38 tests run.",
+            "Test Successful in 0.022s. 15 tests run.",
+            "Test Successful in 0.025s. 34 tests run.",
+            "Test Successful in 0.009s. 7 tests run.",
+            "Test Successful in 0.029s. 13 tests run.",
+            "Test Successful in 0.022s. 62 tests run.",
+            "Test Successful in 0.020s. 16 tests run.",
+            "Test Successful in 0.207s. 78 tests run.",
+            "Test Successful in 0.003s. 15 tests run.",
+            "Test Successful in 0.001s. 18 tests run.",
+            "Test Successful in 0.038s. 26 tests run.",
+            "Test Successful in 0.012s. 7 tests run.",
+            "Test Successful in 0.031s. 13 tests run.",
+            "Test Successful in 0.013s. 8 tests run.",
+            "Test Successful in 0.064s. 25 tests run.",
+            "Test Successful in 0.037s. 395 tests run.",
+            "Test Successful in 0.065s. 143 tests run.",
+            "Test Successful in 0.340s. 103 tests run.",
+            "Test Successful in 0.250s. 28 tests run.",
+            "Test Successful in 0.029s. 16 tests run.",
+            "Test Successful in 0.104s. 22 tests run.",
+            "Test Successful in 0.035s. 89 tests run.",
+            "Test Successful in 2.424s. 66 tests run.",
+            "Test Successful in 0.635s. 77 tests run.",
+            "Test Successful in 0.197s. 87 tests run.",
+            "Test Successful in 8.085s. 42 tests run.",
+            "  [OK]          session                 5   file permissions are enforced.",
+            "  [OK]          permission              0   plan ceiling.",
+            "  [OK]          permission              1   unknown mutation targets.",
+            "  [OK]          permission              2   yolo and plan order.",
+            "  [OK]          permission              3   deny before allow.",
+            "  [OK]          permission              4   deny before session approval.",
+            "  [OK]          permission              5   exact config entries.",
+            "  [OK]          permission              6   exact session grants.",
+            "  [OK]          permission              7   asker session grant.",
+            "  [OK]          permission              8   hook order.",
+            "  [OK]          permission              9   local read-only approval.",
+            "  [OK]          permission             10   read-only plan behavior.",
+            "  [OK]          permission             11   component-aware containment.",
+            "  [OK]          permission             12   decision observability.",
+            "  [OK]          permission             13   policy lock while asking.",
+            "  [OK]          permission             14   entry matching.",
+            "  [OK]          permission             15   review needs explicit approval.",
+            "  [OK]          artifact                6   directory permissions are enforced.",
+            "  [OK]          tools-shell             0   conservative shell classifier.",
+            "  [OK]          tools-shell             1   screen reads shell quoting.",
+            "  [OK]          tools-shell             2   literal here-document boundaries.",
+            "  [OK]          tools-shell             3   ANSI-C NUL screening.",
+            "  [OK]          tools-shell             4   parameter quote context.",
+            "  [OK]          tools-shell             5   command lookup mode.",
+            "  [OK]          tools-shell             6   find data positions.",
+            "  [OK]          tools-shell             7   nested fd actions are screened once.",
+            "  [OK]          tools-shell             8   ANSI-C NUL matches bash.",
+            "  [OK]          tools-shell             9   screen requires review.",
+            "  [OK]          tools-shell            10   screen clears ordinary commands.",
+            "  [OK]          tools-shell            11   screen verdict table.",
+            "  [OK]          tools-shell            12   review argument boundaries.",
+            "  [OK]          tools-shell            13   Cmd loop approval boundary.",
+            "  [OK]          tools-shell            14   wrapper option and argument bound...",
+            "  [OK]          tools-shell            15   xargs replacement positions.",
+            "  [OK]          tools-shell            16   executable suffix positions.",
+            "  [OK]          tools-shell            17   shell information switches.",
+            "  [OK]          tools-shell            18   watch execution mode.",
+            "  [OK]          tools-shell            19   foreground capture.",
+            "  [OK]          tools-shell            20   foreground deadline.",
+            "  [OK]          tools-shell            21   background lifecycle.",
+            "  [OK]          tools-shell            22   permission receives read-only cla...",
+            "  [OK]          tools-shell            23   windows fixtures pin zero exit.",
+            "  [OK]          ui                      2   permission dialog bridge round trip.",
+            "Test Successful in 9.998s. 223 tests run."
+          ]
+        },
+        {
+          "label": "whitespace",
+          "script": "git diff --cached --check",
+          "bootstrap": "eval $(opam env --switch=rd --set-switch)",
+          "actual_exit": 0,
+          "timeout": false,
+          "seconds": 0.015888924000023508,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "accepted": true,
+      "native_windows_full_suite_claim": false,
+      "windows_carry_forward": {
+        "from_tree": "457cd4529dbca9dfb84a258f6a4854b3ce5c6ac2",
+        "current_tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
+        "windows_producer": "0a60a5c81b539444484ffbf596d8a78f179c8cee",
+        "windows_run": "45957479981",
+        "windows_artifact": {
+          "id": 15181286677,
+          "sha256": "5459c195bb44cb21a73a43fffa88a67fa67bba8fcd9cfb7575c0806cdd902941",
+          "producer": "0a60a5c81b539444484ffbf596d8a78f179c8cee",
+          "run": 45957479981,
+          "job": 140367202997
+        },
+        "non_test_entries_identical": 1093,
+        "only_changed_path": "test/crush/test_tools_shell.ml",
+        "windows_specific_fixture_identical": true,
+        "windows_fixture_sha256": "84e4ea277db9f271b3ecc06e11702e3ff28dc04f2f88a7caf5dba2add2a68e07",
+        "scope": "Exact production and native Windows permission fixture evidence; the additional test-only current-head reconciliation runs full Linux gates separately.",
+        "current_tree_executed_on_windows": false
+      }
+    },
+    "artifact": {
+      "id": 15182766656,
+      "node_id": "MDg6QXJ0aWZhY3QxNTE4Mjc2NjY1Ng==",
+      "name": "charamel32-reconciled-gates-linux",
+      "size_in_bytes": 74161,
+      "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15182766656",
+      "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15182766656/zip",
+      "expired": false,
+      "digest": "sha256:eaa2666fdf92c6f764fc47c59a2dd40a60544a54de13430d71fc7f8957ce26e1",
+      "created_at": "2026-11-27T08:26:17Z",
+      "updated_at": "2026-11-27T08:26:17Z",
+      "expires_at": "2026-12-27T08:26:17Z",
+      "workflow_run": {
+        "id": 45964436559,
+        "repository_id": 1424164147,
+        "head_repository_id": 1424164147,
+        "head_branch": "ci/charamel32-cmd-gates-20261127",
+        "head_sha": "f5adc8cbc2b99e6764dd182a6285368a5df60ed5"
+      }
+    },
+    "log_sha256": "5ffd6f6f30df31bc2af59ba8c88259340ef8de45fa35f7588ff0c1547668beb7",
+    "reported_tests": 1775,
+    "suite_count": 30
   },
   "preparation": {
     "producer": "8dece2aac1d8cc2adb407a676a231d042eecebbe",
@@ -169,7 +363,10 @@
       ".github/workflows/charamel32-cmd-options.yml",
       ".github/workflows/charamel32-posix-followup.yml"
     ],
-    "retired": false
+    "retired": true,
+    "retirement_parent": "b479ad5775ad39881f5a621e45f6eaca594202fe",
+    "retirement_scope": "Only three owned temporary workflow files are removed; proof payloads and receipts remain.",
+    "retirement_run_check": "pending"
   },
   "limits": [
     "Current tree runs all Linux AGENTS gates. Windows evidence is carried only after complete non-test blob/mode equality and exact native permission-fixture equality.",
@@ -177,11 +374,34 @@
     "Historical failed native setup/oracle/transport/fd-integration proofs remain unchanged."
   ],
   "next": [
-    "Complete exact-tree full Linux gates",
-    "Fresh raw maintained head and actual main checks",
-    "Publish additively only after accepted gates",
-    "Update body and reply/resolve only addressed currently unresolved threads",
-    "Observe ordinary exact-head CI",
-    "Retire all three owned temporary workflows additively"
-  ]
+    "Update the PR body and evidence replies",
+    "Resolve only addressed current threads after exact published-tree verification",
+    "Observe ordinary exact-head CI and fresh review state",
+    "Save final terminal checkpoint and verify retired probe does not trigger a run"
+  ],
+  "windows_carry_forward": {
+    "from_tree": "457cd4529dbca9dfb84a258f6a4854b3ce5c6ac2",
+    "current_tree": "e0047690e8b0f0013c4e5f3a646ee9663fecb77d",
+    "windows_producer": "0a60a5c81b539444484ffbf596d8a78f179c8cee",
+    "windows_run": "45957479981",
+    "windows_artifact": {
+      "id": 15181286677,
+      "sha256": "5459c195bb44cb21a73a43fffa88a67fa67bba8fcd9cfb7575c0806cdd902941",
+      "producer": "0a60a5c81b539444484ffbf596d8a78f179c8cee",
+      "run": 45957479981,
+      "job": 140367202997
+    },
+    "non_test_entries_identical": 1093,
+    "only_changed_path": "test/crush/test_tools_shell.ml",
+    "windows_specific_fixture_identical": true,
+    "windows_fixture_sha256": "84e4ea277db9f271b3ecc06e11702e3ff28dc04f2f88a7caf5dba2add2a68e07",
+    "scope": "Exact production and native Windows permission fixture evidence; the additional test-only current-head reconciliation runs full Linux gates separately.",
+    "current_tree_executed_on_windows": false
+  },
+  "ordinary_ci": {
+    "status": "not_observed_yet",
+    "conclusion": null,
+    "exact_head": "f879b0156aa32a317cb0e29609df53786a09ec78"
+  },
+  "all_current_threads_resolved": false
 }
