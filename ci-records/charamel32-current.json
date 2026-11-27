@@ -1,18 +1,93 @@
 {
+  "recorded_utc": "2026-11-27 11:24:10 UTC",
   "repository": "gosuda/Charamel",
   "pull_request": 32,
+  "branch": "followup/merged-threads-1127",
   "maintained_head": "c00962f26db32a41cfc1c487027a8b6316cb8bf1",
   "actual_main": "84e5ff153f781c7e2d02804a5c24997858f618ab",
   "candidate_tree": "ecea478c6d047d601c8e09826624f62e25b77a91",
-  "changed_paths": [
-    "bin/crush/lib/shell_screen.ml",
-    "bin/crush/lib/shell_screen.mli",
-    "test/crush/test_tools_shell.ml"
+  "source_elements": [
+    {
+      "path": "bin/crush/lib/shell_screen.ml",
+      "mode": "100644",
+      "sha256": "66af36577313918be01ded984ee3115da9a33e2828e555a9301c9b5a1d732cdc"
+    },
+    {
+      "path": "bin/crush/lib/shell_screen.mli",
+      "mode": "100644",
+      "sha256": "341412aafaebbc354197001bd9373086ee9681ee69cac012df2cf08637212ee9"
+    },
+    {
+      "path": "test/crush/test_tools_shell.ml",
+      "mode": "100644",
+      "sha256": "94038233ffbec8ce1611f6780004a29ac756c7359bbf2f163bc5c1f57f02b54f"
+    }
   ],
-  "source_sha256": {
-    "bin/crush/lib/shell_screen.ml": "66af36577313918be01ded984ee3115da9a33e2828e555a9301c9b5a1d732cdc",
-    "bin/crush/lib/shell_screen.mli": "341412aafaebbc354197001bd9373086ee9681ee69cac012df2cf08637212ee9",
-    "test/crush/test_tools_shell.ml": "94038233ffbec8ce1611f6780004a29ac756c7359bbf2f163bc5c1f57f02b54f"
+  "tree_comparison": {
+    "original_tree": "99508a172cd995a72dc9845016324e13a5b88527",
+    "candidate_tree": "ecea478c6d047d601c8e09826624f62e25b77a91",
+    "original_entries": 1094,
+    "candidate_entries": 1094,
+    "unchanged_entries": 1091,
+    "changed": [
+      {
+        "path": "bin/crush/lib/shell_screen.ml",
+        "before": {
+          "path": "bin/crush/lib/shell_screen.ml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "428bdb18cea1f06de52824ed8c07f8ef1da8a47a",
+          "size": 67331,
+          "url": "https://api.github.com/repos/gosuda/Charamel/git/blobs/428bdb18cea1f06de52824ed8c07f8ef1da8a47a"
+        },
+        "after": {
+          "path": "bin/crush/lib/shell_screen.ml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "70949ae6f48c2041813e96c792570cbb53dca124",
+          "size": 69686,
+          "url": "https://api.github.com/repos/gosuda/Charamel/git/blobs/70949ae6f48c2041813e96c792570cbb53dca124"
+        }
+      },
+      {
+        "path": "bin/crush/lib/shell_screen.mli",
+        "before": {
+          "path": "bin/crush/lib/shell_screen.mli",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "08008ee0b25032e1537d533000b0f662e8ebe2ad",
+          "size": 2618,
+          "url": "https://api.github.com/repos/gosuda/Charamel/git/blobs/08008ee0b25032e1537d533000b0f662e8ebe2ad"
+        },
+        "after": {
+          "path": "bin/crush/lib/shell_screen.mli",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "7d4de560e7640493af362da347287deda12de45d",
+          "size": 3005,
+          "url": "https://api.github.com/repos/gosuda/Charamel/git/blobs/7d4de560e7640493af362da347287deda12de45d"
+        }
+      },
+      {
+        "path": "test/crush/test_tools_shell.ml",
+        "before": {
+          "path": "test/crush/test_tools_shell.ml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b2502db9e4134bfe20839620ee134de169156b9d",
+          "size": 38038,
+          "url": "https://api.github.com/repos/gosuda/Charamel/git/blobs/b2502db9e4134bfe20839620ee134de169156b9d"
+        },
+        "after": {
+          "path": "test/crush/test_tools_shell.ml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c0349011c1cea5cd35e055dabfaa50dfead011ad",
+          "size": 48466,
+          "url": "https://api.github.com/repos/gosuda/Charamel/git/blobs/c0349011c1cea5cd35e055dabfaa50dfead011ad"
+        }
+      }
+    ]
   },
   "preparation": {
     "id": 15193595379,
@@ -22,13 +97,755 @@
     "job": 140467437327,
     "report": "prepare-result.json"
   },
-  "phase": "Full Linux and native Windows gates prepared; no maintained candidate publication.",
-  "full_gate_manifest": "ci-tools/charamel32-cmd-redirection/gates.json",
+  "preparation_result": {
+    "producer": "caa3a43fa5fc409e962d3ac805fd0afece65e434",
+    "run": "45987706404",
+    "head": "c00962f26db32a41cfc1c487027a8b6316cb8bf1",
+    "original_tree": "99508a172cd995a72dc9845016324e13a5b88527",
+    "formatted_tree": "ecea478c6d047d601c8e09826624f62e25b77a91",
+    "accepted": true,
+    "native_counts": [
+      31,
+      10,
+      10
+    ],
+    "source_restored": true,
+    "stages": {
+      "observed_original": {
+        "tree": "297e360629fce1df626dc25bc76c6727e409b933",
+        "classifier_cases": 203,
+        "classifier_failures": [
+          "redirect-reported_quoted_outer",
+          "redirect-quoted_outer_stderr",
+          "redirect-quoted_outer_both",
+          "redirect-quoted_outer_append",
+          "redirect-inner_plus_outer",
+          "redirect-two_outer_targets",
+          "redirect-following_command",
+          "redirect-grouped_outer",
+          "redirect-for_body_outer",
+          "redirect-trailing_space_outer"
+        ],
+        "trace_cases": 48,
+        "trace_failures": [
+          "nested_redirect_equal",
+          "nested_redirect_prefix",
+          "reported_quoted_outer",
+          "quoted_outer_stderr",
+          "quoted_outer_both",
+          "quoted_outer_append",
+          "redirect_before_payload",
+          "inner_plus_outer",
+          "two_outer_targets",
+          "following_command",
+          "grouped_outer",
+          "for_body_outer",
+          "trailing_space_outer",
+          "echo_two_spaces",
+          "echo_tab_gap",
+          "echo_argument_between",
+          "echo_duplication_before",
+          "echo_comma_gap",
+          "echo_quoted_digit",
+          "echo_quoted_digits",
+          "echo_two_digits",
+          "echo_escaped_digit",
+          "echo_ordinary_digit"
+        ],
+        "maintained_test": {
+          "actual_exit": 1,
+          "expected_exit": 1,
+          "expected_failure": "nested_redirect_equal",
+          "log_sha256": "e9569aaeb005d79d65e842e0c725748f1983c994917a8af4fd419713b3a582e3"
+        }
+      },
+      "old_join": {
+        "tree": "ace1332f774c62ffb59fde987bb9bad960a745bf",
+        "classifier_cases": 203,
+        "classifier_failures": [
+          "echo-echo_blank",
+          "echo-echo_at_blank",
+          "echo-echo_case_blank",
+          "echo-echo_text",
+          "echo-echo_nested_open",
+          "echo-echo_space_open",
+          "echo-echo_two_commands",
+          "echo-echo_literal_parens",
+          "echo-group_blank",
+          "echo-group_text",
+          "echo-group_text_parens",
+          "echo-group_text_escaped_close",
+          "echo-loop_blank",
+          "echo-loop_group_blank",
+          "echo-nested_blank",
+          "echo-nested_quoted_blank",
+          "echo-nested_double_blank",
+          "echo-echo_operator_escape",
+          "echo-echo_following_group",
+          "echo-reset-refused",
+          "echo-group-reset-refused"
+        ],
+        "trace_cases": 48,
+        "trace_failures": [
+          "nested_equal",
+          "nested_punctuation",
+          "nested_tab",
+          "nested_blank",
+          "nested_double_blank",
+          "nested_double_equal",
+          "nested_redirect_equal",
+          "nested_redirect_prefix",
+          "nested_prefix_separators",
+          "nested_loop_blank",
+          "trailing_plain",
+          "trailing_trimmed_control",
+          "leading_plain",
+          "quoted_trailing_outside",
+          "prefix_trailing",
+          "for-body-source-offset",
+          "group-local-source-offset",
+          "reported_quoted_outer",
+          "quoted_outer_stderr",
+          "quoted_outer_both",
+          "quoted_outer_append",
+          "inner_plus_outer",
+          "two_outer_targets",
+          "following_command",
+          "grouped_outer",
+          "for_body_outer",
+          "trailing_space_outer",
+          "echo_two_spaces",
+          "echo_tab_gap",
+          "echo_argument_between",
+          "echo_duplication_before",
+          "echo_comma_gap",
+          "echo_quoted_digit",
+          "echo_quoted_digits",
+          "echo_two_digits",
+          "echo_escaped_digit",
+          "echo_ordinary_digit"
+        ],
+        "maintained_test": {
+          "actual_exit": 1,
+          "expected_exit": 1,
+          "expected_failure": "nested_equal",
+          "log_sha256": "5f4e33bd21903f8d940afb28aadc0c6ba007d5a175d60a931693740a996c9810"
+        }
+      },
+      "candidate": {
+        "tree": "ecea478c6d047d601c8e09826624f62e25b77a91",
+        "classifier_cases": 203,
+        "classifier_failures": [],
+        "trace_cases": 48,
+        "trace_failures": [],
+        "maintained_test": {
+          "actual_exit": 0,
+          "expected_exit": 0,
+          "expected_failure": null,
+          "log_sha256": "986db7ab675bca0cd6dcb97517be123b4c8d0f23aa748842484451f81968247f"
+        }
+      },
+      "redirection_mutant": {
+        "tree": "c23b15880cdc37e73b504a883e24a5034fffd205",
+        "classifier_cases": 203,
+        "classifier_failures": [
+          "redirect-reported_quoted_outer",
+          "redirect-quoted_outer_stderr",
+          "redirect-quoted_outer_both",
+          "redirect-quoted_outer_append",
+          "redirect-inner_plus_outer",
+          "redirect-two_outer_targets",
+          "redirect-following_command",
+          "redirect-grouped_outer",
+          "redirect-for_body_outer",
+          "redirect-trailing_space_outer"
+        ],
+        "trace_cases": 48,
+        "trace_failures": [
+          "nested_redirect_equal",
+          "nested_redirect_prefix",
+          "reported_quoted_outer",
+          "quoted_outer_stderr",
+          "quoted_outer_both",
+          "quoted_outer_append",
+          "redirect_before_payload",
+          "inner_plus_outer",
+          "two_outer_targets",
+          "following_command",
+          "grouped_outer",
+          "for_body_outer",
+          "trailing_space_outer",
+          "echo_two_spaces",
+          "echo_tab_gap",
+          "echo_argument_between",
+          "echo_duplication_before",
+          "echo_comma_gap",
+          "echo_quoted_digit",
+          "echo_quoted_digits",
+          "echo_two_digits",
+          "echo_escaped_digit",
+          "echo_ordinary_digit"
+        ],
+        "maintained_test": {
+          "actual_exit": 1,
+          "expected_exit": 1,
+          "expected_failure": "nested_redirect_equal",
+          "log_sha256": "91ee8038bd88d0c3a406fd9525541b3686206546a1b56de91801f0571ee0dc98"
+        }
+      },
+      "restored": {
+        "tree": "ecea478c6d047d601c8e09826624f62e25b77a91",
+        "classifier_cases": 203,
+        "classifier_failures": [],
+        "trace_cases": 48,
+        "trace_failures": [],
+        "maintained_test": {
+          "actual_exit": 0,
+          "expected_exit": 0,
+          "expected_failure": null,
+          "log_sha256": "d8f8e5ccce30faab6fb17acd36c9115e83fcbb368a0e0df024dee6f879a9e373"
+        }
+      }
+    },
+    "commands": [
+      {
+        "label": "compiler-version",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlc",
+          "-version"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.011265090999927452,
+        "log_sha256": "db74d0caf81f43029fa28ce9888695d0b54d0a99003e6042823c9bc914897865"
+      },
+      {
+        "label": "formatter-version",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlformat",
+          "--version"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.013381290999973317,
+        "log_sha256": "a68641c6aacd345c4931a6217331d2bf43398c7bc134666a2f756953eab407aa"
+      },
+      {
+        "label": "fetch-legacy-source",
+        "argv": [
+          "git",
+          "fetch",
+          "--no-tags",
+          "--depth=1",
+          "origin",
+          "f879b0156aa32a317cb0e29609df53786a09ec78"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.3257662150000442,
+        "log_sha256": "a89667a2d1313f44f4874271421625b9ba6a6314ee3bdb36b5a9bf28a4e9a9d0"
+      },
+      {
+        "label": "original-compile",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlc",
+          "-strict-sequence",
+          "-strict-formats",
+          "-short-paths",
+          "-principal",
+          "-warn-error",
+          "+a",
+          "-o",
+          "/tmp/charamel32-redirection-compile-ks9xkz4d/original/screen-probe",
+          "shell_screen.mli",
+          "shell_screen.ml",
+          "probe.ml"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.07280765999996675,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "observed_original-compile",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlc",
+          "-strict-sequence",
+          "-strict-formats",
+          "-short-paths",
+          "-principal",
+          "-warn-error",
+          "+a",
+          "-o",
+          "/tmp/charamel32-redirection-compile-ks9xkz4d/observed_original-plain/screen-probe",
+          "shell_screen.mli",
+          "shell_screen.ml",
+          "probe.ml"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.07281187000000955,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "observed_original-trace-compile",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlc",
+          "-strict-sequence",
+          "-strict-formats",
+          "-short-paths",
+          "-principal",
+          "-warn-error",
+          "+a",
+          "-o",
+          "/tmp/charamel32-redirection-compile-ks9xkz4d/observed_original-trace/screen-probe",
+          "shell_screen.mli",
+          "shell_screen.ml",
+          "probe.ml"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.07575424300000577,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "observed_original-maintained-test",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "dune",
+          "exec",
+          "--profile",
+          "release",
+          "test/crush/test_crush.exe",
+          "--",
+          "test",
+          "--show-errors",
+          "^tools-shell$",
+          "15"
+        ],
+        "actual_exit": 1,
+        "timeout": false,
+        "seconds": 6.059483110000087,
+        "log_sha256": "e9569aaeb005d79d65e842e0c725748f1983c994917a8af4fd419713b3a582e3"
+      },
+      {
+        "label": "old_join-compile",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlc",
+          "-strict-sequence",
+          "-strict-formats",
+          "-short-paths",
+          "-principal",
+          "-warn-error",
+          "+a",
+          "-o",
+          "/tmp/charamel32-redirection-compile-ks9xkz4d/old_join-plain/screen-probe",
+          "shell_screen.mli",
+          "shell_screen.ml",
+          "probe.ml"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.07183497699998043,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "old_join-trace-compile",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlc",
+          "-strict-sequence",
+          "-strict-formats",
+          "-short-paths",
+          "-principal",
+          "-warn-error",
+          "+a",
+          "-o",
+          "/tmp/charamel32-redirection-compile-ks9xkz4d/old_join-trace/screen-probe",
+          "shell_screen.mli",
+          "shell_screen.ml",
+          "probe.ml"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.0757591039999852,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "old_join-maintained-test",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "dune",
+          "exec",
+          "--profile",
+          "release",
+          "test/crush/test_crush.exe",
+          "--",
+          "test",
+          "--show-errors",
+          "^tools-shell$",
+          "15"
+        ],
+        "actual_exit": 1,
+        "timeout": false,
+        "seconds": 1.4376967499999864,
+        "log_sha256": "5f4e33bd21903f8d940afb28aadc0c6ba007d5a175d60a931693740a996c9810"
+      },
+      {
+        "label": "format-candidate",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlformat",
+          "-i",
+          "bin/crush/lib/shell_screen.ml",
+          "bin/crush/lib/shell_screen.mli",
+          "test/crush/test_tools_shell.ml"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.22914643000001433,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "candidate-compile",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlc",
+          "-strict-sequence",
+          "-strict-formats",
+          "-short-paths",
+          "-principal",
+          "-warn-error",
+          "+a",
+          "-o",
+          "/tmp/charamel32-redirection-compile-ks9xkz4d/candidate-plain/screen-probe",
+          "shell_screen.mli",
+          "shell_screen.ml",
+          "probe.ml"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.08144551899999897,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "candidate-trace-compile",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlc",
+          "-strict-sequence",
+          "-strict-formats",
+          "-short-paths",
+          "-principal",
+          "-warn-error",
+          "+a",
+          "-o",
+          "/tmp/charamel32-redirection-compile-ks9xkz4d/candidate-trace/screen-probe",
+          "shell_screen.mli",
+          "shell_screen.ml",
+          "probe.ml"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.07754841200005558,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "candidate-maintained-test",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "dune",
+          "exec",
+          "--profile",
+          "release",
+          "test/crush/test_crush.exe",
+          "--",
+          "test",
+          "--show-errors",
+          "^tools-shell$",
+          "15"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 1.5760330919999888,
+        "log_sha256": "986db7ab675bca0cd6dcb97517be123b4c8d0f23aa748842484451f81968247f"
+      },
+      {
+        "label": "redirection_mutant-compile",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlc",
+          "-strict-sequence",
+          "-strict-formats",
+          "-short-paths",
+          "-principal",
+          "-warn-error",
+          "+a",
+          "-o",
+          "/tmp/charamel32-redirection-compile-ks9xkz4d/redirection_mutant-plain/screen-probe",
+          "shell_screen.mli",
+          "shell_screen.ml",
+          "probe.ml"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.07633126600001106,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "redirection_mutant-trace-compile",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlc",
+          "-strict-sequence",
+          "-strict-formats",
+          "-short-paths",
+          "-principal",
+          "-warn-error",
+          "+a",
+          "-o",
+          "/tmp/charamel32-redirection-compile-ks9xkz4d/redirection_mutant-trace/screen-probe",
+          "shell_screen.mli",
+          "shell_screen.ml",
+          "probe.ml"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.07695190899994486,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "redirection_mutant-maintained-test",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "dune",
+          "exec",
+          "--profile",
+          "release",
+          "test/crush/test_crush.exe",
+          "--",
+          "test",
+          "--show-errors",
+          "^tools-shell$",
+          "15"
+        ],
+        "actual_exit": 1,
+        "timeout": false,
+        "seconds": 1.4168109590000313,
+        "log_sha256": "91ee8038bd88d0c3a406fd9525541b3686206546a1b56de91801f0571ee0dc98"
+      },
+      {
+        "label": "restored-compile",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlc",
+          "-strict-sequence",
+          "-strict-formats",
+          "-short-paths",
+          "-principal",
+          "-warn-error",
+          "+a",
+          "-o",
+          "/tmp/charamel32-redirection-compile-ks9xkz4d/restored-plain/screen-probe",
+          "shell_screen.mli",
+          "shell_screen.ml",
+          "probe.ml"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.07808606399999007,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "restored-trace-compile",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "ocamlc",
+          "-strict-sequence",
+          "-strict-formats",
+          "-short-paths",
+          "-principal",
+          "-warn-error",
+          "+a",
+          "-o",
+          "/tmp/charamel32-redirection-compile-ks9xkz4d/restored-trace/screen-probe",
+          "shell_screen.mli",
+          "shell_screen.ml",
+          "probe.ml"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.07771727300007569,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "restored-maintained-test",
+        "argv": [
+          "opam",
+          "exec",
+          "--switch=rd",
+          "--",
+          "dune",
+          "exec",
+          "--profile",
+          "release",
+          "test/crush/test_crush.exe",
+          "--",
+          "test",
+          "--show-errors",
+          "^tools-shell$",
+          "15"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 1.424083970999959,
+        "log_sha256": "d8f8e5ccce30faab6fb17acd36c9115e83fcbb368a0e0df024dee6f879a9e373"
+      },
+      {
+        "label": "candidate-whitespace",
+        "argv": [
+          "git",
+          "diff",
+          "--cached",
+          "--check"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.001964348000001337,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "restore-original",
+        "argv": [
+          "git",
+          "reset",
+          "--hard",
+          "c00962f26db32a41cfc1c487027a8b6316cb8bf1"
+        ],
+        "actual_exit": 0,
+        "timeout": false,
+        "seconds": 0.004469430000085595,
+        "log_sha256": "41e9c185d5fe3e49a0158895f2922dacc1d7cf99e97585f9496ff86737d31fd3"
+      }
+    ],
+    "scope": "Original parser and exact historical joining implementation receive only the same local observation adapter and the new maintained test; original classifier outputs are compared before and after that adapter. Two historical outer-redirection traces are explicitly corrected."
+  },
+  "full_gate": {
+    "producer": "40bf1bf60309f7a5ee2a5c1a0dded2315df0ebef",
+    "tree": "3d556ed922c37784b340ba7a597fed9ee4d48248",
+    "run": 45989805076,
+    "workflow": ".github/workflows/charamel32-cmd-redirection.yml",
+    "manifest": "ci-tools/charamel32-cmd-redirection/gates.json",
+    "jobs": [
+      {
+        "id": 140474455776,
+        "name": "native (windows, depot-windows-2025)",
+        "status": "in_progress",
+        "conclusion": null,
+        "preflight": "success",
+        "native_replay": "success"
+      },
+      {
+        "id": 140474456073,
+        "name": "native (linux, depot-ubuntu-24.04)",
+        "status": "in_progress",
+        "conclusion": null,
+        "preflight": "success",
+        "native_replay": "skipped"
+      }
+    ]
+  },
+  "phase": "Both native checkouts reached exact ecea source. Windows completed all retained and new native replays successfully. Both jobs installing OCaml; prescribed source gates pending.",
+  "publication_ready": false,
   "unresolved_threads": [
-    "PRRT_kwDOUbWGks68u3UC",
-    "PRRT_kwDOUbWGks68u3WO"
+    {
+      "id": "PRRT_kwDOUbWGks68u3UC",
+      "comments": [
+        4718073202
+      ]
+    },
+    {
+      "id": "PRRT_kwDOUbWGks68u3WO",
+      "comments": [
+        4718073404
+      ]
+    }
   ],
-  "historical_published_receipt": "https://github.com/gosuda/sloplint/blob/97893a8905fecfc6a3dbbc1e7c94b18622d92409/ci-records/charamel32-echo-terminal.json",
+  "publication_drafts": {
+    "body": "## Cmd payload and outer-redirection follow-up\n\nThis update keeps quoted outer redirection targets out of a nested `cmd /c` payload. A command such as `cmd /d /c \"echo ready\" > \"capture (sales & support).txt\"` now retains its existing approval instead of treating punctuation in the filename as command syntax. The parser records current-level redirection spans, removes those spans from the recursive input, and retains the remaining original separators. Redirection inside the quoted payload stays with the child command.\n\nThe regression check now inspects the exact recursive parser inputs through the documented `For_test.screen_cmd` entry point. This distinguishes `echo key=value` from `echo key value` even though both classify as Clear. The maintained table covers 48 input sequences; a separate Windows approval test checks the actual redirected file bytes. The trace is an observation of screening inputs, not a claim that every spelling equals a native child command line.\n\n### Verification\n\n- Candidate source: `{PUBLISHED_HEAD}`, tree `ecea478c6d047d601c8e09826624f62e25b77a91`; only `shell_screen.ml`, its `.mli`, and `test_tools_shell.ml` change from `c00962f26db32a41cfc1c487027a8b6316cb8bf1`.\n- [Source preparation](https://github.com/gosuda/sloplint/actions/runs/45987706404): all 203 classifier cases and 48 trace cases pass the candidate and restored source. The actual maintained test fails on the published redirection bug at `nested_redirect_equal` and on the historical token-joining implementation at `nested_equal`.\n- [Full Linux and Windows gates](https://github.com/gosuda/sloplint/actions/runs/45989805076): {TERMINAL_GATE_SUMMARY}.\n- Native Windows replay compares 101 retained cases and 51 new redirection observations, including quoted filenames, adjacent redirects, descriptor spellings, grouping and loop bodies. It compares actual exits and output bytes; only owned process identifiers and the one owned working-directory prefix are normalized.\n\nThe first preparation attempt [45985935070](https://github.com/gosuda/sloplint/actions/runs/45985935070) remains a failed harness run: its adapter did not pass the observation callback through the older implementation's recursive function. No candidate was applied in that run, and the original source was restored. The corrected preparation, frozen native observations and full-gate evidence are recorded in the [terminal receipt]({TERMINAL_RECEIPT}).\n\nThe earlier loop, POSIX field-boundary, fd-filter and Echo fixes remain in this branch. Their historical exact-source proof is preserved in the [previous receipt](https://github.com/gosuda/sloplint/blob/97893a8905fecfc6a3dbbc1e7c94b18622d92409/ci-records/charamel32-echo-terminal.json). No universal Cmd parser parity or full Windows-suite result is claimed.\n",
+    "replies": [
+      {
+        "thread": "PRRT_kwDOUbWGks68u3UC",
+        "comment": 4718073202,
+        "body": "Fixed in [{PUBLISHED_HEAD}](https://github.com/gosuda/Charamel/commit/{PUBLISHED_HEAD}). Current-level redirection operators and targets now retain their source spans; those spans are excluded when forming a nested Cmd payload. Inner quoted redirections remain intact, and every other source byte is retained. Raw single-digit descriptors are distinguished from quoted, escaped and multi-digit arguments.\n\nThe exact reported command has a native Windows observation and a maintained approval test that checks the redirected file contains `ready \\\\r\\\\n`. The proof also covers adjacent redirects, redirects before the payload/switch, inner-plus-outer redirects, following commands, grouping and loop bodies. The published-source mutant reproduces the classifier and exact-input failures; the candidate and restored candidate pass.\n\nEvidence: [preparation](https://github.com/gosuda/sloplint/actions/runs/45987706404), [full Linux/Windows gates](https://github.com/gosuda/sloplint/actions/runs/45989805076), and [terminal receipt]({TERMINAL_RECEIPT}). Final tested tree: `ecea478c6d047d601c8e09826624f62e25b77a91`."
+      },
+      {
+        "thread": "PRRT_kwDOUbWGks68u3WO",
+        "comment": 4718073404,
+        "body": "Addressed in [{PUBLISHED_HEAD}](https://github.com/gosuda/Charamel/commit/{PUBLISHED_HEAD}). The maintained test now asserts the actual recursive parser inputs through the documented `For_test.screen_cmd` observation entry point, as well as the same public verdict. Its 48 exact sequences distinguish equals signs, punctuation, tabs and trailing spaces. This checks the screening copy directly; an execution-only stdout assertion would not detect token joining inside that copy.\n\nThe actual maintained test fails at `nested_equal` with the historical joining implementation and at `nested_redirect_equal` with the published redirection bug. It passes the exact candidate and restored candidate. A separate Windows permission test also checks the real redirected output bytes.\n\nEvidence: [preparation and both negative controls](https://github.com/gosuda/sloplint/actions/runs/45987706404), [full Linux/Windows gates](https://github.com/gosuda/sloplint/actions/runs/45989805076), and [terminal receipt]({TERMINAL_RECEIPT}). The trace records screening inputs and does not claim byte equality with native child command lines after every native escape transformation."
+      }
+    ]
+  },
   "historical_preparation_failure": {
     "producer": "9a4b67b46de5cab9846808126ec05dff0694766f",
     "run": 45985935070,
@@ -38,8 +855,16 @@
     "conclusion": "failure",
     "reason": "Historical f879 observation adapter omitted trace argument through its older mutually recursive cmd_char path. Candidate was not applied; original source restored. Retry corrects only that harness adapter."
   },
-  "review_scope": "No independent review of this new source proposal has been claimed. Earlier coordinator reviews apply only to their recorded prior source.",
-  "source_changes": "Only shell_screen.ml, its documented shell_screen.mli test observation entry point, and test_tools_shell.ml. Exact native formatter output; unchanged POSIX prefix, tools_shell.ml, permission policy, dependency files and maintained workflows.",
-  "trace_scope": "For_test.screen_cmd records actual recursive screening input strings, including the root. It is not a claim that every traced spelling equals the native child command line; native caret processing and screening recursion remain separate.",
-  "windows_scope": "Fresh formatting and full release build, all shell/permission cases including payload-source and redirection approval tests, 101 retained Cmd observations and 51 new redirection observations. No full Windows suite claim."
+  "previous_receipt": "https://github.com/gosuda/sloplint/blob/97893a8905fecfc6a3dbbc1e7c94b18622d92409/ci-records/charamel32-echo-terminal.json",
+  "scope": {
+    "trace": "For_test.screen_cmd records actual recursive screening input strings, including the root. It is not a claim that every traced spelling equals the native child command line; native caret processing and screening recursion remain separate.",
+    "source_changes": "Only shell_screen.ml, its documented shell_screen.mli test observation entry point, and test_tools_shell.ml. Exact native formatter output; unchanged POSIX prefix, tools_shell.ml, permission policy, dependency files and maintained workflows.",
+    "windows": "Fresh formatting and full release build, all shell/permission cases including payload-source and redirection approval tests, 101 retained Cmd observations and 51 new redirection observations. No full Windows suite claim."
+  },
+  "ordinary_ci": {
+    "head": "c00962f26db32a41cfc1c487027a8b6316cb8bf1",
+    "workflow": "build.yml",
+    "observed_actions_run_count": 0,
+    "description": "No ordinary Actions run found for c009 at this read. External review status is not CI success."
+  }
 }
