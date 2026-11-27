@@ -7,9 +7,8 @@
     "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332"
   },
   "candidate": {
-    "tree": "11048bd42c9e73d8542140a2fe5509632b1e68a7",
+    "tree": "497c679c6e56ce8cd1abbf1004d9e5938503bbd5",
     "blobs": 616,
-    "production_commit_created": false,
     "changed_paths": [
       "cmd/sqlc-gen-spira/model.lgo",
       "cmd/sqlc-gen-spira/typed_literal_test.lgo",
@@ -19,8 +18,9 @@
       "cmd/sqlc-gen-spira/testdata/literal-schema.sql",
       "docs/specs/sqlc-gen-spira.md"
     ],
-    "authored_sha256": "5ba7b7460dc22d47aec57deedaf788c13030c0d9f3431b6700f8c18b047d4f66",
-    "index_sha256": "e7253ae99b4cf4b34a6e07fa69fc0b284aebd9b05f4163da1cef22f22107fd56"
+    "authored_sha256": "71b61c076184beec1726da9a36ef2c8cf0dbd8aa63f1fb3ca1c35af919d6ead3",
+    "index_sha256": "9cf8c72727e8485dd1a3cc566010448be109b47c98acd56b91f3d57d899618c5",
+    "production_commit_created": false
   },
   "native_baseline": {
     "producer": "b1233de9007bdc53a3f64a468d43a831b8bfb96c",
@@ -56,5 +56,6 @@
     "executed": false,
     "finding": "The proposal builder passed a literal dollar-plus-quote sequence to JavaScript replacement-string syntax, duplicating a source suffix.",
     "correction": "Use a replacement callback. Inverting the one function replacement recovers the entire exact original model blob46cdb6fa. All six other authored files remain byte-identical."
-  }
+  },
+  "documentation_qualification": "Only two documentation phrases qualify native-validated fixtures and request-model tests; compiled/test bytes unchanged."
 }

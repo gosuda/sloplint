@@ -1,0 +1,29 @@
+package main_test
+
+import (
+	"encoding/json/v2"
+	"os"
+	"testing"
+)
+
+func TestPostgresTypedLiteralBoundaries(t *testing.T) {
+	data, err := os.ReadFile("testdata/typed-literals.json")
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+	var cases []continuedStringCase
+	if err := json.Unmarshal(data, &cases); err != nil {
+		t.Fatal(err)
+		return
+	}
+	if len(cases) != 12 {
+		t.Fatalf("typed-literal cases = %d; want 12", len(cases))
+		return
+	}
+	for _, tc := range cases {
+		t.Run(tc.Name, func(t *testing.T) {
+			checkContinuedString(t, tc)
+		})
+	}
+}
