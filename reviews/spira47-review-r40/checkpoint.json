@@ -1,0 +1,194 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-11-27T17:20:27Z",
+  "state": "source_published_review_pending_proof_retirement",
+  "publication": {
+    "repository": "gosuda/spira",
+    "pull_request": 47,
+    "url": "https://github.com/gosuda/spira/pull/47",
+    "branch": "followup/merged-threads-1127",
+    "head": "6031a63255bc7496e22b38921e10401a2d50c291",
+    "parent": "4bde2ec5e8bf23ffbeca0b4b54e8c9c7c005e33f",
+    "tree": "e4214ecf0b2b5a214d26921664313b98d14efb13",
+    "blobs": 625,
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "changed_paths": [
+      {
+        "path": "cmd/sqlc-gen-spira/model.lgo",
+        "sha256": "face86cedd33f5aac016ecc7b80947e1cf422ba3e8999b5b7d013d30fc948c4c",
+        "git_blob": "b5c2a9630c8c91c21015393cf642ad93290956c3"
+      },
+      {
+        "path": "cmd/sqlc-gen-spira/version_reference.lgo",
+        "sha256": "f3c2fb8217abe06f16b9e0651e045d2da72af695b5cf288c8e9d17a042e3fefb",
+        "git_blob": "de5af94f52d91c2d91e93c0e1608386450d38807"
+      },
+      {
+        "path": "cmd/sqlc-gen-spira/query_constants_test.lgo",
+        "sha256": "ec79cde53faaee04791258f2352058d18e22e070c47309ed5cf7f4406d7ce69f",
+        "git_blob": "bc58c8d9dfe83060daddfb1d61002c850e258b6f"
+      },
+      {
+        "path": "cmd/sqlc-gen-spira/continued_escape_test.lgo",
+        "sha256": "1b3f0fa23e959479e1834db2709ff61d8af30a57d84b6bbb5302c6a191b25d05",
+        "git_blob": "4e44963247f527362a0fdc9b0366db723d312a64"
+      },
+      {
+        "path": "cmd/sqlc-gen-spira/version_reference_test.lgo",
+        "sha256": "0f6a7d7c2b7419755294bac874f43be3c73a5d64ac9d8946f4c72964d694eaa4",
+        "git_blob": "b8fef503f15b129532b47997904e76cc541c5961"
+      },
+      {
+        "path": "cmd/sqlc-gen-spira/testdata/version-references.json",
+        "sha256": "dd4ce8e234ddd6f4fd668608944dc5bd3b15ce23f3ff9de463d48b9706d8332a",
+        "git_blob": "96d11f4054ecfcb299cdc0c07738313c013e5299"
+      },
+      {
+        "path": "cmd/sqlc-gen-spira/testdata/version-reference-boundaries.json",
+        "sha256": "cdd91ec2867dbc187110e727d96d12c2ea1ead6afbe4592fc6313c6feec7ecbb",
+        "git_blob": "8f1b5c3de5cb8f44fe12e6f9bbd0690eaf2bb05a"
+      },
+      {
+        "path": "docs/specs/sqlc-gen-spira.md",
+        "sha256": "bf9556cd63661b068321133c40b69a358c19120c5a262ece63507dd4a3927435",
+        "git_blob": "7e2b85240d4bcd9708b3862edd67f16788238f78"
+      }
+    ],
+    "all_published_files_read_back": true,
+    "full_tree_index_matches_native": true,
+    "mergeable": true,
+    "ordinary_workflow_paths": [],
+    "ordinary_check_runs": 0,
+    "review_status": {
+      "context": "Devin Review",
+      "state": "pending"
+    }
+  },
+  "addressed_threads": [
+    {
+      "thread": "PRRT_kwDOVpFduc6811oT",
+      "comment": 4721057351,
+      "reply": 4722104771,
+      "is_resolved": true
+    },
+    {
+      "thread": "PRRT_kwDOVpFduc6811qC",
+      "comment": 4721057551,
+      "reply": 4722105785,
+      "is_resolved": true
+    }
+  ],
+  "review_snapshot": {
+    "threads": 20,
+    "unresolved": 0,
+    "status": "Automated review remains pending; later feedback must be reconciled before a terminal completion claim."
+  },
+  "native_proof": {
+    "producer": "7a587b12c28fb7150a36b86ab8aeacf271c92d58",
+    "run": 46038608710,
+    "job": 140640279158,
+    "conclusion": "success",
+    "artifact": 15219668492,
+    "artifact_bytes": 868196,
+    "zip_sha256": "54dead011bed290692a0666f535245102bb0dc46240851534c68754106bf9a44",
+    "raw_job_log_sha256": "14b19affd14540d9c3dc8c986e737a004f15f748cd6429fc3b2289724cc7d609",
+    "verified_receipt_commit": "767da57a9b2759db48fb2d00bc34d38f8835a8fe",
+    "verified_receipt_path": "reviews/spira47-review-r40/verified-run-46038608710.json",
+    "verified_receipt_sha256": "7019e2c11def0a7a9b9b21c9bcf62fc60b01d1cd19a918201ad242a6e71bdcaf",
+    "actual_command_receipts": 132,
+    "verified_command_log_hashes": 132,
+    "actual_gates": [
+      {
+        "name": "just-gate",
+        "command": [
+          "just",
+          "gate"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "7c71df81134206d5c534c67aa687c1a1276a3f622c757ecc1254c149306e466a"
+      },
+      {
+        "name": "just-slop",
+        "command": [
+          "just",
+          "slop"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "07f1ec50bf0b8680864a77289f31f629b96cf0cf239db9b4322c4c377c681aa1"
+      },
+      {
+        "name": "just-eject",
+        "command": [
+          "just",
+          "eject"
+        ],
+        "raw_exit": 0,
+        "expected": 0,
+        "timed_out": false,
+        "log_sha256": "ab7498a95970cfb5b1c90e4813ce0421daa66a7df192a40978b9c488b6b63a42"
+      }
+    ]
+  },
+  "proof_retirement": {
+    "repository": "gosuda/sloplint",
+    "branch": "ci/spira47-version-refs-20261127-r40",
+    "parent": "767da57a9b2759db48fb2d00bc34d38f8835a8fe",
+    "actual_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+    "removed_workflow": ".github/workflows/spira47-review-r40.yml",
+    "scope": "Only the owned terminal proof workflow is removed; source/proof history and failed receipts are preserved.",
+    "post_write_absence_readback_pending": true
+  },
+  "preserved_failures": {
+    "observer_path": {
+      "producer": "5889c641b120ea325e1ff9a04769739db461f039",
+      "run": 46027118627,
+      "job": 140601265244,
+      "conclusion": "failure",
+      "artifact": 15213535172,
+      "zip_sha256": "586b6123b6a0a7a829aa89ce9bfd2c9ed5de86c4f30a61b8d6366b2ef63a3c0f",
+      "source_restored": true,
+      "reason": "Actual test launcher prepended GOROOT/bin; initial PATH-only observer omitted nested records."
+    },
+    "archive_read_bound": {
+      "producer": "7b166f72cb191b33d710389dccceb4f1cc3577a5",
+      "run": 46029336371,
+      "job": 140608831290,
+      "artifact": 15213971655,
+      "zip_sha256": "93ad4f28096354547558679da6ac5f5ee8c29efd06bd05472604dabbd8d8d916",
+      "raw_job_log_sha256": "bbfa45a5b75374c5442c485a79075da7f6977799b7ac85dd56d4cb4a056b2894",
+      "source_restored": true,
+      "phase": "combined central-directory member-count/aggregate-size check",
+      "source_tests_reached": false,
+      "conclusion": "failure"
+    },
+    "native_prediction": {
+      "producer": "922ac683b3bdbeb7f296e74280d69e9f03d77e8f",
+      "run": 46036218162,
+      "job": 140632184087,
+      "artifact": 15215953988,
+      "zip_sha256": "b51ee58ad671dd037f956013aaaaa226640f1a1f2935d079adf5825c35fe8a18",
+      "raw_job_log_sha256": "e752d41b0574b76b568e706c22a693632fa8a31688212f65b12d8e0f47473d54",
+      "conclusion": "failure",
+      "production_applied": false,
+      "source_tests_reached": false,
+      "source_restored": true,
+      "actual_native_passes": 27,
+      "failed_input": "unqualified-function-alias",
+      "actual_exit": 1,
+      "expected_exit": 0
+    }
+  },
+  "limitations": [
+    "The reference guard checks syntactic column presence; it does not perform full table binding across nested query or CTE scopes.",
+    "The exact unaliased OPERATOR query remains native/direct-generator positive; the existing SQLc output-column alias refusal still occurs before version checking. The unqualified operator(name) spelling remains an upstream syntax-error control, with its exact SQL bytes preserved.",
+    "Sloplint passed the unchanged major threshold: zero blocker/critical/major, one minor generic-name finding in unchanged web/web.lgo Handle, and 12 skips.",
+    "Eject completed and actual stock Go 1.27.4 built the output. Existing dependency-capability and frontend node_modules symlink warnings remain; stock-Go tests and just engines were not claimed.",
+    "The maintained Spira source contains no ordinary GitHub Actions or Depot workflow. The isolated Depot proof supplies source-gate evidence; it is not an ordinary PR CI run.",
+    "Earlier failed runs remain failures. No failed full-source gate was reused."
+  ],
+  "next_action": "Verify the retired workflow is absent, reconcile the automated review on the exact published head, then save the terminal checkpoint."
+}
