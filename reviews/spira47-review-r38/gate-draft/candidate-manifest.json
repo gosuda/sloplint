@@ -49,7 +49,8 @@
     "retained-native-cases.json": "50ddfc2bfad5d2454d4557d54c8f2d08ad2f3281596dce28fd4f624ac0423b78",
     "sqlc-literal-pipeline-final.json": "ad36d1af1d66770d6a3f6bcaf911787b3141f824c8316d59723529dc2f3650b8",
     "schema.sql": "bfa56ef159e985b85976918f7fdc7bb79c82095913a8470ce42fd6494b2e99cc",
-    "baseline-report.json": "b79f38301fd14dc0d15a53584402a70c5dd0450ab782cebd090b46bbbc448ce1"
+    "baseline-report.json": "b79f38301fd14dc0d15a53584402a70c5dd0450ab782cebd090b46bbbc448ce1",
+    "pipeline_observer.py": "c3a797b3fd4a9312c2d009bcc462426bfde91bd724398b306d1292eccbcad039"
   },
   "workflow_sha256": "07659444f6bad3113def8b9d73fd0890292f6ed40c22c1da8da8aef1c9271467",
   "toolchain": {
