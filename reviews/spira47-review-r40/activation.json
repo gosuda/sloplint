@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "phase": "activate-reviewed-unchanged-source-baseline",
+  "review": {
+    "reviewer": "/root/bitcoin_round7",
+    "oracle_reviewer": "/root/bitcoin_round7/spira40_oracle_review",
+    "draft": "4884d568f53813635ad1521044648f7d91e91c6f",
+    "verdict": "No blocking static harness or oracle finding",
+    "verified_manifest_sha256": "734400654182d7c0bcd6b042339feb14da9eb879e30757ac1dc1bbfc36b7eb02",
+    "native_execution": false,
+    "scope": "Exact20 cases, all12 RED/8 controls, actual nested command vectors, full621/623 source identity and restoration."
+  },
+  "source": {
+    "repository": "gosuda/spira",
+    "head": "4bde2ec5e8bf23ffbeca0b4b54e8c9c7c005e33f",
+    "tree": "1bb8f519e99a18c603ce8abcd897d2fefbee84e4",
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "blobs": 621,
+    "index_file": "source-index.json"
+  },
+  "tests": {
+    "tree": "0d6a92efd9b8d24e58cdcadad0253c2565759994",
+    "blobs": 623,
+    "index_file": "test-index.json",
+    "changed_paths": [
+      "cmd/sqlc-gen-spira/version_reference_test.lgo",
+      "cmd/sqlc-gen-spira/testdata/version-references.json",
+      "cmd/sqlc-gen-spira/continued_escape_test.lgo"
+    ],
+    "production_unchanged": true
+  },
+  "production_edited": false,
+  "publication_eligible": false,
+  "main_refs": {
+    "proof": "4884d568f53813635ad1521044648f7d91e91c6f",
+    "host_main": "dc99ed955cf78862a6f8811289f606de1fb50dfa",
+    "source": "4bde2ec5e8bf23ffbeca0b4b54e8c9c7c005e33f",
+    "main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332"
+  }
+}
