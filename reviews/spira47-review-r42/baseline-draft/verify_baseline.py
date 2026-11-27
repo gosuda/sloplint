@@ -90,7 +90,7 @@ def main() -> None:
                             "github.com/sqlc-dev/sqlc"])))
         if module["Version"] != manifest["sqlc_version"]:
             raise RuntimeError("source-pinned SQLc differs")
-        cases = observer.rows_from("version-relation-roles.json", 28)
+        cases = observer.rows_from("version-relation-roles.json", 30)
         names = {base.text(row["name"]) for row in cases}
         with native.postgres(manifest) as (container, version):
             report["postgres_version_num"] = version

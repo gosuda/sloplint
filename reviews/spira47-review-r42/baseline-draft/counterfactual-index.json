@@ -1487,7 +1487,7 @@
   {
     "path": "cmd/sqlc-gen-spira/testdata/version-relation-roles.json",
     "mode": "100644",
-    "sha": "1ad13939b34c9dbeb6078c308af0f8f592d9ea3a"
+    "sha": "9896e68ec7f16e3d5cddb100c11fb541b2ed7fde"
   },
   {
     "path": "cmd/sqlc-gen-spira/typed_literal_test.lgo",
@@ -1532,7 +1532,7 @@
   {
     "path": "cmd/sqlc-gen-spira/version_relation_test.lgo",
     "mode": "100644",
-    "sha": "437076f25543e95f3bcc45999242eec3745f51b4"
+    "sha": "f820746877b832d07c8182e096be8eef2480fdf6"
   },
   {
     "path": "cmd/sqlc-gen-spira/wire.lgo",

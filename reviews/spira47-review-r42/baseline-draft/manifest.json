@@ -10,13 +10,13 @@
     "index_file": "source-index.json"
   },
   "tests": {
-    "tree": "e7b75d79b64be3cfd9e87b027fbfaad39a025493",
+    "tree": "7c48c078922ebf058525d773617576f2e7e00f04",
     "blobs": 635,
     "index_file": "test-index.json",
     "production_unchanged": true
   },
   "counterfactual": {
-    "tree": "becf954ec601cd52a72fed2da48276acefff326d",
+    "tree": "d5114a6f2b47eff83334dd0b114daff3d1e3c1b9",
     "blobs": 635,
     "index_file": "counterfactual-index.json",
     "kind": "one-file prior reference classifier, not a complete old-source snapshot",
@@ -40,9 +40,9 @@
     "python": "3.15"
   },
   "contracts": {
-    "cases": 28,
-    "native_original": 28,
-    "native_processed": 28,
+    "cases": 30,
+    "native_original": 30,
+    "native_processed": 30,
     "current_failed": [
       "qualified-time-select-alias",
       "qualified-time-select-quoted-alias",
@@ -67,7 +67,7 @@
       "relation-column-list-explicit"
     ],
     "current_pipeline_partition": {
-      "generated": 24,
+      "generated": 26,
       "plugin-refusal": 4
     },
     "counterfactual_failed": [
@@ -79,15 +79,21 @@
       "relation-where-column",
       "relation-function-argument",
       "relation-distinct-from-column",
-      "relation-function-from-operand"
+      "relation-function-from-operand",
+      "relation-using-column",
+      "relation-array-on-column"
     ],
     "expected_semantics": {
-      "references": 9,
+      "references": 11,
       "aliases": 19
     },
     "native_schema": "Create each public items table inside its transaction and roll it back; this makes the qualified public.items control identical to the real SQLc schema.",
     "all_original_633_source_paths_preserved": true,
-    "source_gates_reused": false
+    "source_gates_reused": false,
+    "appended_controls": [
+      "relation-using-column",
+      "relation-array-on-column"
+    ]
   },
   "source_findings": [
     "PRRT_kwDOVpFduc687Ofj",
@@ -107,12 +113,12 @@
     "observer.py": "288df11fda25bf164ed03820d178fe89f32cca11171830b72a98fcf84b5ca124",
     "schema.sql": "250795d402dca7144e24f33dc51026083c7664385436545bca8762b7a66de6bc",
     "source-index.json": "f82cc1851d56d7cc2e42d29f0e31630934bb204de21e2b252cafc02cbc08c55d",
-    "test-index.json": "7b1f646803cf25a2a627ba3fac0b55594e4fa894d65697850fb64e7bd4deca99",
-    "counterfactual-index.json": "0c4fe50f479d92de56b75a8c637820691f12c08e1f631ac4ee409e8591a83091",
-    "authored-tests.json": "f3602cbdec8519d669f4b3bb098e3695c56f7eba4a39464bcdf86a8f47f4898c",
-    "version-relation-roles.json": "40a3eab823529083252674b686a9c73bf19c196adce918a8658836910286f57f",
+    "test-index.json": "f5fa0c95e9de6c63063f3f9909b356233396545acae46e0467b14b4fa0e41ba9",
+    "counterfactual-index.json": "1af8290d57765a1a4bd91d0bd208467c5cdacb5a302911009e05c1b7d37b3d74",
+    "authored-tests.json": "8fb12d993493a4d0aa4227905ba5926e3ef4ca7efb3789c3ac712ba35c9eeaab",
+    "version-relation-roles.json": "2f28a9bf7f5bfa33b9e7f863b8661484c24dae2a803fe4e493ec439938ad85c1",
     "reference-before-r41.lgo": "f3c2fb8217abe06f16b9e0651e045d2da72af695b5cf288c8e9d17a042e3fefb",
-    "verify_baseline.py": "058504818e91b83efcbd106807bdcfdc201f2a2d6d397fe2370cc527040ac07d"
+    "verify_baseline.py": "2832c4f76ef7588bacba703aef8d000df43e20a3fa0038ce9cbc0503565fc7ca"
   },
   "workflow_sha256": "43e436145e6c962384a40239720f4ec057a1e54b49192c02dbfb16603c24db0c",
   "publication_eligible": false

@@ -418,5 +418,35 @@
       0,
       0
     ]
+  },
+  {
+    "name": "relation-using-column",
+    "sql": "WITH seed AS MATERIALIZED (SELECT i.id FROM items i JOIN items j USING (version)) UPDATE items SET name = 'changed';",
+    "allow": true,
+    "columns": [
+      "version",
+      "time"
+    ],
+    "option": "version",
+    "native_name": "changed",
+    "native_versions": [
+      0,
+      0
+    ]
+  },
+  {
+    "name": "relation-array-on-column",
+    "sql": "WITH seed AS MATERIALIZED (SELECT i.id FROM items i JOIN items j ON ARRAY[1, i.version] = ARRAY[1, 0]) UPDATE items SET name = 'changed';",
+    "allow": true,
+    "columns": [
+      "version",
+      "time"
+    ],
+    "option": "version",
+    "native_name": "changed",
+    "native_versions": [
+      0,
+      0
+    ]
   }
 ]
