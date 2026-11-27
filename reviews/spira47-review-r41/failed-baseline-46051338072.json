@@ -1,0 +1,164 @@
+{
+  "schema": 1,
+  "producer": "105fa98dfd8c58107a9a36bb41f05ccc7671251d",
+  "run": 46051338072,
+  "job": 140683124786,
+  "conclusion": "failure",
+  "artifact": {
+    "id": 15224512377,
+    "name": "spira47-catalog-cte-baseline-r41",
+    "size_in_bytes": 2886626,
+    "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15224512377",
+    "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15224512377/zip",
+    "expired": false,
+    "created_at": "2026-11-27T18:45:22Z",
+    "expires_at": "2026-12-11T18:45:21Z",
+    "updated_at": "2026-11-27T18:45:22Z",
+    "digest": "sha256:2d643bcf9dd38d606df75fd3ef4ac5ef523a40ec74111d1f61a5331331ae796c",
+    "workflow_run": {
+      "id": 46051338072,
+      "repository_id": 1424164147,
+      "head_repository_id": 1424164147,
+      "head_branch": "ci/spira47-catalog-cte-20261127-r41",
+      "head_sha": "105fa98dfd8c58107a9a36bb41f05ccc7671251d"
+    }
+  },
+  "full_report_sha256": "023ca00696a1b46bb4abcc58f40137eed47c8617ce4f60dbb0dbd602faac1172",
+  "full_report_bytes": 70404886,
+  "recovered_projection_sha256": "0a1e672965ac831e127401f10f28486d116438bbafe5119d10985eeddbe06d4c",
+  "recovery": {
+    "producer": "d43fc1abbbdb3c8c5248ba5f29f3e33c513d11ab",
+    "run": 46052998288,
+    "job": 140688657885,
+    "conclusion": "success",
+    "raw_log_sha256": "506db853950faf99a5a7d8031be2dfbe858da69a7fe62e38244198a904ca2023",
+    "artifact": {
+      "id": 15225431799,
+      "name": "spira47-r41-recovered-46051338072",
+      "size_in_bytes": 1128998,
+      "url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15225431799",
+      "archive_download_url": "https://api.github.com/repos/gosuda/sloplint/actions/artifacts/15225431799/zip",
+      "expired": false,
+      "created_at": "2026-11-27T18:56:51Z",
+      "expires_at": "2026-12-11T18:56:51Z",
+      "updated_at": "2026-11-27T18:56:51Z",
+      "digest": "sha256:fc023636edf9a2efb1fd1ca8c957caba9aedcbbe2014ae63cb0e5aee46a8280f",
+      "workflow_run": {
+        "id": 46052998288,
+        "repository_id": 1424164147,
+        "head_repository_id": 1424164147,
+        "head_branch": "ci/spira47-catalog-cte-20261127-r41",
+        "head_sha": "d43fc1abbbdb3c8c5248ba5f29f3e33c513d11ab"
+      }
+    }
+  },
+  "first_failed_contract": {
+    "command": "unchanged-sqlc-nested-materialized-cte-reference",
+    "actual_raw_exit": 1,
+    "expected_raw_exit": 1,
+    "actual_diagnostic": "# package spira\nqueries.sql:1:1: relation \"b\" does not exist\n",
+    "expected_diagnostic": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+    "classification": "The observer rejected a different upstream SQLc diagnostic after the direct source REDs matched their expected-failure contracts."
+  },
+  "coverage": {
+    "command_logs_verified": 114,
+    "native_original": 37,
+    "catalog": {
+      "passed": [
+        "exact-option-before-fold-collision",
+        "exact-option-rejects-quoted-sibling",
+        "lower-option-lower-column",
+        "mixed-option-alias-refusal",
+        "quoted-column-alias-refusal",
+        "quoted-column-exact-option"
+      ],
+      "failed": [
+        "ambiguous-folded-option",
+        "missing-configured-column",
+        "mixed-option-lower-column",
+        "quoted-column-folded-option",
+        "upper-option-lower-column"
+      ]
+    },
+    "cte": {
+      "passed": [
+        "cycle-sibling-omission",
+        "explicit-cycle-mark-sibling-omission",
+        "main-alias-list-after-with",
+        "main-alias-list-without-with",
+        "main-cast-after-with",
+        "materialized-cte-omission",
+        "materialized-cte-output-alias",
+        "not-materialized-cte-omission",
+        "not-materialized-cte-reference",
+        "ordinality-alias-list-omission",
+        "plain-cte-omission",
+        "plain-cte-reference",
+        "quoted-cte-name-reference",
+        "search-cycle-sibling-omission",
+        "search-sibling-omission"
+      ],
+      "failed": [
+        "column-list-materialized-reference",
+        "cycle-sibling-reference",
+        "explicit-cycle-mark-sibling-reference",
+        "materialized-cte-reference",
+        "mixed-case-materialized-reference",
+        "nested-materialized-cte-reference",
+        "ordinality-cte-reference",
+        "recursive-materialized-reference",
+        "search-cycle-sibling-reference",
+        "search-sibling-reference",
+        "second-materialized-reference"
+      ]
+    },
+    "completed_pipeline": [
+      "lower-option-lower-column",
+      "mixed-option-lower-column",
+      "upper-option-lower-column",
+      "mixed-option-alias-refusal",
+      "quoted-column-exact-option",
+      "quoted-column-folded-option",
+      "quoted-column-alias-refusal",
+      "missing-configured-column",
+      "ambiguous-folded-option",
+      "exact-option-before-fold-collision",
+      "exact-option-rejects-quoted-sibling",
+      "plain-cte-reference",
+      "materialized-cte-reference",
+      "not-materialized-cte-reference",
+      "plain-cte-omission",
+      "materialized-cte-omission",
+      "not-materialized-cte-omission",
+      "mixed-case-materialized-reference",
+      "column-list-materialized-reference",
+      "second-materialized-reference",
+      "recursive-materialized-reference",
+      "quoted-cte-name-reference",
+      "main-alias-list-after-with",
+      "main-cast-after-with",
+      "main-alias-list-without-with",
+      "materialized-cte-output-alias",
+      "ordinality-alias-list-omission",
+      "ordinality-cte-reference"
+    ],
+    "permanent_pipeline_reached": false,
+    "counterfactual_reached": false
+  },
+  "before": {
+    "label": "source",
+    "tree": "e4214ecf0b2b5a214d26921664313b98d14efb13",
+    "blobs": 625,
+    "index_sha256": "5f9db7b6da063c1b66ee549ca72338ada4c5fe54b77f02bea571c231d3b59e29"
+  },
+  "restored": {
+    "label": "source",
+    "tree": "e4214ecf0b2b5a214d26921664313b98d14efb13",
+    "blobs": 625,
+    "index_sha256": "5f9db7b6da063c1b66ee549ca72338ada4c5fe54b77f02bea571c231d3b59e29"
+  },
+  "baseline_verified": false,
+  "source_gates_passed": false,
+  "publication_eligible": false,
+  "raw_original_job_log_available": false
+}

@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "scope": "Repeat the unchanged-production baseline with one actual upstream classification correction and compact catalog evidence.",
+  "source": {
+    "repository": "gosuda/spira",
+    "head": "6031a63255bc7496e22b38921e10401a2d50c291",
+    "tree": "e4214ecf0b2b5a214d26921664313b98d14efb13",
+    "blobs": 625,
+    "actual_main": "8761c43a6bdd231ce9fd29ff07f5a5074ea0d332",
+    "index_file": "source-index.json"
+  },
+  "tests": {
+    "tree": "0684127fb3a8f22d91b3f2df14cb141ff16f16b1",
+    "blobs": 628,
+    "index_file": "test-index.json",
+    "changed_paths": [
+      "cmd/sqlc-gen-spira/version_catalog_test.lgo",
+      "cmd/sqlc-gen-spira/testdata/version-catalog.json",
+      "cmd/sqlc-gen-spira/testdata/version-ctes.json",
+      "cmd/sqlc-gen-spira/version_reference_test.lgo",
+      "cmd/sqlc-gen-spira/sqlc_postgres_literal_test.lgo",
+      "cmd/sqlc-gen-spira/testdata/sqlc-literal-pipeline.json",
+      "cmd/sqlc-gen-spira/testdata/literal-schema.sql"
+    ],
+    "production_unchanged": true
+  },
+  "unchanged": "All seven authored paths, all 37 SQL/native/direct contracts, other36 pipeline expectations, permanent60 and one-model12RED/48control contracts stay exact.",
+  "changed": "Only nested-materialized-cte-reference now requires the observed SQLc raw1/diagnostic/no-request/no-output upstream outcome. The next run must establish request absence; the failed observer did not reach that check.",
+  "requirements": [
+    "All37 original native states match; compile before same5RED/6controls and11RED/15controls.",
+    "Actual SQLc partition7generated/29pluginrefusal/1upstream,36 processed native matches.",
+    "Current60 literalPASS, counterfactual12RED/48controls, full original625 restoration.",
+    "No previous gate reused; any different SEARCH/CYCLE outcome remains a failure."
+  ],
+  "publication_eligible": false
+}
