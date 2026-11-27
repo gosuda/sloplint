@@ -156,6 +156,41 @@ def t1 : IO Unit := do
             arg: (identifier)))))))
 
 ==============
+Sloplint: finally with block comment after keyword
+==============
+
+def t1 : IO Unit := do
+  try
+    IO.println "a"
+  catch e =>
+    IO.println e
+  finally /- comment -/
+    IO.println "done"
+
+---
+
+(module
+  (declaration
+    (def
+      name: (identifier)
+      type: (app
+        fn: (identifier)
+        arg: (identifier))
+      body: (do_block
+        stmt: (do_try
+          stmt: (app
+            fn: (identifier)
+            arg: (str_lit))
+          name: (identifier)
+          body: (app
+            fn: (identifier)
+            arg: (identifier))
+          (block_comment)
+          stmt: (app
+            fn: (identifier)
+            arg: (str_lit)))))))
+
+==============
 Sloplint: nested block then sibling statement
 ==============
 
