@@ -1,0 +1,197 @@
+package main_test
+
+import (
+	"context"
+	"encoding/json/v2"
+	"errors"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"slices"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
+	sqlcgen "github.com/gosuda/spira/cmd/sqlc-gen-spira"
+)
+
+type sqlcVersionCase struct {
+	Name     string   `json:"name"`
+	SQL      string   `json:"sql"`
+	Columns  []string `json:"columns"`
+	Option   string   `json:"option"`
+	Text     string   `json:"text"`
+	Error    string   `json:"error"`
+	Upstream bool     `json:"upstream"`
+}
+
+func TestSQLcPostgresVersionPipeline(t *testing.T) {
+	root, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+	cases, err := readSQLcVersionCases()
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+	if len(cases) != 67 {
+		t.Fatalf("version pipeline cases = %d; want 67", len(cases))
+		return
+	}
+	work := t.TempDir()
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Minute)
+	defer cancel()
+	build := exec.CommandContext(ctx, "logos", "build", "-o", filepath.Join(work, "sqlc-gen-spira"), "./cmd/sqlc-gen-spira")
+	build.Dir = root
+	if err := runSQLcSQLiteCommand(build); err != nil {
+		t.Fatal(err)
+		return
+	}
+	var compiled []sqlcLiteralExpectation
+	for _, tc := range cases {
+		if tc.Error == "" {
+			compiled = append(compiled, sqlcLiteralExpectation{Name: tc.Name, Text: tc.Text})
+		}
+		t.Run(tc.Name, func(t *testing.T) {
+			if err := exerciseSQLcVersionCase(ctx, root, filepath.Join(work, tc.Name), tc); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+	if !t.Failed() {
+		if err := checkCompiledSQLcQueries(t, ctx, work, compiled); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func readSQLcVersionCases() ([]sqlcVersionCase, error) {
+	data := os.ReadFile("testdata/sqlc-version-pipeline.json")?
+	var cases []sqlcVersionCase
+	json.Unmarshal(data, &cases)?
+	return cases, nil
+}
+
+func exerciseSQLcVersionCase(ctx context.Context, root string, dir string, tc sqlcVersionCase) error {
+	writeSQLcVersionInput(dir, tc)?
+	cmd := exec.CommandContext(ctx, "go", "-C", filepath.Join(root, "tools"), "tool", "sqlc", "generate", "-f", filepath.Join(dir, "sqlc.yaml"))
+	cmd.Dir = root
+	cmd.Env = append(cmd.Environ(), "SQLCEXPERIMENT=")
+	err := runSQLcSQLiteCommand(cmd)
+	files := filepath.Glob(filepath.Join(dir, "generated", "*.lgo"))?
+	if tc.Error != "" {
+		checkSQLcLiteralRefusal(ctx, err, tc.Error, files)?
+		return checkSQLcVersionCapture(dir, tc)
+	}
+	if err != nil {
+		return err
+	}
+	checkSQLcVersionCapture(dir, tc)?
+	want := []string{filepath.Join(dir, "generated", "models.sql.lgo"), filepath.Join(dir, "generated", "queries.sql.lgo")}
+	if !slices.Equal(files, want) {
+		return fmt.Errorf("sqlc generated source files %q; want %q", files, want)
+	}
+	generated := os.ReadFile(filepath.Join(dir, "generated", "queries.sql.lgo"))?
+	if strings.Count(string(generated), "const ContinueItemQuery = ") != 1 {
+		return errors.New("generated source must declare exactly one ContinueItemQuery")
+	}
+	return nil
+}
+
+func writeSQLcVersionInput(dir string, tc sqlcVersionCase) error {
+	os.Mkdir(dir, 0o755)?
+	parts := []string{"id bigint PRIMARY KEY", "name text NOT NULL"}
+	for _, name := range tc.Columns {
+		column := "\"" + strings.ReplaceAll(name, "\"", "\"\"") + "\""
+		parts = append(parts, column+" integer NOT NULL DEFAULT 0")
+	}
+	schema := "CREATE DOMAIN version AS text;\nCREATE COLLATION version FROM \"C\";\nCREATE TABLE items (" + strings.Join(parts, ", ") + ");\n"
+	os.WriteFile(filepath.Join(dir, "schema.sql"), []byte(schema), 0o644)?
+	os.WriteFile(filepath.Join(dir, "queries.sql"), []byte("-- name: ContinueItem :exec\n"+tc.SQL+"\n"), 0o644)?
+	plugin := filepath.Join(dir, "capture-plugin.sh")
+	script := "#!/usr/bin/env bash\nset -euo pipefail\ncapture_dir=\"$(dirname -- \"$0\")\"\ntee \"$capture_dir/request.json\" | \"$capture_dir/../sqlc-gen-spira\" \"$@\"\n"
+	os.WriteFile(plugin, []byte(script), 0o755)?
+	config := sqlcVersionConfig(plugin, tc.Option)
+	return os.WriteFile(filepath.Join(dir, "sqlc.yaml"), []byte(config), 0o644)
+}
+
+func sqlcVersionConfig(plugin string, option string) string {
+	return fmt.Sprintf(`version: "2"
+plugins:
+  - name: spira
+    process:
+      cmd: %s
+      format: json
+sql:
+  - engine: postgresql
+    schema: schema.sql
+    queries: queries.sql
+    codegen:
+      - plugin: spira
+        out: generated
+        options:
+          package: generated
+          tables:
+            items: {type: Item, key: id, key_type: ItemID, version: %s}
+`, strconv.Quote(plugin), strconv.Quote(option))
+}
+
+func checkSQLcVersionCapture(dir string, tc sqlcVersionCase) error {
+	data, err := os.ReadFile(filepath.Join(dir, "request.json"))
+	if tc.Upstream {
+		if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("upstream SQLc refusal invoked the plugin: request read error %v", err)
+		}
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	var req sqlcgen.Request
+	json.Unmarshal(data, &req)?
+	if req.Settings.Engine != "postgresql" || len(req.Queries) != 1 {
+		return errors.New("SQLc handoff must contain one PostgreSQL query")
+	}
+	query := req.Queries[0]
+	if query.Name != "ContinueItem" || query.Cmd != ":exec" || query.Filename != "queries.sql" || query.Text != tc.Text {
+		return fmt.Errorf("SQLc query handoff = %q; want exact frozen text %q", query.Text, tc.Text)
+	}
+	var options sqlcgen.PluginOptions
+	json.Unmarshal(req.PluginOptions, &options)?
+	if len(options.Tables) != 1 || options.Tables["items"].Version != tc.Option {
+		return fmt.Errorf("SQLc version option = %q; want %q", options.Tables["items"].Version, tc.Option)
+	}
+	return checkSQLcVersionCatalog(req.Catalog, tc.Columns)
+}
+
+func checkSQLcVersionCatalog(catalog sqlcgen.Catalog, columns []string) error {
+	matched := 0
+	for _, schema := range catalog.Schemas {
+		for _, table := range schema.Tables {
+			if schema.Name == "public" && table.Rel.Name == "items" {
+				checkSQLcVersionColumns(table.Columns, columns)?
+				matched++
+			}
+		}
+	}
+	if matched != 1 {
+		return fmt.Errorf("SQLc public.items tables = %d; want 1", matched)
+	}
+	return nil
+}
+
+func checkSQLcVersionColumns(columns []sqlcgen.Column, expected []string) error {
+	var names []string
+	for _, column := range columns {
+		names = append(names, column.Name)
+	}
+	want := append([]string{"id", "name"}, expected...)
+	if !slices.Equal(names, want) {
+		return fmt.Errorf("SQLc catalog column names = %q; want %q", names, want)
+	}
+	return nil
+}

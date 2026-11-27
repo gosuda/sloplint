@@ -1,0 +1,37 @@
+{
+  "existing_literal_inputs": 60,
+  "existing_literal_source_unchanged": true,
+  "additional_inputs": 67,
+  "prior_inputs": 37,
+  "new_inputs": 30,
+  "prior_evidence": {
+    "commit": "400809640b52eacb61b4a9a3d1655762cf7b2da4",
+    "path": "reviews/spira47-review-r41/candidate-report.json",
+    "sha256": "34bbe593df70f1e29ae0d27578cf1f8c3560345b98317643eef4ce7a6be9eded",
+    "selected_rows_sha256": "1eaaca429559253738bed72e22bca23a4381850109c309cc07fbbfdf7085b895"
+  },
+  "pending_new_capture": true,
+  "observed_fields": [
+    "query text",
+    "query name/command/filename",
+    "version option",
+    "public.items column names"
+  ],
+  "generated_package_compilation": true,
+  "upstream_request_absence": true,
+  "nested_race_required": true,
+  "phase": "inactive test-helper draft; new30 captured texts remain pending native baseline",
+  "source": "f3a47a04f1defe427494124507ec621118525265",
+  "baseline": {
+    "producer": "e5c98bfa622da358c1fd84b25b44b00a3a940814",
+    "run": 46068178205,
+    "job": 140738456076,
+    "status": "in_progress",
+    "outcomes_observed": false
+  },
+  "test_sha256": "d9c91322b7d57fda662ee57f0d8b0f8e651ed4bb290815d422752ba56ed8b298",
+  "expected_source_tests67": true,
+  "source_applied": false,
+  "source_gates_passed": false,
+  "publication_eligible": false
+}

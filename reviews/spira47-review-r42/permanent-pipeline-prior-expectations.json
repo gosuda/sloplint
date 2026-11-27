@@ -1,0 +1,412 @@
+[
+  {
+    "name": "lower-option-lower-column",
+    "sql": "UPDATE items SET version = version + 1;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "UPDATE items SET version = version + 1",
+    "error": "",
+    "upstream": false
+  },
+  {
+    "name": "mixed-option-lower-column",
+    "sql": "UPDATE items SET version = version + 1;",
+    "columns": [
+      "version"
+    ],
+    "option": "Version",
+    "text": "UPDATE items SET version = version + 1",
+    "error": "",
+    "upstream": false
+  },
+  {
+    "name": "upper-option-lower-column",
+    "sql": "UPDATE items SET version = version + 1;",
+    "columns": [
+      "version"
+    ],
+    "option": "VERSION",
+    "text": "UPDATE items SET version = version + 1",
+    "error": "",
+    "upstream": false
+  },
+  {
+    "name": "mixed-option-alias-refusal",
+    "sql": "UPDATE items SET name = 'changed' RETURNING name AS version;",
+    "columns": [
+      "version"
+    ],
+    "option": "Version",
+    "text": "UPDATE items SET name = 'changed' RETURNING name AS version",
+    "error": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+    "upstream": false
+  },
+  {
+    "name": "quoted-column-exact-option",
+    "sql": "UPDATE items SET \"Version\" = \"Version\" + 1;",
+    "columns": [
+      "Version"
+    ],
+    "option": "Version",
+    "text": "UPDATE items SET \"Version\" = \"Version\" + 1",
+    "error": "",
+    "upstream": false
+  },
+  {
+    "name": "quoted-column-folded-option",
+    "sql": "UPDATE items SET \"Version\" = \"Version\" + 1;",
+    "columns": [
+      "Version"
+    ],
+    "option": "version",
+    "text": "UPDATE items SET \"Version\" = \"Version\" + 1",
+    "error": "",
+    "upstream": false
+  },
+  {
+    "name": "quoted-column-alias-refusal",
+    "sql": "UPDATE items SET name = 'changed' RETURNING name AS \"Version\";",
+    "columns": [
+      "Version"
+    ],
+    "option": "Version",
+    "text": "UPDATE items SET name = 'changed' RETURNING name AS \"Version\"",
+    "error": "sqlc-gen-spira: ContinueItem: writes versioned table items without Version",
+    "upstream": false
+  },
+  {
+    "name": "missing-configured-column",
+    "sql": "SELECT id FROM items;",
+    "columns": [
+      "version"
+    ],
+    "option": "missing",
+    "text": "SELECT id FROM items",
+    "error": "sqlc-gen-spira: tables.items.version \"missing\" is not a column of public.items",
+    "upstream": false
+  },
+  {
+    "name": "ambiguous-folded-option",
+    "sql": "UPDATE items SET \"Version\" = \"Version\" + 1;",
+    "columns": [
+      "VERSION",
+      "Version"
+    ],
+    "option": "version",
+    "text": "UPDATE items SET \"Version\" = \"Version\" + 1",
+    "error": "sqlc-gen-spira: tables.items.version \"version\" is ambiguous in public.items",
+    "upstream": false
+  },
+  {
+    "name": "exact-option-before-fold-collision",
+    "sql": "UPDATE items SET \"Version\" = \"Version\" + 1;",
+    "columns": [
+      "VERSION",
+      "Version"
+    ],
+    "option": "Version",
+    "text": "UPDATE items SET \"Version\" = \"Version\" + 1",
+    "error": "",
+    "upstream": false
+  },
+  {
+    "name": "exact-option-rejects-quoted-sibling",
+    "sql": "UPDATE items SET \"VERSION\" = \"VERSION\" + 1;",
+    "columns": [
+      "VERSION",
+      "Version"
+    ],
+    "option": "Version",
+    "text": "UPDATE items SET \"VERSION\" = \"VERSION\" + 1",
+    "error": "sqlc-gen-spira: ContinueItem: writes versioned table items without Version",
+    "upstream": false
+  },
+  {
+    "name": "plain-cte-reference",
+    "sql": "WITH bumped AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH bumped AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped",
+    "error": "",
+    "upstream": false
+  },
+  {
+    "name": "materialized-cte-reference",
+    "sql": "WITH bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped",
+    "error": "",
+    "upstream": false
+  },
+  {
+    "name": "not-materialized-cte-reference",
+    "sql": "WITH bumped AS NOT MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH bumped AS NOT MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped",
+    "error": "",
+    "upstream": false
+  },
+  {
+    "name": "plain-cte-omission",
+    "sql": "WITH bumped AS (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH bumped AS (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped",
+    "error": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+    "upstream": false
+  },
+  {
+    "name": "materialized-cte-omission",
+    "sql": "WITH bumped AS MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH bumped AS MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped",
+    "error": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+    "upstream": false
+  },
+  {
+    "name": "not-materialized-cte-omission",
+    "sql": "WITH bumped AS NOT MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH bumped AS NOT MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id FROM bumped",
+    "error": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+    "upstream": false
+  },
+  {
+    "name": "mixed-case-materialized-reference",
+    "sql": "wItH bumped aS mAtErIaLiZeD (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "wItH bumped aS mAtErIaLiZeD (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped",
+    "error": "",
+    "upstream": false
+  },
+  {
+    "name": "column-list-materialized-reference",
+    "sql": "WITH bumped(result_id) AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT result_id FROM bumped;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH bumped(result_id) AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT result_id FROM bumped",
+    "error": "",
+    "upstream": false
+  },
+  {
+    "name": "second-materialized-reference",
+    "sql": "WITH seed AS (SELECT 1 AS value), bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH seed AS (SELECT 1 AS value), bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped",
+    "error": "",
+    "upstream": false
+  },
+  {
+    "name": "recursive-materialized-reference",
+    "sql": "WITH RECURSIVE bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH RECURSIVE bumped AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM bumped",
+    "error": "",
+    "upstream": false
+  },
+  {
+    "name": "quoted-cte-name-reference",
+    "sql": "WITH \"materialized\" AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM \"materialized\";",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH \"materialized\" AS (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM \"materialized\"",
+    "error": "",
+    "upstream": false
+  },
+  {
+    "name": "main-alias-list-after-with",
+    "sql": "WITH seed AS (SELECT 1 AS value) UPDATE items SET name = 'changed' FROM (VALUES (1)) AS materialized(version);",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH seed AS (SELECT 1 AS value) UPDATE items SET name = 'changed' FROM (VALUES (1)) AS materialized(version)",
+    "error": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+    "upstream": false
+  },
+  {
+    "name": "main-cast-after-with",
+    "sql": "WITH seed AS (SELECT 1 AS value) UPDATE items SET name = CAST('changed' AS version);",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH seed AS (SELECT 1 AS value) UPDATE items SET name = CAST('changed' AS version)",
+    "error": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+    "upstream": false
+  },
+  {
+    "name": "main-alias-list-without-with",
+    "sql": "UPDATE items SET name = 'changed' FROM (VALUES (1)) AS materialized(version);",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "UPDATE items SET name = 'changed' FROM (VALUES (1)) AS materialized(version)",
+    "error": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+    "upstream": false
+  },
+  {
+    "name": "materialized-cte-output-alias",
+    "sql": "WITH bumped AS MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id AS version FROM bumped;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH bumped AS MATERIALIZED (UPDATE items SET name = 'changed' RETURNING id) SELECT id AS version FROM bumped",
+    "error": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+    "upstream": false
+  },
+  {
+    "name": "ordinality-alias-list-omission",
+    "sql": "UPDATE items SET name = 'changed' FROM unnest(ARRAY[1]) WITH ORDINALITY AS materialized(version, position) RETURNING items.id;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "UPDATE items SET name = 'changed' FROM unnest(ARRAY[1]) WITH ORDINALITY AS materialized(version, position) RETURNING items.id",
+    "error": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+    "upstream": false
+  },
+  {
+    "name": "ordinality-cte-reference",
+    "sql": "WITH ordinality AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM ordinality;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH ordinality AS MATERIALIZED (UPDATE items SET version = version + 1 RETURNING id) SELECT id FROM ordinality",
+    "error": "",
+    "upstream": false
+  },
+  {
+    "name": "nested-materialized-cte-reference",
+    "sql": "WITH a AS MATERIALIZED (WITH b AS MATERIALIZED (SELECT version FROM items) SELECT 1 FROM b) UPDATE items SET name = 'changed' WHERE EXISTS (SELECT 1 FROM a);",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "",
+    "error": "queries.sql:1:1: relation \"b\" does not exist",
+    "upstream": true
+  },
+  {
+    "name": "search-sibling-reference",
+    "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped",
+    "error": "",
+    "upstream": false
+  },
+  {
+    "name": "search-sibling-omission",
+    "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped",
+    "error": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+    "upstream": false
+  },
+  {
+    "name": "cycle-sibling-reference",
+    "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped",
+    "error": "",
+    "upstream": false
+  },
+  {
+    "name": "cycle-sibling-omission",
+    "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped",
+    "error": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+    "upstream": false
+  },
+  {
+    "name": "search-cycle-sibling-reference",
+    "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped",
+    "error": "",
+    "upstream": false
+  },
+  {
+    "name": "search-cycle-sibling-omission",
+    "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH DEPTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped",
+    "error": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+    "upstream": false
+  },
+  {
+    "name": "explicit-cycle-mark-sibling-reference",
+    "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET version=version+1 RETURNING id) SELECT id FROM bumped",
+    "error": "",
+    "upstream": false
+  },
+  {
+    "name": "explicit-cycle-mark-sibling-omission",
+    "sql": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped;",
+    "columns": [
+      "version"
+    ],
+    "option": "version",
+    "text": "WITH RECURSIVE walk(n,m) AS (SELECT 1,0 UNION ALL SELECT n+1,m FROM walk WHERE n<2) SEARCH BREADTH FIRST BY n,m SET visit_order CYCLE n,m SET cycle_hit TO 'Y' DEFAULT 'N' USING cycle_path, bumped AS MATERIALIZED (UPDATE items SET name='changed' RETURNING id) SELECT id FROM bumped",
+    "error": "sqlc-gen-spira: ContinueItem: writes versioned table items without version",
+    "upstream": false
+  }
+]
