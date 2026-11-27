@@ -101,7 +101,6 @@ jobs:
           SPIRA_ARTIFACT_TOKEN: ${{ github.token }}
         run: |
           export GOENV=off GOCACHEPROG=''
-          test -z "$(go env GOCACHEPROG)"
           uv run --no-project --python 3.15 proof/ci-tools/spira47-review-r40/verify_candidate.py \
             source proof/ci-tools/spira47-review-r40 "$RUNNER_TEMP/spira47-reference-candidate-evidence"
       - name: Preserve source, baseline and complete gate evidence

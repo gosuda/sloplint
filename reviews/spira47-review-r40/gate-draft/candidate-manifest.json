@@ -177,6 +177,7 @@
     "reference_observer.py": "357ea10b7685eff7adc6f96541f99aa67a99efad999ab4eaff09b8acc15114ff",
     "verify_candidate.py": "cf9816a52a73f986c9dcb66d75226abc136c73100232419de7ccb1eb0405d154"
   },
-  "workflow_sha256": "0ae690f472ff7e78d9efb94a94c2e5968336d78274e5f7d773cc8566a8bce57d",
-  "publication_eligible": false
+  "workflow_sha256": "76ba835edd80304c0147fd8e322d49e12e19039061a891eeb707f533c34ebdc6",
+  "publication_eligible": false,
+  "credential_boundary": "SPIRA_ARTIFACT_TOKEN exists only in the verifier step; no compiler command runs in that shell before Python pops it as its first main statement. The actual go-cache-disabled command remains after removal. The token is passed explicitly only to immutable artifact authentication."
 }
