@@ -161,10 +161,11 @@ Remaining errors in the two corpora (3 files):
 
 Outside the corpora, valid PHP that still errors:
 
-- Reserved-word class names such as `foo(Int::FOO)`, `foo(String::class)`,
-  `foo(Bool::FOO)`. `php -l` 8.5.8 accepts them, but upstream keeps
-  `int`, `string`, `bool`, `float`, `object`, `array`, `void`, `mixed`,
-  `iterable`, `never` and `unset` reserved as class names, in statement and
-  argument position alike. No upstream issue covers them, and the analyzer
-  never sees them as `parse-error` shapes distinct from the P1 words, so the
-  patch does not extend the alias list.
+- Reserved-word class names: `foo(Array::FOO)`, `foo(Unset::FOO)`,
+  `foo(Null::FOO)`, `foo(True::FOO)` and `foo(False::FOO)` still error.
+  `foo(Int::FOO)`, `foo(String::class)`, `foo(Bool::FOO)` and the other
+  cast-type spellings (`Float`, `Object`, `Void`, `Mixed`, `Iterable`,
+  `Never`) parse since the scope qualifier accepts dereferencable
+  expressions. The analyzer never sees the remaining ones as
+  `parse-error` shapes distinct from the P1 words, so the patch does
+  not extend the alias list.
