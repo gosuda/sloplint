@@ -4,6 +4,7 @@ use crate::callee::CalleePattern;
 use crate::config::Strictness;
 use crate::facts::{CallKind, FileFacts, Stmt};
 use crate::finding::{Confidence, Finding, Level, Severity};
+use crate::lang::Lang;
 use crate::role::{RolePolicy, Shift};
 use crate::rules::{Build, Family, FileRule, Preset, RuleInfo, Settings};
 use crate::rules::{EmptyOptions, parse_options};
@@ -58,7 +59,7 @@ impl FileRule for ZombieCatch {
             if handler.has_else || handler.try_imports_only || handler.in_cleanup {
                 continue;
             }
-            let Some((kind, fix)) = classify(patterns, &handler.stmts) else {
+            let Some((kind, fix)) = classify(patterns, facts.lang, &handler.stmts) else {
                 continue;
             };
             out.push(Finding::at(
@@ -75,9 +76,10 @@ impl FileRule for ZombieCatch {
 
 fn classify<'s>(
     patterns: &[CalleePattern],
+    lang: Lang,
     stmts: &[Stmt<'s>],
 ) -> Option<(&'static str, &'static str)> {
-    let (stmts, logs) = trim_log_calls(patterns, stmts);
+    let (stmts, logs) = trim_log_calls(patterns, lang, stmts);
     match stmts {
         [] if logs == 0 => Some((
             "swallows the error",
@@ -93,18 +95,19 @@ fn classify<'s>(
 
 fn trim_log_calls<'a, 's>(
     patterns: &[CalleePattern],
+    lang: Lang,
     stmts: &'a [Stmt<'s>],
 ) -> (&'a [Stmt<'s>], u32) {
     let mut rest = stmts;
     let mut logs = 0u32;
     while let Some(Stmt::Call { callee, kind }) = rest.first()
-        && is_log(patterns, callee, *kind)
+        && is_log(patterns, lang, callee, *kind)
     {
         rest = &rest[1..];
         logs += 1;
     }
     while let Some(Stmt::Call { callee, kind }) = rest.last()
-        && is_log(patterns, callee, *kind)
+        && is_log(patterns, lang, callee, *kind)
     {
         rest = &rest[..rest.len() - 1];
         logs += 1;
@@ -112,8 +115,10 @@ fn trim_log_calls<'a, 's>(
     (rest, logs)
 }
 
-fn is_log(patterns: &[CalleePattern], callee: &str, kind: CallKind) -> bool {
-    patterns.iter().any(|pattern| pattern.matches(callee, kind))
+fn is_log(patterns: &[CalleePattern], lang: Lang, callee: &str, kind: CallKind) -> bool {
+    patterns
+        .iter()
+        .any(|pattern| pattern.matches(callee, kind, lang))
 }
 
 #[cfg(test)]

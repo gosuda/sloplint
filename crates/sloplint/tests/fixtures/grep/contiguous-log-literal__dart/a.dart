@@ -9,3 +9,7 @@ void loud(String message) {
 class Logger {
   Logger.new(String message);
 }
+
+void relay(String message) {
+  Logger /* outer /* inner */ note */ .new(message);
+}

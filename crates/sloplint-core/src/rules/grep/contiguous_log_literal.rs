@@ -90,7 +90,7 @@ impl FileRule for ContiguousLogLiteral {
             return;
         };
         for call in &facts.calls {
-            if !is_log_call(patterns, call) {
+            if !is_log_call(patterns, facts.lang, call) {
                 continue;
             }
             let Some(reason) = self.reason(call) else {
@@ -135,9 +135,9 @@ impl ContiguousLogLiteral {
     }
 }
 
-fn is_log_call(patterns: &[CalleePattern], call: &Call<'_>) -> bool {
+fn is_log_call(patterns: &[CalleePattern], lang: Lang, call: &Call<'_>) -> bool {
     for pattern in patterns {
-        if pattern.matches(call.callee, call.kind) {
+        if pattern.matches(call.callee, call.kind, lang) {
             return true;
         }
     }

@@ -1,6 +1,7 @@
 use proptest::prelude::*;
 use sloplint_core::CalleePattern;
 use sloplint_core::facts::CallKind;
+use sloplint_core::lang::Lang;
 
 const SPACES: [&str; 6] = [" ", "\t", "\n", "\r\n", "\u{a0}", "\u{3000}"];
 const SEPARATORS: [&str; 6] = [".", "::", "?.", "->", "?->", "\\"];
@@ -207,7 +208,7 @@ proptest! {
         let pattern = CalleePattern::parse(&shape.pattern()).expect("generated patterns are valid");
         for kind in [CallKind::Plain, CallKind::Macro, CallKind::New] {
             prop_assert_eq!(
-                pattern.matches(&callee, kind),
+                pattern.matches(&callee, kind, Lang::Rust),
                 shape.model_matches(&callee, kind),
                 "pattern {:?} callee {:?} kind {:?}",
                 shape.pattern(),
@@ -221,7 +222,7 @@ proptest! {
 fn observed(pattern: &str, callee: &str, kind: CallKind) -> bool {
     CalleePattern::parse(pattern)
         .unwrap_or_else(|error| panic!("pattern {pattern:?} must parse: {error}"))
-        .matches(callee, kind)
+        .matches(callee, kind, Lang::Rust)
 }
 
 fn hit_as(pattern: &str, callee: &str, kind: CallKind) {

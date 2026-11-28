@@ -579,3 +579,20 @@ fn closures_inside_dart_collections_are_bodies() {
         "a plain list stays a collection"
     );
 }
+
+#[test]
+fn comment_angle_bracket_does_not_cut_callee() {
+    // A `<` inside a block comment is comment text, not a generic
+    // opener: the member suffix survives the generic cut.
+    let analysis = run(
+        "case.dart",
+        "void check(String message) {\n  log /* size < limit */ .flush(message);\n}\n",
+    );
+    assert!(analysis.parse_error.is_none(), "parses");
+    let callees: Vec<_> = analysis.facts.calls.iter().map(|c| c.callee).collect();
+    assert_eq!(
+        callees,
+        ["log /* size < limit */ .flush"],
+        "the full dotted span is the callee, not the comment prefix: {callees:?}"
+    );
+}

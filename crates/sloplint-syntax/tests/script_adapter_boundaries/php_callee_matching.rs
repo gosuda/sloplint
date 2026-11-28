@@ -45,7 +45,7 @@ fn matches_on_line(line: u32, pattern: &str) -> (bool, String) {
     assert_eq!(at_line.len(), 1, "one call on line {line}");
     let matched = at_line
         .iter()
-        .any(|call| pattern.matches(call.callee, call.kind));
+        .any(|call| pattern.matches(call.callee, call.kind, Lang::Php));
     let observed = at_line.iter().map(|call| call.callee).collect::<Vec<_>>();
     (matched, observed.join(" | "))
 }

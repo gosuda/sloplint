@@ -1,10 +1,11 @@
 use sloplint_core::CalleePattern;
 use sloplint_core::facts::CallKind;
+use sloplint_core::lang::Lang;
 
 fn observed(pattern: &str, callee: &str, kind: CallKind) -> bool {
     CalleePattern::parse(pattern)
         .unwrap_or_else(|error| panic!("pattern {pattern:?} must parse: {error}"))
-        .matches(callee, kind)
+        .matches(callee, kind, Lang::Php)
 }
 
 fn hit_as(pattern: &str, callee: &str, kind: CallKind) {

@@ -2,11 +2,18 @@ use std::iter::Filter;
 use std::str::Chars;
 
 use crate::facts::CallKind;
+use crate::lang::Lang;
 
 type Visible<'a> = Filter<Chars<'a>, fn(&char) -> bool>;
 
 #[cfg(test)]
 std::thread_local! { static VISIBLE_CHECKS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
+#[cfg(test)]
+std::thread_local! { static STRIP_STEPS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
+#[cfg(test)]
+fn strip_step() {
+    STRIP_STEPS.with(|c| c.set(c.get() + 1));
+}
 fn is_visible(ch: &char) -> bool {
     #[cfg(test)]
     VISIBLE_CHECKS.with(|c| c.set(c.get() + 1));
@@ -86,16 +93,19 @@ impl CalleePattern {
         Ok(CalleePattern { new_only, segments })
     }
 
-    pub fn matches(&self, callee: &str, kind: CallKind) -> bool {
+    pub fn matches(&self, callee: &str, kind: CallKind, lang: Lang) -> bool {
         if self.new_only && kind != CallKind::New {
             return false;
         }
         // Adapters keep comments inside dotted callee spans (a comment may
         // sit between the base and the `.new` suffix), and patterns name the
         // code. Strip comments first so `Logger /* why */ .new` still
-        // matches a configured `Logger.new` pattern.
+        // matches a configured `Logger.new` pattern. Only the comment
+        // syntax the file's language owns is stripped: Bash `log//rotate`
+        // is a path, not a `log` call with a comment, and only Dart,
+        // Rust and Swift nest `/* */`.
         let cleaned;
-        let callee = match strip_comments(callee) {
+        let callee = match strip_comments(callee, lang) {
             Some(text) => {
                 cleaned = text;
                 &cleaned
@@ -307,19 +317,61 @@ fn split_pattern(text: &str) -> Vec<&str> {
     parts
 }
 
-/// Callee text with `/* */` and `//` comments removed, or `None` when the
-/// text holds no comment marker. String members stay intact: a marker
-/// inside `'...'` or `"..."` is code, not a comment.
-fn strip_comments(callee: &str) -> Option<String> {
-    if !callee.contains("/*") && !callee.contains("//") {
+/// Whether the language owns `//` line comments. The `#`, `;`, `--`,
+/// `(* *)` and `/- -/` families never produce a `//` marker, so it is
+/// code there (Bash `log//rotate` is a path).
+fn strips_line_comment(lang: Lang) -> bool {
+    !matches!(
+        lang,
+        Lang::Python
+            | Lang::Ruby
+            | Lang::Bash
+            | Lang::PowerShell
+            | Lang::R
+            | Lang::Starlark
+            | Lang::Lean
+            | Lang::Tlaplus
+            | Lang::Ocaml
+            | Lang::OcamlInterface
+            | Lang::Racket
+    )
+}
+
+/// Whether the language owns `/* */` block comments. Zig has `//` but no
+/// block comments (`a/*b` dereferences), and the families above have
+/// neither marker.
+fn strips_block_comment(lang: Lang) -> bool {
+    strips_line_comment(lang) && !matches!(lang, Lang::Zig)
+}
+
+/// Whether the language nests `/* */` block comments: a second opener
+/// before the first closer deepens the comment instead of reopening code.
+fn nests_block_comment(lang: Lang) -> bool {
+    matches!(lang, Lang::Dart | Lang::Rust | Lang::Swift)
+}
+
+/// Callee text with the language's `/* */` and `//` comments removed, or
+/// `None` when the text holds no marker the language owns. String members
+/// stay intact: a marker inside `'...'` or `"..."` is code, not a comment.
+fn strip_comments(callee: &str, lang: Lang) -> Option<String> {
+    let block = strips_block_comment(lang);
+    let line = strips_line_comment(lang);
+    if (!block || !callee.contains("/*")) && (!line || !callee.contains("//")) {
+        #[cfg(test)]
+        STRIP_STEPS.with(|c| c.set(c.get() + callee.len()));
         return None;
     }
+    let nested = nests_block_comment(lang);
     let mut out = String::with_capacity(callee.len());
     let mut chars = callee.char_indices().peekable();
     while let Some((_, c)) = chars.next() {
+        #[cfg(test)]
+        strip_step();
         if c == '"' || c == '\'' || c == '`' {
             out.push(c);
             while let Some((_, q)) = chars.next() {
+                #[cfg(test)]
+                strip_step();
                 out.push(q);
                 if q == '\\' {
                     if let Some((_, escaped)) = chars.next() {
@@ -333,18 +385,29 @@ fn strip_comments(callee: &str) -> Option<String> {
         }
         if c == '/' {
             match chars.peek() {
-                Some((_, '*')) => {
+                Some((_, '*')) if block => {
                     chars.next();
+                    let mut depth = 1;
                     while let Some((_, q)) = chars.next() {
-                        if q == '*' && chars.peek().is_some_and(|(_, s)| *s == '/') {
+                        #[cfg(test)]
+                        strip_step();
+                        if q == '/' && nested && chars.peek().is_some_and(|(_, s)| *s == '*') {
                             chars.next();
-                            break;
+                            depth += 1;
+                        } else if q == '*' && chars.peek().is_some_and(|(_, s)| *s == '/') {
+                            chars.next();
+                            depth -= 1;
+                            if depth == 0 {
+                                break;
+                            }
                         }
                     }
                     continue;
                 }
-                Some((_, '/')) => {
+                Some((_, '/')) if line => {
                     for (_, q) in chars.by_ref() {
+                        #[cfg(test)]
+                        strip_step();
                         if q == '\n' {
                             out.push('\n');
                             break;
