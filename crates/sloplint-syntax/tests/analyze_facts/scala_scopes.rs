@@ -1,4 +1,4 @@
-use sloplint_core::facts::MutBinding;
+use sloplint_core::facts::{MutBinding, WildcardArm};
 use sloplint_core::lang::Lang;
 
 use crate::support::run_clean;
@@ -8,8 +8,15 @@ fn with_scala_bindings<R>(source: &str, read: impl FnOnce(&[MutBinding<'_>]) -> 
     read(&analysis.facts.bindings)
 }
 
+fn wildcard_arms(source: &str) -> Vec<WildcardArm> {
+    run_clean(Lang::Scala, "case.scala", source)
+        .facts
+        .wildcard_arms
+        .clone()
+}
+
 fn named_all<'a>(found: &'a [MutBinding<'a>], name: &str) -> Vec<&'a MutBinding<'a>> {
-    found
+     found
         .iter()
         .filter(|binding| binding.name == name)
         .collect()
@@ -477,9 +484,7 @@ fn given_extractor_with_type_shaped_member_binds_the_binder() {
 // the type members `st` and `_status`. A type import leaves the arm write
 // on the outer var, `(2, 9, 12)`; a fresh binder shadows it, `(1, 12, 12)`.
 fn outer_status_writes(import_line: &str) -> (u32, u32, u32) {
-    let source = format!(
-        "object Types {{\n  type st = Int\n  type _status = Int\n}}\ndef f(v: Any): Int = {{\n  {import_line}\n  var _status = 0\n  v match {{\n    case given(_status, other) => _status += 1\n    case _ => 0\n  }}\n  _status += 10\n  _status\n}}\n"
-    );
+    let source = import_case_source(import_line);
     with_scala_bindings(&source, |found| {
         let ss = named_all(found, "_status");
         assert_eq!(ss.len(), 1, "only the outer var binds: {found:?}");
@@ -491,6 +496,20 @@ fn outer_status_writes(import_line: &str) -> (u32, u32, u32) {
     })
 }
 
+// The `case given(_status, other)` match `outer_status_writes` analyzes,
+// with `import_line` spliced in.
+fn import_case_source(import_line: &str) -> String {
+    format!(
+        "object Types {{\n  type st = Int\n  type _status = Int\n}}\ndef f(v: Any): Int = {{\n  {import_line}\n  var _status = 0\n  v match {{\n    case given(_status, other) => _status += 1\n    case _ => 0\n  }}\n  _status += 10\n  _status\n}}\n"
+    )
+}
+
+fn wildcard_variant_count(source: &str) -> u32 {
+    let arms = wildcard_arms(source);
+    assert_eq!(arms.len(), 1, "one wildcard arm: {arms:?}");
+    arms[0].variant_count
+}
+
 #[test]
 fn bare_member_import_before_a_comma_names_a_type_alias() {
     // Each comma-separated import expression resolves on its own, so the
@@ -499,6 +518,11 @@ fn bare_member_import_before_a_comma_names_a_type_alias() {
         outer_status_writes("import Types._status, Types.st"),
         (2, 9, 12),
         "the imported alias binds nothing; the arm write lands outside"
+    );
+    assert_eq!(
+        wildcard_variant_count(&import_case_source("import Types._status, Types.st")),
+        1,
+        "the arm stays an extractor application and counts as a variant"
     );
 }
 
@@ -512,6 +536,11 @@ fn renamed_member_import_names_a_type_alias() {
             (2, 9, 12),
             "`{import_line}` makes `_status` an alias that binds nothing"
         );
+        assert_eq!(
+            wildcard_variant_count(&import_case_source(import_line)),
+            1,
+            "`{import_line}` leaves an extractor arm that counts as a variant"
+        );
     }
 }
 
@@ -523,6 +552,114 @@ fn hidden_member_stays_out_of_a_wildcard_import() {
         outer_status_writes("import Types.{_status => _, *}"),
         (1, 12, 12),
         "the hidden name binds; only the post-match write lands outside"
+    );
+    assert_eq!(
+        wildcard_variant_count(&import_case_source("import Types.{_status => _, *}")),
+        1,
+        "the shadowing arm is still an extractor application and counts"
+    );
+}
+
+#[test]
+fn qualified_import_does_not_borrow_unrelated_aliases() {
+    // `Actual.Types` holds no aliases, but an unrelated top-level
+    // `Types` does. The qualified import must not borrow them: the arm
+    // binders shadow without creating bindings of their own, so the
+    // outer `x` keeps the only binding and the arm write never lands
+    // on it. A borrowed alias would read the arm as a tuple type
+    // instead, landing the arm write outside and dropping the variant.
+    let source = "object Types {\n  type x = Int\n  type y = Int\n}\nobject Actual {\n  object Types {\n  }\n}\ndef f(v: Any): Int = {\n  import Actual.Types.*\n  var x = 0\n  v match {\n    case given(x, y) => x += 1\n    case _ => 0\n  }\n  x += 10\n  x\n}\n";
+    with_scala_bindings(source, |found| {
+        let xs = named_all(found, "x");
+        assert_eq!(xs.len(), 1, "only the outer var binds: {found:?}");
+        assert_eq!(
+            (
+                xs[0].write_lines,
+                xs[0].first_write_line,
+                xs[0].last_write_line
+            ),
+            (1, 16, 16),
+            "the arm write is shadowed; only the post-match write lands outside: {found:?}"
+        );
+    });
+    assert_eq!(
+        wildcard_variant_count(source),
+        1,
+        "the arm is an extractor application, not a borrowed tuple type"
+    );
+}
+
+#[test]
+fn lowercase_type_parameter_is_not_a_binder() {
+    // `t` is a type parameter of `f`, so `case given(t, Int)` is a
+    // tuple-typed given: it binds nothing and counts no variant.
+    let source = "def f[t](v: Any): Int = {\n  v match {\n    case given(t, Int) => 1\n    case Other(x) => x\n    case _ => 0\n  }\n}\n";
+    with_scala_bindings(source, |found| {
+        assert!(
+            named_all(found, "t").is_empty(),
+            "the type parameter binds no local: {found:?}"
+        );
+        // The constructor arm's binder shadows without creating a
+        // binding of its own, so nothing binds anywhere here.
+        assert!(
+            found.is_empty(),
+            "no binding is recorded: {found:?}"
+        );
+    });
+    assert_eq!(
+        wildcard_variant_count(source),
+        1,
+        "only the constructor arm counts; the tuple-typed given does not"
+    );
+}
+
+#[test]
+fn inline_comment_does_not_break_a_type_import() {
+    // A block comment inside a qualified path is transparent: the
+    // qualifier still resolves as a whole. Dropping the qualifier at
+    // the comment would re-resolve from `Types` alone and borrow the
+    // unrelated top-level aliases.
+    let source = "object Types {\n  type x = Int\n  type y = Int\n}\nobject Actual {\n  object Types {\n  }\n}\ndef f(v: Any): Int = {\n  import Actual /* note */ .Types.*\n  var x = 0\n  v match {\n    case given(x, y) => x += 1\n    case _ => 0\n  }\n  x += 10\n  x\n}\n";
+    with_scala_bindings(source, |found| {
+        let xs = named_all(found, "x");
+        assert_eq!(xs.len(), 1, "only the outer var binds: {found:?}");
+        assert_eq!(
+            (
+                xs[0].write_lines,
+                xs[0].first_write_line,
+                xs[0].last_write_line
+            ),
+            (1, 16, 16),
+            "the arm write is shadowed; only the post-match write lands outside: {found:?}"
+        );
+    });
+    assert_eq!(
+        wildcard_variant_count(source),
+        1,
+        "the arm is an extractor application, not a borrowed tuple type"
+    );
+}
+
+#[test]
+fn comment_inside_a_given_tuple_keeps_both_binders() {
+    // A note between the extractor members must not discard them: both
+    // shadow, so the arm write never lands outside, and the arm still
+    // counts as a variant.
+    let source = "def f(v: Any): Int = {\n  var x = 0\n  var y = 0\n  v match {\n    case given(x, /* explanation */ y) => x += y\n    case _ => 0\n  }\n  x += 10\n  x + y\n}\n";
+    with_scala_bindings(source, |found| {
+        // Arm binders shadow without creating bindings of their own.
+        let xs = named_all(found, "x");
+        assert_eq!(xs.len(), 1, "only the outer var binds: {found:?}");
+        assert_eq!(
+            (xs[0].write_lines, xs[0].first_write_line, xs[0].last_write_line),
+            (1, 8, 8),
+            "the arm write is shadowed; only the post-match write lands outside: {found:?}"
+        );
+    });
+    assert_eq!(
+        wildcard_variant_count(source),
+        1,
+        "the commented arm is still an extractor application and counts"
     );
 }
 

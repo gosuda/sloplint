@@ -3,11 +3,15 @@ use tree_sitter::Node;
 use super::items::unquote;
 use crate::hooks::{Cx, child_by_field, first_named_child, named_children, text};
 
-// Whether `name` is a type alias visible where `node` sits: some enclosing
-// scope defines `type <name>` before the node, or imports it from a
-// same-file `object`/`class`/`trait`. Term and type namespaces coexist, so
+// Whether `name` is a type alias visible where `node` sits: an enclosing
+// definition binds it as a type parameter, some enclosing scope defines
+// `type <name>` before the node, or imports it from a same-file
+// `object`/`class`/`trait`. Term and type namespaces coexist, so
 // a `var status` beside `type status` does not hide the alias.
 fn names_visible_type_alias(node: Node<'_>, cx: &Cx<'_, '_>, name: &str) -> bool {
+    if names_type_parameter(node, cx, name) {
+        return true;
+    }
     let mut scope = node.parent();
     while let Some(s) = scope {
         scope = s.parent();
@@ -30,28 +34,70 @@ fn names_visible_type_alias(node: Node<'_>, cx: &Cx<'_, '_>, name: &str) -> bool
     false
 }
 
+// Whether an enclosing definition binds `name` as a type parameter
+// (`def f[t]`, `class C[t]`): the parameter is a type where the body
+// sits, so a lowercase member with its name reads as a type, not a
+// fresh binder.
+fn names_type_parameter(node: Node<'_>, cx: &Cx<'_, '_>, name: &str) -> bool {
+    let mut scope = node.parent();
+    while let Some(s) = scope {
+        scope = s.parent();
+        // Function definitions file both clause kinds under one
+        // `parameters` field, so match the node kind, not the field.
+        for c in named_children(s) {
+            if c.kind() == "type_parameters" && type_parameters_bind(c, cx, name) {
+                return true;
+            }
+        }
+    }
+    false
+}
+// Whether the `type_parameters` clause declares `name`: a parameter's
+// `name` field names it. Bounds may mention the name without declaring
+// it, so only `name` fields count, never a bare mention in a bound.
+fn type_parameters_bind(params: Node<'_>, cx: &Cx<'_, '_>, name: &str) -> bool {
+    let mut pending = vec![params];
+    while let Some(n) = pending.pop() {
+        if let Some(id) = child_by_field(n, "name")
+            && id.kind() != "wildcard"
+            && unquote(text(cx, id)) == name
+        {
+            return true;
+        }
+        pending.extend(named_children(n));
+    }
+    false
+}
+
 // Whether an `import` declaration brings `name` in as a type from a
 // container defined in the same file. Each comma-separated expression
-// resolves on its own: the segment before `.*`, `.{...}` or
-// `.member as name` names a sibling `object`/`class`/`trait` whose `type`
-// members are checked, and a bare `Types.name` covers its last segment.
-// An import the same file cannot resolve keeps the old behavior at the
-// use site.
+// resolves on its own: the qualifier before `.*`, `.{...}` or
+// `.member as name` names nested sibling `object`/`class`/`trait`
+// containers whose innermost `type` members are checked, and a bare
+// `Types.name` covers its last two segments. Comments between the
+// segments are transparent. An import the same file cannot resolve
+// keeps the old behavior at the use site.
 fn import_brings_type_alias(import: Node<'_>, cx: &Cx<'_, '_>, name: &str) -> bool {
     let mut qualifier: Vec<&str> = Vec::new();
     let mut cursor = import.walk();
     for child in import.children(&mut cursor) {
         let declares = |member: &str| {
-            qualifier
-                .last()
-                .is_some_and(|container| container_declares_type(import, cx, container, member))
+            // A fully resolvable qualifier decides on its own: an
+            // unrelated same-named container never lends its aliases.
+            // An unresolvable qualifier keeps the last-segment lookup.
+            match qualifier_path_declares_type(import, cx, &qualifier, member) {
+                Some(declares) => declares,
+                None => qualifier.last().is_some_and(|container| {
+                    container_declares_type(import, cx, container, member)
+                }),
+            }
         };
         let found = match child.kind() {
             "identifier" | "operator_identifier" => {
                 qualifier.push(unquote(text(cx, child)));
                 continue;
             }
-            "." => continue,
+            "." | "comment" | "block_comment" => continue,
             "namespace_wildcard" => text(cx, child) != "given" && declares(name),
             "namespace_selectors" => selectors_import_type(cx, child, name, declares),
             "as_renamed_identifier" => rename_parts(cx, child)
@@ -68,11 +114,75 @@ fn import_brings_type_alias(import: Node<'_>, cx: &Cx<'_, '_>, name: &str) -> bo
     bare_member_import(import, cx, &qualifier, name)
 }
 
-// A bare member import (`import Types._status`) covers its last segment
-// when the segment before it names a container that declares the type.
+// A bare member import (`import Types._status`) covers its last two
+// segments when the qualifier resolves to a container that declares the
+// type; an unresolvable qualifier keeps the last-segment lookup.
 fn bare_member_import(import: Node<'_>, cx: &Cx<'_, '_>, qualifier: &[&str], name: &str) -> bool {
-    matches!(qualifier, [.., container, member]
-        if *member == name && container_declares_type(import, cx, container, member))
+    match qualifier_path_declares_type(import, cx, qualifier, name) {
+        Some(declares) => declares,
+        None => matches!(qualifier, [.., container, member]
+            if *member == name && container_declares_type(import, cx, container, member)),
+    }
+}
+
+// Whether the dotted qualifier names nested sibling containers whose
+// innermost body declares `type <member>`. Each level resolves inside
+// the previous container's own `template_body`. `None` means a level
+// could not be resolved in this file, so the caller keeps the old
+// last-segment lookup instead of borrowing aliases from an unrelated
+// same-named container.
+fn qualifier_path_declares_type(
+    import: Node<'_>,
+    cx: &Cx<'_, '_>,
+    qualifier: &[&str],
+    member: &str,
+) -> Option<bool> {
+    let [first, rest @ ..] = qualifier else {
+        return None;
+    };
+    let mut scope = import.parent();
+    let mut container = None;
+    while let Some(s) = scope {
+        scope = s.parent();
+        for c in named_children(s) {
+            if is_named_container(c)
+                && child_by_field(c, "name").is_some_and(|n| unquote(text(cx, n)) == *first)
+            {
+                container = Some(c);
+                break;
+            }
+        }
+        if container.is_some() {
+            break;
+        }
+    }
+    let mut container = container?;
+    for level in rest {
+        let mut next = None;
+        for m in named_children(container)
+            .into_iter()
+            .filter(|b| b.kind() == "template_body")
+            .flat_map(named_children)
+        {
+            if is_named_container(m)
+                && child_by_field(m, "name").is_some_and(|n| unquote(text(cx, n)) == *level)
+            {
+                next = Some(m);
+                break;
+            }
+        }
+        container = next?;
+    }
+    Some(body_declares_type(cx, container, member))
+}
+
+// A sibling `object`, `class` or `trait` definition that can hold `type`
+// members and nested containers.
+fn is_named_container(n: Node<'_>) -> bool {
+    matches!(
+        n.kind(),
+        "object_definition" | "class_definition" | "trait_definition"
+    )
 }
 
 // Whether a selector list `{...}` imports `name` as a type: a listed
@@ -123,10 +233,8 @@ fn container_declares_type(
     while let Some(s) = scope {
         scope = s.parent();
         for c in named_children(s) {
-            if matches!(
-                c.kind(),
-                "object_definition" | "class_definition" | "trait_definition"
-            ) && child_by_field(c, "name").is_some_and(|n| unquote(text(cx, n)) == container)
+            if is_named_container(c)
+                && child_by_field(c, "name").is_some_and(|n| unquote(text(cx, n)) == container)
                 && body_declares_type(cx, c, member)
             {
                 return true;
@@ -225,6 +333,11 @@ pub(crate) fn given_extractor_binders<'s>(cx: &Cx<'_, 's>, node: Node<'_>) -> Op
     let mut extractor = false;
     let mut tuple = false;
     for p in named_children(t) {
+        // Comment extras are named children too; a note between the
+        // members must not discard the binders around it.
+        if p.kind() == "comment" || p.kind() == "block_comment" {
+            continue;
+        }
         if p.kind() == "wildcard" {
             continue;
         }
