@@ -45,7 +45,7 @@ fn dafny_print_calls_match_no_default_log_callee() {
         assert!(
             patterns
                 .iter()
-                .all(|pattern| !pattern.matches(call.callee, call.kind)),
+                .all(|pattern| !pattern.matches(call.callee, call.kind, Lang::Dafny)),
             "dafny call `{}` must match no default log callee",
             call.callee
         );

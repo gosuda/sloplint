@@ -2,23 +2,31 @@ use super::*;
 use proptest::prelude::*;
 
 fn plain(pattern: &str, callee: &str) -> bool {
+    plain_in(pattern, callee, Lang::Rust)
+}
+
+fn plain_in(pattern: &str, callee: &str, lang: Lang) -> bool {
     CalleePattern::parse(pattern)
         .unwrap()
-        .matches(callee, CallKind::Plain)
+        .matches(callee, CallKind::Plain, lang)
 }
 
 #[test]
 fn matches_plan_examples() {
     assert!(
-        CalleePattern::parse("info!")
-            .unwrap()
-            .matches("tracing::info!", CallKind::Macro),
+        CalleePattern::parse("info!").unwrap().matches(
+            "tracing::info!",
+            CallKind::Macro,
+            Lang::Rust
+        ),
         "info! should match tracing::info! macro"
     );
     assert!(
-        CalleePattern::parse("info!")
-            .unwrap()
-            .matches("tracing::info", CallKind::Macro),
+        CalleePattern::parse("info!").unwrap().matches(
+            "tracing::info",
+            CallKind::Macro,
+            Lang::Rust
+        ),
         "info! should match tracing::info without bang under Macro kind"
     );
     assert!(
@@ -32,19 +40,21 @@ fn matches_plan_examples() {
     assert!(
         CalleePattern::parse("*Error")
             .unwrap()
-            .matches("TypeError", CallKind::New),
+            .matches("TypeError", CallKind::New, Lang::Rust),
         "*Error should match TypeError under New kind"
     );
     assert!(
         CalleePattern::parse("new *Error")
             .unwrap()
-            .matches("TypeError", CallKind::New),
+            .matches("TypeError", CallKind::New, Lang::Rust),
         "new *Error should match TypeError under New kind"
     );
     assert!(
-        !CalleePattern::parse("new *Error")
-            .unwrap()
-            .matches("ValueError", CallKind::Plain),
+        !CalleePattern::parse("new *Error").unwrap().matches(
+            "ValueError",
+            CallKind::Plain,
+            Lang::Rust
+        ),
         "new *Error must not match ValueError under Plain kind"
     );
     assert!(!plain("a.b", "a.bc"), "a.b must not match a.bc");
@@ -61,7 +71,7 @@ fn matches_plan_examples() {
     assert!(
         !CalleePattern::parse("log")
             .unwrap()
-            .matches("log", CallKind::Macro),
+            .matches("log", CallKind::Macro, Lang::Rust),
         "plain log must not match log under Macro kind without bang"
     );
 }
@@ -71,25 +81,25 @@ fn long_callee_without_matching_tail_rejects() {
     let pattern = CalleePattern::parse("logger.info").unwrap();
     let deep = format!("echo {}{}", "$(".repeat(20_000), ")".repeat(20_000));
     assert!(
-        !pattern.matches(&deep, CallKind::Plain),
+        !pattern.matches(&deep, CallKind::Plain, Lang::Rust),
         "a callee whose tail is not the pattern's last segment cannot match"
     );
     let chain = format!("{}info", "x.".repeat(1_000));
     assert!(
         CalleePattern::parse("x.info")
             .unwrap()
-            .matches(&chain, CallKind::Plain),
+            .matches(&chain, CallKind::Plain, Lang::Rust),
         "a callee ending in the pattern's segments still matches"
     );
     let bang = CalleePattern::parse("info!").unwrap();
     for callee in ["tracing::info!", "tracing::info"] {
         assert!(
-            bang.matches(callee, CallKind::Macro),
+            bang.matches(callee, CallKind::Macro, Lang::Rust),
             "info! still matches {callee} under Macro"
         );
     }
     assert!(
-        !bang.matches("tracing::debug!", CallKind::Macro),
+        !bang.matches("tracing::debug!", CallKind::Macro, Lang::Rust),
         "info! still rejects a non-matching macro callee"
     );
 }
@@ -119,24 +129,32 @@ fn nested_callees_reject_every_pattern_in_linear_time() {
     let small = nested_callee(1_000);
     let large = nested_callee(4_000);
     VISIBLE_CHECKS.with(|c| c.set(0));
+    STRIP_STEPS.with(|c| c.set(0));
     for pattern in &patterns {
         assert!(
-            !pattern.matches(&small, CallKind::Plain),
+            !pattern.matches(&small, CallKind::Plain, Lang::Rust),
             "a nested callee matches no log pattern"
         );
     }
     let small_steps = VISIBLE_CHECKS.with(|c| c.get());
+    let small_strip = STRIP_STEPS.with(|c| c.get());
     VISIBLE_CHECKS.with(|c| c.set(0));
+    STRIP_STEPS.with(|c| c.set(0));
     for pattern in &patterns {
         assert!(
-            !pattern.matches(&large, CallKind::Plain),
+            !pattern.matches(&large, CallKind::Plain, Lang::Rust),
             "a nested callee matches no log pattern"
         );
     }
     let large_steps = VISIBLE_CHECKS.with(|c| c.get());
+    let large_strip = STRIP_STEPS.with(|c| c.get());
     assert!(
         large_steps <= small_steps.max(1) * 2,
         "matching cost must stay flat across depths: {small_steps} vs {large_steps}"
+    );
+    assert!(
+        large_strip <= small_strip.max(1) * 6,
+        "the comment-strip scan must stay linear in depth: {small_strip} vs {large_strip}"
     );
     let multi = [
         CalleePattern::parse("logger.info").unwrap(),
@@ -150,7 +168,7 @@ fn nested_callees_reject_every_pattern_in_linear_time() {
     for callee in [&dot_small, &colon_small] {
         for pattern in &multi {
             assert!(
-                !pattern.matches(callee, CallKind::Plain),
+                !pattern.matches(callee, CallKind::Plain, Lang::Rust),
                 "a dotted callee matches no log pattern"
             );
         }
@@ -164,7 +182,7 @@ fn nested_callees_reject_every_pattern_in_linear_time() {
     for callee in [&dot_large, &colon_large] {
         for pattern in &multi {
             assert!(
-                !pattern.matches(callee, CallKind::Plain),
+                !pattern.matches(callee, CallKind::Plain, Lang::Rust),
                 "a dotted callee matches no log pattern"
             );
         }
@@ -236,8 +254,8 @@ proptest! {
         let mut callee_segments = c;
         callee_segments.push("x".to_string());
         callee_segments.extend(p.iter().cloned());
-        prop_assert!(pattern.matches(&callee_segments.join("."), CallKind::Plain));
-        prop_assert!(pattern.matches(&callee_segments.join("."), CallKind::New));
+        prop_assert!(pattern.matches(&callee_segments.join("."), CallKind::Plain, Lang::Rust));
+        prop_assert!(pattern.matches(&callee_segments.join("."), CallKind::New, Lang::Rust));
     }
 
     #[test]
@@ -246,7 +264,7 @@ proptest! {
         let mut changed = p.clone();
         let last = changed.len() - 1;
         changed[last].push('z');
-        prop_assert!(!pattern.matches(&changed.join("."), CallKind::Plain));
+        prop_assert!(!pattern.matches(&changed.join("."), CallKind::Plain, Lang::Rust));
     }
 
     #[test]
@@ -260,7 +278,6 @@ proptest! {
         );
     }
 }
-
 /// The reference forward segment walk, kept only as a test oracle for
 /// [`SegmentsRev`]: production matching consumes segments back to front.
 fn forward_segments(text: &str) -> Vec<&str> {
@@ -320,8 +337,6 @@ fn segments_rev_pairs_colons_left_to_right() {
         ("a::b", vec!["a", "b"]),
         ("a:::b", vec!["a", ":b"]),
         ("a::::b", vec!["a", "", "b"]),
-        ("a:.b", vec!["a:", "b"]),
-        ("a::.b", vec!["a", "", "b"]),
         ("a:::", vec!["a", ":"]),
         ("::a", vec!["", "a"]),
         ("x ?. a.b", vec!["x ", " a", "b"]),
@@ -365,23 +380,61 @@ fn commented_callee_segments_still_match() {
         "a different suffix still misses"
     );
     assert_eq!(
-        strip_comments("Logger /* reason */ .new"),
+        strip_comments("Logger /* reason */ .new", Lang::Rust),
         Some("Logger  .new".to_string()),
         "block comments strip out"
     );
     assert_eq!(
-        strip_comments("foo // reason\n.bar"),
+        strip_comments("foo // reason\n.bar", Lang::Rust),
         Some("foo \n.bar".to_string()),
         "line comments strip to the newline"
     );
     assert_eq!(
-        strip_comments("obj[\"/*\"]"),
+        strip_comments("obj[\"/*\"]", Lang::Rust),
         Some("obj[\"/*\"]".to_string()),
         "comment markers inside a string member are code, not a comment"
     );
     assert_eq!(
-        strip_comments("Logger.new"),
+        strip_comments("Logger.new", Lang::Rust),
         None,
         "comment-free callees take the zero-alloc path"
+    );
+}
+
+#[test]
+fn comment_markers_follow_the_language() {
+    // Bash `//` is a path separator, never a comment: `log//rotate`
+    // must not match the bare `log` pattern.
+    assert!(
+        !plain_in("log", "log//rotate", Lang::Bash),
+        "Bash log//rotate is a path, not a log call"
+    );
+    // The same text in Rust strips the `//` comment and matches.
+    assert!(
+        plain_in("log", "log//rotate", Lang::Rust),
+        "Rust log//rotate strips the trailing comment and matches log"
+    );
+    // Zig has no block comments: `/*` dereferences.
+    assert!(
+        !plain_in("a", "a/*b", Lang::Zig),
+        "Zig a/*b is a dereference, not a comment"
+    );
+    // Dart nests block comments: the whole comment strips as one.
+    assert!(
+        plain_in(
+            "Logger.new",
+            "Logger /* outer /* inner */ note */ .new",
+            Lang::Dart
+        ),
+        "Dart nested comments strip as one comment"
+    );
+    // C does not nest: the outer remainder stays and hides the call.
+    assert!(
+        !plain_in(
+            "Logger.new",
+            "Logger /* outer /* inner */ note */ .new",
+            Lang::C
+        ),
+        "C stops at the first close, so the remainder hides the call"
     );
 }

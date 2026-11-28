@@ -17,11 +17,55 @@ pub(crate) fn has_anon(n: Node<'_>, kind: &str) -> bool {
         .any(|c| !c.is_named() && c.kind() == kind)
 }
 
+/// Cut a trailing generic argument list: the first `<` that is code, not
+/// inside a comment or a string. A `<` inside `/* … */`, `// …` or quotes
+/// belongs to the comment or string, so `log /* size < limit */ .flush`
+/// keeps its member suffix and only a bare `<` opens type arguments.
+/// Dart nests block comments, so an opener inside one deepens it.
 pub(crate) fn cut_generics(t: &str) -> &str {
-    match t.find('<') {
-        Some(i) => &t[..i],
-        None => t,
+    let bytes = t.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'"' | b'\'' | b'`' => {
+                let quote = bytes[i];
+                i += 1;
+                while i < bytes.len() {
+                    if bytes[i] == b'\\' {
+                        i += 2;
+                    } else {
+                        i += 1;
+                        if bytes[i - 1] == quote {
+                            break;
+                        }
+                    }
+                }
+            }
+            b'/' if i + 1 < bytes.len() && bytes[i + 1] == b'*' => {
+                let mut depth = 1;
+                i += 2;
+                while i < bytes.len() && depth > 0 {
+                    if bytes[i] == b'/' && i + 1 < bytes.len() && bytes[i + 1] == b'*' {
+                        depth += 1;
+                        i += 2;
+                    } else if bytes[i] == b'*' && i + 1 < bytes.len() && bytes[i + 1] == b'/' {
+                        depth -= 1;
+                        i += 2;
+                    } else {
+                        i += 1;
+                    }
+                }
+            }
+            b'/' if i + 1 < bytes.len() && bytes[i + 1] == b'/' => {
+                while i < bytes.len() && bytes[i] != b'\n' {
+                    i += 1;
+                }
+            }
+            b'<' => return &t[..i],
+            _ => i += 1,
+        }
     }
+    t
 }
 
 pub(crate) fn last_ident(t: &str) -> &str {

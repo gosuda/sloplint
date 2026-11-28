@@ -1,4 +1,11 @@
 # given.scala: `case given(value)` is a Scala 2 extractor application, so it
 # counts as a variant constructor; with `Circle` the wildcard stays enum-like.
 src/given.scala:8 info agent/catch-all-match
+# given_variants.scala: `case given(Int, String)` is a tuple type and counts
+# nothing, so Circle and Square alone make the wildcard enum-like; a comment
+# inside the extractor members keeps both binders, so that arm counts too;
+# a lowercase type parameter binds nothing, so only Circle counts there and
+# that wildcard stays silent.
+src/given_variants.scala:10 info agent/catch-all-match
+src/given_variants.scala:16 info agent/catch-all-match
 src/shapes.scala:9 info agent/catch-all-match

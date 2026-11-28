@@ -461,3 +461,237 @@ fn export_declaration_lookahead_is_comment_and_name_aware() {
         "each `/` before a declaration reads as postfix, sexp: {sexp}"
     );
 }
+
+#[test]
+fn comment_only_line_does_not_end_an_infix_operand() {
+    // A line holding only a comment is content to scalac, not a blank
+    // line, so `&&` still takes its operand from the next line — in a
+    // block and inside an `if` condition alike.
+    let source = concat!(
+        "object T {\n",
+        "  def f(a: Boolean, b: Boolean): Boolean = {\n",
+        "    val ok = a &&\n",
+        "      // b must hold too\n",
+        "      b\n",
+        "    if (a &&\n",
+        "      // c\n",
+        "      b) 1 else 0\n",
+        "  }\n",
+        "}\n",
+    );
+    run_clean(source);
+    let sexp = sexp_of(source);
+    assert!(
+        !sexp.contains("postfix_expression"),
+        "neither `&&` turns postfix across the comment-only line, sexp: {sexp}"
+    );
+    assert_eq!(
+        sexp.matches("(infix_expression").count(),
+        2,
+        "both `&&` keep an infix right operand, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn slash_operator_before_annotation_and_enum_stays_postfix() {
+    // `@` starts a definition, never an operand, and `enum Name` opens
+    // one when a name follows — with or without a line comment after the
+    // slash-tailed operator.
+    let source = concat!(
+        "object T {\n",
+        "  val x = 2\n",
+        "  val a = x / // note\n",
+        "  @deprecated val y = 0\n",
+        "  val b = x /\n",
+        "  enum E { case A }\n",
+        "  val z = a\n",
+        "}\n",
+    );
+    run_clean(source);
+    let sexp = sexp_of(source);
+    assert!(
+        sexp.matches("(postfix_expression").count() >= 2,
+        "both slashes read as postfix before the definitions, sexp: {sexp}"
+    );
+    assert!(
+        !sexp.contains("(infix_expression"),
+        "no slash takes the definition as its operand, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn export_before_expression_tail_stays_infix() {
+    // `export` is a plain Scala 2 identifier, but `match` continues the
+    // operand instead of opening an export path — with or without a block
+    // comment between them.
+    let source = concat!(
+        "object T {\n",
+        "  def m: Int = {\n",
+        "    val a = 10 / export /* note */ match { case 2 => 1; case _ => 0 }\n",
+        "    val b = 10 / export match { case 2 => 1; case _ => 0 }\n",
+        "    a + b\n",
+        "  }\n",
+        "}\n",
+    );
+    run_clean(source);
+    let sexp = sexp_of(source);
+    assert!(
+        !sexp.contains("(export_declaration"),
+        "no `export` opens a declaration before `match`, sexp: {sexp}"
+    );
+    assert_eq!(
+        sexp.matches("(infix_expression").count(),
+        3,
+        "both divisions and the final sum stay infix, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn using_clause_with_tuple_type_after_postfix() {
+    // A `using` clause with tuple context parameters is a definition even
+    // when it follows a line-ending postfix operator.
+    let source = concat!(
+        "object T {\n",
+        "  val flags = \"x\"\n",
+        "  val cached = flags !\n",
+        "  given (using (Int, Int)): String = \"a\"\n",
+        "}\n",
+    );
+    run_clean(source);
+    let sexp = sexp_of(source);
+    assert!(
+        sexp.contains("(postfix_expression"),
+        "`!` stays postfix before the given definition, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn using_clause_with_parenthesized_and_literal_types_after_postfix() {
+    // Parenthesized and literal singleton types open a `using` clause the
+    // same way a plain type name does.
+    let source = concat!(
+        "object T {\n",
+        "  val flags = \"x\"\n",
+        "  val cached = flags !\n",
+        "  given (using (Int, String)): String = \"v\"\n",
+        "  val other = flags !\n",
+        "  given (using 42): Int = 1\n",
+        "}\n",
+    );
+    run_clean(source);
+    let sexp = sexp_of(source);
+    assert_eq!(
+        sexp.matches("(postfix_expression").count(),
+        2,
+        "both `!` stay postfix before the given definitions, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn blank_line_inside_call_parens_keeps_the_infix() {
+    // Newlines — blank or not — never separate statements inside
+    // parentheses, so the operator still takes its operand from the
+    // next line.
+    let source = concat!(
+        "object T {\n",
+        "  def f(a: Int, b: Int): Int = g(a +\n",
+        "\n",
+        "    b)\n",
+        "  def g(x: Int): Int = x\n",
+        "}\n",
+    );
+    run_clean(source);
+    let sexp = sexp_of(source);
+    assert!(
+        !sexp.contains("postfix_expression"),
+        "`+` stays infix across the blank line in parens, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("right: (identifier)"),
+        "`b` is still the right operand, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn blank_line_inside_grouped_parens_keeps_the_infix() {
+    // The same transparency holds for a parenthesized group: the blank
+    // line must not turn the operator postfix.
+    let source = concat!("object T {\n", "  val n = (1 +\n", "\n", "    2)\n", "}\n",);
+    run_clean(source);
+    let sexp = sexp_of(source);
+    assert!(
+        !sexp.contains("postfix_expression"),
+        "`+` stays infix across the blank line in the group, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn slash_inside_call_parens_keeps_the_infix() {
+    // The slash-tail probe needs the same bracket transparency: the
+    // blank line must not turn the trailing slash postfix.
+    let source = concat!(
+        "object T {\n",
+        "  def f(a: Int, b: Int): Int = g(a /\n",
+        "\n",
+        "    b)\n",
+        "  def g(x: Int): Int = x\n",
+        "}\n",
+    );
+    run_clean(source);
+    let sexp = sexp_of(source);
+    assert!(
+        !sexp.contains("postfix_expression"),
+        "`/` stays infix across the blank line in parens, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("right: (identifier)"),
+        "`b` is still the right operand, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn multiline_operand_after_blank_inside_parens_keeps_the_infix() {
+    // The operand may run past the blank line: only an unmatched
+    // closing bracket proves nesting, and it arrives at the end.
+    let source = concat!(
+        "object T {\n",
+        "  def f(a: Int, b: Int, c: Int): Int = g(a +\n",
+        "\n",
+        "    b +\n",
+        "    c)\n",
+        "  def g(x: Int): Int = x\n",
+        "}\n",
+    );
+    run_clean(source);
+    let sexp = sexp_of(source);
+    assert!(
+        !sexp.contains("postfix_expression"),
+        "`+` stays infix across the blank line in parens, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn blank_line_before_a_block_close_still_separates() {
+    // Braces hold statements, so a blank line stays a separator even
+    // when a closing brace follows: only parentheses and brackets
+    // disable separation.
+    let source = concat!(
+        "object T {\n",
+        "  def f(a: Int, b: Int): Int = {\n",
+        "    a +\n",
+        "\n",
+        "    b\n",
+        "  }\n",
+        "}\n",
+    );
+    run_clean(source);
+    let sexp = sexp_of(source);
+    assert!(
+        sexp.contains("postfix_expression"),
+        "`a +` stays postfix before the blank line, sexp: {sexp}"
+    );
+    assert!(
+        !sexp.contains("infix_expression"),
+        "the blank line keeps the operand from attaching, sexp: {sexp}"
+    );
+}

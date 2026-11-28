@@ -1,5 +1,6 @@
 use sloplint_core::CalleePattern;
 use sloplint_core::facts::CallKind;
+use sloplint_core::lang::Lang;
 
 fn rejection(pattern: &str) -> String {
     match CalleePattern::parse(pattern) {
@@ -11,7 +12,7 @@ fn rejection(pattern: &str) -> String {
 fn matches_plain(pattern: &str, callee: &str) -> bool {
     CalleePattern::parse(pattern)
         .unwrap_or_else(|error| panic!("pattern {pattern:?} must parse: {error}"))
-        .matches(callee, CallKind::Plain)
+        .matches(callee, CallKind::Plain, Lang::Rust)
 }
 
 #[test]
@@ -109,15 +110,15 @@ fn rejected_shapes_have_working_equivalents() {
 fn valid_shapes_parse_and_match() {
     let macro_pattern = CalleePattern::parse("info!").expect("info! is valid");
     assert!(
-        macro_pattern.matches("tracing::info", CallKind::Macro),
+        macro_pattern.matches("tracing::info", CallKind::Macro, Lang::Rust),
         "macro calls must receive their implicit exclamation mark"
     );
     assert!(
-        macro_pattern.matches("tracing::info!", CallKind::Macro),
+        macro_pattern.matches("tracing::info!", CallKind::Macro, Lang::Rust),
         "an explicit macro mark must not be duplicated"
     );
     assert!(
-        !macro_pattern.matches("tracing::info", CallKind::Plain),
+        !macro_pattern.matches("tracing::info", CallKind::Plain, Lang::Rust),
         "a plain function must not match a macro pattern"
     );
 
@@ -144,11 +145,11 @@ fn valid_shapes_parse_and_match() {
 
     let constructor = CalleePattern::parse("new *Error").expect("new *Error is valid");
     assert!(
-        constructor.matches("TypeError", CallKind::New),
+        constructor.matches("TypeError", CallKind::New, Lang::Rust),
         "a constructor pattern must match a new expression"
     );
     assert!(
-        !constructor.matches("TypeError", CallKind::Plain),
+        !constructor.matches("TypeError", CallKind::Plain, Lang::Rust),
         "a constructor pattern must reject plain calls"
     );
 }
@@ -163,8 +164,14 @@ fn surrounding_whitespace_and_new_prefix_spacing_are_accepted() {
     ] {
         let parsed = CalleePattern::parse(pattern)
             .unwrap_or_else(|error| panic!("pattern {pattern:?} must parse: {error}"));
-        assert!(parsed.matches("TypeError", CallKind::New), "{pattern:?}");
-        assert!(!parsed.matches("TypeError", CallKind::Plain), "{pattern:?}");
+        assert!(
+            parsed.matches("TypeError", CallKind::New, Lang::Rust),
+            "{pattern:?}"
+        );
+        assert!(
+            !parsed.matches("TypeError", CallKind::Plain, Lang::Rust),
+            "{pattern:?}"
+        );
     }
     assert!(
         matches_plain("  console.log ", "console.log"),
@@ -172,7 +179,7 @@ fn surrounding_whitespace_and_new_prefix_spacing_are_accepted() {
     );
     let newer = CalleePattern::parse("newer.make").expect("`newer` is an ordinary segment");
     assert!(
-        newer.matches("newer.make", CallKind::Plain),
+        newer.matches("newer.make", CallKind::Plain, Lang::Rust),
         "the constructor keyword must not consume a longer identifier"
     );
 }

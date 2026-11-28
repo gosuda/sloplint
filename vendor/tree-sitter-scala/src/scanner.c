@@ -193,6 +193,12 @@ typedef struct {
   // last line break that ended a statement or opened a region. -1 when
   // unknown.
   int16_t statement_indent;
+  // Set while a blank-line operand search proves bracket context ahead:
+  // the proof consumed the lexer, so the follow-up checks must not
+  // re-read it. `nested_operand_ok` is the operand verdict taken at the
+  // real operand. Both are cleared when consumed or on the next search.
+  int16_t nested_ready;
+  int16_t nested_operand_ok;
 } Scanner;
 
 void *tree_sitter_scala_external_scanner_create() {
@@ -213,7 +219,7 @@ void tree_sitter_scala_external_scanner_destroy(void *payload) {
 unsigned tree_sitter_scala_external_scanner_serialize(void *payload, char *buffer) {
   Scanner *scanner = (Scanner*)payload;
 
-  if ((scanner->indents.size + 6) * sizeof(int16_t) > TREE_SITTER_SERIALIZATION_BUFFER_SIZE) {
+  if ((scanner->indents.size + 8) * sizeof(int16_t) > TREE_SITTER_SERIALIZATION_BUFFER_SIZE) {
     return 0;
   }
 
@@ -229,6 +235,10 @@ unsigned tree_sitter_scala_external_scanner_serialize(void *payload, char *buffe
   memcpy(buffer + size, &scanner->after_colon_eol, sizeof(int16_t));
   size += sizeof(int16_t);
   memcpy(buffer + size, &scanner->statement_indent, sizeof(int16_t));
+  size += sizeof(int16_t);
+  memcpy(buffer + size, &scanner->nested_ready, sizeof(int16_t));
+  size += sizeof(int16_t);
+  memcpy(buffer + size, &scanner->nested_operand_ok, sizeof(int16_t));
   size += sizeof(int16_t);
 
   for (unsigned i = 0; i < scanner->indents.size; i++) {
@@ -248,7 +258,8 @@ void tree_sitter_scala_external_scanner_deserialize(void *payload, const char *b
   scanner->last_char = 0;
   scanner->last_newline_count = 0;
   scanner->after_colon_eol = 0;
-  scanner->statement_indent = -1;
+  scanner->nested_ready = 0;
+  scanner->nested_operand_ok = 0;
 
   if (length == 0) {
     return;
@@ -268,6 +279,12 @@ void tree_sitter_scala_external_scanner_deserialize(void *payload, const char *b
   size += sizeof(int16_t);
   scanner->statement_indent = *(int16_t *)&buffer[size];
   size += sizeof(int16_t);
+  if (size + 2 * sizeof(int16_t) <= (size_t)length) {
+    scanner->nested_ready = *(int16_t *)&buffer[size];
+    size += sizeof(int16_t);
+    scanner->nested_operand_ok = *(int16_t *)&buffer[size];
+    size += sizeof(int16_t);
+  }
 
   unsigned count = (length - (unsigned)size) / sizeof(int16_t);
   if (count > 0) {
@@ -1263,12 +1280,25 @@ static bool empty_body_end_follows(TSLexer *lexer) {
   return len == 3 && strcmp(word, "end") == 0 && name_follows_word(lexer);
 }
 // Whether a real operand follows the operator. Comments and a single line
-// break are transparent, so scalac reads the next real token across them;
-// a blank line (two line breaks) is a statement separator, so it ends the
-// expression. A comment-only tail to EOF, a closing delimiter and a list
-// separator are all no operand. A CRLF pair counts as one line break.
+// break are transparent, so scalac reads the next real token across them.
+// A blank line (two line breaks) is a statement separator — unless it sits
+// inside brackets, where scalac disables newline separation. The scanner
+// keeps no bracket depth across tokens, so a blank triggers a lookahead
+// walk instead: an unmatched closing bracket ahead proves nesting (the
+// search continues past the blank), while end of input or `;` proves
+// statement level (the search ends). A line holding only a comment is not
+// blank — a comment is content to scalac — so it resets the break count
+// instead of ending the search. A comment-only tail to EOF, a closing
+// delimiter and a list separator are all no operand. A CRLF pair counts
+// as one line break.
+//
+// The nesting walk consumes past the operand, so the caller must not
+// re-read the lexer afterwards: it sets `nested_ready`, and the callers
+// consume the stashed verdict instead of examining the new position.
+static bool blank_nested_operand(TSLexer *lexer, Scanner *scanner);
 
-static bool has_operand(TSLexer *lexer) {
+static bool has_operand(TSLexer *lexer, Scanner *scanner) {
+  scanner->nested_ready = 0;
   int line_breaks = 0;
   for (;;) {
     if (lexer->eof(lexer)) {
@@ -1277,7 +1307,10 @@ static bool has_operand(TSLexer *lexer) {
     int32_t c = lexer->lookahead;
     if (c == '\n') {
       if (++line_breaks >= 2) {
-        return false;
+        // Inside brackets the blank is transparent: keep the search
+        // alive. Otherwise it separates statements and ends it.
+        bool operand_ok = blank_nested_operand(lexer, scanner);
+        return scanner->nested_ready && operand_ok;
       }
       advance(lexer);
       continue;
@@ -1288,7 +1321,8 @@ static bool has_operand(TSLexer *lexer) {
         advance(lexer);
       }
       if (++line_breaks >= 2) {
-        return false;
+        bool operand_ok = blank_nested_operand(lexer, scanner);
+        return scanner->nested_ready && operand_ok;
       }
       continue;
     }
@@ -1301,16 +1335,22 @@ static bool has_operand(TSLexer *lexer) {
     }
     advance(lexer);
     if (lexer->lookahead == '/') {
+      // A line comment makes its line non-blank: the break that ends it
+      // starts a fresh count instead of ending the search.
       while (!lexer->eof(lexer) && lexer->lookahead != '\n') {
         advance(lexer);
       }
-      continue;  // the closing newline counts on the next pass
+      line_breaks = 0;
+      continue;
     }
     if (lexer->lookahead != '*') {
       return true;  // a lone '/' is code
     }
     advance(lexer);
     consume_block_comment_body(lexer);
+    // A block comment is content too, so a break past it keeps the search
+    // alive the same way a break past a line comment does.
+    line_breaks = 0;
   }
 }
 
@@ -1354,7 +1394,9 @@ static int32_t peek_past_blanks_comments(TSLexer *lexer) {
 // block and line comments are transparent to the parser, so they are skipped
 // here too; a line comment ends the declaration prefix, so it reads as "no
 // continuation" (an operand). Anything else — call parentheses, a member's
-// `.`, an operator, the line end — leaves the word an operand. This mirrors
+// `.`, an operator, the line end — leaves the word an operand. An
+// expression tail (`match`, `case`, …) continues the operand instead:
+// `10 / export match {…}` divides before matching. This mirrors
 // the parser's export declaration, which accepts comments before its path.
 static bool soft_keyword_starts_declaration(TSLexer *lexer) {
   for (;;) {
@@ -1378,6 +1420,12 @@ static bool soft_keyword_starts_declaration(TSLexer *lexer) {
   int32_t c = lexer->lookahead;
   if (is_alpha(c) || c == '_' || c == '$' || c == '`' ||
       nonascii_id_start(c)) {
+    // A tail keyword is the operand's continuation, not a path start.
+    // Back-quoted and non-ASCII names are always paths: the tail check
+    // reads a plain word, so it is only consulted for one.
+    if (is_alpha(c) && word_is_expression_tail(lexer)) {
+      return false;
+    }
     return true;
   }
   if (c == '=') {
@@ -1443,10 +1491,85 @@ static bool is_unary_op(const char *op, int len) {
          (op[0] == '-' || op[0] == '+' || op[0] == '~' || op[0] == '!');
 }
 
+// Whether a blank line inside the operand search sits inside brackets.
+// The scanner keeps no bracket depth across tokens, so the walk looks
+// ahead instead, tracking depth over subsequent lines while skipping
+// whitespace, comments, strings (with interpolation holes) and character
+// literals. The first unmatched closing bracket proves nesting: balanced
+// code cannot close what it never opened. End of input or `;` proves
+// statement level instead. An `@` proves a definition follows, which is
+// postfix even inside brackets, since annotations never start operands.
+// Returns whether the operand search continues, and records the verdict
+// for the caller: the walk consumed the lexer, so the caller must use
+// `nested_operand_ok` instead of re-reading the new position.
+static bool blank_nested_operand(TSLexer *lexer, Scanner *scanner) {
+  int depth = 0;
+  int32_t prev = '\n';
+  bool saw_operand = false;
+  bool operand_ok = false;
+  for (;;) {
+    if (lexer->eof(lexer)) {
+      scanner->nested_ready = 0;
+      return false;
+    }
+    int32_t c = lexer->lookahead;
+    // Only parentheses and brackets disable newline separation: a block
+    // holds statements, so braces (including a `}` closing the enclosing
+    // region) ride along as ordinary characters below.
+    if (c == '(' || c == '[') {
+      depth++;
+      saw_operand = true;
+      operand_ok = true;
+      advance(lexer);
+      prev = c;
+      continue;
+    }
+    if (c == ')' || c == ']') {
+      depth--;
+      advance(lexer);
+      prev = c;
+      if (depth < 0) {
+        scanner->nested_ready = 1;
+        scanner->nested_operand_ok = saw_operand && operand_ok ? 1 : 0;
+        return saw_operand && operand_ok;
+      }
+      continue;
+    }
+    if (c == ';' || c == '@') {
+      scanner->nested_ready = 0;
+      return false;
+    }
+    if (!saw_operand && !is_space(c) && c != '\n' && c != '\r') {
+      // Classify the operand the way the caller would: a unary operator
+      // or an allowed word continues; anything else ends the search.
+      saw_operand = true;
+      if (is_op_char(c)) {
+        char op[4] = {0};
+        int len = read_op_chars(lexer, op);
+        operand_ok = is_unary_op(op, len);
+        prev = ' ';
+      } else if (is_close_or_separator(c)) {
+        operand_ok = false;
+      } else {
+        operand_ok = operand_word_allowed(lexer);
+        prev = (c >= '0' && c <= '9') ? '0' : c;
+      }
+      continue;
+    }
+    skip_group_char(lexer, &prev);
+  }
+}
+
 // Blanks and then something that can be the right operand.
-static bool operand_follows(TSLexer *lexer) {
-  if (!advance_past_blanks(lexer) || !has_operand(lexer)) {
+static bool operand_follows(TSLexer *lexer, Scanner *scanner) {
+  if (!advance_past_blanks(lexer) || !has_operand(lexer, scanner)) {
     return false;
+  }
+  if (scanner->nested_ready) {
+    // The blank sat inside brackets: the operand verdict was taken at
+    // the real operand, and the proof consumed the lexer past it.
+    scanner->nested_ready = 0;
+    return scanner->nested_operand_ok;
   }
   if (is_op_char(lexer->lookahead)) {
     char op[4] = {0};
@@ -1461,7 +1584,7 @@ static bool operand_follows(TSLexer *lexer) {
 // `op_column`. As in scalac's isLeadingInfixOperator, the next line must not
 // be blank, must be at least as deep as the operator, and must start an
 // operand.
-static bool operand_on_next_line(TSLexer *lexer, uint32_t op_column) {
+static bool operand_on_next_line(TSLexer *lexer, uint32_t op_column, Scanner *scanner) {
   if (lexer->lookahead == '\r') {
     advance(lexer);
   }
@@ -1474,8 +1597,12 @@ static bool operand_on_next_line(TSLexer *lexer, uint32_t op_column) {
     width++;
   }
   if (lexer->eof(lexer) || lexer->lookahead == '\n' ||
-      lexer->lookahead == '\r' || width < op_column || !has_operand(lexer)) {
+      lexer->lookahead == '\r' || width < op_column || !has_operand(lexer, scanner)) {
     return false;
+  }
+  if (scanner->nested_ready) {
+    scanner->nested_ready = 0;
+    return scanner->nested_operand_ok;
   }
   if (is_op_char(lexer->lookahead)) {
     char op[4] = {0};
@@ -1493,7 +1620,7 @@ static bool operand_on_next_line(TSLexer *lexer, uint32_t op_column) {
 // characters is one too, but it is left out here because the OUTDENT caller
 // reads a word of its own right after this call. `alone`, when asked for,
 // reports an operator alone on its line, whose operand is on the next one.
-static bool is_leading_infix_continuation(TSLexer *lexer, bool *alone) {
+static bool is_leading_infix_continuation(TSLexer *lexer, bool *alone, Scanner *scanner) {
   if (alone != NULL) {
     *alone = false;
   }
@@ -1509,9 +1636,9 @@ static bool is_leading_infix_continuation(TSLexer *lexer, bool *alone) {
       if (alone != NULL) {
         *alone = true;
       }
-      return operand_on_next_line(lexer, column);
+      return operand_on_next_line(lexer, column, scanner);
     }
-    return operand_follows(lexer);
+    return operand_follows(lexer, scanner);
   }
   if (lexer->lookahead == '`') {
     advance(lexer);
@@ -1522,7 +1649,7 @@ static bool is_leading_infix_continuation(TSLexer *lexer, bool *alone) {
       return false;
     }
     advance(lexer);
-    return operand_follows(lexer);
+    return operand_follows(lexer, scanner);
   }
   return false;
 }
@@ -2042,7 +2169,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
         // Nor with a leading `|`/`&` infix operator, which continues the
         // previous expression. Only these two run here, and not after a colon,
         // where the line can only be the body.
-        if (!scanner->after_colon_eol && is_leading_infix_continuation(lexer, NULL)) {
+        if (!scanner->after_colon_eol && is_leading_infix_continuation(lexer, NULL, scanner)) {
           return false;
         }
         break;
@@ -2130,7 +2257,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
     // ending in depth-0 `then`/`do` closes the regions up to its conditional.
     bool alone = false;
     bool infix = lexer->lookahead != 0 &&
-                 is_leading_infix_continuation(lexer, &alone) &&
+                 is_leading_infix_continuation(lexer, &alone, scanner) &&
                  !scan_rest_of_line(lexer).ends_conditional;
     uint32_t top = scanner->indents.size - 1;
     if (infix && region_keeps_operator(scanner, top, indentation_size, alone)) {
@@ -2354,14 +2481,14 @@ static bool scan_impl(void *payload, TSLexer *lexer,
       }
       if (newline_count == 1 &&
           (lexer->lookahead == '\n' || lexer->lookahead == '\r'
-               ? operand_on_next_line(lexer, (uint32_t)indentation_size)
-               : operand_follows(lexer))) {
+               ? operand_on_next_line(lexer, (uint32_t)indentation_size, scanner)
+               : operand_follows(lexer, scanner))) {
         return false;
       }
       return true;
     }
     if (lexer->lookahead == '`') {
-      if (newline_count == 1 && is_leading_infix_continuation(lexer, NULL)) {
+      if (newline_count == 1 && is_leading_infix_continuation(lexer, NULL, scanner)) {
         return false;
       }
       return true;
@@ -2381,7 +2508,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
         while (is_op_char(lexer->lookahead)) {
           advance(lexer);
         }
-        if (newline_count == 1 && operand_follows(lexer)) {
+        if (newline_count == 1 && operand_follows(lexer, scanner)) {
           return false;
         }
         return true;
@@ -2872,6 +2999,12 @@ static bool scan_impl(void *payload, TSLexer *lexer,
               advance(lexer);
             }
             if (++line_breaks >= 2) {
+              // Inside brackets the blank is transparent: an unmatched
+              // close ahead keeps the infix reading.
+              if (blank_nested_operand(lexer, scanner)) {
+                operand_follows = true;
+              }
+              scanner->nested_ready = 0;
               break;
             }
             continue;
@@ -2879,8 +3012,14 @@ static bool scan_impl(void *payload, TSLexer *lexer,
           if (lexer->eof(lexer) || is_close_or_separator(c)) {
             break;
           }
+          if (c == '@') {
+            // An annotation starts a declaration, never an operand:
+            // `x /` followed by `@deprecated val y` is a postfix `/`
+            // before that definition, comment or not.
+            break;
+          }
           if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
-            char kw[sizeof "protected"];
+             char kw[sizeof "protected"];
             int kw_len = read_word(lexer, kw, (int)sizeof kw, NULL);
             // A definition keyword cannot be the operand: `x /\nval v` is
             // a postfix `/` before `val`, not `x / val`. This mirrors the
@@ -2907,8 +3046,19 @@ static bool scan_impl(void *payload, TSLexer *lexer,
                 soft_keyword_starts_declaration(lexer)) {
               break;
             }
-            operand_follows = true;
-            break;
+            // `enum` is both a soft identifier and a definition starter,
+            // so the word alone cannot decide either: peek at the token
+            // after it the way the postfix path does. An identifier start
+            // (`enum Foo`) or `=` (a variable named `enum`) opens a
+            // definition; anything else keeps the operand read.
+            if (kw_len == 4 && memcmp(kw, "enum", 4) == 0) {
+              int32_t after = peek_past_blanks_comments(lexer);
+              if ((after >= 'a' && after <= 'z') ||
+                  (after >= 'A' && after <= 'Z') || after == '_' ||
+                  after == '$' || after == '=') {
+                break;
+              }
+            }
           }
           if (c != '/') {
             operand_follows = true;
@@ -3048,12 +3198,18 @@ static bool scan_impl(void *payload, TSLexer *lexer,
     }
     // The right operand must be able to start an expression. Comments and line
     // breaks before it are transparent. A comment-only tail to EOF is postfix.
-    if (!has_operand(lexer)) {
+    if (!has_operand(lexer, scanner)) {
       lexer->result_symbol = postfix_sym;
       return true;
     }
+    if (scanner->nested_ready) {
+      // The blank sat inside brackets: skip the new-statement checks,
+      // whose reads the nesting proof already consumed, and continue
+      // the infix reading below.
+      scanner->nested_ready = 0;
+    } else {
     // A `.` or a `=` next also ends the infix reading, but those lines read
-    // best with the internal tokens, as before.
+     // best with the internal tokens, as before.
     if (lexer->lookahead == '.' || lexer->lookahead == '=') {
       return false;
     }
@@ -3210,14 +3366,19 @@ static bool scan_impl(void *payload, TSLexer *lexer,
             if (inner_len > 0) {
               inner_last = inner[inner_len - 1];
             }
-            // `using` opens a clause only when a type name follows it:
-            // `given(using)` passes the Scala 2 value `using` as an
-            // ordinary argument, and `given(using = 2)` is a named
-            // argument. Both keep the call's operand read.
+            // `using` opens a clause when a type follows it: a name
+            // (`using Ord[T]`), a parenthesized or tuple type
+            // (`using (Int, Int)`), or a literal singleton type
+            // (`using 42`, `using "lit"`). `given(using)` passes the
+            // Scala 2 value `using` as an ordinary argument, and
+            // `given(using = 2)` is a named argument. Both keep the
+            // call's operand read.
             int32_t after_using = peek_past_blanks_comments(lexer);
             if (inner_len == 5 && strcmp(inner, "using") == 0 &&
                 (is_alpha(after_using) || after_using == '_' ||
                  after_using == '$' || after_using == '`' ||
+                 after_using == '(' || after_using == '"' ||
+                 (after_using >= '0' && after_using <= '9') ||
                  nonascii_id_start(after_using))) {
               lexer->result_symbol = postfix_sym;
               return true;
@@ -3272,6 +3433,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
           }
         }
       }
+    }
     }
     // Any other operand continues the expression, on this line or over the
     // break; the internal per-class token carries the operator's precedence.
@@ -3515,7 +3677,16 @@ static bool scan_impl(void *payload, TSLexer *lexer,
         lexer->lookahead == '\r' || width < prev_width) {
       return false;
     }
-    if (!has_operand(lexer) || lexer->lookahead == '.' ||
+    if (!has_operand(lexer, scanner)) {
+      return false;
+    }
+    if (scanner->nested_ready) {
+      // The blank sat inside brackets: skip the new-statement checks,
+      // whose reads the nesting proof already consumed, and continue
+      // the leading infix reading below.
+      scanner->nested_ready = 0;
+    } else {
+    if (lexer->lookahead == '.' ||
         lexer->lookahead == '=' || lexer->lookahead == '@') {
       return false;
     }
@@ -3536,6 +3707,7 @@ static bool scan_impl(void *payload, TSLexer *lexer,
                   sizeof(not_operand) / sizeof(not_operand[0]))) {
         return false;
       }
+    }
     }
     lexer->result_symbol = WORD_OPERATOR_EOL;
     LOG("    WORD_OPERATOR_EOL\n");

@@ -19,7 +19,7 @@
   `Cargo.lock`, `LICENSE`, `README.md`, `bindings/`, `queries/`,
   `tree-sitter.json`, and `test/corpus/*.txt` (10 files).
 - Changed: `grammar.js` and `src/scanner.c` (see `sloplint-grammar.patch`,
-  1978 lines, 54 hunks), and `src/` regenerated.
+  2326 lines, 72 hunks), and `src/` regenerated.
 - Added: `test/corpus/sloplint_endnew.txt`, `sloplint_parenif.txt`,
   `sloplint_instar.txt`, `sloplint_oplam.txt`, `sloplint_multipat.txt`,
   `sloplint_softkw.txt`, `sloplint_enum.txt`, `sloplint_opcmt.txt`.
@@ -72,7 +72,11 @@ on pristine HEAD):
 - SC-OPCMT / SC-OPRIGHT: operators cut short by a comment keep their
   class (`_op_right_*`, `_op_assign` externals); slash-tail operand and
   postfix probes with comment transparency and blank-line termination;
-  `export`/`given` soft-keyword operand lookaheads.
+  `export`/`given` soft-keyword operand lookaheads. A comment-only line
+  is content, not a blank line, so it resets the operand-search break
+  count; the slash probe treats `@` and `enum Name` as declaration
+  starts; `export` rejects expression-tail continuations (`match`);
+  `using` accepts parenthesized, tuple, and literal singleton types.
 - SC-WILDLAMBDA: `{ _: Any => () }` (kept; upstream covers it too, but
   the hunk is load-bearing for the exercised shapes).
 - SC-SELFWILD: `new T { _: (A, B) => … }` reads as a wildcard self-type
@@ -158,14 +162,22 @@ invalid-control guard only narrows the empty-body alternative.
 - SC-POLYARG (`[X] => (_: List[X]).headOption`, cats
   FunctionKLiftSuite; `[t] => _ match`, tests/pos/i23774typeclass):
   fixed upstream by #753, now clean.
+- SC-OPCMT comment-line operands (`a &&` with a `//`-only line before
+  the operand, including inside `if` conditions), slash-tailed
+  operators before annotations and `enum` definitions
+  (`x /` with `@deprecated val y` or `enum E` on the next line),
+  `export` before an expression tail (`10 / export match {…}` stays
+  division), and `using` clauses with tuple, parenthesized, or literal
+  types after a postfix line (`given (using (Int, Int)): String`).
 
 ## Still failing (residual)
 
-- Experimental-flag and spec-string constructs (modularity,
-  subCases, singleton-ctx-bound, spec-strings): upstream will not fix
-  these; out of scope.
 - End-marker alignment is not checked (pre-existing; upstream also
   unchecked): a misaligned `end` marker still parses.
+- Blank-line termination does not apply inside brackets: `f(a +` with a
+  blank line before the operand still misreads the operator as postfix.
+  The external scanner carries no bracket depth, so the cutoff cannot
+  tell a parenthesized break from a statement separator.
 - Out of scope: `tests/pos/i19642/i19642.java` (Java).
 - Invalid shapes checked to stay errors: the marker-less empty `new:`
   template above; dangling `[X] =>`; spaced `' +`; bare infix in

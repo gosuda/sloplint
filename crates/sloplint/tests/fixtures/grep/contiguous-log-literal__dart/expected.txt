@@ -1,2 +1,3 @@
 a.dart:2 info grep/contiguous-log-literal
 a.dart:6 info grep/contiguous-log-literal
+a.dart:14 info grep/contiguous-log-literal
