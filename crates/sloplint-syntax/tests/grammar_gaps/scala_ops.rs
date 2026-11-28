@@ -616,13 +616,7 @@ fn blank_line_inside_call_parens_keeps_the_infix() {
 fn blank_line_inside_grouped_parens_keeps_the_infix() {
     // The same transparency holds for a parenthesized group: the blank
     // line must not turn the operator postfix.
-    let source = concat!(
-        "object T {\n",
-        "  val n = (1 +\n",
-        "\n",
-        "    2)\n",
-        "}\n",
-    );
+    let source = concat!("object T {\n", "  val n = (1 +\n", "\n", "    2)\n", "}\n",);
     run_clean(source);
     let sexp = sexp_of(source);
     assert!(

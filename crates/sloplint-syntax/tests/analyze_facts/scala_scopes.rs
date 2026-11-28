@@ -16,7 +16,7 @@ fn wildcard_arms(source: &str) -> Vec<WildcardArm> {
 }
 
 fn named_all<'a>(found: &'a [MutBinding<'a>], name: &str) -> Vec<&'a MutBinding<'a>> {
-     found
+    found
         .iter()
         .filter(|binding| binding.name == name)
         .collect()
@@ -601,10 +601,7 @@ fn lowercase_type_parameter_is_not_a_binder() {
         );
         // The constructor arm's binder shadows without creating a
         // binding of its own, so nothing binds anywhere here.
-        assert!(
-            found.is_empty(),
-            "no binding is recorded: {found:?}"
-        );
+        assert!(found.is_empty(), "no binding is recorded: {found:?}");
     });
     assert_eq!(
         wildcard_variant_count(source),
@@ -651,7 +648,11 @@ fn comment_inside_a_given_tuple_keeps_both_binders() {
         let xs = named_all(found, "x");
         assert_eq!(xs.len(), 1, "only the outer var binds: {found:?}");
         assert_eq!(
-            (xs[0].write_lines, xs[0].first_write_line, xs[0].last_write_line),
+            (
+                xs[0].write_lines,
+                xs[0].first_write_line,
+                xs[0].last_write_line
+            ),
             (1, 8, 8),
             "the arm write is shadowed; only the post-match write lands outside: {found:?}"
         );
