@@ -624,3 +624,74 @@ fn blank_line_inside_grouped_parens_keeps_the_infix() {
         "`+` stays infix across the blank line in the group, sexp: {sexp}"
     );
 }
+
+#[test]
+fn slash_inside_call_parens_keeps_the_infix() {
+    // The slash-tail probe needs the same bracket transparency: the
+    // blank line must not turn the trailing slash postfix.
+    let source = concat!(
+        "object T {\n",
+        "  def f(a: Int, b: Int): Int = g(a /\n",
+        "\n",
+        "    b)\n",
+        "  def g(x: Int): Int = x\n",
+        "}\n",
+    );
+    run_clean(source);
+    let sexp = sexp_of(source);
+    assert!(
+        !sexp.contains("postfix_expression"),
+        "`/` stays infix across the blank line in parens, sexp: {sexp}"
+    );
+    assert!(
+        sexp.contains("right: (identifier)"),
+        "`b` is still the right operand, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn multiline_operand_after_blank_inside_parens_keeps_the_infix() {
+    // The operand may run past the blank line: only an unmatched
+    // closing bracket proves nesting, and it arrives at the end.
+    let source = concat!(
+        "object T {\n",
+        "  def f(a: Int, b: Int, c: Int): Int = g(a +\n",
+        "\n",
+        "    b +\n",
+        "    c)\n",
+        "  def g(x: Int): Int = x\n",
+        "}\n",
+    );
+    run_clean(source);
+    let sexp = sexp_of(source);
+    assert!(
+        !sexp.contains("postfix_expression"),
+        "`+` stays infix across the blank line in parens, sexp: {sexp}"
+    );
+}
+
+#[test]
+fn blank_line_before_a_block_close_still_separates() {
+    // Braces hold statements, so a blank line stays a separator even
+    // when a closing brace follows: only parentheses and brackets
+    // disable separation.
+    let source = concat!(
+        "object T {\n",
+        "  def f(a: Int, b: Int): Int = {\n",
+        "    a +\n",
+        "\n",
+        "    b\n",
+        "  }\n",
+        "}\n",
+    );
+    run_clean(source);
+    let sexp = sexp_of(source);
+    assert!(
+        sexp.contains("postfix_expression"),
+        "`a +` stays postfix before the blank line, sexp: {sexp}"
+    );
+    assert!(
+        !sexp.contains("infix_expression"),
+        "the blank line keeps the operand from attaching, sexp: {sexp}"
+    );
+}
